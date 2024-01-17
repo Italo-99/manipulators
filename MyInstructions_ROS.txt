@@ -531,6 +531,6 @@ CABLE DETECTION COMMANDS
 
     The following are the commands to launch some procedures about cable detection through AI pkgs
 
-USE THE following TO COPY AND PASTE THE SYMBOLS 
+USE THE FOLLOWING TO COPY AND PASTE THE SYMBOLS 
 
     w W "

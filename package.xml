@@ -1,12 +1,15 @@
 <?xml version="1.0"?>
-<package format="2">
-  <name>manipulator_planner</name>
-  <version>0.0.0</version>
-  <description>The manipulator_planner package</description>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 
-  <maintainer email="andrea.pupa@unimore.it">andrea</maintainer>
+<package format="3">
+  <name>manipulators</name>
+  <version>1.2.4</version>
+  <description> Pkg container of useful ROS1 files for the manipulators planning used for Italo Almirante's internship project</description>
+  <maintainer email="255778@studenti.unimore.it">Italo Almirante</maintainer>
+  <license>Apache License 2.0</license>
 
-  <license>TODO</license>
+  <url>http://ros.org/wiki/foo_core</url>
+  <author>Italo Almirante</author>
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
