@@ -1,0 +1,60 @@
+<launch>
+  <!-- Decide if you want to see or not on rviz -->
+  <arg name="rviz" default="true" />
+
+  <!-- By default, we are not in debug mode -->
+  <arg name="debug" default="false" />
+
+  <arg name="sim" default="false" />
+
+  <!-- If true you launch the trajectory converter node.
+  This node sends a true value on the topic /trajectory_executed when the trajectory is completed, also in simulation.-->
+  <arg name="control" default ="false" />
+  
+  <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
+  <include file="$(find ur5e_moveit_config)/launch/planning_context.launch">
+    <arg name="load_robot_description" value="true"/>
+  </include>
+
+  <!-- If needed, broadcast static tf for robot root -->
+  
+
+  <!-- We do not have a robot connected, so publish fake joint states -->
+  <node if="$(arg sim)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <param name="/use_gui" value="false"/> 
+    <rosparam param="/source_list">[/move_group/fake_controller_joint_states]</rosparam>
+  </node>
+  
+  <!-- Given the published joint states, publish tf for the robot links -->
+  <node if="$(arg sim)" name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen" />
+
+  <!-- Run the main MoveIt executable without trajectory execution (we do not have controllers configured by default) -->
+  <include file="$(find ur5e_moveit_config)/launch/move_group.launch">
+    <arg name="allow_trajectory_execution" value="true"/>  
+    <arg name="fake_execution" value="true"/>
+    <arg name="info" value="true"/>
+    <arg name="debug" value="$(arg debug)"/>
+  </include>
+
+  <!-- Run Rviz and load the default config to see the state of the move_group node -->
+  <group if="$(arg rviz)">
+  <include file="$(find ur5e_moveit_config)/launch/moveit_rviz.launch">
+    <arg name="rviz_config" value="$(find ur5e_moveit_config)/launch/moveit.rviz"/>
+    <arg name="debug" value="$(arg debug)"/>
+  </include>
+  </group>
+  
+  <arg name="planning_plugin" value="ompl_interface/OMPLPlanner" />
+  <arg name="planning_adapters" value="industrial_trajectory_filters/UniformSampleFilter default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints" />
+
+  <node name="manipulator_planner" pkg="manipulator_planner" type="manipulator_planner" output="screen">
+    <param name="planning_plugin" value="$(arg planning_plugin)" />
+    <param name="request_adapters" value="$(arg planning_adapters)" />
+    <param name="sample_duration" value="0.01"/>
+    <param name="sim" value="$(arg sim)"/>
+    <rosparam command="load" file="$(find ur5e_moveit_config)/config/ompl_planning.yaml"/>
+    <rosparam command="load" file="$(find manipulator_planner)/config/ur5e.yaml" />
+  </node>  
+  <node if="$(arg control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" />
+  
+</launch>

@@ -1,0 +1,15 @@
+## Configuration file used by the planner
+
+manipulator_name: manipulator
+
+name: manipulator
+
+joint_names: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint]
+
+ee_name: tool0
+
+base_name: base_link
+
+vel_factor: 0.3
+
+acc_factor: 1
