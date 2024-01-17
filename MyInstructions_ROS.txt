@@ -1,0 +1,536 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!! GENERAL INSTRUCTIONS FOR ROS1 AND ROS2 USE !!!!!!!!!!!!!!!!!!!!!!!!!
+
+USART BASE COMMANDS
+
+    UNLOCK AUTHORIZATION:                   sudo chmod -R 777 <nome_file_o_pacchetto>
+
+    START UP SERIAL COMMUNICATION:          sudo chmod 777 /dev/ttyACM0
+
+ARUCO MARKERS    
+    
+    DOWNLOAD ARUCO PICTURES:                https://pyimagesearch.com/2020/12/14/generating-aruco-markers-with-opencv-and-python/
+
+    ADD MARKERS TO SIMULATION:              https://answers.ros.org/question/365445/how-to-add-image-to-modelurdfxacro/
+
+GITHUB
+
+    UPDATE TO GITHUB :      git status  git fetch  git status  git add "file_name or '.' to add all files"  git commit -m "Comment"  git push
+
+    DOWNLOAD FROM GITHUB :  git status   git stash   git pull   git stash apply  git fetch
+
+    CREATE A NEW REPO:      do it directly on GitHub, download it, then copy and paste all files from a locally created pkg, then push the new contents 
+
+    CREATE A NEW BRANCH:    git checkout -b almirante/devel
+
+    PUSH ON A NEW BRANCH:   git add .   git commit -m "commit msg"  git push origin almirante/devel
+
+    TO SWITCH IN BRANCHES:  git checkout almirante/devel    git checkout main       git checkout master 
+
+PROJECTRED 2021 NAVIGATION SIMULATION
+
+    DOCKER : 
+        
+        give all comands within ERC_navigation folder (use files with "rs" prefix fi autonomous navigation is lauched on the actual rover)
+
+    SIMULATION: 
+        
+        roslaunch leo_erc_gazebo leo_marsyard2021.launch
+
+    ARTAG: 
+    
+        roslaunch ar_track_alvar detect_and_convert.launch (detects the ar_tag and its relative position along x, y and z respect to the rover)
+        -> rtab map
+        -> odom
+        -> distanza artag
+
+    LOCALIZATION:   
+    
+        oslaunch localization odometry.launch
+                    roslaunch mrpt_localization ro_localization.launch 
+
+    CONFIG FILES LAUNCHER PYTHON: 
+    
+        python3 src/leo_erc_desktop/JetsonDocker/start.py 
+
+    START UP INITIAL COSTMAP: 
+    
+        roslaunch localization start_map.launch (costmap)
+
+    AUTONOMOUS NAVIGATION LAUNCH: 
+    
+        roslaunch navigation move_base1.launch
+        rosrun navigation cli_navigation.py (per scegliere il waypoint da raggiungere)
+
+    START RVIZ: 
+    
+        viz (da terminale globale)
+        ADD -> openConfig _ rviz folder (to activate the costmap)
+
+JETSON ROVER FOR AUTONOMOUS NAVIGATION
+
+    INDIRIZZO IP 
+    
+        to detect the networks, "ifconfig" command and search the slot with the corresponding IP address
+
+    SSH COMUNICATION START: 
+    
+        ssh projectred@192.168.82.10 -> password projectred 
+
+    SHUTDOWN SSH COMMUNICATION: 
+    
+        CTRL-D (logout printed on the terminal) 
+
+    RESTART JETSON: 
+    
+        sudo reboot
+
+    MODIFY FILES: 
+    
+        to open text files, command "vim <file_name> and "wq" to save modifications
+
+    CARTEL SYSTEM: 
+    
+        cd to set current working directory and ls to see what is directly under the selected folder
+
+    START UP SERIAL COMMUNICATION WITH ARDUINO: 
+    
+        sudo chmod 777 /dev/tty/ACM0 > password projectred
+
+        rosrun rosserial_arduino serial_node.py
+
+    TO KILL CURRENT WORKING NODES: 
+        
+        rosnode kill -a 
+
+    TO SET ROVER TARGET POSITION: 
+    
+        rosrun navigation cli_navigation.py 
+
+TO SEE AVAILABLE USB DEVICES CONNECTED TO THE PC 
+
+    dmesg | grep tty
+
+COMMUNICATION WITH INTEL NUC
+
+    Start up:                               ssh projectred@192.168.1.196    (or see 'sshred)
+    Password:                               projectred
+    To shutdown connection: exit
+    To unlock permanently a serial port:    sudo chown projectred /dev/ttyACM0 or everything with sudo chown projectred /dev/ttyACM*
+
+    Store SSH key within the PC:            cat .ssh/id_ed25519.pub
+                                            ssh-copy-id -i $HOME/.ssh/id_ed25519.pub projectred@192.168.1.196
+    
+    Write within "more alias" in '.bashrc' : alias sshred='ssh -v -X projectred@192.168.1.196'
+
+ENVIRONMENT VARIABLE CHECK
+
+    printenv | grep ROS                 check if enironment variables are correctly set
+
+BASICS TERMINAL COMMANDS
+
+    Ctrl + Alt + T                  to open a new terminal
+    Ctrl + Maiusc + T               to open a new terminal on the same window 
+    Alt + 1/2 ...                   to move on another terminal of the same window
+
+    exit                            to close the terminal
+    clear                           to clear terminal's contents
+
+ROS2
+
+    BASICS ROS2 COMMANDS
+        
+        source install/local_setup.bash                         to set current workind directory to launch files from
+
+        mkdir -p ~/ros2_ws/src                                  to create a workspace
+
+        colcon build --symlink-install                          to build a workspace for the first time, then 'colcon build' is sufficient 
+
+        source /opt/ros/foxy/setup.bash                         to source main ROS2 directory
+
+        rosdep install -i --from-path src --rosdistro foxy -y   to install directory dependencies (out of /src)
+
+        ros2 pkg create --build-type ament_cmake --node-name 
+        my_node my_package --dependencies dep_name1 dep_name2   to create a C++ package
+
+        ros2 pkg create --build-type ament_python --node-name 
+        my_node my_package --dependencies dep_name1 dep_name2   to create a python package
+
+        colcon build --packages-select <my_package>             to build a single package 
+
+        ros2 run my_package my_node                             to run a single file
+
+        ros2 interface show <pkg_name>>/srv/<srv_name>          to verify srv interface setting
+
+        ros2 interface show <pkg_name>>/msg/<srv_name>          to verify msg interface setting
+
+        ros2 pkg create --build-type ament_cmake name_plugins 
+        --dependencies polygon_base pluginlib                   to create a package with defined dependencies and library definition 
+        --library-name polygon_plugins                          
+
+        NOTE:   look at https://docs.ros2.org/foxy/api/example_interfaces/index-msg.html 
+                and https://docs.ros2.org/foxy/api/std_msgs/index-msg.html for basic msgs definition
+
+        FOR FURTHER DETAILS about files editing (sub. pub or srvs) visit my 'BACKUP_ROS2TUTORIALS' within 'Projects'
+
+    ROS1 BRIDGE (install with sudo apt install ros2-rolling-ros1-bridge)
+
+        1 - Launch 'roscore' to start ROS1 master
+        2 - On another terminal, launch ROS2 bridge: 'ros2 run ros1_bridge dynamic_bridge'
+        3 - From this momento, if a talker and a listener have a common /topic as sub or pub, they will communicate with each other 
+        4 - Verify communication correctness with these two sample codes: 'ros2 run demo_nodes_cpp listener' e 'rosrun rospy_tutorials talker'
+        5 - To publish a msg on ROS1 from the terminal, write 'rostopic pub /topic std_msgs/Int16 1' or 'rostopic pub /button8 std_msgs/Bool "data: true"'
+        6 - To publish a msg on ROS2 from the terminal, write 'ros2 topic pub /button std_msgs/msg/Int16 "{data: 25}"',be careful with msg struct
+        7 - To read a msg on ROS1 from the terminal, write 'rostopic echo /topic' (no need to specify msg type)
+        8 - To read a msg on ROS2 from the terminal, write 'ros2 topic echo /button std_msgs/Int16' or 'ros2 topic echo /button std_msgs/msg/Int16'(msg type is already defined)
+        9 - Bridge communication is bidirectional (both topics and services)
+        10 - To share images, use'ros2 run image_tools cam2image' and 'rqt_image_view /image'
+        11 - To avoid create a brdige with all possible topics, use ROS2 command 'ros2 run ros1_bridge parameter_bridge' and then 'rosparam load bridge.yaml' on ROS1
+        12 - File 'bridge.yaml' should be structured as followed 
+            topics:
+            -
+                topic: /chatter                 # Topic name on both ROS 1 and ROS 2
+                type: std_msgs/msg/String       # Type of topic to bridge
+                queue_size: 1                   # Queue size
+                    queue_size: 1
+                qos:
+                    history: keep_last          # OR keep_all, then you can omit `depth` parameter below
+                    depth: 10                   # Only required when history == keep_last
+                    reliability: reliable       # OR best_effort
+                    durability: transient_local # OR volatile
+                    deadline:
+                        secs: 10
+                        nsecs: 2345
+                    lifespan:
+                        secs: 20
+                        nsecs: 3456
+                    liveliness: liveliness_system_default  # Values from https://design.ros2.org/articles/qos_deadline_liveliness_lifespan.html, eg. LIVELINESS_AUTOMATIC
+                    liveliness_lease_duration:
+                        secs: 40
+                        nsecs: 5678
+
+            services_2_to_1:
+            -
+                service: /add_two_ints          # ROS 1 service name
+                type: roscpp_tutorials/TwoInts  # The ROS 1 service type name
+
+            services_1_to_2:
+            -
+                service: /add_two_ints          # ROS 1 service name
+                type: roscpp_tutorials/TwoInts  # The ROS 1 service type name
+
+    ROS 2 NODES, PUBLISHERS, SUBSCRIBERS  (guardare la documentazione dei 'msg' per capire i tipi di messaggio che si possono scambiare)
+
+        ros2 topic echo \topic              to listen topic's data
+        ros2 topic list -t                  to watch active topics with their corresponding type
+        ros2 node list                      to watch active node list 
+        ros2 topic info /topic              to see which node is sub/pub for a certain topic, with the corresponding msg type
+        ros2 interface show 'msg'           to see msg data struct
+        ros2 topic hz /topic                to see publishing rate of a certain topic
+
+        HOW TO PUBLISH A ROS2 MSG ON A TOPIC (the following is just an example, look at msg type for the corresponding .yaml struct)
+            
+            ros2 topic pub [--once --rate 1] /topic 'msg_type' "{linear: {x: 2.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.8}}"
+
+    SERVICES (look at ROS2 doc to see srv types that can be exchanged)
+
+        ros2 service list -t                            to show active services list
+        ros2 service type <srv_name>                    to show srv type
+        ros2 service find <srv_type>                    to find all active services with a certain type
+        ros2 interface show <srv_type>.srv              to show srv type's structre info
+        ros2 service call <srv_name> <srv_type> <args>  to call a srv
+
+        NOTE:   custom msgs and srvs can be included only in different packages (you can't use a msg declared in the same pkg)
+                to generate custom msgs within the same package, in the CMakeLists.txt file you need to add 'set(msg_files "msg/AddressBook.msg")' or 'set(srv_files "srv/srv_name.srv")'
+                together with other commands (IMPORTANT)
+
+    PARAMETERS (types of ROS2 parameters are: integers, floats, booleans, strings, and lists)
+
+        ros2 param list                                                         to show params list related to active nodes
+        ros2 param get <node_name> <param_name>                                 to show value and tupe of params of a certain node    
+        ros2 param set <node_name> <param_name> <value>                         to set the (non permanent) value of a param of a certain node
+        ros2 param dump <node_name>                                             to save current params' value of a certain node
+        ros2 param load <node_name> .<node_name>.yaml                           to load saved values of params of a certain node
+        ros2 run <pkg_name> <exec_name> --ros-args --params-file <file_name>    to set params at node launch
+
+    ACTIONS
+
+        ros2 action list -t                                                     to show a running action with its cooresponding type
+        ros2 action info <action_name>                                          to show client and server nodes of a specified action
+        ros2 interface show <action_name>                                       to show data structure of the action type (request, result and feedback)
+        ros2 action send_goal <action_name> <action_type> <values> --feedback   to send a goal to an action (values must follow .yaml format)
+
+        NOTE: actions can be included only in this way (IMPORTANT!!):
+                1) server is defined in pkg1->src                                                   (functions definition)
+                2) the <file_name>.action is defined in pkg2                                        (ROS custom files definition)
+                3) visibility_control.h is defined in pkg2->include                                 (ROS custom files definition)   
+                4) the rules of the doc.ros2.org in file editing are followed                       (see the website)
+                5) the client file can be called from where you want, possibly in pkg3-4-5...       (my custom pkgs)
+
+    RQT CONSOLE
+
+        ros2 run rqt_console rqt_console                                        to show rqt console (log msgs, severity and highlights)
+        ros2 run <pkg_name> <node_name> --ros-args --log-level <log_level>      to change log level (lower leveles will not be showed) to one of these -> FATAL ERROR WARN INFO DEBUG
+
+    ROS2 LOGGING COMMANDS (check ROS2 tutorial documentation to copy cmds structure, you can also configure your own log msgs)
+
+        PYTHON: 
+
+            node.get_logger().debug/info/warn(/error/fatal('My log msg %d' % (4), once = True)
+            node.get_logger().debug/info/warn(/error(f'My log msg {num}'), skipfirst = False, throttle_duration_sec=1)
+
+        C++:
+
+            RCLPP_DEBUG/INFO/wARN/ERROR(node->get_logger(), ''My log msg %d'',4)                                    this is for printf style, more common in ROS
+
+            RCLPP_DEBUG/INFO/wARN/ERROR_STREAM(node->get_logger(), ''My log msg %d'' << 4)                          this is for c++ stream style, less common in ROS
+
+            {cmd}_ONCE          log only the first time
+            {cmd}_THROTTLE      (node->get_logger(), *node->get_clock(), msg_interval.nanoseconds()/1000000,'Msg')  publishes log msg at least once per second
+            {cmd}_SKIPFIRST     log all but first time
+
+    ROS2 BAG
+
+            ros2 bag record <topic_name>                            to save a file record about data pubslished on a specified topic
+            ros2 bag record -o subset <topic_name1> <topic_name2>   to save a record file about data pusblidhed on two different topics 
+            ros2 bag info <bag_file_name>                           to show information taken from a bag file
+            ros2 bag play subset                                    to play collected data of topics msgs as they were showed during the running (as previous, but with timing)  
+
+            NOTE: in case of over-usage of memory, you can write a custom memory allocator as depicted in ROS2 Tutorials -> Advanced -> 'Implementing a custom memory allocator'
+
+            NOTE: in case you may want to write a custom bag generator file, you may follow the ROS2 Tutorials -> Advanced -> 'Recording a bag from a node (C++)'
+
+            NOTE: rosbag within ROS1 version can be used in the same way to log both ROS1 and ROS2 topics if ROS1-Bridge is used
+
+    CREATE A C++ EXECUTABLE
+
+        1) Set dependencies of ALL imported libraries within "package.xml":     <depend>'pkg_name1'</depend> e.g.
+
+        2) Add package in the CMakeLists.txt:                                   find_package('pkg_name1' REQUIRED) e.g.
+
+        3) Add the executable file:                                             add_executable('<exec_name1' src/publisher_member_function.cpp)
+
+        4) Set dependencies of libraries and executable in "CMakeLists.txt":    ament_target_dependencies('<exec_name1' rclcpp std_msgs)
+
+        5) install the executable in the "CMakeLists.txt":                      install (TARGETS
+                                                                                    '<exec_name1'
+                                                                                    '<exec_name2'
+                                                                                    DESTINATION lib/${PROJECT_NAME})
+
+    CREATE A PYTHON EXECUTABLE
+
+        1) Set dependencies of ALL imported libraries within "package.xml":     <depend>'pkg_name1'</depend> e.g.
+
+        2) Add the executable to the setup.py file:                             '<exec_name> = <pkg_name>.<file_name>:main' (within the 'console' section)
+
+    LAUNCH FILES
+
+        SUGGESTION: there are many formats (XML, YAML, Python) to write launch files, but the most used in ROS2 is Python since it lets more complex implementation
+
+        ros2 run <pkg_name> <file_name>_launch.py/xml/yaml                          to execute a launch file
+        ros2 launch <pkg_name> <file_name>_launch.py --show-args                    to watch args of a launch file
+        ros2 launch <pkg_name> <file_name>_launch.py <arg_name>:= <arg_value>       to execute a launch file running with args
+
+        NOTE: look at the folder 'Projects -> BACKUP_ROS2TUTORIALS -> src' to find reusable codes for launch calling
+
+    TF2 
+
+
+        ros2 run tf2_tools view_frames.py                                                           to show the tf2 tree with parent-child relationships between view_frames
+
+        ros2 run tf2_ros tf2_echo <frame_1> <frame_2>                                               to print the transform between two view_frames
+
+        ros2 topic echo --qos-reliability reliable --qos-durability transient_local /tf_static      to see all static trasnforms
+
+        ros2 run tf2_ros static_transform_publisher x y z yaw pitch roll frame_id child_frame_id    to publish a static tf2 frame with x,y,z-rx,ry,rz offsets
+
+        ros2 run tf2_ros static_transform_publisher x y z qx qy qz qw frame_id child_frame_id       to publish a static tf2 frame with x,y,z-qx,qy,qz,qw offsets
+
+        ros2 run tf2_ros tf2_monitor <frame_1> <frame_2>                                            to get info about tf2 between two frames
+
+        NOTE: quaternions can be useful to handle tf transforms, look at here -> https://docs.ros.org/en/foxy/Tutorials/Intermediate/Tf2/Quaternion-Fundamentals.html
+
+    ROS TEST 
+
+        colcon test --packages-select <pkg_name> --ctest-args test      to test package building dependencies and coding issues
+
+        colcon test-result --all --verbose                              to see the results of the previous command 
+
+        colcon test-result --delete-yes                                 to delete all test result files (be careful to wirte the command in the right workspace) 
+        
+        colcon test --packages-select <pkg_name> --pytest-args          to test a package with a specific test function 
+        -k name_of_the_test_function
+
+        colcon test --event-handlers console_cohesion+                  to see the pytest output while running the tests
+
+        clang-format -i <my_file>.cpp                                   to automatically format a file according to clang format 
+
+        find . -name "*.cpp" -exec clang-format -i {} \;                to automatically format all files of a package according to clang format 
+
+        see https://docs.pytest.org/ to setup a python folder to execute custom tests
+
+        NOTE:   this command is useful when you want to verify code in order to make a re-usable package; it doesn't allow you to see errors or bugs in your code: 
+                    
+                    1)  copyright notice lacking
+                    2)  missing header file
+                    3)  file length more than 100 characters
+                    4)  missing newline character at the end of the file
+                    5)  whitespace at the end of the file/line
+                    6)  unexpected spaces near = (e.g variable=1 is ok, variable = 1 is not ok)
+                    7)  single quotes preferred to double ('arg_name' is good, "arg_name" is not good)     
+                    8)  missing tab spaces after/below function definition in python files
+                    9)  import statements are in the wrong order
+                    10) indentation is not a multiple of four      
+                    11) block comment should start with '# '
+                    12) line length should not exceed 99 characters
+                
+    URDF
+
+        Follow this doc https://github.com/benbongalon/ros2-urdf-tutorial as guideline for source files.
+
+        Description and display file must be not modified, as in my Drive folder 'Projects'.
+
+        In the urdf_tutorial_launch.py you can modify the path of: urdf file pkg, urdf file and rviz confid file.
+
+        Another useful guide for robot_state:publisher files is the 'dummy robot' simulation in the ROS2 Tutorials -> Advanced -> 'Experimenting with a dummy robot'
+
+        The file 'urdf/05-visual.urdf' is a guideline on how to build a '.xacro' file.
+
+        For each link, you can set visual (box, sphere, chilinder, .dae) and collision (to slow down 
+        mesh computation or to set safe zones) properties.
+        Then you have to set joint type (fixed, continuous, revolute and prismatic; continuous, revolute and prismatic. and floating) 
+        and origin (xyz and rpy offsets).
+
+        Some main tags in urdf file may add phisical properties: inertial, contact coefficients (mu, kp, kd), joint
+        dynamics (friction, damping), calibration and safety controller.
+
+        The file 'urdf/07-physics.urdf' can be used as guideline on how to compose an urdf file, since it cointains all
+        possible tags that can be used by the user to setup a configuration.
+
+        The file 'urdf/08-macroed.urdf.xacro' is useful to understand how to use macros to setup default parameters values.
+
+    ROS2 STATISTICS
+            
+        Data types: (see ROS Tutorials -> Advanced -> 'Enabling topic statistics')
+
+                1) average
+
+                2) minimum
+
+                3) maximum
+
+                4) standard deviation
+
+                5) sample count
+
+    FAST DDS DISCOVERY SERVICE
+
+        It's an architecture that connects nodes only as we want they to link each other.
+
+        fastdds discovery --server id 0 --ip-address 127.0.0.1 --port 11811
+
+        The above command, run into a terminal, creates a network which connects all nodes started in that 
+        terminal on a discovery server with     fixed id, address, and is named as a specified port. 
+        It will communicate only with different ports of the same id and ip.
+
+        You have to add the command 'export ROS_DISCOVERY_SERVER=127.0.0.1:11811' to set that 
+        terminal as a port of the previously created server.
+
+    wEBOTS (copy tutorial files)
+
+        Follow the advanced tutorial in ROS Documentation - Advanced - webots to see how to install it and execute a simple node
+
+    IGNITION GAZEBO (copy tutorial files)
+
+        Follow the advanced tutorial in ROS Documentation - Advanced - Ignition Gazebo to see how to install it and execute a simple node
+
+    SIMULATE LOSSY networks with cam2image
+
+        ros2 run image_tools cam2image --ros-args -p burger_mode:=True -p reliability:=best_effort
+        -p width:=640 -p heigth:=480                                                                    to publish image from your camera
+
+        ros2 run image_tools showimage -h                                                               to show the image generator
+
+        sudo tc qdisc add dev lo root netem loss 5%                                                     to start simulating 5% pkg loss 
+
+        sudo tc qdisc delete dev lo root netem loss 5%                                                  to stop simulating 5% pkg loss
+
+    LIFECYCLE NODES & INTRA-PROCESS COMMUNICATION
+
+        To copy the source code that manages lifetime, see github about ros2/demos/LIFECYCLE
+
+        To sum up, it's just a simple state machine with corresponding transitions, anyway it can 
+        be implemented as a standard FSM as logic control, without complex ROS sintax.
+
+        Intra-process communication handles a quite complex structure of coding, without a significant
+        utility to our case of study.
+
+ROS1
+
+    PACKAGES
+
+        catkin_create_pkg [PKG_NAME] [pkg_dep]                                          to create a given pkg
+
+    EXECUTABLES 
+
+        add_executable([node_name] [file_path])                                         to make a given file as executable
+
+        target_link_libraries([node_name] ${catkin_LIBRARIES})                          to link libraries with a given node
+
+    URDF
+
+        The useful tutorial is the same for ROS2: its sufficient to follow this tutorial http://wiki.ros.org/urdf/Tutorials
+
+        xacro --inorder model.xacro > model.urdf        to convert a xacro model to urdf (prove it without '--inorder')
+
+    NAVIGATION
+
+        An overall view on how to handle navigation setup is at http://wiki.ros.org/navigation/Tutorials/RobotSetup
+        Looking inside files of turtlebot3_gazebo, one can modify these sources for custom implementation
+
+        roslaunch turtlebot3_gazebo turtlebot_world.launch              to launch turtlebot simulation
+
+        roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch        to launch the teleop keyboard
+
+        roslaunch turtlebot3_slam turtlebot3_slam.launch                to launch slam algorithm upon ACML (param slam_methods:=gmapping) and rviz
+
+        roslaunch turtlebot3_navigation turtlebot3_navigation.launch    to start navigation and localization (param map_file:=maps/map.yaml)
+   
+    TF 
+
+        rosrun tf2_tools view_frames.py                                                 to get a tf tree as .pdf file
+
+        rosrun tf tf_echo [frame_1] [frame_2]                                           to hear the tf transform between two frames
+
+        static_transform_publisher x y z yaw pitch roll frame_id child_frame_id         to publish a transform from the terminal with angles
+
+        static_transform_publisher x y z rx ry rz rw frame_id child_frame_id            to publish a transform from the terminal with quaternions
+
+    COPPELIASIM
+
+        1) LAUNCH COMMANDS
+
+            export VREP_ROOT=/home/italo/Desktop/VREP				                to set VREP folder path into .bashrc file
+
+            export PATH=$PATH:/home/italo/Desktop/VREP/coppeliaSim.sh               to setup the trick to launch coppeliaSim into .bashrc file
+
+            sudo ln -s /$path_to_VREP$/coppeliaSim.sh /usr/local/bin/coppeliaSim    to setup CoppeliaSim launch command ('trick')
+
+            ./coppeliaSim.sh                                                        to launch coppeliaSim
+
+            coppeliaSim                                                             to launch coppealiaSim if the 'trick' is done
+
+        2) OTHER COMMANDS can be easily found on the User Manual on the internet: https://manual.coppeliarobotics.com/index.html                
+
+    MOVEIT
+     
+    UNIVERSAL ROBOT UR10
+
+    REALSENSE CAMERA
+
+CABLE DETECTION COMMANDS
+
+    The following are the commands to launch some procedures about cable detection through AI pkgs
+
+USE THE following TO COPY AND PASTE THE SYMBOLS 
+
+    w W "
