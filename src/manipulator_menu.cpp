@@ -1,9 +1,39 @@
 #include "ros/ros.h"
 #include <iostream>
+#include "manipulators/ManipulatorPlanner.h"
 
 class MenuHandler
 {
 public:
+
+  ros::Publisher jointStatePublisher_;
+
+  MenuHandler(ros::Publisher jointStatePublisher)
+  {
+    jointStatePublisher_ = jointStatePublisher;
+  }
+
+  void pubJointGoal()
+  {
+    std::vector<double> joints = {0.0,-1.57,+1.57,0.0,0.0,0.0};
+
+    sensor_msgs::JointState jointStateMsg;
+    jointStateMsg.header.stamp = ros::Time::now();
+    jointStateMsg.name.push_back("shoulder_pan_joint");
+    jointStateMsg.name.push_back("shoulder_lift_joint");
+    jointStateMsg.name.push_back("elbow_joint");
+    jointStateMsg.name.push_back("wrist_1_joint");
+    jointStateMsg.name.push_back("wrist_2_joint");
+    jointStateMsg.name.push_back("wrist_3_joint");
+    for (unsigned int k = 0; k < joints.size(); k++) {jointStateMsg.position.push_back(joints[k]); }
+
+    std::cout << "The value of positions size is: " <<jointStateMsg.position.size() << std::endl ;
+    std::cout << "The value of names size is: " <<jointStateMsg.name.size() << std::endl;
+
+    // Publish the JointState message
+    jointStatePublisher_.publish(jointStateMsg);
+  }
+
   void printMenu()
   {
     std::cout << "======= Menu =======\n";
@@ -28,7 +58,7 @@ public:
     {
     case 1:
       ROS_INFO("You selected Option 1");
-      // Add your Option 1 logic here
+      pubJointGoal();
       break;
 
     case 2:
@@ -54,10 +84,12 @@ public:
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "menu_node");
+  ros::init(argc, argv, "manipulator_menu");
   ros::NodeHandle nh;
 
-  MenuHandler menuHandler;
+  ros::Publisher jstpub = nh.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1); 
+
+  MenuHandler menuHandler(jstpub);
 
   int userChoice = 0;
 

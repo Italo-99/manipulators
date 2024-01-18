@@ -41,7 +41,7 @@
 // dynamic planner, plus a table object in RViz to test planning
 
 // IMPORT LIBRARIES
-#include "manipulator_planner/ManipulatorPlanner.h"
+#include "manipulators/ManipulatorPlanner.h"
 
 // TODO: together with node launch, UR10 should go immediatly to a preconfigured configuration
 // initial position {0,-90,+90,-90,-90,0}
@@ -60,22 +60,27 @@ ManipulatorPlanner::ManipulatorPlanner()
   // joint_goalSeq_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
 
 
-  // Planner args
-  std::string manipulator_name;     // Manipulator name
-  double vel_factor, acc_factor;    // Scale factor for joint velocities and accelerations
-  bool sim;                         // Simulation status (true for sim, false for debug)
+  // // Planner args
+  // std::string manipulator_name;     // Manipulator name
+  // double vel_factor, acc_factor;    // Scale factor for joint velocities and accelerations
+  // bool sim;                         // Simulation status (true for sim, false for debug)
+
+  check_param(manipulator_name,vel_factor,acc_factor,sim);
 
   // CALL TO THE DYNAMIC PLANNER
   planner_ = new DynamicPlanner(manipulator_name, joint_names_, vel_factor, acc_factor, false);
 
+  std::cout << manipulator_name << std::endl;
+  for (int k = 0; k < joint_names_.size(); k++) {
+    std::cout << joint_names_[k] << std::endl;
+  }
+  
+
   // Set the sim mode for the dynamic planner
-  planner_->setSimMode(sim);
+  planner_->setSimMode(sim);  
 
   // Add a table to the scene
   createObj("table", 1, {4,4,0.079}, {0,0,-0.04}, false);  
-
-  // Update collision objects scene
-  planner_->getPlanningSceneInterface().applyCollisionObjects(planner_->getCollisionObjects());
 }
 
 // Destructor of the object manipulator planner's class
@@ -84,7 +89,7 @@ ManipulatorPlanner::~ManipulatorPlanner() {delete planner_;}
 // ---------------------  PUBLIC FUNCTIONS ---------------------
 
 // Manipulator planner spin function -> NOTE: the sleep rate is set in the node
-void ManipulatorPlanner::spinner()  {ros::spinOnce();}
+void ManipulatorPlanner::spinner()  {planner_->spinner();}
 
 // // Creation of a collision object
 void ManipulatorPlanner::createObj( const std::string&         name, 
@@ -157,6 +162,7 @@ void ManipulatorPlanner::createObj( const std::string&         name,
   // remove from the vector if you want to remove. Be sure to also process and apply!
   planner_->getCollisionObjects().push_back(obj);                       // add the obj object as obstacle
   planner_->getPlanningScenePtr()->processCollisionObjectMsg(obj);      // map the collision object into the joint space
+  planner_->getPlanningSceneInterface().applyCollisionObjects(planner_->getCollisionObjects());
 }
 
 // // Check manipulators parameters passed to the node

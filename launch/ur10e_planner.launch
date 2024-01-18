@@ -49,7 +49,7 @@
   <!-- WHAT IS DONE BY THE FOLLOWING??? -->
   <arg name="planning_adapters" value="industrial_trajectory_filters/UniformSampleFilter default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints" />
 
-  <node name="manipulator_planner" pkg="manipulator_planner" type="manipulator_planner" output="screen">
+  <node name="manipulator_planner" pkg="manipulators" type="manipulator_planner" output="screen">
     <param name="planning_plugin" value="$(arg planning_plugin)" />
     <param name="request_adapters" value="$(arg planning_adapters)" />
     <param name="sample_duration" value="0.01"/>
@@ -57,7 +57,7 @@
     <!-- This file contains the parameters configuration for each possible 6-dof planner for the ur10e robot-->
     <rosparam command="load" file="$(find ur10e_moveit_config)/config/ompl_planning.yaml"/>
     <!-- THis file contains the names of the manipulator, the joints, the base and the end-effector -->
-    <rosparam command="load" file="$(find manipulator_planner)/config/ur10e.yaml" />
+    <rosparam command="load" file="$(find manipulators)/config/ur10e.yaml" />
   </node>  
   <!-- WHAT IS DONE BY THE FOLLOWING??? AND WHERE IS IT ????? -->
   <node if="$(arg control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" /> 

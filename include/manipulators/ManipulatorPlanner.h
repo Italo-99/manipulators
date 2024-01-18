@@ -93,6 +93,11 @@ class ManipulatorPlanner
     // ros::Subscriber tcp_goalSeq_sub_;       // Subscriber to the sequence of TCP goal
     // ros::Subscriber joint_goalSeq_sub_;     // Publisher to the sequence of joint goal
 
+    // Planner args
+    std::string manipulator_name;     // Manipulator name
+    double vel_factor, acc_factor;    // Scale factor for joint velocities and accelerations
+    bool sim;     
+
     std::vector<std::string> joint_names_;  // Joints' names
     std::string ee_name_;                   // End-effector's name
     std::string base_name_;                 // Robot base's name

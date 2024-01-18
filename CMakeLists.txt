@@ -19,7 +19,12 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-
+# Add manipulator class node
 add_executable(manipulator_planner src/manipulator_planner.cpp src/manipulator_planner_node.cpp)
 target_link_libraries(manipulator_planner ${catkin_LIBRARIES})
 add_dependencies(manipulator_planner ${catkin_EXPORTED_TARGETS})
+
+# Add manipulator menu node
+add_executable(manipulator_menu src/manipulator_menu.cpp)
+target_link_libraries(manipulator_menu ${catkin_LIBRARIES})
+add_dependencies(manipulator_menu ${catkin_EXPORTED_TARGETS})

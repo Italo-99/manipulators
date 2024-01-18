@@ -38,7 +38,7 @@
 // NODE FILE TO LAUNCH A MANIPULATOR PLANNER INSTANCE
 
 // IMPORT LIBRARIES
-#include "manipulator_planner/ManipulatorPlanner.h"
+#include "manipulators/ManipulatorPlanner.h"
 
 // MAIN FUNCTION: this is a node
 int main(int argc, char** argv)
