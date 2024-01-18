@@ -55,11 +55,11 @@ class ManipulatorPlanner
     void spinner(void);       // Asynchronous spinner for ROS routines
 
     // // Create a collision object from a selected primitive
-    // moveit_msgs::CollisionObject createObj(std::string& name, 
-    //                                        int        obj_type, 
-    //                                        float      obj_dims, 
-    //                                        float      obj_pos, 
-    //                                        bool       rot_90);
+    void createObj(const std::string&        name, 
+                   const int                 obj_type, 
+                   const std::vector<double> obj_dims, 
+                   const std::vector<double> obj_pos, 
+                   bool                      rot_90);
 
  private:
 
@@ -79,17 +79,19 @@ class ManipulatorPlanner
       // Callback function for goals in the joint space
       void jointsGoalCallback(const sensor_msgs::JointState::ConstPtr& js);
 
-      // Callback function for goals in the 3D cartesian space for the robot TCP
-      void tcpGoalSeqCallback(const std::vector<geometry_msgs::Pose>& p_seq);
+      // // Callback function for goals in the 3D cartesian space for the robot TCP
+      // void tcpGoalSeqCallback(const std::vector<geometry_msgs::Pose>& p_seq);
 
-      // Callback function for goals in the joint space
-      void jointsGoalSeqCallback(const std::vector<sensor_msgs::JointState>& js_seq);
+      // // Callback function for goals in the joint space
+      // void jointsGoalSeqCallback(const std::vector<std::vector<double>>& js_seq);
 
   // ---------------------  PRIVATE VARIABLES ---------------------
 
     ros::NodeHandle nh_;                    // Node object
     ros::Subscriber tcp_goal_sub_;          // Subscriber to TCP goal
     ros::Subscriber joint_goal_sub_;        // Publisher to joint goal
+    // ros::Subscriber tcp_goalSeq_sub_;       // Subscriber to the sequence of TCP goal
+    // ros::Subscriber joint_goalSeq_sub_;     // Publisher to the sequence of joint goal
 
     std::vector<std::string> joint_names_;  // Joints' names
     std::string ee_name_;                   // End-effector's name

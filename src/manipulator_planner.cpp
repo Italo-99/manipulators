@@ -56,8 +56,8 @@ ManipulatorPlanner::ManipulatorPlanner()
   tcp_goal_sub_   = nh_.subscribe("/desired_tcp_pose",   1, &ManipulatorPlanner::tcpGoalCallback,    this);
   joint_goal_sub_ = nh_.subscribe("/desired_joint_pose", 1, &ManipulatorPlanner::jointsGoalCallback, this);
 
-  tcp_goal_sub_   = nh_.subscribe("/desired_tcpSeq_poses",   1, &ManipulatorPlanner::tcpGoalSeqCallback,    this);
-  joint_goal_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
+  // tcp_goalSeq_sub_   = nh_.subscribe("/desired_tcpSeq_poses",   1, &ManipulatorPlanner::tcpGoalSeqCallback,    this);
+  // joint_goalSeq_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
 
 
   // Planner args
@@ -72,7 +72,7 @@ ManipulatorPlanner::ManipulatorPlanner()
   planner_->setSimMode(sim);
 
   // Add a table to the scene
-  // moveit_msgs::CollisionObject table = createObj("table", 1, [4,4,0.079], [0,0,-0.04]);  
+  createObj("table", 1, {4,4,0.079}, {0,0,-0.04}, false);  
 
   // Update collision objects scene
   planner_->getPlanningSceneInterface().applyCollisionObjects(planner_->getCollisionObjects());
@@ -87,79 +87,77 @@ ManipulatorPlanner::~ManipulatorPlanner() {delete planner_;}
 void ManipulatorPlanner::spinner()  {ros::spinOnce();}
 
 // // Creation of a collision object
-// moveit_msgs::CollisionObject ManipulatorPlanner::createObj(std::string& name, 
-//                                                            int          obj_type, 
-//                                                            float        obj_dims, 
-//                                                            float        obj_pos = [0,0,0], 
-//                                                            bool         rot_90  = false)
-// {
-//   // Creation of the obj
-//   moveit_msgs::CollisionObject obj;
+void ManipulatorPlanner::createObj( const std::string&         name, 
+                                    const int                  obj_type, 
+                                    const std::vector<double>  obj_dims, 
+                                    const std::vector<double>  obj_pos = {0,0,0}, 
+                                    const bool                 rot_90  = false)
+{
+  // Creation of the obj
+  moveit_msgs::CollisionObject obj;
 
-//   obj.header.frame_id = base_name_;
-//   obj.id              = name;
-//   obj.primitives[0].type = obj_type;
-//   obj.operation = 0;  // static obj
-//   obj.primitives[0].dimensions.resize(int(size(obj_dims)));
+  obj.header.frame_id = base_name_;
+  obj.id              = name;
+  obj.primitives[0].type = obj_type;
+  obj.operation = 0;  // static obj
+  obj.primitives[0].dimensions.resize(int(obj_dims.size()));
 
-//   // Set primitive type
-//   switch(obj_type)
-//   {
-//     case 1:   // BOX: Rectangular shape setting
-//       if (size(obj_dims) != 3) {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
-//       else                     {obj.primitives.resize(1);
-//                                 // Set the three dimensions of the parallelepiped
-//                                 obj.primitives[0].dimensions[0] = obj_dims[0];
-//                                 obj.primitives[0].dimensions[1] = obj_dims[1];
-//                                 obj.primitives[0].dimensions[2] = obj_dims[2];}
-//       break;
+  // Set primitive type
+  switch(obj_type)
+  {
+    case 1:   // BOX: Rectangular shape setting
+      if (obj_dims.size() != 3){ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {obj.primitives.resize(1);
+                                // Set the three dimensions of the parallelepiped
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];
+                                obj.primitives[0].dimensions[2] = obj_dims[2];}
+      break;
 
-//     case 2:   // SPHERE
-//       if (size(obj_dims) != 1) {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
-//       else                     {obj.primitives.resize(1);
-//                                 // Set the sphere radius
-//                                 obj.primitives[0].dimensions[0] = obj_dims[0];}
-//       break;
+    case 2:   // SPHERE
+      if (obj_dims.size() != 1){ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {obj.primitives.resize(1);
+                                // Set the sphere radius
+                                obj.primitives[0].dimensions[0] = obj_dims[0];}
+      break;
 
-//     default:   // CYLINDER OR CONE
-//       if (size(obj_dims) != 2) {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
-//       else                     {obj.primitives.resize(1);
-//                                 // Set height and radius of the cylinder/cone
-//                                 obj.primitives[0].dimensions[0] = obj_dims[0];
-//                                 obj.primitives[0].dimensions[1] = obj_dims[1];}
-//       break;
-//   }
+    default:   // CYLINDER OR CONE
+      if (obj_dims.size() != 2){ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {obj.primitives.resize(1);
+                                // Set height and radius of the cylinder/cone
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];}
+      break;
+  }
 
-//   // Set obj position
-//   obj.primitive_poses.resize(1);
-//   obj.primitive_poses[0].position.x = obj_pos[0];
-//   obj.primitive_poses[0].position.y = obj_pos[1];
-//   obj.primitive_poses[0].position.z = obj_pos[2];
+  // Set obj position
+  obj.primitive_poses.resize(1);
+  obj.primitive_poses[0].position.x = obj_pos[0];
+  obj.primitive_poses[0].position.y = obj_pos[1];
+  obj.primitive_poses[0].position.z = obj_pos[2];
 
-//   // Set obj orientation
-//   if (rot90)
-//   {
-//     obj.primitive_poses[0].orientation.x = 0;
-//     obj.primitive_poses[0].orientation.y = 0;
-//     obj.primitive_poses[0].orientation.z = PI/4;
-//     obj.primitive_poses[0].orientation.w = PI/4;
-//   }
-//   else
-//   {
-//     obj.primitive_poses[0].orientation.x = 0;
-//     obj.primitive_poses[0].orientation.y = 0;
-//     obj.primitive_poses[0].orientation.z = 0;
-//     obj.primitive_poses[0].orientation.w = 1;
-//   }
+  // Set obj orientation
+  if (rot_90)
+  {
+    obj.primitive_poses[0].orientation.x = 0;
+    obj.primitive_poses[0].orientation.y = 0;
+    obj.primitive_poses[0].orientation.z = M_PI/4;
+    obj.primitive_poses[0].orientation.w = M_PI/4;
+  }
+  else
+  {
+    obj.primitive_poses[0].orientation.x = 0;
+    obj.primitive_poses[0].orientation.y = 0;
+    obj.primitive_poses[0].orientation.z = 0;
+    obj.primitive_poses[0].orientation.w = 1;
+  }
 
 
-//   // THIS IS THE WAY TO HANDLE OBSTACLES. Push back in the vector if you want to add, 
-//   // remove from the vector if you want to remove. Be sure to also process and apply!
-//   planner_->getCollisionObjects().push_back(obj);                       // add the obj object as obstacle
-//   planner_->getPlanningScenePtr()->processCollisionObjectMsg(obj);      // map the collision object into the joint space
-
-//   return obj;
-// }
+  // THIS IS THE WAY TO HANDLE OBSTACLES. Push back in the vector if you want to add, 
+  // remove from the vector if you want to remove. Be sure to also process and apply!
+  planner_->getCollisionObjects().push_back(obj);                       // add the obj object as obstacle
+  planner_->getPlanningScenePtr()->processCollisionObjectMsg(obj);      // map the collision object into the joint space
+}
 
 // // Check manipulators parameters passed to the node
 void ManipulatorPlanner::check_param(std::string manipulator_name,
@@ -265,55 +263,48 @@ void ManipulatorPlanner::jointsGoalCallback(const sensor_msgs::JointState::Const
   planner_->plan(js->position);
 }
 
+
+// TODO: the following two functions give an allocator error on the compiler
 // // Callback function for goals in the 3D cartesian space for the robot TCP
-void tcpGoalSeqCallback(const std::vector<geometry_msgs::Pose>& p_seq)
-{ 
-  // // Create a vector of PoseStamped msgs
-  // std::vector<const geometry_msgs::PoseStamped> p_stamp_seq;
+// void ManipulatorPlanner::tcpGoalSeqCallback(const std::vector<geometry_msgs::Pose>& p_seq)
+// { 
+//   // // Create a vector of PoseStamped msgs
+//   // std::vector<const geometry_msgs::PoseStamped> p_stamp_seq;
   
-  // // Convert each pose of the input vector into PoseStamped goals
-  // for (const auto& p : p_stamp_seq)
-  // {   
-  //   // Declaration of the goal variable as PS
-  //   geometry_msgs::PoseStamped goal;
+//   // // Convert each pose of the input vector into PoseStamped goals
+//   // for (const auto& p : p_stamp_seq)
+//   // {   
+//   //   // Declaration of the goal variable as PS
+//   //   geometry_msgs::PoseStamped goal;
 
-  //   // Fill the fields of the goal variable
-  //   goal.header.frame_id = base_name_;
-  //   // Set the pose as passed from the publisher
-  //   goal.pose            = *p;                              
+//   //   // Fill the fields of the goal variable
+//   //   goal.header.frame_id = base_name_;
+//   //   // Set the pose as passed from the publisher
+//   //   goal.pose            = *p;                              
 
-  //   // Check if the quaternion has unit norm, if not return an error
-  //   tf2::Quaternion quat_tf;
-  //   tf2::convert(goal.pose.orientation, quat_tf);
-  //   if (quat_tf.length() >= 1.1 || quat_tf.length() <= 0.9)
-  //   {
-  //     ROS_ERROR("Quaternion must have unit norm.");
-  //     return;
-  //   }
-  //   // If the norm is not so far from the unit, normalize the orientation quaternion
-  //   quat_tf.normalize();
-  //   goal.pose.orientation = tf2::toMsg(quat_tf);
+//   //   // Check if the quaternion has unit norm, if not return an error
+//   //   tf2::Quaternion quat_tf;
+//   //   tf2::convert(goal.pose.orientation, quat_tf);
+//   //   if (quat_tf.length() >= 1.1 || quat_tf.length() <= 0.9)
+//   //   {
+//   //     ROS_ERROR("Quaternion must have unit norm.");
+//   //     return;
+//   //   }
+//   //   // If the norm is not so far from the unit, normalize the orientation quaternion
+//   //   quat_tf.normalize();
+//   //   goal.pose.orientation = tf2::toMsg(quat_tf);
 
-  //   // Push back the goal
-  //   p_stamp_seq.push_back(goal);
-  // }
+//   //   // Push back the goal
+//   //   p_stamp_seq.push_back(goal);
+//   // }
 
-  // // Call the sequencial planner
-  // plan(p_seq, ee_name_); 
-}
+//   // // Call the sequencial planner
+//   // planner_->plan(p_seq, ee_name_); 
+// }
 
-// // Callback function for goals in the joint space
-void jointsGoalSeqCallback(const std::vector<sensor_msgs::JointState>& js_seq)
-{
-  // // Create a vector of vectors
-  // std::vector<std::vector<int>> js_seq_vecs;
-
-  // // Convert each joint state msg into a vector
-  // for (const auto& js : js_seq)
-  // {
-  //   js_seq_vecs.push_back(js.position);
-  // }
-
-  // // Call the sequential planner
-  // plan(js_seq_vecs);
-}
+// // // Callback function for goals in the joint space
+// void ManipulatorPlanner::jointsGoalSeqCallback(const std::vector<std::vector<double>>& js_seq)
+// {
+//   // Call the sequential planner
+//   planner_->plan(js_seq);
+// }
