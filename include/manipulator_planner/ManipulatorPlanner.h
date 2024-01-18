@@ -54,12 +54,12 @@ class ManipulatorPlanner
 
     void spinner(void);       // Asynchronous spinner for ROS routines
 
-    // Create a collision object from a selected primitive
-    moveit_msgs::CollisionObject createObj(std::string& name, 
-                                         uint8        obj_type, 
-                                         float64      obj_dims, 
-                                         float64      obj_pos, 
-                                         bool         rot_90);
+    // // Create a collision object from a selected primitive
+    // moveit_msgs::CollisionObject createObj(std::string& name, 
+    //                                        int        obj_type, 
+    //                                        float      obj_dims, 
+    //                                        float      obj_pos, 
+    //                                        bool       rot_90);
 
  private:
 
@@ -67,9 +67,9 @@ class ManipulatorPlanner
     // --------------------- UTILS FUNCTIONS ---------------------
 
       void check_param(std::string manipulator_name,
-                          double vel_factor, 
-                          double acc_factor,
-                            bool sim);
+                          double   vel_factor, 
+                          double   acc_factor,
+                          bool     sim);
 
     // --------------------- MOVE FUNCTIONS ---------------------
 
@@ -80,10 +80,10 @@ class ManipulatorPlanner
       void jointsGoalCallback(const sensor_msgs::JointState::ConstPtr& js);
 
       // Callback function for goals in the 3D cartesian space for the robot TCP
-      void tcpGoalSeqCallback(std::vector<const geometry_msgs::Pose::ConstPtr>& p_seq);
+      void tcpGoalSeqCallback(const std::vector<geometry_msgs::Pose>& p_seq);
 
       // Callback function for goals in the joint space
-      void jointsGoalSeqCallback(std::vector<const sensor_msgs::JointState::ConstPtr>& js_seq);
+      void jointsGoalSeqCallback(const std::vector<sensor_msgs::JointState>& js_seq);
 
   // ---------------------  PRIVATE VARIABLES ---------------------
 
