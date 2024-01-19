@@ -45,7 +45,7 @@
 
 // ---------------------  PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorPlanner::ManipulatorPlanner(const bool tcp_pub)
+ManipulatorPlanner::ManipulatorPlanner(const bool tcp_pub):tcp_pub_(tcp_pub)
 {
   // ---------------------  TCP AND JOINT GOALS SUBSCRIBERS ---------------------
 
@@ -59,7 +59,7 @@ ManipulatorPlanner::ManipulatorPlanner(const bool tcp_pub)
   // joint_goalSeq_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
 
   // If the user wants to continuosly publish the end effector pose
-  if (tcp_pub)
+  if (tcp_pub_)
   { ee_pose_pub_     = nh_.advertise<geometry_msgs::PoseStamped>("/display_eepose", 1);
     joint_state_sub_ = nh_.subscribe("/joint_states", 1, &ManipulatorPlanner::jointsStateCallback, this);}
 

@@ -46,7 +46,7 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(const bool tcp_pub)
+ManipulatorMenu::ManipulatorMenu(const bool tcp_pub):tcp_pub_(tcp_pub)
 {
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
 
@@ -57,10 +57,8 @@ ManipulatorMenu::ManipulatorMenu(const bool tcp_pub)
     jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
     display_goal_pub_         = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
 
-    tcp_pub_ = tcp_pub;
-
-    if (tcp_pub) {eepose_sub_ = nh_.subscribe("/display_eepose", 1, &ManipulatorMenu::eePoseCallback, this);}
-    else         {eepose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);}
+    if (tcp_pub_) {eepose_sub_= nh_.subscribe("/display_eepose", 1, &ManipulatorMenu::eePoseCallback, this);}
+    else          {eepose_pub_= nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);}
 
     // --------------------- Global class variables init ---------------------
 
@@ -77,6 +75,7 @@ void ManipulatorMenu::spinner()
 
   while (ros::ok())
   {
+    getEEpos_rpy();
     printMenu();
     userChoice = getUserChoice();
     processChoice(userChoice);
@@ -148,7 +147,7 @@ void ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position)
 
 void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 {
-  std::vector<double> joint_target = {0.,0.,0.,0.,0.,0.} ;
+  std::vector<double> joint_target = {0.,0.,0.,0.,0.,0.};
   for (unsigned int k = 0; k < 6; k++) 
   {
     joint_target[k] = current_joint_pose_.position[k];
@@ -435,7 +434,7 @@ void ManipulatorMenu::addObj(const std::string&   name,
   // Creation of the obj
   moveit_msgs::CollisionObject obj;
 
-  obj.header.frame_id = base_name_;
+  obj.header.frame_id = "base_link";
   obj.id              = name;
   obj.primitives.resize(1);
   obj.primitives[0].type = obj_type;
@@ -492,30 +491,30 @@ void ManipulatorMenu::addCollObj()
   std::vector<double>  obj_dims;
   double               obj_pos[] = {0.,0.,0.};
   double               rot_pos[] = {0.,0.,0.};
-  cout << "Insert following infomation about the obj.";
-  cout << "Name: "; cin >> name;
-  cout << "Object type: 1 for BOX, 2 for SPHERE, 3 for CYLINDER, 4 for CONE."; cin >> obj_type;
+  std::cout << "Insert following infomation about the obj.";
+  std::cout << "Name: "; std::cin >> name;
+  std::cout << "Object type: 1 for BOX, 2 for SPHERE, 3 for CYLINDER, 4 for CONE."; std::cin >> obj_type;
   //If box chosen
   if (obj_type == 1)       {obj_dims = {0.,0.,0.,};
-                            cout << "X dim: "; cin >> obj_dims[0];
-                            cout << "Y dim: "; cin >> obj_dims[1];
-                            cout << "Z dim: "; cin >> obj_dims[2];}
+                            std::cout << "X dim: "; std::cin >> obj_dims[0];
+                            std::cout << "Y dim: "; std::cin >> obj_dims[1];
+                            std::cout << "Z dim: "; std::cin >> obj_dims[2];}
   // If sphere chosen
   else if (obj_type == 2)  {obj_dims = {0.};
-                            cout << "X dim: "; cin >> obj_dims[0];}
+                            std::cout << "X dim: "; std::cin >> obj_dims[0];}
   // Else
-  else if                  {obj_dims = {0.,0.};
-                            cout << "X dim: "; cin >> obj_dims[0];
-                            cout << "Y dim: "; cin >> obj_dims[1];}
+  else                     {obj_dims = {0.,0.};
+                            std::cout << "X dim: "; std::cin >> obj_dims[0];
+                            std::cout << "Y dim: "; std::cin >> obj_dims[1];}
 
-  cout << "Insert position";
-  cout zz "X position: "; cin >> obj_pos[0];
-  cout zz "Y position: "; cin >> obj_pos[1];
-  cout zz "Z position: "; cin >> obj_pos[2];
-  cout << "Insert orientation";
-  cout zz "RX rotation: "; cin >> obj_pos[3];
-  cout zz "RY rotation: "; cin >> obj_pos[4];
-  cout zz "RZ rotation: "; cin >> obj_pos[5];
+  std::cout << "Insert position";
+  std::cout << "X position: "; std::cin >> obj_pos[0];
+  std::cout << "Y position: "; std::cin >> obj_pos[1];
+  std::cout << "Z position: "; std::cin >> obj_pos[2];
+  std::cout << "Insert orientation";
+  std::cout << "RX rotation: "; std::cin >> obj_pos[3];
+  std::cout << "RY rotation: "; std::cin >> obj_pos[4];
+  std::cout << "RZ rotation: "; std::cin >> obj_pos[5];
 
   addObj(name,obj_type,obj_dims,obj_pos,rot_pos);
 }
@@ -595,6 +594,10 @@ int ManipulatorMenu::getUserChoice()
 
 void ManipulatorMenu::processChoice(int choice)
 {
+  double step;
+  std::vector<double> rot;
+  std::vector<double> ee_pos;
+  geometry_msgs::PoseStamped ee_pose;
   switch (choice)
   {
   case 1:
@@ -629,68 +632,70 @@ void ManipulatorMenu::processChoice(int choice)
 
   case 7:
     ROS_INFO("You selected Option 7\n");
-    double step = 0.;
-    cout << "Insert how many metres you want to move along x";
-    cin >> step;
+    
+    std::cout << "Insert how many metres you want to move along x";
+    std::cin >> step;
     move_along_x(step);
     break;
 
   case 8:
     ROS_INFO("You selected Option 8\n");
-    double step = 0.;
-    cout << "Insert how many metres you want to move along y";
-    cin >> step;
+    
+    std::cout << "Insert how many metres you want to move along y";
+    std::cin >> step;
     move_along_y(step);
 
   case 9:
     ROS_INFO("You selected Option 9\n");
-    double step = 0.;
-    cout << "Insert how many metres you want to move along z";
-    cin >> step;
+    
+    std::cout << "Insert how many metres you want to move along z";
+    std::cin >> step;
     move_along_z(step);
     break;
 
   case 10:
     ROS_INFO("You selected Option 10\n");
-    cout << "Insert the rotation around the axis you want to do."
-    std::vector<double> rot = {0.,0.,0.}; 
-    cout << " X rotation: "; cin >> rot[0];
-    cout << " Y rotation: "; cin >> rot[1];
-    cout << " Z rotation: "; cin >> rot[2];
+    std::cout << "Insert the rotation around the axis you want to do.";
+    
+    rot = {0.,0.,0.}; 
+    std::cout << " X rotation: "; std::cin >> rot[0];
+    std::cout << " Y rotation: "; std::cin >> rot[1];
+    std::cout << " Z rotation: "; std::cin >> rot[2];
     make_tcp_rot(rot);
     break;
 
   case 11:
     ROS_INFO("You selected Option 11\n");
-    cout << "Insert the rotation around X axis you want to do."
+    std::cout << "Insert the rotation around X axis you want to do.";
     double x_rot; 
-    cout << " X rotation: "; cin >> x_rot;
+    std::cout << " X rotation: "; std::cin >> x_rot;
     rotate_around_x(x_rot);
     break;
 
   case 12:
     ROS_INFO("You selected Option 12\n");
-    cout << "Insert the rotation around Y axis you want to do."
+    std::cout << "Insert the rotation around Y axis you want to do.";
     double y_rot; 
-    cout << " Y rotation: "; cin >> y_rot;
+    std::cout << " Y rotation: "; std::cin >> y_rot;
     rotate_around_y(y_rot);
     break;
 
   case 13:
     ROS_INFO("You selected Option 13\n");
-    cout << "Insert the rotation around Z axis you want to do."
+    std::cout << "Insert the rotation around Z axis you want to do.";
     double z_rot; 
-    cout << " Z rotation: "; cin >> z_rot;
+    std::cout << " Z rotation: "; std::cin >> z_rot;
     rotate_around_z(z_rot);
     break;
 
   case 14:
     ROS_INFO("You selected Option 14\n");
-    cout << "Insert the FIXED orientation of the EE you want to have."
-    std::vector<double> rot = {0.,0.,0.}; 
-    cout << " X rotation: "; cin >> rot[0];
-    cout << " Y rotation: "; cin >> rot[1];
-    cout << " Z rotation: "; cin >> rot[2];
+    std::cout << "Insert the FIXED orientation of the EE you want to have.";
+    
+    rot = {0.,0.,0.}; 
+    std::cout << " X rotation: "; std::cin >> rot[0];
+    std::cout << " Y rotation: "; std::cin >> rot[1];
+    std::cout << " Z rotation: "; std::cin >> rot[2];
     change_tcp_orient(rot);
     break;
 
@@ -703,20 +708,20 @@ void ManipulatorMenu::processChoice(int choice)
     ROS_INFO("You selected Option 14\n");
     for (unsigned int k = 0; k < 6; k++) 
     {
-      cout << "Joint " << k << " : " << current_joint_pose_.position[k];
+      std::cout << "Joint " << k << " : " << current_joint_pose_.position[k];
     }    
     break;
 
   case 17:
     ROS_INFO("You selected Option 15\n");
-    geometry_msgs::PoseStamped ee_pose getEEpose();
-    std::vector<double> ee_pos = getEEpos_rpy();
-    cout << " EE - X position: " zz ee_pos[0];
-    cout << " EE - Y position: " zz ee_pos[1];
-    cout << " EE - Z position: " zz ee_pos[2];
-    cout << " EE - X rotation: " zz ee_pos[3];
-    cout << " EE - Y rotation: " zz ee_pos[4];
-    cout << " EE - Z rotation: " zz ee_pos[5];
+    ee_pose = getEEpose();
+    ee_pos = getEEpos_rpy();
+    std::cout << " EE - X position: " << ee_pos[0];
+    std::cout << " EE - Y position: " << ee_pos[1];
+    std::cout << " EE - Z position: " << ee_pos[2];
+    std::cout << " EE - X rotation: " << ee_pos[3];
+    std::cout << " EE - Y rotation: " << ee_pos[4];
+    std::cout << " EE - Z rotation: " << ee_pos[5];
     break;
 
   case 18:

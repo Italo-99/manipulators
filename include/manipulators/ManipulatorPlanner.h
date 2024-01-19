@@ -117,6 +117,7 @@ class ManipulatorPlanner
     std::string ee_name_;                   // End-effector's name
     std::string base_name_;                 // Robot base's name
     DynamicPlanner* planner_;               // Dynamic planner object 
+    bool tcp_pub_;                          // True if this instance has to publish ee_pos, else false 
 };
 
 #endif /* MANIPULATOR_PLANNER_H */

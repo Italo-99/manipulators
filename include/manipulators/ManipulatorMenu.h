@@ -66,7 +66,8 @@ class ManipulatorMenu
 
     void publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
     void publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
-    void publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planner
+    void publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planne
+    void oneJointMove(const int num, const double joint_rot); // to define a rotation around a single joint
 
     // Get the position and orientation of the end effector
     geometry_msgs::PoseStamped getEEpose();
@@ -100,7 +101,7 @@ class ManipulatorMenu
 
       void testJointGoal(void);   // to test a joint goal
       void userJointGoal(void);   // to perform a joint goal set by the user 
-      void oneJointMove(void);    // to define a rotation around a single joint
+      void oneJointMove_user();
 
       void testTcpGoal(void);     // to test a tcp goal
       void userTcpGoal(void);     // to perform a tcp goal set by the user 
@@ -147,7 +148,7 @@ class ManipulatorMenu
       geometry_msgs::PoseStamped current_tcp_pose_;
       sensor_msgs::JointState current_joint_pose_;
 
-      const bool tcp_pub_;
+      bool tcp_pub_;
 
     // ---------------------  USEFUL TOOLS ---------------------
 
