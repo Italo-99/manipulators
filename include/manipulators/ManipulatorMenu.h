@@ -45,7 +45,11 @@
 #include "ros/ros.h"
 #include "sensor_msgs/JointState.h"
 #include "geometry_msgs/Pose.h"
+#include "geometry_msgs/PoseStamped.h"
 #include "moveit_msgs/CollisionObject.h"
+#include <tf2/LinearMath/Quaternion.h>
+#include <moveit_msgs/DisplayRobotState.h>
+#include <moveit/robot_state/conversions.h>
 
 class ManipulatorMenu
 {
@@ -55,7 +59,11 @@ class ManipulatorMenu
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
-    void spinner(void);       // Asynchronous spinner for ROS routines
+    void spinner(void);                                       // Asynchronous spinner for ROS routines
+
+    void publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
+    void publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
+
 
  private:
 
@@ -63,12 +71,16 @@ class ManipulatorMenu
 
     // ---------------------  PRIVATE PUBS/SUBS ---------------------
 
-      void publishJointGoal();          // publish a joint goal to the manipulator planner
-      void publishTcpGoal();            // publish a tcp   goal to the manipulator planner
       void publishCollisionObject();    // add a collision object to the manipulator scene
       void jointStateVisualizer();      // listen to joint state publisher
 
     // --------------------- MOVE FUNCTIONS ---------------------
+
+      void testJointGoal(void);   // to test a joint goal
+      void userJointGoal(void);   // to perform a joint goal set by the user 
+
+      void testTcpGoal(void);     // to test a tcp goal
+      void userTcpGoal(void);     // to perform a tcp goal set by the user 
 
       // Joint state callback function
       void jointStateCallback(const sensor_msgs::JointState::ConstPtr& msg);
@@ -99,6 +111,8 @@ class ManipulatorMenu
       ros::Publisher  tcpPosePublisher_;
       ros::Publisher  collisionObjectPublisher_;
       ros::Subscriber jointStateSubscriber_;
+      
+      ros::Publisher display_goal_pub_;
 
     // ---------------------  USEFUL TOOLS ---------------------
 

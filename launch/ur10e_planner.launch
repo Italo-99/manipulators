@@ -1,5 +1,5 @@
 <launch>
-  <!-- Decide if you want to see or not on rviz -->
+  <!-- Decide weather you want to launch rviz -->
   <arg name="rviz" default="true" />
 
   <!-- By default, we are not in debug mode -->
@@ -44,9 +44,9 @@
   </include>
   </group>
   
-  <!-- WHAT IS DONE BY THE FOLLOWING??? -->
+  <!-- Planner setup -->
   <arg name="planning_plugin" value="ompl_interface/OMPLPlanner" />
-  <!-- WHAT IS DONE BY THE FOLLOWING??? -->
+  <!-- Adapters: uniform sample filter and optimal parametrization -->
   <arg name="planning_adapters" value="industrial_trajectory_filters/UniformSampleFilter default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints" />
 
   <node name="manipulator_planner" pkg="manipulators" type="manipulator_planner" output="screen">
