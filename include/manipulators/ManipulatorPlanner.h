@@ -42,6 +42,7 @@
 
 // IMPORT LIBRARIES
 #include "dynamic_planner/dynamic_planner.h"
+#include <tf2_ros/transform_listener.h>
 
 class ManipulatorPlanner
 {
@@ -72,6 +73,10 @@ class ManipulatorPlanner
       // Callback function for goals in the 3D cartesian space for the robot TCP
       void addCollObjCallback(const moveit_msgs::CollisionObject& obj);
 
+      // Callback to joints state and publish end-effector pose
+      void jointsStateCallback(const sensor_msgs::JointState::ConstPtr& js);
+
+
     // --------------------- MOVE FUNCTIONS ---------------------
 
       // Callback function for goals in the 3D cartesian space for the robot TCP
@@ -94,6 +99,11 @@ class ManipulatorPlanner
     // ros::Subscriber tcp_goalSeq_sub_;       // Subscriber to the sequence of TCP goal
     // ros::Subscriber joint_goalSeq_sub_;     // Subscriber to the sequence of joint goal
     ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
+    ros::Publisher ee_pose_pub_;            // Publisher of ee pose value
+    ros::Subscriber joint_state_sub_;       // Subscriber to joint state   
+
+    geometry_msgs::PoseStamped ee_pose_;    // Current ee pose
+    sensor_msgs::JointState joint_state_;   // Current joint values
 
     // Planner args
     std::string manipulator_name_;          // Manipulator name

@@ -50,6 +50,9 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <moveit_msgs/DisplayRobotState.h>
 #include <moveit/robot_state/conversions.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 class ManipulatorMenu
 {
@@ -64,6 +67,12 @@ class ManipulatorMenu
     void publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
     void publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
 
+    // Get the position and orientation of the end effector
+    geometry_msgs::PoseStamped getEEpose();
+    std::vector<double> getEEpos_rpy();
+
+    // Get the transform between two frames
+    geometry_msgs::PoseStamped getTf(const std::string& source_frame, const std::string& target_frame);
 
  private:
 
@@ -78,12 +87,15 @@ class ManipulatorMenu
 
       void testJointGoal(void);   // to test a joint goal
       void userJointGoal(void);   // to perform a joint goal set by the user 
+      void oneJointMove(void);    // to define a rotation around a single joint
 
       void testTcpGoal(void);     // to test a tcp goal
       void userTcpGoal(void);     // to perform a tcp goal set by the user 
 
       // Joint state callback function
       void jointStateCallback(const sensor_msgs::JointState::ConstPtr& msg);
+      void eePoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+
     
     // --------------------- UTILS FUNCTIONS ---------------------
 
@@ -97,10 +109,13 @@ class ManipulatorMenu
       // Function to add a collision object
       void addCollObj(const moveit_msgs::CollisionObject& obj);
 
+      // Quaternions handling
+      geometry_msgs::Quaternion quaternion_from_euler(double roll, double pitch, double yaw);
+      std::vector<double> euler_from_quaternion(const geometry_msgs::Quaternion quat);
+
+      //Menu handling
       void printMenu();
-
       int getUserChoice();
-
       void processChoice(int choice);
 
   // ---------------------  PRIVATE VARIABLES ---------------------
@@ -111,8 +126,11 @@ class ManipulatorMenu
       ros::Publisher  tcpPosePublisher_;
       ros::Publisher  collisionObjectPublisher_;
       ros::Subscriber jointStateSubscriber_;
-      
+
+      ros::Subscriber eepose_sub_;      
       ros::Publisher display_goal_pub_;
+      geometry_msgs::PoseStamped current_tcp_pose_;
+      sensor_msgs::JointState current_joint_pose_;
 
     // ---------------------  USEFUL TOOLS ---------------------
 

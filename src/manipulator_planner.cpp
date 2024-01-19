@@ -55,6 +55,9 @@ ManipulatorPlanner::ManipulatorPlanner()
   // tcp_goalSeq_sub_   = nh_.subscribe("/desired_tcpSeq_poses",   1, &ManipulatorPlanner::tcpGoalSeqCallback,    this);
   // joint_goalSeq_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
 
+  ee_pose_pub_     = nh_.advertise<geometry_msgs::PoseStamped>("/display_eepose", 1);
+  joint_state_sub_ = nh_.subscribe("/joint_states", 1, &ManipulatorPlanner::jointsStateCallback, this);
+
   // ---------------------  ADD COLLISION OBJECT SUBSCRIBER  ---------------------
 
   add_coll_obj_sub_ = nh_.subscribe("/add_collision_object", 1, &ManipulatorPlanner::addCollObjCallback, this);
@@ -67,7 +70,7 @@ ManipulatorPlanner::ManipulatorPlanner()
   planner_ = new DynamicPlanner(manipulator_name_, joint_names_, vel_factor_, acc_factor_, false);  
 
   // Set the sim mode for the dynamic planner
-  planner_->setSimMode(sim_);  
+  planner_->setSimMode(sim_);
 
   // --------------------- ENVIRONMENT SETUP ---------------------
 
@@ -222,6 +225,43 @@ void ManipulatorPlanner::addCollObjCallback(const moveit_msgs::CollisionObject& 
   double rot_array[]            = {obj.primitive_poses[0].orientation.x, obj.primitive_poses[0].orientation.y, obj.primitive_poses[0].orientation.z, obj.primitive_poses[0].orientation.w};
   createObj(obj.id,obj.primitives[0].type,dim_array,pos_array,rot_array);
 }
+
+// Read current joint status and publish ee pose
+void ManipulatorPlanner::jointsStateCallback(const sensor_msgs::JointState::ConstPtr& js)
+{
+  // Update current joint state
+  joint_state_ = *js;
+
+  // Version1: use a tf
+  // Create a TF2 buffer and listener
+    tf2_ros::Buffer tf_buffer;
+    tf2_ros::TransformListener tf_listener(tf_buffer);
+
+    // Wait for the transformation to be available
+    try {tf_buffer.canTransform("base_link", "tool0", ros::Time(0), ros::Duration(0.5));} 
+    catch (tf2::TransformException& ex) {ROS_WARN("%s", ex.what());}
+
+    // Get the transformation
+    geometry_msgs::TransformStamped transformStamped;
+    try                                 {transformStamped = tf_buffer.lookupTransform("base_link", "tool0",ros::Time(0));}
+    catch (tf2::TransformException &ex) {ROS_WARN("%s",ex.what()); ros::Duration(1.0).sleep();}
+
+    // Convert the tf msg into a PoseStamped
+    ee_pose_.header.frame_id  = "base_link";
+    ee_pose_.header.stamp     = ros::Time::now();
+    ee_pose_.pose.position.x  = transformStamped.transform.translation.x;
+    ee_pose_.pose.position.y  = transformStamped.transform.translation.y;
+    ee_pose_.pose.position.z  = transformStamped.transform.translation.z;
+    ee_pose_.pose.orientation = transformStamped.transform.rotation;
+
+  // Version2: use FKine
+    // ee_pose_ = planner_->setFKine(joint_state_);
+  
+  // Version3: use moveit function getCurrentPose()
+
+    ee_pose_pub_.publish(ee_pose_);
+}
+
 
 // --------------------- MOVE FUNCTIONS ---------------------
 

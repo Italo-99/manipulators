@@ -55,6 +55,7 @@ ManipulatorMenu::ManipulatorMenu()
     collisionObjectPublisher_ = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
     jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
     display_goal_pub_         = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
+    eepose_sub_               = nh_.subscribe("/display_eepose", 1, &ManipulatorMenu::eePoseCallback, this);
 
     // --------------------- Global class variables init ---------------------
 
@@ -104,11 +105,7 @@ void ManipulatorMenu::publishTcpGoal(const std::vector<double> position)
   tcpPoseMsg.position.z = position[2];
 
   // Conversion from euler rotation to pose quaternion
-  tf2::Quaternion quat; quat.setRPY(position[3]*M_PI/180,position[4]*M_PI/180,position[5]*M_PI/180); quat.normalize();
-  tcpPoseMsg.orientation.x = quat.getX();
-  tcpPoseMsg.orientation.y = quat.getY();
-  tcpPoseMsg.orientation.z = quat.getZ();
-  tcpPoseMsg.orientation.w = quat.getW();
+  tcpPoseMsg.orientation = quaternion_from_euler(position[3],position[4],position[5]);
 
   tcpPosePublisher_.publish(tcpPoseMsg);
 
@@ -119,6 +116,56 @@ void ManipulatorMenu::publishTcpGoal(const std::vector<double> position)
   robot_goal_msg.pose = tcpPoseMsg,
   
   display_goal_pub_.publish(robot_goal_msg);
+}
+
+// Get current EE pose
+geometry_msgs::PoseStamped ManipulatorMenu::getEEpose()
+{
+  return current_tcp_pose_;
+}
+
+// Get EE pos as vector with RPY euler angles
+std::vector<double> ManipulatorMenu::getEEpos_rpy()
+{
+  // Declaration of pose vector
+  std::vector<double> tcp_pose_rpy = {0.,0.,0.,0.,0.,0.};
+
+  // Fill the position
+  tcp_pose_rpy[0] = current_tcp_pose_.pose.position.x;
+  tcp_pose_rpy[1] = current_tcp_pose_.pose.position.y;
+  tcp_pose_rpy[2] = current_tcp_pose_.pose.position.z;
+
+  // Fill the rotation
+  std::vector<double> tcp_rpy = euler_from_quaternion(current_tcp_pose_.pose.orientation);
+  tcp_pose_rpy[3] = tcp_rpy[0];
+  tcp_pose_rpy[4] = tcp_rpy[1];
+  tcp_pose_rpy[5] = tcp_rpy[2];
+
+  return tcp_rpy;
+}
+
+// Listen a TF between two given frames
+geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_frame, const std::string& target_frame)
+{
+  // Create a TF2 buffer and listener
+  tf2_ros::Buffer tf_buffer;
+  tf2_ros::TransformListener tf_listener(tf_buffer);
+
+  // Get the transformation
+  geometry_msgs::TransformStamped transformStamped;
+  try                                 {transformStamped = tf_buffer.lookupTransform(source_frame, target_frame,ros::Time(0));}
+  catch (tf2::TransformException &ex) {ROS_WARN("%s",ex.what()); ros::Duration(1.0).sleep();}
+
+  // Convert the tf msg into a PoseStamped
+  geometry_msgs::PoseStamped target_pose;
+  target_pose.header.frame_id  = source_frame;
+  target_pose.header.stamp     = ros::Time::now();
+  target_pose.pose.position.x  = transformStamped.transform.translation.x;
+  target_pose.pose.position.y  = transformStamped.transform.translation.y;
+  target_pose.pose.position.z  = transformStamped.transform.translation.z;
+  target_pose.pose.orientation = transformStamped.transform.rotation;
+
+  return target_pose;
 }
 
 // --------------------- PRIVATE FUNCTIONS ---------------------
@@ -133,8 +180,8 @@ void ManipulatorMenu::testJointGoal()
   std::vector<double> joints = {0.,0.,0.,0.,0.,0.};
 
   // Alternate a different joint goal when launching this function
-  counterCg_ = !counterCg_;
-  if (counterCg_) {joints = {0.0,-1.57,+1.57,0.0,+1.57,0.0};}
+  counterJg_ = !counterJg_;
+  if (counterJg_) {joints = {0.0,-1.57,+1.57,0.0,+1.57,0.0};}
   else            {joints = {0.0,-1.57,+1.57,0.0,-1.57,0.0};}   
   
   publishJointGoal(joints);
@@ -156,6 +203,17 @@ void ManipulatorMenu::userJointGoal()
   }
 
   publishJointGoal(joints);
+}
+
+// Test functioni to move a single joint
+void ManipulatorMenu::oneJointMove()
+{
+  int num = 0;
+  double joint_rot = 0.0;
+  std::cout << "Enter the values of the joint to move: \n";
+  std::cin >> num;
+  std::cout << "Enter the rotation of the joint in deg: \n";
+  std::cin >> joint_rot;
 }
 
 // --------------------- TCP GOALS HANDLER ---------------------
@@ -206,21 +264,36 @@ void ManipulatorMenu::userTcpGoal()
 
 void ManipulatorMenu::jointStateVisualizer() 
 {
-    // This method is called internally by the constructor
+    for (unsigned int k = 0; k < 6; k++)
+    {
+      std::cout << "Joint 0: " << current_joint_pose_.position[0];
+      std::cout << "Joint 1: " << current_joint_pose_.position[1];
+      std::cout << "Joint 2: " << current_joint_pose_.position[2];
+      std::cout << "Joint 3: " << current_joint_pose_.position[3];
+      std::cout << "Joint 4: " << current_joint_pose_.position[4];
+      std::cout << "Joint 5: " << current_joint_pose_.position[5];
+    }
 }
 
 void ManipulatorMenu::jointStateCallback(const sensor_msgs::JointState::ConstPtr& msg) 
 {
-    // Process incoming joint state message
+  // Update joint current pose
+  current_joint_pose_ = *msg;
+}
+
+void ManipulatorMenu::eePoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+  // Update current ee pose
+  current_tcp_pose_ = *msg;
 }
 
 // --------------------- COLLISION OBJECTS HANDLER ---------------------
 // Create a collision object from a selected primitive
-void ManipulatorMenu::addObj(const std::string&   name, 
-            const int            obj_type, 
-            std::vector<double>  obj_dims, 
-            double               obj_pos[], 
-            double               rot_pos[])
+void ManipulatorMenu::addObj(const std::string&   name,
+                             const int            obj_type, 
+                             std::vector<double>  obj_dims, 
+                             double               obj_pos[], 
+                             double               rot_pos[])
 {
   
 }
@@ -237,6 +310,37 @@ void ManipulatorMenu::publishCollisionObject()
     collisionObjectPublisher_.publish(collisionObjectMsg);
 }
 
+// --------------------- QUATERNIONS HANDLER -------------------
+// Conversion from degrees euler angles to quaternion
+geometry_msgs::Quaternion ManipulatorMenu::quaternion_from_euler(double roll, double pitch, double yaw)
+{
+  // Declaration of empty quaternion
+  geometry_msgs::Quaternion quaternion;
+
+  // Conversion from euler rotation to pose quaternion
+  tf2::Quaternion quat; quat.setRPY(roll*M_PI/180,pitch*M_PI/180,yaw*M_PI/180); quat.normalize();
+  quaternion.x = quat.getX();
+  quaternion.y = quat.getY();
+  quaternion.z = quat.getZ();
+  quaternion.w = quat.getW();
+
+  return quaternion;
+}
+
+std::vector<double> ManipulatorMenu::euler_from_quaternion(const geometry_msgs::Quaternion quaternion)
+{
+  tf2::Quaternion tf_quaternion;
+  tf2::fromMsg(quaternion, tf_quaternion);
+
+  // Get Euler angles
+  double roll, pitch, yaw;
+  tf2::Matrix3x3(tf_quaternion).getRPY(roll, pitch, yaw);
+
+  // Store the angles in a vector
+  std::vector<double> euler_angles = {roll,pitch,yaw};
+
+  return euler_angles; 
+}
 
 // --------------------- MENU HANDLER ---------------------
 
@@ -253,9 +357,14 @@ void ManipulatorMenu::printMenu()
   std::cout << "8. Move the robot along y\n";
   std::cout << "9. Move the robot along z\n";
   std::cout << "10.Change TCP orientation\n";
-  std::cout << "11.Add an object to the scene\n";
-  std::cout << "12.Clear goal markers\n";
-  std::cout << "13.Shutdown the menu\n";
+  std::cout << "11.Rotate the TCP around x\n";
+  std::cout << "12.Rotate the TCP around y\n";
+  std::cout << "13.Rotate the TCP around z\n";
+  std::cout << "14.Get a fixed TCP orientation\n";
+  std::cout << "15.Add an object to the scene\n";
+  std::cout << "16.Visualize joints state\n";
+  std::cout << "17.Visualize current tcp pose\n";
+  std::cout << "18.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -323,6 +432,26 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 13:
+    ROS_INFO("You selected Option 13\n");
+    break;
+
+  case 14:
+    ROS_INFO("You selected Option 14\n");
+    break;
+
+  case 15:
+    ROS_INFO("You selected Option 15\n");
+    break;
+
+  case 16:
+    ROS_INFO("You selected Option 14\n");
+    break;
+
+  case 17:
+    ROS_INFO("You selected Option 15\n");
+    break;
+
+  case 18:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;
