@@ -59,28 +59,27 @@ ManipulatorPlanner::ManipulatorPlanner()
   // tcp_goalSeq_sub_   = nh_.subscribe("/desired_tcpSeq_poses",   1, &ManipulatorPlanner::tcpGoalSeqCallback,    this);
   // joint_goalSeq_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
 
+  // ---------------------  ADD COLLISION OBJECT SUBSCRIBER  ---------------------
 
-  // // Planner args
-  // std::string manipulator_name;     // Manipulator name
-  // double vel_factor, acc_factor;    // Scale factor for joint velocities and accelerations
-  // bool sim;                         // Simulation status (true for sim, false for debug)
+  add_coll_obj_sub_ = nh_.subscribe("/add_collision_object", 1, &ManipulatorPlanner::addCollObjCallback, this);
 
-  check_param(manipulator_name,vel_factor,acc_factor,sim);
+  // ---------------------  PRIVATE VARIABLES SETUP  ---------------------------
 
-  // CALL TO THE DYNAMIC PLANNER
-  planner_ = new DynamicPlanner(manipulator_name, joint_names_, vel_factor, acc_factor, false);
+  check_param();
 
-  std::cout << manipulator_name << std::endl;
-  for (int k = 0; k < joint_names_.size(); k++) {
-    std::cout << joint_names_[k] << std::endl;
-  }
-  
+  // Call to the dynamic planner constructor
+  planner_ = new DynamicPlanner(manipulator_name_, joint_names_, vel_factor_, acc_factor_, false);  
 
   // Set the sim mode for the dynamic planner
-  planner_->setSimMode(sim);  
+  planner_->setSimMode(sim_);  
+
+  // --------------------- ENVIRONMENT SETUP ---------------------
 
   // Add a table to the scene
-  createObj("table", 1, {4,4,0.079}, {0,0,-0.04}, false);  
+  std::vector<double> dim_obj = {4.,4.,0.079};
+  double pos_obj[]            = {0.,0.,-0.04};
+  double rot_obj[]            = {0.,0.,0.,1.};
+  createObj("table", 1, dim_obj, pos_obj,rot_obj);  
 }
 
 // Destructor of the object manipulator planner's class
@@ -91,90 +90,18 @@ ManipulatorPlanner::~ManipulatorPlanner() {delete planner_;}
 // Manipulator planner spin function -> NOTE: the sleep rate is set in the node
 void ManipulatorPlanner::spinner()  {planner_->spinner();}
 
-// // Creation of a collision object
-void ManipulatorPlanner::createObj( const std::string&         name, 
-                                    const int                  obj_type, 
-                                    const std::vector<double>  obj_dims, 
-                                    const std::vector<double>  obj_pos = {0,0,0}, 
-                                    const bool                 rot_90  = false)
-{
-  // Creation of the obj
-  moveit_msgs::CollisionObject obj;
+// ---------------------  PRIVATE FUNCTIONS ---------------------
 
-  obj.header.frame_id = base_name_;
-  obj.id              = name;
-  obj.primitives[0].type = obj_type;
-  obj.operation = 0;  // static obj
-  obj.primitives[0].dimensions.resize(int(obj_dims.size()));
+// --------------------- UTILS FUNCTIONS --------------------
 
-  // Set primitive type
-  switch(obj_type)
-  {
-    case 1:   // BOX: Rectangular shape setting
-      if (obj_dims.size() != 3){ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
-      else                     {obj.primitives.resize(1);
-                                // Set the three dimensions of the parallelepiped
-                                obj.primitives[0].dimensions[0] = obj_dims[0];
-                                obj.primitives[0].dimensions[1] = obj_dims[1];
-                                obj.primitives[0].dimensions[2] = obj_dims[2];}
-      break;
-
-    case 2:   // SPHERE
-      if (obj_dims.size() != 1){ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
-      else                     {obj.primitives.resize(1);
-                                // Set the sphere radius
-                                obj.primitives[0].dimensions[0] = obj_dims[0];}
-      break;
-
-    default:   // CYLINDER OR CONE
-      if (obj_dims.size() != 2){ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
-      else                     {obj.primitives.resize(1);
-                                // Set height and radius of the cylinder/cone
-                                obj.primitives[0].dimensions[0] = obj_dims[0];
-                                obj.primitives[0].dimensions[1] = obj_dims[1];}
-      break;
-  }
-
-  // Set obj position
-  obj.primitive_poses.resize(1);
-  obj.primitive_poses[0].position.x = obj_pos[0];
-  obj.primitive_poses[0].position.y = obj_pos[1];
-  obj.primitive_poses[0].position.z = obj_pos[2];
-
-  // Set obj orientation
-  if (rot_90)
-  {
-    obj.primitive_poses[0].orientation.x = 0;
-    obj.primitive_poses[0].orientation.y = 0;
-    obj.primitive_poses[0].orientation.z = M_PI/4;
-    obj.primitive_poses[0].orientation.w = M_PI/4;
-  }
-  else
-  {
-    obj.primitive_poses[0].orientation.x = 0;
-    obj.primitive_poses[0].orientation.y = 0;
-    obj.primitive_poses[0].orientation.z = 0;
-    obj.primitive_poses[0].orientation.w = 1;
-  }
-
-
-  // THIS IS THE WAY TO HANDLE OBSTACLES. Push back in the vector if you want to add, 
-  // remove from the vector if you want to remove. Be sure to also process and apply!
-  planner_->getCollisionObjects().push_back(obj);                       // add the obj object as obstacle
-  planner_->getPlanningScenePtr()->processCollisionObjectMsg(obj);      // map the collision object into the joint space
-  planner_->getPlanningSceneInterface().applyCollisionObjects(planner_->getCollisionObjects());
-}
-
-// // Check manipulators parameters passed to the node
-void ManipulatorPlanner::check_param(std::string manipulator_name,
-                                     double      vel_factor, 
-                                     double      acc_factor,
-                                     bool        sim)
+// Check manipulators parameters passed to the node
+void ManipulatorPlanner::check_param()
 {
   // If one of the following parameters has not been defined, shutdwon ROS
+  // The names of the params are passed with the prefix of the name of the node
 
   // Check for manipulator name parameter
-  if (!nh_.getParam("manipulator_planner/manipulator_name", manipulator_name))
+  if (!nh_.getParam("manipulator_planner/manipulator_name", manipulator_name_))
   {
     ROS_ERROR("Manipulator name not defined");
     ros::shutdown();
@@ -207,25 +134,100 @@ void ManipulatorPlanner::check_param(std::string manipulator_name,
 
   // The following parameters can also be unset, but it's better to show a warning to the console to make the user aware
   // Check for velocity factor parameter
-  if (!nh_.getParam("manipulator_planner/vel_factor", vel_factor))
+  if (!nh_.getParam("manipulator_planner/vel_factor", vel_factor_))
   {
     ROS_WARN("Velocity factor not defined, assuming 0.5");
     // If the parameter has not been set by the user, it is set here
-    vel_factor = 0.5;
+    vel_factor_ = 0.5;
   }
 
   // Check for acceleration factor parameter
-  if (!nh_.getParam("manipulator_planner/acc_factor", acc_factor))
+  if (!nh_.getParam("manipulator_planner/acc_factor", acc_factor_))
   {
     ROS_WARN("Acceleration factor not defined, assuming 0.5");
 
     // If the parameter has not been set by the user, it is set here
-    acc_factor = 0.5;
+    acc_factor_ = 0.5;
   }
 
   // Get simulation status from the user (simulation or debug)
-  nh_.getParam("manipulator_planner/sim", sim);
+  nh_.getParam("manipulator_planner/sim", sim_);
 }
+
+// // Creation of a collision object
+void ManipulatorPlanner::createObj( const std::string&  name, 
+                                    const int           obj_type, 
+                                    std::vector<double> obj_dims, 
+                                    double              obj_pos[], 
+                                    double              rot_pos[])
+{
+  // Creation of the obj
+  moveit_msgs::CollisionObject obj;
+
+  obj.header.frame_id = base_name_;
+  obj.id              = name;
+  obj.primitives.resize(1);
+  obj.primitives[0].type = obj_type;
+  int size_obj_dims = obj_dims.size();
+  obj.primitives[0].dimensions.resize(size_obj_dims);
+
+  // Set primitive type
+  switch(obj_type)
+  {
+    case 1:   // BOX: Rectangular shape setting
+      if (size_obj_dims != 3)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set the three dimensions of the parallelepiped
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];
+                                obj.primitives[0].dimensions[2] = obj_dims[2];}
+      break;
+
+    case 2:   // SPHERE
+      if (size_obj_dims != 1)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set the sphere radius
+                                obj.primitives[0].dimensions[0] = obj_dims[0];}
+      break;
+
+    default:   // CYLINDER OR CONE
+      if (size_obj_dims != 2)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set height and radius of the cylinder/cone
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];}
+      break;
+  }
+
+  // Set static obj
+  obj.operation = 0;
+
+  // Set obj position
+  obj.primitive_poses.resize(1);
+  obj.primitive_poses[0].position.x = obj_pos[0];
+  obj.primitive_poses[0].position.y = obj_pos[1];
+  obj.primitive_poses[0].position.z = obj_pos[2];
+
+  // Set obj orientation
+  obj.primitive_poses[0].orientation.x = rot_pos[0];
+  obj.primitive_poses[0].orientation.y = rot_pos[1];
+  obj.primitive_poses[0].orientation.z = rot_pos[2];
+  obj.primitive_poses[0].orientation.w = rot_pos[3];
+
+  // THIS IS THE WAY TO HANDLE OBSTACLES. Push back in the vector if you want to add, 
+  // remove from the vector if you want to remove. Be sure to also process and apply!
+  planner_->getCollisionObjects().push_back(obj);                       // add the obj object as obstacle
+  planner_->getPlanningScenePtr()->processCollisionObjectMsg(obj);      // map the collision object into the joint space
+  planner_->getPlanningSceneInterface().applyCollisionObjects(planner_->getCollisionObjects());
+}
+
+// Callback function for goals in the 3D cartesian space for the robot TCP
+void ManipulatorPlanner::addCollObjCallback(const moveit_msgs::CollisionObject& obj)
+{
+  std::vector<double> dim_array = {obj.primitives[0].dimensions[0],      obj.primitives[0].dimensions[1],      obj.primitives[0].dimensions[2]  };
+  double pos_array[]            = {obj.primitive_poses[0].position.x,    obj.primitive_poses[0].position.y,    obj.primitive_poses[0].position.z};
+  double rot_array[]            = {obj.primitive_poses[0].orientation.x, obj.primitive_poses[0].orientation.y, obj.primitive_poses[0].orientation.z, obj.primitive_poses[0].orientation.w};
+  createObj(obj.id,obj.primitives[0].type,dim_array,pos_array,rot_array);
+}
+
+// --------------------- MOVE FUNCTIONS ---------------------
 
 // Callback function to handle a tcp 3D goal
 void ManipulatorPlanner::tcpGoalCallback(const geometry_msgs::Pose::ConstPtr& p)

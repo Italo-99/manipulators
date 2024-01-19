@@ -54,22 +54,23 @@ class ManipulatorPlanner
 
     void spinner(void);       // Asynchronous spinner for ROS routines
 
-    // // Create a collision object from a selected primitive
-    void createObj(const std::string&        name, 
-                   const int                 obj_type, 
-                   const std::vector<double> obj_dims, 
-                   const std::vector<double> obj_pos, 
-                   bool                      rot_90);
-
  private:
 
   // --------------------- PRIVATE FUNCTIONS ---------------------
     // --------------------- UTILS FUNCTIONS ---------------------
 
-      void check_param(std::string manipulator_name,
-                          double   vel_factor, 
-                          double   acc_factor,
-                          bool     sim);
+      // Check parameters passed to the manipulator
+      void check_param();
+
+      // Create a collision object from a selected primitive
+      void createObj(const std::string&   name, 
+                     const int            obj_type, 
+                     std::vector<double>  obj_dims, 
+                     double               obj_pos[], 
+                     double               rot_pos[]);
+
+      // Callback function for goals in the 3D cartesian space for the robot TCP
+      void addCollObjCallback(const moveit_msgs::CollisionObject& obj);
 
     // --------------------- MOVE FUNCTIONS ---------------------
 
@@ -89,14 +90,15 @@ class ManipulatorPlanner
 
     ros::NodeHandle nh_;                    // Node object
     ros::Subscriber tcp_goal_sub_;          // Subscriber to TCP goal
-    ros::Subscriber joint_goal_sub_;        // Publisher to joint goal
+    ros::Subscriber joint_goal_sub_;        // Subscriber to joint goal
     // ros::Subscriber tcp_goalSeq_sub_;       // Subscriber to the sequence of TCP goal
-    // ros::Subscriber joint_goalSeq_sub_;     // Publisher to the sequence of joint goal
+    // ros::Subscriber joint_goalSeq_sub_;     // Subscriber to the sequence of joint goal
+    ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
 
     // Planner args
-    std::string manipulator_name;     // Manipulator name
-    double vel_factor, acc_factor;    // Scale factor for joint velocities and accelerations
-    bool sim;     
+    std::string manipulator_name_;          // Manipulator name
+    double vel_factor_, acc_factor_;        // Scale factor for joint velocities and accelerations
+    bool sim_;     
 
     std::vector<std::string> joint_names_;  // Joints' names
     std::string ee_name_;                   // End-effector's name
