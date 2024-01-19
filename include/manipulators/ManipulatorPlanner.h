@@ -98,7 +98,7 @@ class ManipulatorPlanner
     // Planner args
     std::string manipulator_name_;          // Manipulator name
     double vel_factor_, acc_factor_;        // Scale factor for joint velocities and accelerations
-    bool sim_;     
+    bool sim_;
 
     std::vector<std::string> joint_names_;  // Joints' names
     std::string ee_name_;                   // End-effector's name

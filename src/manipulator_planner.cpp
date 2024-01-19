@@ -43,10 +43,6 @@
 // IMPORT LIBRARIES
 #include "manipulators/ManipulatorPlanner.h"
 
-// TODO: together with node launch, UR10 should go immediatly to a preconfigured configuration
-// initial position {0,-90,+90,-90,-90,0}
-
-
 // ---------------------  PUBLIC CONSTRUCTOR ---------------------
 
 ManipulatorPlanner::ManipulatorPlanner()

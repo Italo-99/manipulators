@@ -25,6 +25,6 @@ target_link_libraries(manipulator_planner ${catkin_LIBRARIES})
 add_dependencies(manipulator_planner ${catkin_EXPORTED_TARGETS})
 
 # Add manipulator menu node
-add_executable(manipulator_menu src/manipulator_menu.cpp)
+add_executable(manipulator_menu src/manipulator_menu.cpp src/manipulator_menu_node.cpp)
 target_link_libraries(manipulator_menu ${catkin_LIBRARIES})
 add_dependencies(manipulator_menu ${catkin_EXPORTED_TARGETS})
