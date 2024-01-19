@@ -58,7 +58,7 @@ class ManipulatorMenu
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-      ManipulatorMenu();     // Constructor
+      ManipulatorMenu(const bool tcp_pub);     // Constructor
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
@@ -66,6 +66,7 @@ class ManipulatorMenu
 
     void publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
     void publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
+    void publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planner
 
     // Get the position and orientation of the end effector
     geometry_msgs::PoseStamped getEEpose();
@@ -73,6 +74,18 @@ class ManipulatorMenu
 
     // Get the transform between two frames
     geometry_msgs::PoseStamped getTf(const std::string& source_frame, const std::string& target_frame);
+
+    // Move along axes
+    void move_along_x(const double x_step);
+    void move_along_y(const double y_step);
+    void move_along_z(const double z_step);
+
+    // Tcp orientation handling
+    void make_tcp_rot(const std::vector<double> rot_vec);
+    void rotate_around_x(const double x_rot_step);
+    void rotate_around_y(const double y_rot_step);
+    void rotate_around_z(const double z_rot_step);
+    void change_tcp_orient(const std::vector<double> rot_vec);
 
  private:
 
@@ -91,11 +104,11 @@ class ManipulatorMenu
 
       void testTcpGoal(void);     // to test a tcp goal
       void userTcpGoal(void);     // to perform a tcp goal set by the user 
+      void userTcpIKGoal(void);   // to perform a tcpIK goal set by the user 
 
       // Joint state callback function
       void jointStateCallback(const sensor_msgs::JointState::ConstPtr& msg);
       void eePoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
-
     
     // --------------------- UTILS FUNCTIONS ---------------------
 
@@ -107,7 +120,7 @@ class ManipulatorMenu
                   double               rot_pos[]);
 
       // Function to add a collision object
-      void addCollObj(const moveit_msgs::CollisionObject& obj);
+      void addCollObj();
 
       // Quaternions handling
       geometry_msgs::Quaternion quaternion_from_euler(double roll, double pitch, double yaw);
@@ -124,13 +137,17 @@ class ManipulatorMenu
       ros::NodeHandle nh_;
       ros::Publisher  jointStatePublisher_;
       ros::Publisher  tcpPosePublisher_;
+      ros::Publisher  tcpPoseIKPublisher_;
       ros::Publisher  collisionObjectPublisher_;
       ros::Subscriber jointStateSubscriber_;
 
-      ros::Subscriber eepose_sub_;      
+      ros::Subscriber eepose_sub_;  // If tcp_pub is false, the menu code will not subscribe to the end effector pose published by the manipulator node
+      ros::Publisher  eepose_pub_;  // If tcp_pub is false, the menu node will publish the end effector pose
       ros::Publisher display_goal_pub_;
       geometry_msgs::PoseStamped current_tcp_pose_;
       sensor_msgs::JointState current_joint_pose_;
+
+      const bool tcp_pub_;
 
     // ---------------------  USEFUL TOOLS ---------------------
 

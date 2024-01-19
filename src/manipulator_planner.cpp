@@ -45,18 +45,23 @@
 
 // ---------------------  PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorPlanner::ManipulatorPlanner()
+ManipulatorPlanner::ManipulatorPlanner(const bool tcp_pub)
 {
   // ---------------------  TCP AND JOINT GOALS SUBSCRIBERS ---------------------
 
   tcp_goal_sub_   = nh_.subscribe("/desired_tcp_pose",   1, &ManipulatorPlanner::tcpGoalCallback,    this);
   joint_goal_sub_ = nh_.subscribe("/desired_joint_pose", 1, &ManipulatorPlanner::jointsGoalCallback, this);
 
+  tcp_goalIK_sub_ = nh_.subscribe("/desired_tcpIK_pose", 1, &ManipulatorPlanner::tcpGoalIKCallback,this);
+
+
   // tcp_goalSeq_sub_   = nh_.subscribe("/desired_tcpSeq_poses",   1, &ManipulatorPlanner::tcpGoalSeqCallback,    this);
   // joint_goalSeq_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
 
-  ee_pose_pub_     = nh_.advertise<geometry_msgs::PoseStamped>("/display_eepose", 1);
-  joint_state_sub_ = nh_.subscribe("/joint_states", 1, &ManipulatorPlanner::jointsStateCallback, this);
+  // If the user wants to continuosly publish the end effector pose
+  if (tcp_pub)
+  { ee_pose_pub_     = nh_.advertise<geometry_msgs::PoseStamped>("/display_eepose", 1);
+    joint_state_sub_ = nh_.subscribe("/joint_states", 1, &ManipulatorPlanner::jointsStateCallback, this);}
 
   // ---------------------  ADD COLLISION OBJECT SUBSCRIBER  ---------------------
 
@@ -232,34 +237,28 @@ void ManipulatorPlanner::jointsStateCallback(const sensor_msgs::JointState::Cons
   // Update current joint state
   joint_state_ = *js;
 
-  // Version1: use a tf
   // Create a TF2 buffer and listener
-    tf2_ros::Buffer tf_buffer;
-    tf2_ros::TransformListener tf_listener(tf_buffer);
+  tf2_ros::Buffer tf_buffer;
+  tf2_ros::TransformListener tf_listener(tf_buffer);
 
-    // Wait for the transformation to be available
-    try {tf_buffer.canTransform("base_link", "tool0", ros::Time(0), ros::Duration(0.5));} 
-    catch (tf2::TransformException& ex) {ROS_WARN("%s", ex.what());}
+  // Wait for the transformation to be available
+  try {tf_buffer.canTransform("base_link", "tool0", ros::Time(0), ros::Duration(0.5));} 
+  catch (tf2::TransformException& ex) {ROS_WARN("%s", ex.what());}
 
-    // Get the transformation
-    geometry_msgs::TransformStamped transformStamped;
-    try                                 {transformStamped = tf_buffer.lookupTransform("base_link", "tool0",ros::Time(0));}
-    catch (tf2::TransformException &ex) {ROS_WARN("%s",ex.what()); ros::Duration(1.0).sleep();}
+  // Get the transformation
+  geometry_msgs::TransformStamped transformStamped;
+  try                                 {transformStamped = tf_buffer.lookupTransform("base_link", "tool0",ros::Time(0));}
+  catch (tf2::TransformException &ex) {ROS_WARN("%s",ex.what()); ros::Duration(1.0).sleep();}
 
-    // Convert the tf msg into a PoseStamped
-    ee_pose_.header.frame_id  = "base_link";
-    ee_pose_.header.stamp     = ros::Time::now();
-    ee_pose_.pose.position.x  = transformStamped.transform.translation.x;
-    ee_pose_.pose.position.y  = transformStamped.transform.translation.y;
-    ee_pose_.pose.position.z  = transformStamped.transform.translation.z;
-    ee_pose_.pose.orientation = transformStamped.transform.rotation;
+  // Convert the tf msg into a PoseStamped
+  ee_pose_.header.frame_id  = "base_link";
+  ee_pose_.header.stamp     = ros::Time::now();
+  ee_pose_.pose.position.x  = transformStamped.transform.translation.x;
+  ee_pose_.pose.position.y  = transformStamped.transform.translation.y;
+  ee_pose_.pose.position.z  = transformStamped.transform.translation.z;
+  ee_pose_.pose.orientation = transformStamped.transform.rotation;
 
-  // Version2: use FKine
-    // ee_pose_ = planner_->setFKine(joint_state_);
-  
-  // Version3: use moveit function getCurrentPose()
-
-    ee_pose_pub_.publish(ee_pose_);
+  ee_pose_pub_.publish(ee_pose_);
 }
 
 
@@ -268,7 +267,7 @@ void ManipulatorPlanner::jointsStateCallback(const sensor_msgs::JointState::Cons
 // Callback function to handle a tcp 3D goal
 void ManipulatorPlanner::tcpGoalCallback(const geometry_msgs::Pose::ConstPtr& p)
 {
-
+  // V1: tcp goal
   // Declaration of the goal variabl as PS
   geometry_msgs::PoseStamped goal;
 
@@ -291,6 +290,23 @@ void ManipulatorPlanner::tcpGoalCallback(const geometry_msgs::Pose::ConstPtr& p)
 
   // Send the goal to the planner
   planner_->plan(goal, ee_name_);
+}
+
+// Callback function to handle a tcp 3D goal with the inverse kinematics
+void ManipulatorPlanner::tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& p)
+{
+  // Fill the pose stamped goal
+  geometry_msgs::PoseStamped goal;
+  goal.header.frame_id = base_name_;
+  goal.pose            = *p;
+
+  // Make the inverse kinematics
+  std::vector<double> joint_values = planner_->invKine(goal,ee_name_);
+  sensor_msgs::JointState js;
+  for (unsigned int k = 0; k < 6; k++) {js.position.push_back(joint_values[k]);}
+
+  // Send to joint goal planner
+  planner_->plan(js.position);
 }
 
 // Callback function to handle a joint goal

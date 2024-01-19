@@ -48,8 +48,8 @@ class ManipulatorPlanner
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-      ManipulatorPlanner();     // Constructor
-      ~ManipulatorPlanner();    // Destructor
+      ManipulatorPlanner(const bool tcp_pub); // Constructor
+      ~ManipulatorPlanner();                  // Destructor
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
@@ -81,6 +81,8 @@ class ManipulatorPlanner
 
       // Callback function for goals in the 3D cartesian space for the robot TCP
       void tcpGoalCallback(const geometry_msgs::Pose::ConstPtr& p);
+      // Callback function for goals in the 3D cartesian space for the robot TCP computed through Inverse Kinematics
+      void tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& p);
 
       // Callback function for goals in the joint space
       void jointsGoalCallback(const sensor_msgs::JointState::ConstPtr& js);
@@ -96,6 +98,7 @@ class ManipulatorPlanner
     ros::NodeHandle nh_;                    // Node object
     ros::Subscriber tcp_goal_sub_;          // Subscriber to TCP goal
     ros::Subscriber joint_goal_sub_;        // Subscriber to joint goal
+    ros::Subscriber tcp_goalIK_sub_;        // Subscriber to TCP goal with InvKine
     // ros::Subscriber tcp_goalSeq_sub_;       // Subscriber to the sequence of TCP goal
     // ros::Subscriber joint_goalSeq_sub_;     // Subscriber to the sequence of joint goal
     ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object

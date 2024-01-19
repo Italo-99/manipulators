@@ -46,16 +46,21 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu()
+ManipulatorMenu::ManipulatorMenu(const bool tcp_pub)
 {
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
 
     jointStatePublisher_      = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
     tcpPosePublisher_         = nh_.advertise<geometry_msgs::Pose>("/desired_tcp_pose", 1);
+    tcpPoseIKPublisher_       = nh_.advertise<geometry_msgs::Pose>("/desired_tcpIK_pose", 1);
     collisionObjectPublisher_ = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
     jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
     display_goal_pub_         = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
-    eepose_sub_               = nh_.subscribe("/display_eepose", 1, &ManipulatorMenu::eePoseCallback, this);
+
+    tcp_pub_ = tcp_pub;
+
+    if (tcp_pub) {eepose_sub_ = nh_.subscribe("/display_eepose", 1, &ManipulatorMenu::eePoseCallback, this);}
+    else         {eepose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);}
 
     // --------------------- Global class variables init ---------------------
 
@@ -118,15 +123,54 @@ void ManipulatorMenu::publishTcpGoal(const std::vector<double> position)
   display_goal_pub_.publish(robot_goal_msg);
 }
 
+// Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
+void ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position) 
+{
+  geometry_msgs::Pose tcpPoseMsg;
+
+  tcpPoseMsg.position.x = position[0];
+  tcpPoseMsg.position.y = position[1];
+  tcpPoseMsg.position.z = position[2];
+
+  // Conversion from euler rotation to pose quaternion
+  tcpPoseMsg.orientation = quaternion_from_euler(position[3],position[4],position[5]);
+
+  tcpPoseIKPublisher_.publish(tcpPoseMsg);
+
+  // Display the goal on RViz
+  geometry_msgs::PoseStamped robot_goal_msg;
+  robot_goal_msg.header.frame_id = "base_link";
+  robot_goal_msg.header.stamp = ros::Time::now();
+  robot_goal_msg.pose = tcpPoseMsg,
+  
+  display_goal_pub_.publish(robot_goal_msg);
+}
+
+void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
+{
+  std::vector<double> joint_target = {0.,0.,0.,0.,0.,0.} ;
+  for (unsigned int k = 0; k < 6; k++) 
+  {
+    joint_target[k] = current_joint_pose_.position[k];
+  }
+  joint_target[num] = joint_target[num] + joint_rot*M_PI/180;
+  publishJointGoal(joint_target);
+}
+
 // Get current EE pose
 geometry_msgs::PoseStamped ManipulatorMenu::getEEpose()
 {
+  if(tcp_pub_) {current_tcp_pose_ = getTf("base_link","tool0");}
+  eepose_pub_.publish(current_tcp_pose_);
   return current_tcp_pose_;
 }
 
 // Get EE pos as vector with RPY euler angles
 std::vector<double> ManipulatorMenu::getEEpos_rpy()
 {
+  // Read current EE pose by TF
+  getEEpose();
+
   // Declaration of pose vector
   std::vector<double> tcp_pose_rpy = {0.,0.,0.,0.,0.,0.};
 
@@ -151,6 +195,10 @@ geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_fram
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener(tf_buffer);
 
+  // Wait for the transformation to be available
+  try {tf_buffer.canTransform(source_frame, target_frame, ros::Time(0), ros::Duration(0.5));} 
+  catch (tf2::TransformException& ex) {ROS_WARN("%s", ex.what());}
+
   // Get the transformation
   geometry_msgs::TransformStamped transformStamped;
   try                                 {transformStamped = tf_buffer.lookupTransform(source_frame, target_frame,ros::Time(0));}
@@ -166,6 +214,66 @@ geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_fram
   target_pose.pose.orientation = transformStamped.transform.rotation;
 
   return target_pose;
+}
+
+void ManipulatorMenu::move_along_x(const double x_step)
+{
+  std::vector<double> goal_pose = getEEpos_rpy();
+  goal_pose[0] = goal_pose[0] + x_step;
+  publishTcpIKGoal(goal_pose);
+}
+
+void ManipulatorMenu::move_along_y(const double y_step)
+{
+    std::vector<double> goal_pose = getEEpos_rpy();
+    goal_pose[1] = goal_pose[1] + y_step;
+    publishTcpIKGoal(goal_pose);
+}
+
+void ManipulatorMenu::move_along_z(const double z_step)
+{
+    std::vector<double> goal_pose = getEEpos_rpy();
+    goal_pose[2] = goal_pose[2] + z_step;
+    publishTcpIKGoal(goal_pose);
+}
+
+void ManipulatorMenu::make_tcp_rot(const std::vector<double> rot_vec)
+{
+  std::vector<double> goal_pose = getEEpos_rpy();
+  goal_pose[3] = goal_pose[3] + rot_vec[0];
+  goal_pose[4] = goal_pose[4] + rot_vec[1];
+  goal_pose[5] = goal_pose[5] + rot_vec[2];
+  publishTcpIKGoal(goal_pose);
+}
+
+void ManipulatorMenu::change_tcp_orient(const std::vector<double> rot_vec)
+{
+  std::vector<double> goal_pose = getEEpos_rpy();
+  goal_pose[3] = rot_vec[0];
+  goal_pose[4] = rot_vec[1];
+  goal_pose[5] = rot_vec[2];
+  publishTcpIKGoal(goal_pose);
+}
+
+void ManipulatorMenu::rotate_around_x(const double x_rot_step)
+{
+  std::vector<double> goal_pose = getEEpos_rpy();
+  goal_pose[3] = goal_pose[3] + x_rot_step;
+  publishTcpIKGoal(goal_pose);
+}
+
+void ManipulatorMenu::rotate_around_y(const double y_rot_step)
+{
+  std::vector<double> goal_pose = getEEpos_rpy();
+  goal_pose[4] = goal_pose[4] + y_rot_step;
+  publishTcpIKGoal(goal_pose);
+}
+
+void ManipulatorMenu::rotate_around_z(const double z_rot_step)
+{
+  std::vector<double> goal_pose = getEEpos_rpy();
+  goal_pose[5] = goal_pose[5] + z_rot_step;
+  publishTcpIKGoal(goal_pose);
 }
 
 // --------------------- PRIVATE FUNCTIONS ---------------------
@@ -205,15 +313,15 @@ void ManipulatorMenu::userJointGoal()
   publishJointGoal(joints);
 }
 
-// Test functioni to move a single joint
-void ManipulatorMenu::oneJointMove()
+void ManipulatorMenu::oneJointMove_user()
 {
   int num = 0;
   double joint_rot = 0.0;
-  std::cout << "Enter the values of the joint to move: \n";
+  std::cout << "Enter the values of the joint to move in [0,5]: \n";
   std::cin >> num;
   std::cout << "Enter the rotation of the joint in deg: \n";
   std::cin >> joint_rot;
+  oneJointMove(num,joint_rot);
 }
 
 // --------------------- TCP GOALS HANDLER ---------------------
@@ -260,6 +368,35 @@ void ManipulatorMenu::userTcpGoal()
   publishTcpGoal(position);
 }
 
+void ManipulatorMenu::userTcpIKGoal()
+{
+  // Declare the empty vector of joints goals
+  std::vector<double> position = {0.,0.,0.,0.,0.,0.};
+  
+  // Take user degree angle for each joint
+  std::cout << "Enter the values of the tcp goal through InvKine, with rotation angles in degrees:";
+
+  // X position input
+  std::cout << "X position:  ";
+  std::cin >> position[0];
+  // Y position input
+  std::cout << "Y position:  ";
+  std::cin >> position[1];
+  // Z position input
+  std::cout << "Z position:  ";
+  std::cin >> position[2];
+
+  // Deg RPY angles input
+  std::cout << "Rx: ";
+  std::cin >> position[3];
+  std::cout << "Ry: ";
+  std::cin >> position[4];
+  std::cout << "Rz: ";
+  std::cin >> position[5];
+
+  publishTcpIKGoal(position);
+}
+
 // --------------------- SUBS HANDLER ---------------------
 
 void ManipulatorMenu::jointStateVisualizer() 
@@ -295,12 +432,92 @@ void ManipulatorMenu::addObj(const std::string&   name,
                              double               obj_pos[], 
                              double               rot_pos[])
 {
-  
+  // Creation of the obj
+  moveit_msgs::CollisionObject obj;
+
+  obj.header.frame_id = base_name_;
+  obj.id              = name;
+  obj.primitives.resize(1);
+  obj.primitives[0].type = obj_type;
+  int size_obj_dims = obj_dims.size();
+  obj.primitives[0].dimensions.resize(size_obj_dims);
+
+  // Set primitive type
+  switch(obj_type)
+  {
+    case 1:   // BOX: Rectangular shape setting
+      if (size_obj_dims != 3)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set the three dimensions of the parallelepiped
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];
+                                obj.primitives[0].dimensions[2] = obj_dims[2];}
+      break;
+
+    case 2:   // SPHERE
+      if (size_obj_dims != 1)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set the sphere radius
+                                obj.primitives[0].dimensions[0] = obj_dims[0];}
+      break;
+
+    default:   // CYLINDER OR CONE
+      if (size_obj_dims != 2)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set height and radius of the cylinder/cone
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];}
+      break;
+  }
+
+  // Set static obj
+  obj.operation = 0;
+
+  // Set obj position
+  obj.primitive_poses.resize(1);
+  obj.primitive_poses[0].position.x = obj_pos[0];
+  obj.primitive_poses[0].position.y = obj_pos[1];
+  obj.primitive_poses[0].position.z = obj_pos[2];
+
+  // Set obj orientation
+  obj.primitive_poses[0].orientation.x = rot_pos[0];
+  obj.primitive_poses[0].orientation.y = rot_pos[1];
+  obj.primitive_poses[0].orientation.z = rot_pos[2];
+  obj.primitive_poses[0].orientation.w = rot_pos[3];
+
+  collisionObjectPublisher_.publish(obj);
 }
 // Function to add a collision object
-void ManipulatorMenu::addCollObj(const moveit_msgs::CollisionObject& obj)
+void ManipulatorMenu::addCollObj()
 {
+  std::string name;
+  int obj_type;
+  std::vector<double>  obj_dims;
+  double               obj_pos[] = {0.,0.,0.};
+  double               rot_pos[] = {0.,0.,0.};
+  cout << "Insert following infomation about the obj.";
+  cout << "Name: "; cin >> name;
+  cout << "Object type: 1 for BOX, 2 for SPHERE, 3 for CYLINDER, 4 for CONE."; cin >> obj_type;
+  //If box chosen
+  if (obj_type == 1)       {obj_dims = {0.,0.,0.,};
+                            cout << "X dim: "; cin >> obj_dims[0];
+                            cout << "Y dim: "; cin >> obj_dims[1];
+                            cout << "Z dim: "; cin >> obj_dims[2];}
+  // If sphere chosen
+  else if (obj_type == 2)  {obj_dims = {0.};
+                            cout << "X dim: "; cin >> obj_dims[0];}
+  // Else
+  else if                  {obj_dims = {0.,0.};
+                            cout << "X dim: "; cin >> obj_dims[0];
+                            cout << "Y dim: "; cin >> obj_dims[1];}
 
+  cout << "Insert position";
+  cout zz "X position: "; cin >> obj_pos[0];
+  cout zz "Y position: "; cin >> obj_pos[1];
+  cout zz "Z position: "; cin >> obj_pos[2];
+  cout << "Insert orientation";
+  cout zz "RX rotation: "; cin >> obj_pos[3];
+  cout zz "RY rotation: "; cin >> obj_pos[4];
+  cout zz "RZ rotation: "; cin >> obj_pos[5];
+
+  addObj(name,obj_type,obj_dims,obj_pos,rot_pos);
 }
 
 void ManipulatorMenu::publishCollisionObject() 
@@ -402,53 +619,104 @@ void ManipulatorMenu::processChoice(int choice)
 
   case 5:
     ROS_INFO("You selected Option 5");
+    userTcpIKGoal();
     break;
 
   case 6:
     ROS_INFO("You selected Option 6\n");
+    oneJointMove_user();
     break;
 
   case 7:
     ROS_INFO("You selected Option 7\n");
+    double step = 0.;
+    cout << "Insert how many metres you want to move along x";
+    cin >> step;
+    move_along_x(step);
     break;
 
   case 8:
     ROS_INFO("You selected Option 8\n");
+    double step = 0.;
+    cout << "Insert how many metres you want to move along y";
+    cin >> step;
+    move_along_y(step);
 
   case 9:
     ROS_INFO("You selected Option 9\n");
+    double step = 0.;
+    cout << "Insert how many metres you want to move along z";
+    cin >> step;
+    move_along_z(step);
     break;
 
   case 10:
     ROS_INFO("You selected Option 10\n");
+    cout << "Insert the rotation around the axis you want to do."
+    std::vector<double> rot = {0.,0.,0.}; 
+    cout << " X rotation: "; cin >> rot[0];
+    cout << " Y rotation: "; cin >> rot[1];
+    cout << " Z rotation: "; cin >> rot[2];
+    make_tcp_rot(rot);
     break;
 
   case 11:
     ROS_INFO("You selected Option 11\n");
+    cout << "Insert the rotation around X axis you want to do."
+    double x_rot; 
+    cout << " X rotation: "; cin >> x_rot;
+    rotate_around_x(x_rot);
     break;
 
   case 12:
     ROS_INFO("You selected Option 12\n");
+    cout << "Insert the rotation around Y axis you want to do."
+    double y_rot; 
+    cout << " Y rotation: "; cin >> y_rot;
+    rotate_around_y(y_rot);
     break;
 
   case 13:
     ROS_INFO("You selected Option 13\n");
+    cout << "Insert the rotation around Z axis you want to do."
+    double z_rot; 
+    cout << " Z rotation: "; cin >> z_rot;
+    rotate_around_z(z_rot);
     break;
 
   case 14:
     ROS_INFO("You selected Option 14\n");
+    cout << "Insert the FIXED orientation of the EE you want to have."
+    std::vector<double> rot = {0.,0.,0.}; 
+    cout << " X rotation: "; cin >> rot[0];
+    cout << " Y rotation: "; cin >> rot[1];
+    cout << " Z rotation: "; cin >> rot[2];
+    change_tcp_orient(rot);
     break;
 
   case 15:
     ROS_INFO("You selected Option 15\n");
+    addCollObj();
     break;
 
   case 16:
     ROS_INFO("You selected Option 14\n");
+    for (unsigned int k = 0; k < 6; k++) 
+    {
+      cout << "Joint " << k << " : " << current_joint_pose_.position[k];
+    }    
     break;
 
   case 17:
     ROS_INFO("You selected Option 15\n");
+    geometry_msgs::PoseStamped ee_pose getEEpose();
+    std::vector<double> ee_pos = getEEpos_rpy();
+    cout << " EE - X position: " zz ee_pos[0];
+    cout << " EE - Y position: " zz ee_pos[1];
+    cout << " EE - Z position: " zz ee_pos[2];
+    cout << " EE - X rotation: " zz ee_pos[3];
+    cout << " EE - Y rotation: " zz ee_pos[4];
+    cout << " EE - Z rotation: " zz ee_pos[5];
     break;
 
   case 18:

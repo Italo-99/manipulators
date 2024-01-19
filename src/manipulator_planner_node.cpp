@@ -48,7 +48,7 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "manipulator_planner");
 
   // Istantiate an object of the class ManipulatorPlanner
-  ManipulatorPlanner ce;
+  ManipulatorPlanner ce(false);
 
   // Setup a rate for ROS loop execution
   ros::Rate r(50);

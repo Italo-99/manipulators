@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "manipulator_menu");
 
-  ManipulatorMenu Menu;
+  ManipulatorMenu Menu(false);
 
   Menu.spinner();
 
