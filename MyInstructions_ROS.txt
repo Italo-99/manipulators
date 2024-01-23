@@ -525,11 +525,107 @@ ROS1
      
     UNIVERSAL ROBOT UR10
 
-    REALSENSE CAMERA
+    REALSENSE CAMERA (info at https://github.com/IntelRealSense/realsense-ros/tree/ros1-legacy)
+
+        roslaunch realsense2_camera rs_camera.launch        to launch the attached camera
+
+        1) To launch real camera with all params set by the user
+
+            roslaunch realsense2_camera rs_camera.launch depth_fps:=30 color_fps:=30 filters:=pointcloud enable_gyro:=true enable_accel:=true enable_fisheye1:=true enable_fisheye2:=true enable_infra1:=true enable_pointcloud:=true accel_fps:=250 gyro_fps:=400 fisheye_fps:=30 align_depth:=true enable_sync:=true allow_no_texture_points:=true ordered_pc:=true
+
+        2) rosrun rqt_reconfigure rqt_reconfigure
+
+        3) roslaunch realsense2_camera rs_d435_camera_with_model.launch
+
+        4) FOLDER CAMERA d435i
+            Nel folder d435i c'è un file di calibrazione per attivare la imu presente all'interno della camera.
+
+            Per lanciare la detection della camera d435i lanciare da terminale il seguente comando (non tutti gli arg potrebbero essere necessari):
+                roslaunch realsense2_camera rs_camera.launch depth_fps:=30 color_fps:=30 filters:=pointcloud enable_gyro:=true enable_accel:=true enable_fisheye1:=true enable_fisheye2:=true enable_infra1:=true enable_pointcloud:=true accel_fps:=250 gyro_fps:=400 fisheye_fps:=30 align_depth:=true
+
+            Il launch appena mostrato funziona interamente sulla d435i, sulla d435 non ci sono invece accel, imu e gyro. Gli fps sono regolabili, ma meglio tenerli più bassi possibli,
+            così come il rate di pubblicazione dei msgs sui topic.
+
+            Per visualizzare su rviz le immagini, selezionare il topic su Image /camera/color/image_raw e compressed.
+            Per visualizzare le pointcloud, selezionare il tipic su pointcloud2 /camera/depth/color/points.
+
+            Per riconoscere gli artag landmarks sulla marsyard, lanciare il seguente file nella repo della navigation:
+                roslaunch ar_track_alvar detect_and_convert.launch output_frame:=camera_link cam_image_topic:=camera/color/image_raw cam_info_topic:=camera/color/camera_info
+
+            Per visualizzare le distanze dagli artag, runnare il seguente file python nella repo della navigation:
+                rosrun utility TaskLandmarkDistances.py
+
+            Per scattare una foto, modificare il file cli_pdu.py nel pacchetto utility alla voce self.topic.data con "/camera/color/image_raw".
+            Runnare i due seguenti file con:
+                rosrun erc_bringup image_saver
+                rosrun utility cli_pdu.py (dall'interfaccia che si apre premere 3)
+
+            L'immagine sarà salvata in ERC23_NavigationSim e potrà essere usata per la detection con Yolo.
+
+            Caricare l'immagine in Detection_Yolo (nostra repo per la computer vision) ->yolo5->data->images 
+            Aprire un terminale in yolo5 e lanciare il seguente comando:
+                python3 detect.py
+
+            Verificare la corretta individuazione dei box artag in Detection_Yolo->yolo5->runs->detect.
+            Di solito funziona correttamente con una confidence di 0.7.
+
+            Per visualizzare i dati provenienti dall'accelerometro, leggere il topic corrispondente con:
+                rostopic echo /camera/accel/sample (i dati affidabili sono quelli relativi alla linear_acceleration)
+
+            Per visualizzare i dati provenienti dal giroscopo, leggere il topic corrispondente con:
+                rostopic echo /camera/gyro/sample (i dati affidabili sono quellil relativi alla velocità angolare)
+
+            Per riassumere: il giroscopo è inutile, l'accelerometro è utilissimo. Non c'è un odometria ma c'è la pointcloud ricavata dalla depth camera.
+            Abbiamo uno stream a colori per fare anche le foto, con la imu sappiamo di quanto è inclinato il rover. 
+            Ci serve un'odometria, per questo si associa sempre la d435i con la t265 perchè questa ha sia odometria che imu (ma non uno stream a colori e nemmeno la depth) 
+
+        5) FOLDER CAMERA T265
+            Per lanciare la detection della camera T265 lanciare da terminale il seguente comando:
+                roslaunch realsense2_camera rs_t265.launch enable_fisheye1:=true fisheye_fps:=30 enable_fisheye2:=true
+
+            Per visualizzare su rviz le immagini, selezionare il topic su Image /camera/fisheye1/image_raw e compressed.
+
+            Per riconoscere gli artag landmarks sulla marsyard, lanciare il seguente file nella repo della navigation:
+                roslaunch ar_track_alvar detect_and_convert.launch output_frame:=camera_link cam_image_topic:=camera/fisheye1/image_raw cam_info_topic:=camera/fisheye1/camera_info
+
+            Per visualizzare le distanze dagli artag, runnare il seguente file python nella repo della navigation:
+                rosrun utility TaskLandmarkDistances.py
+
+            Per scattare una foto, modificare il file cli_pdu.py nel pacchetto utility alla voce self.topic.data con "/camera/fisheye1/image_raw".
+            Runnare i due seguenti file con:
+                rosrun erc_bringup image_saver
+                rosrun utility cli_pdu.py (dall'interfaccia che si apre premere 3)
+
+            L'immagine sarà salvata in ERC23_NavigationSim e potrà essere usata per la detection con Yolo.
+
+            Caricare l'immagine in Detection_Yolo (nostra repo per la computer vision) ->yolo5->data->images 
+            Aprire un terminale in yolo5 e lanciare il seguente comando:
+                python3 detect.py
+
+            Verificare la corretta individuazione dei box artag in Detection_Yolo->yolo5->runs->detect.
+            Di solito funziona correttamente con una confidence di 0.25.
+
+            Per visualizzare i dati provenienti dall'accelerometro, leggere il topic corrispondente con:
+                rostopic echo /camera/accel/sample (i dati affidabili sono quelli relativi alla linear_acceleration)
+
+            Per visualizzare i dati provenienti dall'odometria (posa e twist), leggere il topic corrispondente con:
+                rostopic echo /camera/odom/sample 
+
+            Per visualizzare i dati provenienti dal giroscopo, leggere il topic corrispondente con:
+                rostopic echo /camera/gyro/sample (i dati affidabili sono quellil relativi alla velocità angolare)
+
+            Per riassumere: il giroscopo è inutile perchè dà un'info che già ci arriva dall'odometria; l'odometria è completa e può essere usata
+            per il controllo in retroazione di velocità e per la localizzazione; l'accelerometro è una imu che ci dice com'è orientato il rover
+            rispetto alla Terra, considerando l'accelerazione di gravità (questa info non è necessariamente coincidente con l'orientamento
+            che arriva da odom perchè quest'ultimo confronta l'orientamento relativo tra un frame child e un frame parent).
+            La t265 non ha depth ne stream a colori, quindi non ha pointcloud
+
 
 CABLE DETECTION COMMANDS
 
     The following are the commands to launch some procedures about cable detection through AI pkgs
+
+    roslaunch AI_pkgs run_dlo3ds.launch
 
 USE THE FOLLOWING TO COPY AND PASTE THE SYMBOLS 
 
