@@ -58,7 +58,7 @@ class ManipulatorMenu
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-      ManipulatorMenu(const bool tcp_pub);     // Constructor
+    ManipulatorMenu();     // Constructor
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
@@ -88,13 +88,20 @@ class ManipulatorMenu
     void rotate_around_z(const double z_rot_step);
     void change_tcp_orient(const std::vector<double> rot_vec);
 
+    // Add collision objects
+    void publishCollisionObject(const moveit_msgs::CollisionObject collisionObjectMsg);
+    void addObj(const std::string&   name, 
+                const int            obj_type, 
+                std::vector<double>  obj_dims, 
+                double               obj_pos[], 
+                double               rot_pos[]);
+
  private:
 
   // --------------------- PRIVATE FUNCTIONS ---------------------
 
     // ---------------------  PRIVATE PUBS/SUBS ---------------------
 
-      void publishCollisionObject();    // add a collision object to the manipulator scene
       void jointStateVisualizer();      // listen to joint state publisher
 
     // --------------------- MOVE FUNCTIONS ---------------------
@@ -113,20 +120,17 @@ class ManipulatorMenu
     
     // --------------------- UTILS FUNCTIONS ---------------------
 
-      // Create a collision object from a selected primitive
-      void addObj(const std::string&   name, 
-                  const int            obj_type, 
-                  std::vector<double>  obj_dims, 
-                  double               obj_pos[], 
-                  double               rot_pos[]);
-
-      // Function to add a collision object
+      // Function to add a collision object by the users
       void addCollObj();
 
       // Quaternions handling
       geometry_msgs::Quaternion quaternion_from_euler(double roll, double pitch, double yaw);
       std::vector<double> euler_from_quaternion(const geometry_msgs::Quaternion quat);
 
+      // Degrees and radians conversions
+      std::vector<double> deg_from_rad(const std::vector<double>);
+      std::vector<double> rad_from_deg(const std::vector<double>);
+      
       //Menu handling
       void printMenu();
       int getUserChoice();
@@ -136,19 +140,16 @@ class ManipulatorMenu
 
     // ---------------------  ROS HANDLING ---------------------
       ros::NodeHandle nh_;
-      ros::Publisher  jointStatePublisher_;
+      ros::Publisher  jointGoalPublisher_;
       ros::Publisher  tcpPosePublisher_;
       ros::Publisher  tcpPoseIKPublisher_;
-      ros::Publisher  collisionObjectPublisher_;
       ros::Subscriber jointStateSubscriber_;
+      ros::Publisher  display_goal_pub_;
+      ros::Publisher  eepose_pub_;
+      ros::Publisher  collisionObjectPublisher_;
 
-      ros::Subscriber eepose_sub_;  // If tcp_pub is false, the menu code will not subscribe to the end effector pose published by the manipulator node
-      ros::Publisher  eepose_pub_;  // If tcp_pub is false, the menu node will publish the end effector pose
-      ros::Publisher display_goal_pub_;
       geometry_msgs::PoseStamped current_tcp_pose_;
       sensor_msgs::JointState current_joint_pose_;
-
-      bool tcp_pub_;
 
     // ---------------------  USEFUL TOOLS ---------------------
 

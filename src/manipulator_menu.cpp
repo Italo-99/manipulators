@@ -46,19 +46,22 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(const bool tcp_pub):tcp_pub_(tcp_pub)
+ManipulatorMenu::ManipulatorMenu()
 {
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
 
-    jointStatePublisher_      = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
+    jointGoalPublisher_       = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
     tcpPosePublisher_         = nh_.advertise<geometry_msgs::Pose>("/desired_tcp_pose", 1);
     tcpPoseIKPublisher_       = nh_.advertise<geometry_msgs::Pose>("/desired_tcpIK_pose", 1);
-    collisionObjectPublisher_ = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
     jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
     display_goal_pub_         = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
+    eepose_pub_               = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1, true);
+    collisionObjectPublisher_ = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
 
-    if (tcp_pub_) {eepose_sub_= nh_.subscribe("/display_eepose", 1, &ManipulatorMenu::eePoseCallback, this);}
-    else          {eepose_pub_= nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);}
+    // ------------- Fill the initial robot goal msg as default goal msg -------------------
+    
+    // std::vector<double> current_pose = getEEpos_rpy();
+    // publishTcpGoal(current_pose);
 
     // --------------------- Global class variables init ---------------------
 
@@ -93,10 +96,11 @@ void ManipulatorMenu::publishJointGoal(const std::vector<double> joints)
   // Fill the joint msg
   sensor_msgs::JointState jointStateMsg;
   jointStateMsg.header.stamp = ros::Time::now();
-  for (unsigned int k = 0; k < joints.size(); k++) {jointStateMsg.position.push_back(joints[k]); }
+  for (unsigned int k = 0; k < joints.size(); k++) 
+      {jointStateMsg.position.push_back(joints[k]*M_PI/180);}
 
   // Publish the JointState message
-  jointStatePublisher_.publish(jointStateMsg);
+  jointGoalPublisher_.publish(jointStateMsg);
 }
 
 // Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
@@ -145,47 +149,20 @@ void ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position)
   display_goal_pub_.publish(robot_goal_msg);
 }
 
+// Move a single joint, joint rotation must be in deg
 void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 {
   std::vector<double> joint_target = {0.,0.,0.,0.,0.,0.};
   for (unsigned int k = 0; k < 6; k++) 
   {
-    joint_target[k] = current_joint_pose_.position[k];
+    joint_target[k] = current_joint_pose_.position[k]*180/M_PI;
   }
-  joint_target[num] = joint_target[num] + joint_rot*M_PI/180;
+  
+  joint_target[num] = joint_target[num] + joint_rot;
   publishJointGoal(joint_target);
 }
 
-// Get current EE pose
-geometry_msgs::PoseStamped ManipulatorMenu::getEEpose()
-{
-  if(tcp_pub_) {current_tcp_pose_ = getTf("base_link","tool0");}
-  eepose_pub_.publish(current_tcp_pose_);
-  return current_tcp_pose_;
-}
-
-// Get EE pos as vector with RPY euler angles
-std::vector<double> ManipulatorMenu::getEEpos_rpy()
-{
-  // Read current EE pose by TF
-  getEEpose();
-
-  // Declaration of pose vector
-  std::vector<double> tcp_pose_rpy = {0.,0.,0.,0.,0.,0.};
-
-  // Fill the position
-  tcp_pose_rpy[0] = current_tcp_pose_.pose.position.x;
-  tcp_pose_rpy[1] = current_tcp_pose_.pose.position.y;
-  tcp_pose_rpy[2] = current_tcp_pose_.pose.position.z;
-
-  // Fill the rotation
-  std::vector<double> tcp_rpy = euler_from_quaternion(current_tcp_pose_.pose.orientation);
-  tcp_pose_rpy[3] = tcp_rpy[0];
-  tcp_pose_rpy[4] = tcp_rpy[1];
-  tcp_pose_rpy[5] = tcp_rpy[2];
-
-  return tcp_rpy;
-}
+// -------------------- TF END EFFECTOR LISTENER -----------------------//
 
 // Listen a TF between two given frames
 geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_frame, const std::string& target_frame)
@@ -214,6 +191,39 @@ geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_fram
 
   return target_pose;
 }
+
+// Get current EE pose
+geometry_msgs::PoseStamped ManipulatorMenu::getEEpose()
+{
+  current_tcp_pose_ = getTf("base_link","tool0");
+  eepose_pub_.publish(current_tcp_pose_);
+  return current_tcp_pose_;
+}
+
+// Get EE pos as vector with RPY euler angles
+std::vector<double> ManipulatorMenu::getEEpos_rpy()
+{
+  // Read current EE pose by TF
+  getEEpose();
+
+  // Declaration of pose vector
+  std::vector<double> tcp_pose_rpy = {0.,0.,0.,0.,0.,0.};
+
+  // Fill the position
+  tcp_pose_rpy[0] = current_tcp_pose_.pose.position.x;
+  tcp_pose_rpy[1] = current_tcp_pose_.pose.position.y;
+  tcp_pose_rpy[2] = current_tcp_pose_.pose.position.z;
+
+  // Fill the rotation
+  std::vector<double> tcp_rpy = euler_from_quaternion(current_tcp_pose_.pose.orientation);
+  tcp_pose_rpy[3] = tcp_rpy[0];
+  tcp_pose_rpy[4] = tcp_rpy[1];
+  tcp_pose_rpy[5] = tcp_rpy[2];
+
+  return tcp_rpy;
+}
+
+// -------------------- SIMPLE MOVES ALONG CARTHESIAN AXES -----------------------//
 
 void ManipulatorMenu::move_along_x(const double x_step)
 {
@@ -275,9 +285,76 @@ void ManipulatorMenu::rotate_around_z(const double z_rot_step)
   publishTcpIKGoal(goal_pose);
 }
 
+// --------------------- COLLISION OBJECTS HANDLER ---------------------
+// Create a collision object from a selected primitive
+void ManipulatorMenu::addObj(const std::string&   name,
+                             const int            obj_type, 
+                             std::vector<double>  obj_dims, 
+                             double               obj_pos[], 
+                             double               rot_pos[])
+{
+  // Creation of the obj
+  moveit_msgs::CollisionObject obj;
+
+  obj.header.frame_id = "base_link";
+  obj.id              = name;
+  obj.primitives.resize(1);
+  obj.primitives[0].type = obj_type;
+  int size_obj_dims = obj_dims.size();
+  obj.primitives[0].dimensions.resize(size_obj_dims);
+
+  // Set primitive type
+  switch(obj_type)
+  {
+    case 1:   // BOX: Rectangular shape setting
+      if (size_obj_dims != 3)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set the three dimensions of the parallelepiped
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];
+                                obj.primitives[0].dimensions[2] = obj_dims[2];}
+      break;
+
+    case 2:   // SPHERE
+      if (size_obj_dims != 1)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set the sphere radius
+                                obj.primitives[0].dimensions[0] = obj_dims[0];}
+      break;
+
+    default:   // CYLINDER OR CONE
+      if (size_obj_dims != 2)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set height and radius of the cylinder/cone
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];}
+      break;
+  }
+
+  // Set static obj
+  obj.operation = 0;
+
+  // Set obj position
+  obj.primitive_poses.resize(1);
+  obj.primitive_poses[0].position.x = obj_pos[0];
+  obj.primitive_poses[0].position.y = obj_pos[1];
+  obj.primitive_poses[0].position.z = obj_pos[2];
+
+  // Set obj orientation
+  obj.primitive_poses[0].orientation.x = rot_pos[0];
+  obj.primitive_poses[0].orientation.y = rot_pos[1];
+  obj.primitive_poses[0].orientation.z = rot_pos[2];
+  obj.primitive_poses[0].orientation.w = rot_pos[3];
+
+  publishCollisionObject(obj);
+}
+
+// Collision object publisher
+void ManipulatorMenu::publishCollisionObject(const moveit_msgs::CollisionObject collisionObjectMsg) 
+{
+  collisionObjectPublisher_.publish(collisionObjectMsg);
+}
+
 // --------------------- PRIVATE FUNCTIONS ---------------------
   
-// --------------------- PUBS HANDLER ---------------------
+// --------------------- PUBS HANDLERS ---------------------
   
 // --------------------- JOINT GOALS HANDLER ---------------------
 
@@ -291,7 +368,7 @@ void ManipulatorMenu::testJointGoal()
   if (counterJg_) {joints = {0.0,-1.57,+1.57,0.0,+1.57,0.0};}
   else            {joints = {0.0,-1.57,+1.57,0.0,-1.57,0.0};}   
   
-  publishJointGoal(joints);
+  publishJointGoal(deg_from_rad(joints));
 }
 
 void ManipulatorMenu::userJointGoal()
@@ -306,7 +383,6 @@ void ManipulatorMenu::userJointGoal()
   {
     std::cout << "Joint " << k+1 << " : ";
     std::cin >> joints[k];
-    joints[k] = joints[k]/180.00*M_PI;
   }
 
   publishJointGoal(joints);
@@ -423,67 +499,8 @@ void ManipulatorMenu::eePoseCallback(const geometry_msgs::PoseStamped::ConstPtr&
   current_tcp_pose_ = *msg;
 }
 
-// --------------------- COLLISION OBJECTS HANDLER ---------------------
-// Create a collision object from a selected primitive
-void ManipulatorMenu::addObj(const std::string&   name,
-                             const int            obj_type, 
-                             std::vector<double>  obj_dims, 
-                             double               obj_pos[], 
-                             double               rot_pos[])
-{
-  // Creation of the obj
-  moveit_msgs::CollisionObject obj;
-
-  obj.header.frame_id = "base_link";
-  obj.id              = name;
-  obj.primitives.resize(1);
-  obj.primitives[0].type = obj_type;
-  int size_obj_dims = obj_dims.size();
-  obj.primitives[0].dimensions.resize(size_obj_dims);
-
-  // Set primitive type
-  switch(obj_type)
-  {
-    case 1:   // BOX: Rectangular shape setting
-      if (size_obj_dims != 3)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
-      else                     {// Set the three dimensions of the parallelepiped
-                                obj.primitives[0].dimensions[0] = obj_dims[0];
-                                obj.primitives[0].dimensions[1] = obj_dims[1];
-                                obj.primitives[0].dimensions[2] = obj_dims[2];}
-      break;
-
-    case 2:   // SPHERE
-      if (size_obj_dims != 1)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
-      else                     {// Set the sphere radius
-                                obj.primitives[0].dimensions[0] = obj_dims[0];}
-      break;
-
-    default:   // CYLINDER OR CONE
-      if (size_obj_dims != 2)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
-      else                     {// Set height and radius of the cylinder/cone
-                                obj.primitives[0].dimensions[0] = obj_dims[0];
-                                obj.primitives[0].dimensions[1] = obj_dims[1];}
-      break;
-  }
-
-  // Set static obj
-  obj.operation = 0;
-
-  // Set obj position
-  obj.primitive_poses.resize(1);
-  obj.primitive_poses[0].position.x = obj_pos[0];
-  obj.primitive_poses[0].position.y = obj_pos[1];
-  obj.primitive_poses[0].position.z = obj_pos[2];
-
-  // Set obj orientation
-  obj.primitive_poses[0].orientation.x = rot_pos[0];
-  obj.primitive_poses[0].orientation.y = rot_pos[1];
-  obj.primitive_poses[0].orientation.z = rot_pos[2];
-  obj.primitive_poses[0].orientation.w = rot_pos[3];
-
-  collisionObjectPublisher_.publish(obj);
-}
-// Function to add a collision object
+// --------------------- COLLISION OBJECTS PRIVATE MENU HANDLER ---------------------
+// Function to add a collision object from the user menu
 void ManipulatorMenu::addCollObj()
 {
   std::string name;
@@ -519,13 +536,6 @@ void ManipulatorMenu::addCollObj()
   addObj(name,obj_type,obj_dims,obj_pos,rot_pos);
 }
 
-void ManipulatorMenu::publishCollisionObject() 
-{
-    moveit_msgs::CollisionObject collisionObjectMsg;
-    // Fill collision object message
-    collisionObjectPublisher_.publish(collisionObjectMsg);
-}
-
 // --------------------- QUATERNIONS HANDLER -------------------
 // Conversion from degrees euler angles to quaternion
 geometry_msgs::Quaternion ManipulatorMenu::quaternion_from_euler(double roll, double pitch, double yaw)
@@ -542,7 +552,7 @@ geometry_msgs::Quaternion ManipulatorMenu::quaternion_from_euler(double roll, do
 
   return quaternion;
 }
-
+// Conversion from quaternion to degrees euler angles
 std::vector<double> ManipulatorMenu::euler_from_quaternion(const geometry_msgs::Quaternion quaternion)
 {
   tf2::Quaternion tf_quaternion;
@@ -556,6 +566,27 @@ std::vector<double> ManipulatorMenu::euler_from_quaternion(const geometry_msgs::
   std::vector<double> euler_angles = {roll,pitch,yaw};
 
   return euler_angles; 
+}
+
+// --------------------- DEG-RADIANS HANDLER -------------------
+std::vector<double> ManipulatorMenu::deg_from_rad(const std::vector<double> joint_rad)
+{
+  std::vector<double> joint_deg(joint_rad.size(),0);
+  // Iterate over input vector
+  for (unsigned int k; k < joint_deg.size(); k++)
+      {joint_deg[k] = joint_rad[k]*180/M_PI;}
+  // Return result
+  return joint_deg;
+}
+
+std::vector<double> ManipulatorMenu::rad_from_deg(const std::vector<double> joint_deg)
+{
+  std::vector<double> joint_rad(joint_deg.size(),0);
+  // Iterate over input vector
+  for (unsigned int k; k < joint_rad.size(); k++)
+      {joint_rad[k] = joint_deg[k]/180*M_PI;}
+  // Return result
+  return joint_rad;
 }
 
 // --------------------- MENU HANDLER ---------------------

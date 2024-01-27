@@ -45,7 +45,7 @@
 
 // ---------------------  PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorPlanner::ManipulatorPlanner(const bool tcp_pub):tcp_pub_(tcp_pub)
+ManipulatorPlanner::ManipulatorPlanner()
 {
   // ---------------------  TCP AND JOINT GOALS SUBSCRIBERS ---------------------
 
@@ -57,11 +57,6 @@ ManipulatorPlanner::ManipulatorPlanner(const bool tcp_pub):tcp_pub_(tcp_pub)
 
   // tcp_goalSeq_sub_   = nh_.subscribe("/desired_tcpSeq_poses",   1, &ManipulatorPlanner::tcpGoalSeqCallback,    this);
   // joint_goalSeq_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
-
-  // If the user wants to continuosly publish the end effector pose
-  if (tcp_pub_)
-  { ee_pose_pub_     = nh_.advertise<geometry_msgs::PoseStamped>("/display_eepose", 1);
-    joint_state_sub_ = nh_.subscribe("/joint_states", 1, &ManipulatorPlanner::jointsStateCallback, this);}
 
   // ---------------------  ADD COLLISION OBJECT SUBSCRIBER  ---------------------
 
@@ -89,14 +84,14 @@ ManipulatorPlanner::ManipulatorPlanner(const bool tcp_pub):tcp_pub_(tcp_pub)
 // Destructor of the object manipulator planner's class
 ManipulatorPlanner::~ManipulatorPlanner() {delete planner_;}
 
-// ---------------------  PUBLIC FUNCTIONS ---------------------
+// ---------------------  PUBLIC FUNCTIONS --------------------- //
 
 // Manipulator planner spin function -> NOTE: the sleep rate is set in the node
 void ManipulatorPlanner::spinner()  {planner_->spinner();}
 
-// ---------------------  PRIVATE FUNCTIONS ---------------------
+// ---------------------  PRIVATE FUNCTIONS --------------------- //
 
-// --------------------- UTILS FUNCTIONS --------------------
+// --------------------- UTILS FUNCTIONS -------------------- //
 
 // Check manipulators parameters passed to the node
 void ManipulatorPlanner::check_param()
@@ -159,7 +154,7 @@ void ManipulatorPlanner::check_param()
 }
 
 // // Creation of a collision object
-void ManipulatorPlanner::createObj( const std::string&  name, 
+void ManipulatorPlanner::createObj( const std::string&  name,
                                     const int           obj_type, 
                                     std::vector<double> obj_dims, 
                                     double              obj_pos[], 
@@ -231,38 +226,7 @@ void ManipulatorPlanner::addCollObjCallback(const moveit_msgs::CollisionObject& 
   createObj(obj.id,obj.primitives[0].type,dim_array,pos_array,rot_array);
 }
 
-// Read current joint status and publish ee pose
-void ManipulatorPlanner::jointsStateCallback(const sensor_msgs::JointState::ConstPtr& js)
-{
-  // Update current joint state
-  joint_state_ = *js;
-
-  // Create a TF2 buffer and listener
-  tf2_ros::Buffer tf_buffer;
-  tf2_ros::TransformListener tf_listener(tf_buffer);
-
-  // Wait for the transformation to be available
-  try {tf_buffer.canTransform("base_link", "tool0", ros::Time(0), ros::Duration(0.5));} 
-  catch (tf2::TransformException& ex) {ROS_WARN("%s", ex.what());}
-
-  // Get the transformation
-  geometry_msgs::TransformStamped transformStamped;
-  try                                 {transformStamped = tf_buffer.lookupTransform("base_link", "tool0",ros::Time(0));}
-  catch (tf2::TransformException &ex) {ROS_WARN("%s",ex.what()); ros::Duration(1.0).sleep();}
-
-  // Convert the tf msg into a PoseStamped
-  ee_pose_.header.frame_id  = "base_link";
-  ee_pose_.header.stamp     = ros::Time::now();
-  ee_pose_.pose.position.x  = transformStamped.transform.translation.x;
-  ee_pose_.pose.position.y  = transformStamped.transform.translation.y;
-  ee_pose_.pose.position.z  = transformStamped.transform.translation.z;
-  ee_pose_.pose.orientation = transformStamped.transform.rotation;
-
-  ee_pose_pub_.publish(ee_pose_);
-}
-
-
-// --------------------- MOVE FUNCTIONS ---------------------
+// --------------------- MOVE FUNCTIONS --------------------- //
 
 // Callback function to handle a tcp 3D goal
 void ManipulatorPlanner::tcpGoalCallback(const geometry_msgs::Pose::ConstPtr& p)

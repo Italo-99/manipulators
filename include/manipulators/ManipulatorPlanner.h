@@ -48,7 +48,7 @@ class ManipulatorPlanner
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-      ManipulatorPlanner(const bool tcp_pub); // Constructor
+      ManipulatorPlanner();                   // Constructor
       ~ManipulatorPlanner();                  // Destructor
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
