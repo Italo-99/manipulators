@@ -519,6 +519,8 @@ ROS1
 
             coppeliaSim                                                             to launch coppealiaSim if the 'trick' is done
 
+            export COPPELIASIM_ROOT_DIR=~/Desktop/VREP                              to build sim_ros_interface package in a workspace 
+
         2) OTHER COMMANDS can be easily found on the User Manual on the internet: https://manual.coppeliarobotics.com/index.html                
 
     MOVEIT
@@ -620,12 +622,13 @@ ROS1
             che arriva da odom perchè quest'ultimo confronta l'orientamento relativo tra un frame child e un frame parent).
             La t265 non ha depth ne stream a colori, quindi non ha pointcloud
 
-
 CABLE DETECTION COMMANDS
 
     The following are the commands to launch some procedures about cable detection through AI pkgs
 
-    roslaunch AI_pkgs run_dlo3ds.launch
+    roslaunch AI_pkgs run_dlo3ds.launch             to launch UNIBO custom detection pipeline
+
+    rosrun cable_detection fastdlo_detection.py     to launch my test detection node
 
 USE THE FOLLOWING TO COPY AND PASTE THE SYMBOLS 
 
