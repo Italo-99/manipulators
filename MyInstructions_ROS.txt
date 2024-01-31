@@ -531,9 +531,9 @@ ROS1
 
         roslaunch realsense2_camera rs_camera.launch        to launch the attached camera
 
-        1) To launch real camera with all params set by the user
+        1) To launch real camera with all params set by the user (example)
 
-            roslaunch realsense2_camera rs_camera.launch depth_fps:=30 color_fps:=30 filters:=pointcloud enable_gyro:=true enable_accel:=true enable_fisheye1:=true enable_fisheye2:=true enable_infra1:=true enable_pointcloud:=true accel_fps:=250 gyro_fps:=400 fisheye_fps:=30 align_depth:=true enable_sync:=true allow_no_texture_points:=true ordered_pc:=true
+            roslaunch realsense2_camera rs_d435_camera_with_model.launch depth_fps:=30 color_fps:=30 filters:=pointcloud enable_gyro:=true enable_accel:=true enable_fisheye1:=true enable_fisheye2:=true enable_infra1:=true enable_pointcloud:=true accel_fps:=250 gyro_fps:=400 fisheye_fps:=30 align_depth:=true enable_sync:=true allow_no_texture_points:=true ordered_pc:=true
 
         2) rosrun rqt_reconfigure rqt_reconfigure
 
