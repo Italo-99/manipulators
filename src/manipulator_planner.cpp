@@ -62,6 +62,9 @@ ManipulatorPlanner::ManipulatorPlanner()
 
   add_coll_obj_sub_ = nh_.subscribe("/add_collision_object", 1, &ManipulatorPlanner::addCollObjCallback, this);
 
+  VERIFY_PUB_COLL_OBJ = nh_.advertise<moveit_msgs::CollisionObject>("/OBJ_TEST", 1); //TODO
+
+
   // ---------------------  PRIVATE VARIABLES SETUP  ---------------------------
 
   check_param();
@@ -74,11 +77,12 @@ ManipulatorPlanner::ManipulatorPlanner()
 
   // --------------------- ENVIRONMENT SETUP ---------------------
 
-  // Add a table to the scene
+  // // Add a table to the scene
   std::vector<double> dim_obj = {4.,4.,0.079};
   double pos_obj[]            = {0.,0.,-0.04};
   double rot_obj[]            = {0.,0.,0.,1.};
-  createObj("table", 1, dim_obj, pos_obj,rot_obj);  
+  createObj("table", 1, dim_obj, pos_obj,rot_obj);
+
 }
 
 // Destructor of the object manipulator planner's class
@@ -153,7 +157,7 @@ void ManipulatorPlanner::check_param()
   nh_.getParam("manipulator_planner/sim", sim_);
 }
 
-// // Creation of a collision object
+// Creation of a collision object
 void ManipulatorPlanner::createObj( const std::string&  name,
                                     const int           obj_type, 
                                     std::vector<double> obj_dims, 
@@ -162,9 +166,15 @@ void ManipulatorPlanner::createObj( const std::string&  name,
 {
   // Creation of the obj
   moveit_msgs::CollisionObject obj;
-
+  // Set header msg
+  obj.header.seq = 1;
+  obj.header.stamp.sec  = ros::Time::now().sec;
+  obj.header.stamp.nsec = ros::Time::now().nsec;
+  // Set frames
   obj.header.frame_id = base_name_;
   obj.id              = name;
+  // Set pose
+  obj.pose.orientation.w = 1.;
   obj.primitives.resize(1);
   obj.primitives[0].type = obj_type;
   int size_obj_dims = obj_dims.size();
@@ -195,9 +205,6 @@ void ManipulatorPlanner::createObj( const std::string&  name,
       break;
   }
 
-  // Set static obj
-  obj.operation = 0;
-
   // Set obj position
   obj.primitive_poses.resize(1);
   obj.primitive_poses[0].position.x = obj_pos[0];
@@ -209,6 +216,12 @@ void ManipulatorPlanner::createObj( const std::string&  name,
   obj.primitive_poses[0].orientation.y = rot_pos[1];
   obj.primitive_poses[0].orientation.z = rot_pos[2];
   obj.primitive_poses[0].orientation.w = rot_pos[3];
+
+  // Set static obj
+  obj.operation = 0;
+
+  // VERIFY IF THE MESSAGE HAS BEEN PROPERLY FILLED
+  VERIFY_PUB_COLL_OBJ.publish(obj); // TODO
 
   // THIS IS THE WAY TO HANDLE OBSTACLES. Push back in the vector if you want to add, 
   // remove from the vector if you want to remove. Be sure to also process and apply!

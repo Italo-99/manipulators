@@ -70,6 +70,10 @@ ManipulatorMenu::ManipulatorMenu()
 
     // --------------------- CoppeliaSim client init ---------------------
     client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
+
+    // -------------------- Initial pose definition --------------------------ù
+      std::vector<double> start_joint_pose = {0.0,-90,+90,0.0,+90,0.0};
+      publishJointGoal(start_joint_pose);
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
@@ -113,10 +117,10 @@ void ManipulatorMenu::closeCoppeliaSim()
 
 // --------------------- MOVEMENTS HANDLER ---------------------
 
-// Publish a joint goal by passing a vector
+// Publish a joint goal by passing a vector of joints in deg
 void ManipulatorMenu::publishJointGoal(const std::vector<double> joints) 
 {
-  // Fill the joint msg
+  // Fill the joint msg with degToRad conversion
   sensor_msgs::JointState jointStateMsg;
   jointStateMsg.header.stamp = ros::Time::now();
   for (unsigned int k = 0; k < joints.size(); k++) 
@@ -180,7 +184,6 @@ void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
   {
     joint_target[k] = current_joint_pose_.position[k]*180/M_PI;
   }
-  
   joint_target[num] = joint_target[num] + joint_rot;
   publishJointGoal(joint_target);
 }
@@ -243,7 +246,7 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
   tcp_pose_rpy[4] = tcp_rpy[1];
   tcp_pose_rpy[5] = tcp_rpy[2];
 
-  return tcp_rpy;
+  return tcp_pose_rpy;
 }
 
 // -------------------- SIMPLE MOVES ALONG CARTHESIAN AXES -----------------------//
@@ -251,6 +254,8 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
 void ManipulatorMenu::move_along_x(const double x_step)
 {
   std::vector<double> goal_pose = getEEpos_rpy();
+  ROS_INFO("Current pose x: %f",goal_pose[0]);
+  ROS_INFO("Desired move: %f", x_step);
   goal_pose[0] = goal_pose[0] + x_step;
   publishTcpIKGoal(goal_pose);
 }
@@ -381,6 +386,7 @@ void ManipulatorMenu::publishCollisionObject(const moveit_msgs::CollisionObject 
 // --------------------- PRIVATE FUNCTIONS ---------------------
 
 // --------------------- COPPELIA HANDLER ---------------------
+
 // Send the request and show the response
 void ManipulatorMenu::wait_for_response()
 {
@@ -405,10 +411,10 @@ void ManipulatorMenu::testJointGoal()
 
   // Alternate a different joint goal when launching this function
   counterJg_ = !counterJg_;
-  if (counterJg_) {joints = {0.0,-1.57,+1.57,0.0,+1.57,0.0};}
-  else            {joints = {0.0,-1.57,+1.57,0.0,-1.57,0.0};}   
+  if (counterJg_) {joints = {0.0,-90,+90,0.0,+90,0.0};}
+  else            {joints = {0.0,-90,+90,0.0,-90,0.0};}   
   
-  publishJointGoal(deg_from_rad(joints));
+  publishJointGoal(joints);
 }
 
 void ManipulatorMenu::userJointGoal()
@@ -460,7 +466,7 @@ void ManipulatorMenu::userTcpGoal()
   std::vector<double> position = {0.,0.,0.,0.,0.,0.};
   
   // Take user degree angle for each joint
-  std::cout << "Enter the values of the tcp goal, with rotation angles in degrees:";
+  std::cout << "Enter the values of the tcp goal, with rotation angles in degrees:\n";
 
   // X position input
   std::cout << "X position:  ";
@@ -489,7 +495,7 @@ void ManipulatorMenu::userTcpIKGoal()
   std::vector<double> position = {0.,0.,0.,0.,0.,0.};
   
   // Take user degree angle for each joint
-  std::cout << "Enter the values of the tcp goal through InvKine, with rotation angles in degrees:";
+  std::cout << "Enter the values of the tcp goal through InvKine, with rotation angles in degrees:\n";
 
   // X position input
   std::cout << "X position:  ";
@@ -518,12 +524,7 @@ void ManipulatorMenu::jointStateVisualizer()
 {
     for (unsigned int k = 0; k < 6; k++)
     {
-      std::cout << "Joint 0: " << current_joint_pose_.position[0];
-      std::cout << "Joint 1: " << current_joint_pose_.position[1];
-      std::cout << "Joint 2: " << current_joint_pose_.position[2];
-      std::cout << "Joint 3: " << current_joint_pose_.position[3];
-      std::cout << "Joint 4: " << current_joint_pose_.position[4];
-      std::cout << "Joint 5: " << current_joint_pose_.position[5];
+      std::cout << "\nJoint " << k << " : " << current_joint_pose_.position[k];
     }
 }
 
@@ -548,9 +549,9 @@ void ManipulatorMenu::addCollObj()
   std::vector<double>  obj_dims;
   double               obj_pos[] = {0.,0.,0.};
   double               rot_pos[] = {0.,0.,0.};
-  std::cout << "Insert following infomation about the obj.";
+  std::cout << "Insert following infomation about the obj.\n";
   std::cout << "Name: "; std::cin >> name;
-  std::cout << "Object type: 1 for BOX, 2 for SPHERE, 3 for CYLINDER, 4 for CONE."; std::cin >> obj_type;
+  std::cout << "Object type: 1 for BOX, 2 for SPHERE, 3 for CYLINDER, 4 for CONE.\n"; std::cin >> obj_type;
   //If box chosen
   if (obj_type == 1)       {obj_dims = {0.,0.,0.,};
                             std::cout << "X dim: "; std::cin >> obj_dims[0];
@@ -564,16 +565,19 @@ void ManipulatorMenu::addCollObj()
                             std::cout << "X dim: "; std::cin >> obj_dims[0];
                             std::cout << "Y dim: "; std::cin >> obj_dims[1];}
 
-  std::cout << "Insert position";
+  std::cout << "Insert position\n";
   std::cout << "X position: "; std::cin >> obj_pos[0];
   std::cout << "Y position: "; std::cin >> obj_pos[1];
   std::cout << "Z position: "; std::cin >> obj_pos[2];
-  std::cout << "Insert orientation";
-  std::cout << "RX rotation: "; std::cin >> obj_pos[3];
-  std::cout << "RY rotation: "; std::cin >> obj_pos[4];
-  std::cout << "RZ rotation: "; std::cin >> obj_pos[5];
+  std::cout << "Insert orientation\n";
+  std::cout << "RX rotation: "; std::cin >> rot_pos[0];
+  std::cout << "RY rotation: "; std::cin >> rot_pos[1];
+  std::cout << "RZ rotation: "; std::cin >> rot_pos[2];
 
-  addObj(name,obj_type,obj_dims,obj_pos,rot_pos);
+  geometry_msgs::Quaternion rot_quat = quaternion_from_euler(rot_pos[0],rot_pos[1],rot_pos[2]);
+  double rot_pos_quat[4] = {rot_quat.x,rot_quat.y,rot_quat.z,rot_quat.w};
+
+  addObj(name,obj_type,obj_dims,obj_pos,rot_pos_quat);
 }
 
 // --------------------- QUATERNIONS HANDLER -------------------
@@ -667,10 +671,9 @@ int ManipulatorMenu::getUserChoice()
 
 void ManipulatorMenu::processChoice(int choice)
 {
-  double step;
-  std::vector<double> rot;
-  std::vector<double> ee_pos;
-  geometry_msgs::PoseStamped ee_pose;
+  double step;                // Linear move length along axis
+  std::vector<double> rot;    // End effector rotation
+  std::vector<double> ee_pos; // End effector position
   switch (choice)
   {
   case 0:
@@ -711,7 +714,7 @@ void ManipulatorMenu::processChoice(int choice)
   case 7:
     ROS_INFO("You selected Option 7\n");
     
-    std::cout << "Insert how many metres you want to move along x";
+    std::cout << "Insert how many metres you want to move along x: \n";
     std::cin >> step;
     move_along_x(step);
     break;
@@ -719,14 +722,14 @@ void ManipulatorMenu::processChoice(int choice)
   case 8:
     ROS_INFO("You selected Option 8\n");
     
-    std::cout << "Insert how many metres you want to move along y";
+    std::cout << "Insert how many metres you want to move along y:\n";
     std::cin >> step;
     move_along_y(step);
 
   case 9:
     ROS_INFO("You selected Option 9\n");
     
-    std::cout << "Insert how many metres you want to move along z";
+    std::cout << "Insert how many metres you want to move along z:\n";
     std::cin >> step;
     move_along_z(step);
     break;
@@ -744,7 +747,7 @@ void ManipulatorMenu::processChoice(int choice)
 
   case 11:
     ROS_INFO("You selected Option 11\n");
-    std::cout << "Insert the rotation around X axis you want to do.";
+    std::cout << "Insert the rotation around X axis you want to do.\n";
     double x_rot; 
     std::cout << " X rotation: "; std::cin >> x_rot;
     rotate_around_x(x_rot);
@@ -752,7 +755,7 @@ void ManipulatorMenu::processChoice(int choice)
 
   case 12:
     ROS_INFO("You selected Option 12\n");
-    std::cout << "Insert the rotation around Y axis you want to do.";
+    std::cout << "Insert the rotation around Y axis you want to do.\n";
     double y_rot; 
     std::cout << " Y rotation: "; std::cin >> y_rot;
     rotate_around_y(y_rot);
@@ -760,7 +763,7 @@ void ManipulatorMenu::processChoice(int choice)
 
   case 13:
     ROS_INFO("You selected Option 13\n");
-    std::cout << "Insert the rotation around Z axis you want to do.";
+    std::cout << "Insert the rotation around Z axis you want to do.\n";
     double z_rot; 
     std::cout << " Z rotation: "; std::cin >> z_rot;
     rotate_around_z(z_rot);
@@ -783,16 +786,12 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 16:
-    ROS_INFO("You selected Option 14\n");
-    for (unsigned int k = 0; k < 6; k++) 
-    {
-      std::cout << "Joint " << k << " : " << current_joint_pose_.position[k];
-    }    
+    ROS_INFO("You selected Option 16\n");
+    jointStateVisualizer();    
     break;
 
   case 17:
-    ROS_INFO("You selected Option 15\n");
-    ee_pose = getEEpose();
+    ROS_INFO("You selected Option 17\n");
     ee_pos = getEEpos_rpy();
     std::cout << " EE - X position: " << ee_pos[0];
     std::cout << " EE - Y position: " << ee_pos[1];
@@ -803,6 +802,7 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 18:
+    ROS_INFO("You selected Option 18\n");
     ROS_INFO("Closing CoppeliaSim...");
     closeCoppeliaSim();
     break;

@@ -102,11 +102,8 @@ class ManipulatorPlanner
     // ros::Subscriber tcp_goalSeq_sub_;       // Subscriber to the sequence of TCP goal
     // ros::Subscriber joint_goalSeq_sub_;     // Subscriber to the sequence of joint goal
     ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
-    ros::Publisher ee_pose_pub_;            // Publisher of ee pose value
-    ros::Subscriber joint_state_sub_;       // Subscriber to joint state   
 
-    geometry_msgs::PoseStamped ee_pose_;    // Current ee pose
-    sensor_msgs::JointState joint_state_;   // Current joint values
+    ros::Publisher VERIFY_PUB_COLL_OBJ;
 
     // Planner args
     std::string manipulator_name_;          // Manipulator name
