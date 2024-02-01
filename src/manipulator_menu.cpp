@@ -100,29 +100,15 @@ void ManipulatorMenu::spinner()
 // Open Coppelia simulation
 void ManipulatorMenu::openCoppeliaSim()
 {
-  coppelia_srv_.request.command = 0;
-  if (client_.call(coppelia_srv_))
-  {
-    ROS_INFO("Simulation status: %s", coppelia_srv_.response.result);
-  }
-  else
-  {
-    ROS_ERROR("Failed to call service coppelia_menu");
-  }
+  coppelia_srv_.request.command = 0;  // Set the Coppelia Menu command for starting sim
+  wait_for_response();                // Send the request
 }
 
 // Close Coppelia simulation
 void ManipulatorMenu::closeCoppeliaSim()
 {
-  coppelia_srv_.request.command = 1;
-  if (client_.call(coppelia_srv_))
-  {
-    ROS_INFO("Simulation status: %s", coppelia_srv_.response.result);
-  }
-  else
-  {
-    ROS_ERROR("Failed to call service coppelia_menu");
-  }
+  coppelia_srv_.request.command = 1;  // Set the Coppelia Menu command for closing sim
+  wait_for_response();                // Send the request
 }
 
 // --------------------- MOVEMENTS HANDLER ---------------------
@@ -393,7 +379,21 @@ void ManipulatorMenu::publishCollisionObject(const moveit_msgs::CollisionObject 
 }
 
 // --------------------- PRIVATE FUNCTIONS ---------------------
-  
+
+// --------------------- COPPELIA HANDLER ---------------------
+// Send the request and show the response
+void ManipulatorMenu::wait_for_response()
+{
+  if (client_.call(coppelia_srv_))
+  {
+    ROS_INFO("Simulation status: %d", coppelia_srv_.response.result);
+  }
+  else
+  {
+    ROS_ERROR("Failed to call service coppelia_menu");
+  }
+}
+
 // --------------------- PUBS HANDLERS ---------------------
   
 // --------------------- JOINT GOALS HANDLER ---------------------
@@ -803,7 +803,7 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 18:
-    ROS_INFO("Closing CoppeliaSim...\n");
+    ROS_INFO("Closing CoppeliaSim...");
     closeCoppeliaSim();
     break;
   case 19:

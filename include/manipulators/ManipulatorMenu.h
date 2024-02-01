@@ -53,6 +53,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "manipulators/CoppeliaMenu.h"
 
 class ManipulatorMenu
 {
@@ -102,6 +103,9 @@ class ManipulatorMenu
  private:
 
   // --------------------- PRIVATE FUNCTIONS ---------------------
+
+    // ---------------  PRIVATE COPPELIA METHODS ---------------------
+      void wait_for_response(void);     // Send the request and show the response
 
     // ---------------------  PRIVATE PUBS/SUBS ---------------------
 
