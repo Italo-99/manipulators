@@ -67,9 +67,14 @@ ManipulatorMenu::ManipulatorMenu()
 
     counterJg_ = false;       // choice of test joint goal
     counterCg_ = false;       // choice of test tcp3D goal
+
+    // --------------------- CoppeliaSim client init ---------------------
+    client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
+
+// --------------------- ROS HANDLER ---------------------
 
 // Asynchronous spinner for ROS routines
 void ManipulatorMenu::spinner()
@@ -78,17 +83,49 @@ void ManipulatorMenu::spinner()
 
   while (ros::ok())
   {
-    getEEpos_rpy();
-    printMenu();
-    userChoice = getUserChoice();
-    processChoice(userChoice);
     ros::spinOnce();
-    ros::Duration(1.0).sleep();
+    getEEpos_rpy();                 // Update current robot pose
+    printMenu();                    // Print choice menu
+    userChoice = getUserChoice();   // Get user choice from the terminal
+    processChoice(userChoice);      // Execute the command
+    ros::Duration(1.0).sleep();     // Wait 1s until next command
   }
 
   ROS_WARN_THROTTLE(3, "Closing the menu! \n");
   ros::shutdown();
 }
+
+// --------------------- COPPELIASIM HANDLER ---------------------
+
+// Open Coppelia simulation
+void ManipulatorMenu::openCoppeliaSim()
+{
+  coppelia_srv_.request.command = 0;
+  if (client_.call(coppelia_srv_))
+  {
+    ROS_INFO("Simulation status: %s", coppelia_srv_.response.result);
+  }
+  else
+  {
+    ROS_ERROR("Failed to call service coppelia_menu");
+  }
+}
+
+// Close Coppelia simulation
+void ManipulatorMenu::closeCoppeliaSim()
+{
+  coppelia_srv_.request.command = 1;
+  if (client_.call(coppelia_srv_))
+  {
+    ROS_INFO("Simulation status: %s", coppelia_srv_.response.result);
+  }
+  else
+  {
+    ROS_ERROR("Failed to call service coppelia_menu");
+  }
+}
+
+// --------------------- MOVEMENTS HANDLER ---------------------
 
 // Publish a joint goal by passing a vector
 void ManipulatorMenu::publishJointGoal(const std::vector<double> joints) 
@@ -246,6 +283,8 @@ void ManipulatorMenu::move_along_z(const double z_step)
     publishTcpIKGoal(goal_pose);
 }
 
+// -------------------- SIMPLE ROTATIONS AROUND CARTHESIAN AXES -----------------------//
+
 void ManipulatorMenu::make_tcp_rot(const std::vector<double> rot_vec)
 {
   std::vector<double> goal_pose = getEEpos_rpy();
@@ -286,6 +325,7 @@ void ManipulatorMenu::rotate_around_z(const double z_rot_step)
 }
 
 // --------------------- COLLISION OBJECTS HANDLER ---------------------
+
 // Create a collision object from a selected primitive
 void ManipulatorMenu::addObj(const std::string&   name,
                              const int            obj_type, 
@@ -594,6 +634,7 @@ std::vector<double> ManipulatorMenu::rad_from_deg(const std::vector<double> join
 void ManipulatorMenu::printMenu()
 {
   std::cout << "\n======= Manipulator Menu =======\n";
+  std::cout << "0. To open twin Coppelia sim scene\n";
   std::cout << "1. Test a joint goal\n";
   std::cout << "2. Test a TCP goal\n";
   std::cout << "3. Give a joint goal\n";
@@ -611,7 +652,8 @@ void ManipulatorMenu::printMenu()
   std::cout << "15.Add an object to the scene\n";
   std::cout << "16.Visualize joints state\n";
   std::cout << "17.Visualize current tcp pose\n";
-  std::cout << "18.Shutdown the menu\n";
+  std::cout << "18.Shutdown CoppeliaSim\n";
+  std::cout << "19.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -631,6 +673,11 @@ void ManipulatorMenu::processChoice(int choice)
   geometry_msgs::PoseStamped ee_pose;
   switch (choice)
   {
+  case 0:
+    ROS_INFO("You selected Option 0");
+    openCoppeliaSim();
+    break;
+
   case 1:
     ROS_INFO("You selected Option 1");
     testJointGoal();
@@ -756,10 +803,13 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 18:
+    ROS_INFO("Closing CoppeliaSim...\n");
+    closeCoppeliaSim();
+    break;
+  case 19:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;
-
   default:
     ROS_WARN("Invalid choice. Please choose a valid option.");
     break;

@@ -64,6 +64,9 @@ class ManipulatorMenu
 
     void spinner(void);                                       // Asynchronous spinner for ROS routines
 
+    void openCoppeliaSim(void);
+    void closeCoppeliaSim(void);
+
     void publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
     void publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
     void publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planne
@@ -150,6 +153,10 @@ class ManipulatorMenu
 
       geometry_msgs::PoseStamped current_tcp_pose_;
       sensor_msgs::JointState current_joint_pose_;
+
+    // ---------------------  COPPELIA HANDLING ---------------------
+      ros::ServiceClient client_;
+      manipulators::CoppeliaMenu coppelia_srv_;
 
     // ---------------------  USEFUL TOOLS ---------------------
 

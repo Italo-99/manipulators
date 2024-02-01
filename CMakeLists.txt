@@ -1,22 +1,36 @@
 cmake_minimum_required(VERSION 2.8.3)
+cmake_policy(SET CMP0048 NEW)
 project(manipulators)
 
 add_compile_options(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  rospy
   std_msgs
   geometry_msgs
   dynamic_planner
-)
-
-catkin_package(
-  INCLUDE_DIRS include
+  message_generation
 )
 
 include_directories(
   include
+  srv
   ${catkin_INCLUDE_DIRS}
+)
+
+add_service_files(
+  FILES
+  CoppeliaMenu.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
+
+catkin_package(
+  INCLUDE_DIRS include
 )
 
 # Add manipulator class node
