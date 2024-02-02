@@ -78,7 +78,7 @@ ManipulatorPlanner::ManipulatorPlanner()
   std::vector<double> dim_obj = {4.,4.,0.079};
   double pos_obj[]            = {0.,0.,-0.04};
   double rot_obj[]            = {0.,0.,0.,1.};
-  createObj("table", 1, dim_obj, pos_obj,rot_obj);
+  createObj("table", 1, dim_obj, pos_obj,rot_obj,0);
 
 }
 
@@ -159,7 +159,8 @@ void ManipulatorPlanner::createObj( const std::string&  name,
                                     const int           obj_type, 
                                     std::vector<double> obj_dims, 
                                     double              obj_pos[], 
-                                    double              rot_pos[])
+                                    double              rot_pos[],
+                                    uint                operation)
 {
   // Creation of the obj
   moveit_msgs::CollisionObject obj;
@@ -213,8 +214,8 @@ void ManipulatorPlanner::createObj( const std::string&  name,
   obj.primitive_poses[0].orientation.z = rot_pos[2];
   obj.primitive_poses[0].orientation.w = rot_pos[3];
 
-  // Set static obj
-  obj.operation = 0;
+  // Set obj operation: ADD=0, REMOVE=1, APPEND=2, MOVE=3
+  obj.operation = operation;
 
   // THIS IS THE WAY TO HANDLE OBSTACLES. Push back in the vector if you want to add, 
   // remove from the vector if you want to remove. Be sure to also process and apply!
@@ -229,7 +230,8 @@ void ManipulatorPlanner::addCollObjCallback(const moveit_msgs::CollisionObject& 
   std::vector<double> dim_array = {obj.primitives[0].dimensions[0],      obj.primitives[0].dimensions[1],      obj.primitives[0].dimensions[2]  };
   double pos_array[]            = {obj.primitive_poses[0].position.x,    obj.primitive_poses[0].position.y,    obj.primitive_poses[0].position.z};
   double rot_array[]            = {obj.primitive_poses[0].orientation.x, obj.primitive_poses[0].orientation.y, obj.primitive_poses[0].orientation.z, obj.primitive_poses[0].orientation.w};
-  createObj(obj.id,obj.primitives[0].type,dim_array,pos_array,rot_array);
+  uint operation                = obj.operation;
+  createObj(obj.id,obj.primitives[0].type,dim_array,pos_array,rot_array,operation);
 }
 
 // --------------------- JACOBIAN-FKINE FUNCTIONS -------------------- //

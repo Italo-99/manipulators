@@ -64,11 +64,12 @@ class ManipulatorPlanner
       void check_param();
 
       // Create a collision object from a selected primitive
-      void createObj(const std::string&   name, 
+      void createObj(const std::string& name,
                      const int            obj_type, 
                      std::vector<double>  obj_dims, 
                      double               obj_pos[], 
-                     double               rot_pos[]);
+                     double               rot_pos[],
+                     uint                 opoeration);
 
       // Callback function for goals in the 3D cartesian space for the robot TCP
       void addCollObjCallback(const moveit_msgs::CollisionObject& obj);

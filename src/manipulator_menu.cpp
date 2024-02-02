@@ -361,11 +361,12 @@ void ManipulatorMenu::rotate_around_z(const double z_rot_step)
 // --------------------- COLLISION OBJECTS HANDLER ---------------------
 
 // Create a collision object from a selected primitive
-void ManipulatorMenu::addObj(const std::string& name,
+void ManipulatorMenu::addObj(const std::string&   name,
                              const int            obj_type, 
                              std::vector<double>  obj_dims, 
                              double               obj_pos[], 
-                             double               rot_pos[])
+                             double               rot_pos[],
+                             uint                 operation)
 {
   // Creation of the obj
   moveit_msgs::CollisionObject obj;
@@ -402,8 +403,8 @@ void ManipulatorMenu::addObj(const std::string& name,
       break;
   }
 
-  // Set static obj
-  obj.operation = 0;
+  // Set obj operation: ADD=0, REMOVE=1, APPEND=2, MOVE=3
+  obj.operation = operation;
 
   // Set obj position
   obj.primitive_poses.resize(1);
@@ -614,7 +615,19 @@ void ManipulatorMenu::addCollObj()
   geometry_msgs::Quaternion rot_quat = quaternion_from_euler(rot_pos[0],rot_pos[1],rot_pos[2]);
   double rot_pos_quat[4] = {rot_quat.x,rot_quat.y,rot_quat.z,rot_quat.w};
 
-  addObj(name,obj_type,obj_dims,obj_pos,rot_pos_quat);
+  addObj(name,obj_type,obj_dims,obj_pos,rot_pos_quat,0);
+}
+
+// Function to delete a given collision object from the user menu
+void ManipulatorMenu::deleteCollObj()
+{
+    std::string obj_name_loc;
+    std::cout << "Insert the name of the object you want to delete:" << std::endl;
+    std::cin >> obj_name_loc;
+    std::vector<double>   obj_dim_loc        = {0.,0.,0.};
+    double                obj_pos_loc[]      = {0.,0.,0.};
+    double                rot_pos_quat_loc[] = {0.,0.,0.,1.};
+    addObj(obj_name_loc,1,obj_dim_loc,obj_pos_loc,rot_pos_quat_loc,1);
 }
 
 // --------------------- QUATERNIONS HANDLER -------------------
@@ -696,7 +709,8 @@ void ManipulatorMenu::printMenu()
   std::cout << "18.Shutdown CoppeliaSim\n";
   std::cout << "19.Go to home position (gripper down)\n";
   std::cout << "20.Go to home position (gripper at the front)\n";
-  std::cout << "21.Shutdown the menu\n";
+  std::cout << "21.Delete an object from the scene\n";
+  std::cout << "22.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -845,19 +859,24 @@ void ManipulatorMenu::processChoice(int choice)
     closeCoppeliaSim();
     break;
   case 19:
-    ROS_INFO("You selected Option 19\n");
+    ROS_INFO("You selected Option 19");
     ROS_INFO("Go to home position, gripper down ...");
     goHome(0);
     break;
   case 20:
-    ROS_INFO("You selected Option 20\n");
+    ROS_INFO("You selected Option 20");
     ROS_INFO("Go to home position, gripper at the front ...");
     goHome(1);
     break;
   case 21:
+    ROS_INFO("You selected Option 21");
+    deleteCollObj();
+    break;
+  case 22:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;
+
   default:
     ROS_WARN("Invalid choice. Please choose a valid option.");
     break;

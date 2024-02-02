@@ -96,11 +96,12 @@ class ManipulatorMenu
 
     // Add collision objects
     void publishCollisionObject(const moveit_msgs::CollisionObject collisionObjectMsg);
-    void addObj(const std::string&   name, 
+    void addObj(const std::string& name,
                 const int            obj_type, 
                 std::vector<double>  obj_dims, 
                 double               obj_pos[], 
-                double               rot_pos[]);
+                double               rot_pos[],
+                uint                 operation);
 
  private:
 
@@ -128,8 +129,10 @@ class ManipulatorMenu
     
     // --------------------- UTILS FUNCTIONS ---------------------
 
-      // Function to add a collision object by the users
-      void addCollObj();
+      // Function to add a collision object by the user
+      void addCollObj(void);
+      // Function to delete a given collision object from the user menu
+      void deleteCollObj(void);
 
       // Quaternions handling
       geometry_msgs::Quaternion quaternion_from_euler(double roll, double pitch, double yaw);
