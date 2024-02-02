@@ -33,7 +33,7 @@
  *
  *  Author: [Andrea Pupa] [Italo Almirante]
  *  Created on: [2024-01-17]
- */
+*/
 
 // CLASS SOURCE IMLEMENTATION OF MANIPULATOR MENU
 // This file is useful to publish some msgs on the topics of a manipulator planner instance
@@ -72,8 +72,8 @@ ManipulatorMenu::ManipulatorMenu()
     client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
 
     // -------------------- Initial pose definition --------------------------ù
-      std::vector<double> start_joint_pose = {0.0,-90,+90,0.0,+90,0.0};
-      publishJointGoal(start_joint_pose);
+    std::vector<double> start_joint_pose = {0.0,-90,+90,0.0,+90,0.0};
+    publishJointGoal(start_joint_pose);
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
@@ -179,11 +179,15 @@ void ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position)
 // Move a single joint, joint rotation must be in deg
 void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 {
+  // Read from subscribers
+  ros::spinOnce();
+  // Fill current joints pose as target
   std::vector<double> joint_target = {0.,0.,0.,0.,0.,0.};
   for (unsigned int k = 0; k < 6; k++) 
   {
     joint_target[k] = current_joint_pose_.position[k]*180/M_PI;
   }
+  // Change the joint target position
   joint_target[num] = joint_target[num] + joint_rot;
   publishJointGoal(joint_target);
 }
@@ -251,66 +255,104 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
 
 // -------------------- SIMPLE MOVES ALONG CARTHESIAN AXES -----------------------//
 
+// Set a carthesian move along x axis in metres
 void ManipulatorMenu::move_along_x(const double x_step)
 {
+  // Update current joint state
+  ros::spinOnce();
+  // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
-  ROS_INFO("Current pose x: %f",goal_pose[0]);
-  ROS_INFO("Desired move: %f", x_step);
+  // Update position along X
   goal_pose[0] = goal_pose[0] + x_step;
   publishTcpIKGoal(goal_pose);
 }
 
+// Set a carthesian move along x axis in metres
 void ManipulatorMenu::move_along_y(const double y_step)
 {
-    std::vector<double> goal_pose = getEEpos_rpy();
-    goal_pose[1] = goal_pose[1] + y_step;
-    publishTcpIKGoal(goal_pose);
+  // Update current joint state
+  ros::spinOnce();
+  // Get current EE pose
+  std::vector<double> goal_pose = getEEpos_rpy();
+  // Update position along Y
+  goal_pose[1] = goal_pose[1] + y_step;
+  publishTcpIKGoal(goal_pose);
 }
 
+// Set a carthesian move along x axis in metres
 void ManipulatorMenu::move_along_z(const double z_step)
 {
-    std::vector<double> goal_pose = getEEpos_rpy();
-    goal_pose[2] = goal_pose[2] + z_step;
-    publishTcpIKGoal(goal_pose);
+  // Update current joint state
+  ros::spinOnce();
+  // Get current EE pose
+  std::vector<double> goal_pose = getEEpos_rpy();
+  goal_pose[2] = goal_pose[2] + z_step;
+  // Update position along Z
+  publishTcpIKGoal(goal_pose);
 }
 
 // -------------------- SIMPLE ROTATIONS AROUND CARTHESIAN AXES -----------------------//
 
+// Set a RELATIVE ee rotation around the 3 carthesian axis (in degrees)
 void ManipulatorMenu::make_tcp_rot(const std::vector<double> rot_vec)
 {
+  // Update current joint state
+  ros::spinOnce();
+  // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
+  // Update tcp orient goal
   goal_pose[3] = goal_pose[3] + rot_vec[0];
   goal_pose[4] = goal_pose[4] + rot_vec[1];
   goal_pose[5] = goal_pose[5] + rot_vec[2];
   publishTcpIKGoal(goal_pose);
 }
 
+// Set an ABSOLUTE orientation ee position around the 3 carthesian axis (in degrees)
 void ManipulatorMenu::change_tcp_orient(const std::vector<double> rot_vec)
 {
+  // Update current joint state
+  ros::spinOnce();
+  // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
+  // Update tcp orient goal
   goal_pose[3] = rot_vec[0];
   goal_pose[4] = rot_vec[1];
   goal_pose[5] = rot_vec[2];
   publishTcpIKGoal(goal_pose);
 }
 
+// Set a relative rotation around x axis (in degrees)
 void ManipulatorMenu::rotate_around_x(const double x_rot_step)
 {
+  // Update current joint state
+  ros::spinOnce();
+  // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
+  // Update tcp orient goal
   goal_pose[3] = goal_pose[3] + x_rot_step;
   publishTcpIKGoal(goal_pose);
 }
 
+// Set a relative rotation around y axis (in degrees)
 void ManipulatorMenu::rotate_around_y(const double y_rot_step)
 {
+  // Update current joint state
+  ros::spinOnce();
+  // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
+  // Update tcp orient goal
   goal_pose[4] = goal_pose[4] + y_rot_step;
   publishTcpIKGoal(goal_pose);
 }
 
+// Set a relative rotation around z axis (in degrees)
 void ManipulatorMenu::rotate_around_z(const double z_rot_step)
 {
+  // Update current joint state
+  ros::spinOnce();
+  // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
+  // Update tcp orient goal
   goal_pose[5] = goal_pose[5] + z_rot_step;
   publishTcpIKGoal(goal_pose);
 }
@@ -532,12 +574,6 @@ void ManipulatorMenu::jointStateCallback(const sensor_msgs::JointState::ConstPtr
 {
   // Update joint current pose
   current_joint_pose_ = *msg;
-}
-
-void ManipulatorMenu::eePoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
-{
-  // Update current ee pose
-  current_tcp_pose_ = *msg;
 }
 
 // --------------------- COLLISION OBJECTS PRIVATE MENU HANDLER ---------------------

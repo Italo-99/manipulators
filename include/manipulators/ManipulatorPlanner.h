@@ -73,9 +73,11 @@ class ManipulatorPlanner
       // Callback function for goals in the 3D cartesian space for the robot TCP
       void addCollObjCallback(const moveit_msgs::CollisionObject& obj);
 
-      // Callback to joints state and publish end-effector pose
-      void jointsStateCallback(const sensor_msgs::JointState::ConstPtr& js);
+      // Get manipulator ee pose thourgh FKINE of current joints pose
+      const geometry_msgs::PoseStamped get_manip_FKine(void);
 
+      // Get manipulator Jacobian
+      const Eigen::MatrixXd get_manip_Jacobian(void);
 
     // --------------------- MOVE FUNCTIONS ---------------------
 

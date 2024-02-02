@@ -123,7 +123,6 @@ class ManipulatorMenu
 
       // Joint state callback function
       void jointStateCallback(const sensor_msgs::JointState::ConstPtr& msg);
-      void eePoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
     
     // --------------------- UTILS FUNCTIONS ---------------------
 

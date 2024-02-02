@@ -62,9 +62,6 @@ ManipulatorPlanner::ManipulatorPlanner()
 
   add_coll_obj_sub_ = nh_.subscribe("/add_collision_object", 1, &ManipulatorPlanner::addCollObjCallback, this);
 
-  VERIFY_PUB_COLL_OBJ = nh_.advertise<moveit_msgs::CollisionObject>("/OBJ_TEST", 1); //TODO
-
-
   // ---------------------  PRIVATE VARIABLES SETUP  ---------------------------
 
   check_param();
@@ -91,7 +88,7 @@ ManipulatorPlanner::~ManipulatorPlanner() {delete planner_;}
 // ---------------------  PUBLIC FUNCTIONS --------------------- //
 
 // Manipulator planner spin function -> NOTE: the sleep rate is set in the node
-void ManipulatorPlanner::spinner()  {planner_->spinner();}
+void ManipulatorPlanner::spinner()  {planner_->spinner();} 
 
 // ---------------------  PRIVATE FUNCTIONS --------------------- //
 
@@ -220,9 +217,6 @@ void ManipulatorPlanner::createObj( const std::string&  name,
   // Set static obj
   obj.operation = 0;
 
-  // VERIFY IF THE MESSAGE HAS BEEN PROPERLY FILLED
-  VERIFY_PUB_COLL_OBJ.publish(obj); // TODO
-
   // THIS IS THE WAY TO HANDLE OBSTACLES. Push back in the vector if you want to add, 
   // remove from the vector if you want to remove. Be sure to also process and apply!
   planner_->getCollisionObjects().push_back(obj);                       // add the obj object as obstacle
@@ -239,7 +233,25 @@ void ManipulatorPlanner::addCollObjCallback(const moveit_msgs::CollisionObject& 
   createObj(obj.id,obj.primitives[0].type,dim_array,pos_array,rot_array);
 }
 
-// --------------------- MOVE FUNCTIONS --------------------- //
+// --------------------- JACOBIAN-FKINE FUNCTIONS -------------------- //
+
+// THE FOLLOWING FUNCTION CANNOT BE USED SINCE DYNAMIC PLANNER METHODS CALLED DOENS'T WORK
+// Get the tcp pose through FKINE of a given joint pose
+const geometry_msgs::PoseStamped ManipulatorPlanner::get_manip_FKine()
+{
+  // Get current tcp pose through FKINE
+  return planner_->get_currentFKine();
+}
+
+// Get manipulator Jacobian
+const Eigen::MatrixXd ManipulatorPlanner::get_manip_Jacobian()
+{
+  // Get robot jacobian
+  return planner_->getJacobian();
+}
+
+
+// --------------------- MOVE CALLBACK FUNCTIONS --------------------- //
 
 // Callback function to handle a tcp 3D goal
 void ManipulatorPlanner::tcpGoalCallback(const geometry_msgs::Pose::ConstPtr& p)
@@ -300,48 +312,49 @@ void ManipulatorPlanner::jointsGoalCallback(const sensor_msgs::JointState::Const
   planner_->plan(js->position);
 }
 
+/*
+  // TODO: the following two functions give an allocator error on the compiler
+  // // Callback function for goals in the 3D cartesian space for the robot TCP
+  // void ManipulatorPlanner::tcpGoalSeqCallback(const std::vector<geometry_msgs::Pose>& p_seq)
+  // { 
+  //   // // Create a vector of PoseStamped msgs
+  //   // std::vector<const geometry_msgs::PoseStamped> p_stamp_seq;
+    
+  //   // // Convert each pose of the input vector into PoseStamped goals
+  //   // for (const auto& p : p_stamp_seq)
+  //   // {   
+  //   //   // Declaration of the goal variable as PS
+  //   //   geometry_msgs::PoseStamped goal;
 
-// TODO: the following two functions give an allocator error on the compiler
-// // Callback function for goals in the 3D cartesian space for the robot TCP
-// void ManipulatorPlanner::tcpGoalSeqCallback(const std::vector<geometry_msgs::Pose>& p_seq)
-// { 
-//   // // Create a vector of PoseStamped msgs
-//   // std::vector<const geometry_msgs::PoseStamped> p_stamp_seq;
-  
-//   // // Convert each pose of the input vector into PoseStamped goals
-//   // for (const auto& p : p_stamp_seq)
-//   // {   
-//   //   // Declaration of the goal variable as PS
-//   //   geometry_msgs::PoseStamped goal;
+  //   //   // Fill the fields of the goal variable
+  //   //   goal.header.frame_id = base_name_;
+  //   //   // Set the pose as passed from the publisher
+  //   //   goal.pose            = *p;                              
 
-//   //   // Fill the fields of the goal variable
-//   //   goal.header.frame_id = base_name_;
-//   //   // Set the pose as passed from the publisher
-//   //   goal.pose            = *p;                              
+  //   //   // Check if the quaternion has unit norm, if not return an error
+  //   //   tf2::Quaternion quat_tf;
+  //   //   tf2::convert(goal.pose.orientation, quat_tf);
+  //   //   if (quat_tf.length() >= 1.1 || quat_tf.length() <= 0.9)
+  //   //   {
+  //   //     ROS_ERROR("Quaternion must have unit norm.");
+  //   //     return;
+  //   //   }
+  //   //   // If the norm is not so far from the unit, normalize the orientation quaternion
+  //   //   quat_tf.normalize();
+  //   //   goal.pose.orientation = tf2::toMsg(quat_tf);
 
-//   //   // Check if the quaternion has unit norm, if not return an error
-//   //   tf2::Quaternion quat_tf;
-//   //   tf2::convert(goal.pose.orientation, quat_tf);
-//   //   if (quat_tf.length() >= 1.1 || quat_tf.length() <= 0.9)
-//   //   {
-//   //     ROS_ERROR("Quaternion must have unit norm.");
-//   //     return;
-//   //   }
-//   //   // If the norm is not so far from the unit, normalize the orientation quaternion
-//   //   quat_tf.normalize();
-//   //   goal.pose.orientation = tf2::toMsg(quat_tf);
+  //   //   // Push back the goal
+  //   //   p_stamp_seq.push_back(goal);
+  //   // }
 
-//   //   // Push back the goal
-//   //   p_stamp_seq.push_back(goal);
-//   // }
+  //   // // Call the sequencial planner
+  //   // planner_->plan(p_seq, ee_name_); 
+  // }
 
-//   // // Call the sequencial planner
-//   // planner_->plan(p_seq, ee_name_); 
-// }
-
-// // // Callback function for goals in the joint space
-// void ManipulatorPlanner::jointsGoalSeqCallback(const std::vector<std::vector<double>>& js_seq)
-// {
-//   // Call the sequential planner
-//   planner_->plan(js_seq);
-// }
+  // // // Callback function for goals in the joint space
+  // void ManipulatorPlanner::jointsGoalSeqCallback(const std::vector<std::vector<double>>& js_seq)
+  // {
+  //   // Call the sequential planner
+  //   planner_->plan(js_seq);
+  // }
+*/

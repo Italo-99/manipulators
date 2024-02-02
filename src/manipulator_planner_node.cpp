@@ -51,7 +51,7 @@ int main(int argc, char** argv)
   ManipulatorPlanner ce;
 
   // Setup a rate for ROS loop execution
-  ros::Rate r(50);
+  ros::Rate r(10);
 
   // ROS loop
   while (ros::ok())
