@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 
   ManipulatorMenu Menu;
 
-  Menu.spinner();
+  Menu.spinnerMenu();
 
   return 0;
 }

@@ -63,7 +63,8 @@ class ManipulatorMenu
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
-    void spinner(void);                                       // Asynchronous spinner for ROS routines
+    void spinnerMenu(void);         // Asynchronous spinner for ROS routines with user menu
+    void spinner(void);             // Update current robot joints state
 
     void openCoppeliaSim(void);
     void closeCoppeliaSim(void);
@@ -72,8 +73,9 @@ class ManipulatorMenu
     void publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
     void publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planne
     void oneJointMove(const int num, const double joint_rot); // to define a rotation around a single joint
+    void goHome(void);                                        // to setup home position
 
-    // Get the position and orientation of the end effector
+    // Get the position and orientation of the end effector (they contain a ros spin once)
     geometry_msgs::PoseStamped getEEpose();
     std::vector<double> getEEpos_rpy();
 

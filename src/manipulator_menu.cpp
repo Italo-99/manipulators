@@ -71,18 +71,30 @@ ManipulatorMenu::ManipulatorMenu()
     // --------------------- CoppeliaSim client init ---------------------
     client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
 
-    // -------------------- Initial pose definition --------------------------ù
-    std::vector<double> start_joint_pose = {0.0,-90,+90,0.0,+90,0.0};
-    publishJointGoal(start_joint_pose);
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
 
 // --------------------- ROS HANDLER ---------------------
 
-// Asynchronous spinner for ROS routines
+// Asynchronous spinner for ROS routines without user menu
 void ManipulatorMenu::spinner()
 {
+  ros::spinOnce();  // The loop rate is set in the child class node
+}
+
+// Asynchronous spinner for ROS routines with user menu
+void ManipulatorMenu::spinnerMenu()
+{
+  if (ros::ok())
+  {
+    // Set initial home position for the manipulator
+    ros::spinOnce();
+    goHome();
+    ros::Duration(3.0).sleep();     // Wait 3s until next command
+  }
+
+  // Initialize user choice variable
   int userChoice = 0;
 
   while (ros::ok())
@@ -171,7 +183,7 @@ void ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position)
   geometry_msgs::PoseStamped robot_goal_msg;
   robot_goal_msg.header.frame_id = "base_link";
   robot_goal_msg.header.stamp = ros::Time::now();
-  robot_goal_msg.pose = tcpPoseMsg,
+  robot_goal_msg.pose = tcpPoseMsg;
   
   display_goal_pub_.publish(robot_goal_msg);
 }
@@ -179,8 +191,8 @@ void ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position)
 // Move a single joint, joint rotation must be in deg
 void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 {
-  // Read from subscribers
-  ros::spinOnce();
+  // Read from subscribers the current joints state
+  spinner();
   // Fill current joints pose as target
   std::vector<double> joint_target = {0.,0.,0.,0.,0.,0.};
   for (unsigned int k = 0; k < 6; k++) 
@@ -190,6 +202,13 @@ void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
   // Change the joint target position
   joint_target[num] = joint_target[num] + joint_rot;
   publishJointGoal(joint_target);
+}
+
+// Go to pre configured home position
+void ManipulatorMenu::goHome()
+{
+  std::vector<double> start_joint_pose = {0.0,-90.,+90.,0.0,+90.,0.0}; // or {0,-90,+90,-90,-90,0}
+  publishJointGoal(start_joint_pose);
 }
 
 // -------------------- TF END EFFECTOR LISTENER -----------------------//
@@ -225,6 +244,7 @@ geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_fram
 // Get current EE pose
 geometry_msgs::PoseStamped ManipulatorMenu::getEEpose()
 {
+  // Compute the tf between base_link and end-effector
   current_tcp_pose_ = getTf("base_link","tool0");
   eepose_pub_.publish(current_tcp_pose_);
   return current_tcp_pose_;
@@ -249,6 +269,10 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
   tcp_pose_rpy[3] = tcp_rpy[0];
   tcp_pose_rpy[4] = tcp_rpy[1];
   tcp_pose_rpy[5] = tcp_rpy[2];
+  
+  ROS_INFO("TCP rot x: %f", tcp_rpy[0]);
+  ROS_INFO("TCP rot y: %f", tcp_rpy[1]);
+  ROS_INFO("TCP rot z: %f", tcp_rpy[2]);
 
   return tcp_pose_rpy;
 }
@@ -258,8 +282,6 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
 // Set a carthesian move along x axis in metres
 void ManipulatorMenu::move_along_x(const double x_step)
 {
-  // Update current joint state
-  ros::spinOnce();
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update position along X
@@ -270,8 +292,6 @@ void ManipulatorMenu::move_along_x(const double x_step)
 // Set a carthesian move along x axis in metres
 void ManipulatorMenu::move_along_y(const double y_step)
 {
-  // Update current joint state
-  ros::spinOnce();
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update position along Y
@@ -282,8 +302,6 @@ void ManipulatorMenu::move_along_y(const double y_step)
 // Set a carthesian move along x axis in metres
 void ManipulatorMenu::move_along_z(const double z_step)
 {
-  // Update current joint state
-  ros::spinOnce();
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   goal_pose[2] = goal_pose[2] + z_step;
@@ -296,8 +314,6 @@ void ManipulatorMenu::move_along_z(const double z_step)
 // Set a RELATIVE ee rotation around the 3 carthesian axis (in degrees)
 void ManipulatorMenu::make_tcp_rot(const std::vector<double> rot_vec)
 {
-  // Update current joint state
-  ros::spinOnce();
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update tcp orient goal
@@ -310,8 +326,6 @@ void ManipulatorMenu::make_tcp_rot(const std::vector<double> rot_vec)
 // Set an ABSOLUTE orientation ee position around the 3 carthesian axis (in degrees)
 void ManipulatorMenu::change_tcp_orient(const std::vector<double> rot_vec)
 {
-  // Update current joint state
-  ros::spinOnce();
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update tcp orient goal
@@ -324,8 +338,6 @@ void ManipulatorMenu::change_tcp_orient(const std::vector<double> rot_vec)
 // Set a relative rotation around x axis (in degrees)
 void ManipulatorMenu::rotate_around_x(const double x_rot_step)
 {
-  // Update current joint state
-  ros::spinOnce();
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update tcp orient goal
@@ -336,8 +348,6 @@ void ManipulatorMenu::rotate_around_x(const double x_rot_step)
 // Set a relative rotation around y axis (in degrees)
 void ManipulatorMenu::rotate_around_y(const double y_rot_step)
 {
-  // Update current joint state
-  ros::spinOnce();
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update tcp orient goal
@@ -348,8 +358,6 @@ void ManipulatorMenu::rotate_around_y(const double y_rot_step)
 // Set a relative rotation around z axis (in degrees)
 void ManipulatorMenu::rotate_around_z(const double z_rot_step)
 {
-  // Update current joint state
-  ros::spinOnce();
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update tcp orient goal
@@ -360,7 +368,7 @@ void ManipulatorMenu::rotate_around_z(const double z_rot_step)
 // --------------------- COLLISION OBJECTS HANDLER ---------------------
 
 // Create a collision object from a selected primitive
-void ManipulatorMenu::addObj(const std::string&   name,
+void ManipulatorMenu::addObj(const std::string& name,
                              const int            obj_type, 
                              std::vector<double>  obj_dims, 
                              double               obj_pos[], 
@@ -441,8 +449,6 @@ void ManipulatorMenu::wait_for_response()
     ROS_ERROR("Failed to call service coppelia_menu");
   }
 }
-
-// --------------------- PUBS HANDLERS ---------------------
   
 // --------------------- JOINT GOALS HANDLER ---------------------
 
@@ -566,7 +572,7 @@ void ManipulatorMenu::jointStateVisualizer()
 {
     for (unsigned int k = 0; k < 6; k++)
     {
-      std::cout << "\nJoint " << k << " : " << current_joint_pose_.position[k];
+      std::cout << "Joint " << k << " : " << current_joint_pose_.position[k]*180/M_PI << std::endl;
     }
 }
 
@@ -577,6 +583,7 @@ void ManipulatorMenu::jointStateCallback(const sensor_msgs::JointState::ConstPtr
 }
 
 // --------------------- COLLISION OBJECTS PRIVATE MENU HANDLER ---------------------
+
 // Function to add a collision object from the user menu
 void ManipulatorMenu::addCollObj()
 {
@@ -643,7 +650,7 @@ std::vector<double> ManipulatorMenu::euler_from_quaternion(const geometry_msgs::
   tf2::Matrix3x3(tf_quaternion).getRPY(roll, pitch, yaw);
 
   // Store the angles in a vector
-  std::vector<double> euler_angles = {roll,pitch,yaw};
+  std::vector<double> euler_angles = {roll*180.0/M_PI,pitch*180.0/M_PI,yaw*180.0/M_PI};
 
   return euler_angles; 
 }
@@ -822,7 +829,7 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 16:
-    ROS_INFO("You selected Option 16\n");
+    ROS_INFO("You selected Option 16");
     jointStateVisualizer();    
     break;
 

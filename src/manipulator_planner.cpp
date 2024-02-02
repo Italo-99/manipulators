@@ -165,8 +165,7 @@ void ManipulatorPlanner::createObj( const std::string&  name,
   moveit_msgs::CollisionObject obj;
   // Set header msg
   obj.header.seq = 1;
-  obj.header.stamp.sec  = ros::Time::now().sec;
-  obj.header.stamp.nsec = ros::Time::now().nsec;
+  obj.header.stamp = ros::Time::now();
   // Set frames
   obj.header.frame_id = base_name_;
   obj.id              = name;

@@ -113,14 +113,14 @@ Visualization Manager:
       Class: rviz/Pose
       Color: 0; 0; 0
       Enabled: true
-      Head Length: 0.05000000074505806
-      Head Radius: 0.03999999910593033
+      Head Length: 0.029999999329447746
+      Head Radius: 0.019999999552965164
       Name: Pose
       Queue Size: 10
-      Shaft Length: 0.6000000238418579
-      Shaft Radius: 0.029999999329447746
+      Shaft Length: 0.30000001192092896
+      Shaft Radius: 0.009999999776482582
       Shape: Arrow
-      Topic: /display_eepose
+      Topic: /display_ee_pose
       Unreliable: false
       Value: true
     - Class: moveit_rviz_plugin/PlanningScene
@@ -215,7 +215,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 1.525622844696045
+      Distance: 1.6080204248428345
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -223,9 +223,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 1.108189344406128
-        Y: 0.4259289503097534
-        Z: -2.5331917186122155e-07
+        X: 0.33924466371536255
+        Y: -0.3437688648700714
+        Z: -4.023307837996981e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
