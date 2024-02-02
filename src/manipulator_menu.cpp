@@ -86,20 +86,12 @@ void ManipulatorMenu::spinner()
 // Asynchronous spinner for ROS routines with user menu
 void ManipulatorMenu::spinnerMenu()
 {
-  if (ros::ok())
-  {
-    // Set initial home position for the manipulator
-    ros::spinOnce();
-    goHome();
-    ros::Duration(3.0).sleep();     // Wait 3s until next command
-  }
-
   // Initialize user choice variable
   int userChoice = 0;
 
   while (ros::ok())
   {
-    ros::spinOnce();
+    spinner();                      // ROS Once spinner
     getEEpos_rpy();                 // Update current robot pose
     printMenu();                    // Print choice menu
     userChoice = getUserChoice();   // Get user choice from the terminal
@@ -107,7 +99,7 @@ void ManipulatorMenu::spinnerMenu()
     ros::Duration(1.0).sleep();     // Wait 1s until next command
   }
 
-  ROS_WARN_THROTTLE(3, "Closing the menu! \n");
+  ROS_INFO("Closing the menu!\n");
   ros::shutdown();
 }
 
@@ -135,7 +127,7 @@ void ManipulatorMenu::publishJointGoal(const std::vector<double> joints)
   // Fill the joint msg with degToRad conversion
   sensor_msgs::JointState jointStateMsg;
   jointStateMsg.header.stamp = ros::Time::now();
-  for (unsigned int k = 0; k < joints.size(); k++) 
+  for (unsigned int k = 0; k < joints.size(); k++)
       {jointStateMsg.position.push_back(joints[k]*M_PI/180);}
 
   // Publish the JointState message
@@ -205,9 +197,14 @@ void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 }
 
 // Go to pre configured home position
-void ManipulatorMenu::goHome()
+void ManipulatorMenu::goHome(const bool ee_orient)
 {
-  std::vector<double> start_joint_pose = {0.0,-90.,+90.,0.0,+90.,0.0}; // or {0,-90,+90,-90,-90,0}
+  std::vector<double> start_joint_pose = {0.,0.,0.,0.,0.,0};
+  if (!ee_orient) // gripper down
+  {start_joint_pose = {0.,-90.,+90.,-90.,-90.,0};}
+  else // gripper at the front
+  {start_joint_pose = {0.,-90.,+90.,  0.,+90.,0};}
+  // Publishe home joint goal 
   publishJointGoal(start_joint_pose);
 }
 
@@ -269,10 +266,6 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
   tcp_pose_rpy[3] = tcp_rpy[0];
   tcp_pose_rpy[4] = tcp_rpy[1];
   tcp_pose_rpy[5] = tcp_rpy[2];
-  
-  ROS_INFO("TCP rot x: %f", tcp_rpy[0]);
-  ROS_INFO("TCP rot y: %f", tcp_rpy[1]);
-  ROS_INFO("TCP rot z: %f", tcp_rpy[2]);
 
   return tcp_pose_rpy;
 }
@@ -486,7 +479,7 @@ void ManipulatorMenu::oneJointMove_user()
 {
   int num = 0;
   double joint_rot = 0.0;
-  std::cout << "Enter the values of the joint to move in [0,5]: \n";
+  std::cout << "Enter the joint to move in [0,5]: \n";
   std::cin >> num;
   std::cout << "Enter the rotation of the joint in deg: \n";
   std::cin >> joint_rot;
@@ -570,10 +563,11 @@ void ManipulatorMenu::userTcpIKGoal()
 
 void ManipulatorMenu::jointStateVisualizer() 
 {
-    for (unsigned int k = 0; k < 6; k++)
-    {
-      std::cout << "Joint " << k << " : " << current_joint_pose_.position[k]*180/M_PI << std::endl;
-    }
+  spinner();
+  for (unsigned int k = 0; k < 6; k++)
+  {
+    std::cout << "Joint " << k << " : " << current_joint_pose_.position[k]*180/M_PI << std::endl;
+  }
 }
 
 void ManipulatorMenu::jointStateCallback(const sensor_msgs::JointState::ConstPtr& msg) 
@@ -700,7 +694,9 @@ void ManipulatorMenu::printMenu()
   std::cout << "16.Visualize joints state\n";
   std::cout << "17.Visualize current tcp pose\n";
   std::cout << "18.Shutdown CoppeliaSim\n";
-  std::cout << "19.Shutdown the menu\n";
+  std::cout << "19.Go to home position (gripper down)\n";
+  std::cout << "20.Go to home position (gripper at the front)\n";
+  std::cout << "21.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -750,12 +746,12 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 6:
-    ROS_INFO("You selected Option 6\n");
+    ROS_INFO("You selected Option 6");
     oneJointMove_user();
     break;
 
   case 7:
-    ROS_INFO("You selected Option 7\n");
+    ROS_INFO("You selected Option 7");
     
     std::cout << "Insert how many metres you want to move along x: \n";
     std::cin >> step;
@@ -763,14 +759,14 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 8:
-    ROS_INFO("You selected Option 8\n");
+    ROS_INFO("You selected Option 8");
     
     std::cout << "Insert how many metres you want to move along y:\n";
     std::cin >> step;
     move_along_y(step);
-
+    break;
   case 9:
-    ROS_INFO("You selected Option 9\n");
+    ROS_INFO("You selected Option 9");
     
     std::cout << "Insert how many metres you want to move along z:\n";
     std::cin >> step;
@@ -789,7 +785,7 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 11:
-    ROS_INFO("You selected Option 11\n");
+    ROS_INFO("You selected Option 11");
     std::cout << "Insert the rotation around X axis you want to do.\n";
     double x_rot; 
     std::cout << " X rotation: "; std::cin >> x_rot;
@@ -797,7 +793,7 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 12:
-    ROS_INFO("You selected Option 12\n");
+    ROS_INFO("You selected Option 12");
     std::cout << "Insert the rotation around Y axis you want to do.\n";
     double y_rot; 
     std::cout << " Y rotation: "; std::cin >> y_rot;
@@ -805,7 +801,7 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 13:
-    ROS_INFO("You selected Option 13\n");
+    ROS_INFO("You selected Option 13");
     std::cout << "Insert the rotation around Z axis you want to do.\n";
     double z_rot; 
     std::cout << " Z rotation: "; std::cin >> z_rot;
@@ -813,9 +809,8 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 14:
-    ROS_INFO("You selected Option 14\n");
-    std::cout << "Insert the FIXED orientation of the EE you want to have.";
-    
+    ROS_INFO("You selected Option 14");
+    std::cout << "Insert the FIXED orientation of the EE you want to have.\n";    
     rot = {0.,0.,0.}; 
     std::cout << " X rotation: "; std::cin >> rot[0];
     std::cout << " Y rotation: "; std::cin >> rot[1];
@@ -824,7 +819,7 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 15:
-    ROS_INFO("You selected Option 15\n");
+    ROS_INFO("You selected Option 15");
     addCollObj();
     break;
 
@@ -834,22 +829,32 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 17:
-    ROS_INFO("You selected Option 17\n");
+    ROS_INFO("You selected Option 17");
     ee_pos = getEEpos_rpy();
-    std::cout << " EE - X position: " << ee_pos[0];
-    std::cout << " EE - Y position: " << ee_pos[1];
-    std::cout << " EE - Z position: " << ee_pos[2];
-    std::cout << " EE - X rotation: " << ee_pos[3];
-    std::cout << " EE - Y rotation: " << ee_pos[4];
-    std::cout << " EE - Z rotation: " << ee_pos[5];
+    std::cout << " EE - X position: " << ee_pos[0] << std::endl;
+    std::cout << " EE - Y position: " << ee_pos[1] << std::endl;
+    std::cout << " EE - Z position: " << ee_pos[2] << std::endl;
+    std::cout << " EE - X rotation: " << ee_pos[3] << std::endl;
+    std::cout << " EE - Y rotation: " << ee_pos[4] << std::endl;
+    std::cout << " EE - Z rotation: " << ee_pos[5] << std::endl;
     break;
 
   case 18:
-    ROS_INFO("You selected Option 18\n");
+    ROS_INFO("You selected Option 18");
     ROS_INFO("Closing CoppeliaSim...");
     closeCoppeliaSim();
     break;
   case 19:
+    ROS_INFO("You selected Option 19\n");
+    ROS_INFO("Go to home position, gripper down ...");
+    goHome(0);
+    break;
+  case 20:
+    ROS_INFO("You selected Option 20\n");
+    ROS_INFO("Go to home position, gripper at the front ...");
+    goHome(1);
+    break;
+  case 21:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;

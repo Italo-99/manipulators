@@ -85,7 +85,6 @@ class ManipulatorPlanner
       void tcpGoalCallback(const geometry_msgs::Pose::ConstPtr& p);
       // Callback function for goals in the 3D cartesian space for the robot TCP computed through Inverse Kinematics
       void tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& p);
-
       // Callback function for goals in the joint space
       void jointsGoalCallback(const sensor_msgs::JointState::ConstPtr& js);
 

@@ -73,7 +73,7 @@ class ManipulatorMenu
     void publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
     void publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planne
     void oneJointMove(const int num, const double joint_rot); // to define a rotation around a single joint
-    void goHome(void);                                        // to setup home position
+    void goHome(const bool);                                  // to setup home position
 
     // Get the position and orientation of the end effector (they contain a ros spin once)
     geometry_msgs::PoseStamped getEEpose();
