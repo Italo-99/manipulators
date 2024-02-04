@@ -57,10 +57,20 @@ class Coppelia:
 
     def __init__(self):
 
+        # Get scene params (fill here if the user doesn't pass them)
+        package_name = rospy.get_param('~package_name')
+        scene_name   = rospy.get_param('~scene_name')
+
+        if (package_name == ''):
+            package_name = 'manipulators'
+
+        if (scene_name == ''):
+            scene_name = ''
+
         # Get user scene
         rospack = rospkg.RosPack()
-        package_path = rospack.get_path('manipulators')
-        self.scene_path = package_path + "/scenes/" + "main_scene.ttt"
+        package_path = rospack.get_path(package_name)
+        self.scene_path = package_path + "/scenes/" + scene_name
 
     # Coppelia simulation starting
     def start_sim(self):
@@ -104,16 +114,16 @@ def coppelia_menu_server():
 
     # Init coppelia node
     rospy.init_node('coppelia_server')
-    print("Coppelia server python started")
+    rospy.loginfo("Coppelia server python started")
     # Init coppelia service
     rospy.Service('coppelia_menu', CoppeliaMenu, menu_handler)
-    print("Ready to send commands to CoppeliaSim")
+    rospy.loginfo("Ready to send commands to CoppeliaSim")
     # Setup a controlled rate ROS Python spinner
     spin_rate = rospy.Rate(0.5)
     while not rospy.is_shutdown():
         spin_rate.sleep()
     # Closing the node
-    print("Closing the node")
+    rospy.loginfo("Closing the node")
     rospy.signal_shutdown("Shutdown requested")
 
 
