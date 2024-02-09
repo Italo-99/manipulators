@@ -12,12 +12,11 @@
   <arg name="control" default ="false" />
   
   <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
-  <include file="$(find ur10e_moveit_config)/launch/planning_context.launch">
+  <include file="$(find manipulators)/launch/planning_context/planning_context_eecam.launch">
     <arg name="load_robot_description" value="true"/>
   </include>
 
-  <!-- If needed, broadcast static tf for robot root -->
-  
+  <!-- If needed, broadcast static tf for robot root -->  
 
   <!-- We do not have a robot connected, so publish fake joint states -->
   <node if="$(arg sim)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">

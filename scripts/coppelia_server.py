@@ -45,17 +45,18 @@ import rospy, rospkg                                        # ROS libraries
 import time                                                 # Python libraries
 from coppeliasim_zmqremoteapi_client import RemoteAPIClient #`Coppelia Remote API`
 
-# GLOBAL VARIABLES DECLARATION
-
-# Setup sim client Remote API
-client = RemoteAPIClient()
-sim    = client.require('sim')
-
 
 # COPPELIA SIM CLASS
 class Coppelia:
 
     def __init__(self):
+
+        # Init coppelia node
+        rospy.init_node('coppelia_server')
+
+        # Setup sim client Remote API
+        self.client = RemoteAPIClient()
+        self.sim    = self.client.require('sim')
 
         # Get scene params (fill here if the user doesn't pass them)
         package_name = rospy.get_param('~package_name')
@@ -65,69 +66,68 @@ class Coppelia:
             package_name = 'manipulators'
 
         if (scene_name == ''):
-            scene_name = ''
+            scene_name = 'dlo_manipulation.ttt'
 
         # Get user scene
         rospack = rospkg.RosPack()
         package_path = rospack.get_path(package_name)
         self.scene_path = package_path + "/scenes/" + scene_name
 
+        # Start node execution
+        self.coppelia_menu_server()
+
     # Coppelia simulation starting
     def start_sim(self):
         
-        sim.loadScene(self.scene_path)
-        sim.startSimulation()
+        self.sim.loadScene(self.scene_path)
+        self.sim.startSimulation()
 
         return True
 
     # Coppelia simulation stopping
     def stop_sim(self):
 
-        sim.stopSimulation()
+        self.sim.stopSimulation()
         time.sleep(2)
-        sim.saveScene()
+        self.sim.saveScene()
         time.sleep(2)
-        sim.closeScene()
+        self.sim.closeScene()
         
         return False
 
 
-# COPPELIA MENU HANDLER
-    
-# Choice among Coppelia functions according to the client request
-def menu_handler(req):
+    # COPPELIA MENU HANDLER
+        
+    # Choice among Coppelia functions according to the client request
+    def menu_handler(self,req):
 
-    coppelia = Coppelia()
+        if      req.command == 0:
+            self.start_sim()
+            return True
+        elif    req.command == 1:
+            self.stop_sim()
+            return False
+        else:
+            print("Wrong command sent")
+            return False
 
-    if      req.command == 0:
-        coppelia.start_sim()
-        return True
-    elif    req.command == 1:
-        coppelia.stop_sim()
-        return False
-    else:
-        print("Wrong command sent")
-        return False
+    # Service and node declarations
+    def coppelia_menu_server(self):
 
-# Service and node declarations
-def coppelia_menu_server():
-
-    # Init coppelia node
-    rospy.init_node('coppelia_server')
-    rospy.loginfo("Coppelia server python started")
-    # Init coppelia service
-    rospy.Service('coppelia_menu', CoppeliaMenu, menu_handler)
-    rospy.loginfo("Ready to send commands to CoppeliaSim")
-    # Setup a controlled rate ROS Python spinner
-    spin_rate = rospy.Rate(0.5)
-    while not rospy.is_shutdown():
-        spin_rate.sleep()
-    # Closing the node
-    rospy.loginfo("Closing the node")
-    rospy.signal_shutdown("Shutdown requested")
+        rospy.loginfo("Coppelia server python started")
+        # Init coppelia service
+        rospy.Service('coppelia_menu', CoppeliaMenu, self.menu_handler)
+        rospy.loginfo("Ready to send commands to CoppeliaSim")
+        # Setup a controlled rate ROS Python spinner
+        spin_rate = rospy.Rate(0.5)
+        while not rospy.is_shutdown():
+            spin_rate.sleep()
+        # Closing the node
+        rospy.loginfo("Closing the node")
+        rospy.signal_shutdown("Shutdown requested")
 
 
 # MAIN PYTHON EXECUTABLE FUNCTION
 if __name__ == '__main__':
 
-    coppelia_menu_server()
+    Coppelia()
