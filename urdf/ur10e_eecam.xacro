@@ -24,15 +24,15 @@
 
   <!-- Fixed joint camera -->
   <joint name="camera_robot_joint" type="fixed">
-    <origin xyz="0.1 0.1 0.1" rpy="0 0 0"/>
+    <origin xyz="0.1 0.1 0.1" rpy="0 -1.570796327 1.570796327"/>
     <parent link="tool0"/>
-    <child link="camera_base_link"/>
+    <child  link="camera_base_link"/>
   </joint>
 
   <!-- Import d435 xacro file -->
   <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro" />
   
-  <link name="camera_base_link" />
+  <link name="camera_base_link"/>
   <xacro:sensor_d435 parent="camera_base_link" use_nominal_extrinsics="false" add_plug="false" use_mesh="true">
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:sensor_d435>
