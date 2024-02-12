@@ -201,7 +201,7 @@ void ManipulatorMenu::goHome(const bool ee_orient)
 {
   std::vector<double> start_joint_pose = {0.,0.,0.,0.,0.,0};
   if (!ee_orient) // gripper down
-  {start_joint_pose = {0.,-90.,+90.,-90.,-90.,0};}
+  {start_joint_pose = {0.,-90.,+90.,-90.,-90.,180};}
   else // gripper at the front
   {start_joint_pose = {0.,-90.,+90.,  0.,+90.,0};}
   // Publishe home joint goal 

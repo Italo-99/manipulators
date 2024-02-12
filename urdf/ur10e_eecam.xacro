@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+
 <robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur10e_robot">
 
   <!-- Args for starting camera position -->
@@ -9,6 +10,11 @@
   <xacro:arg name="cam_ry"        default="-1.570796327"/>
   <xacro:arg name="cam_rz"        default="-1.570796327"/>
   <xacro:arg name="cam_parent"    default="tool0"/>
+
+  <!-- Args for starting gripper position -->
+  <xacro:arg name="ee_z_offset"   default="+0.0"/>
+  <xacro:arg name="ee_rz"         default="+0.0"/>
+  <xacro:arg name="ee_parent"     default="tool0"/>
 
   <!-- Import robot ur10 xacro file -->
   <xacro:include filename="$(find ur_description)/urdf/inc/ur10e_macro.xacro"/>
@@ -28,5 +34,15 @@
   <xacro:sensor_d435 parent="camera_base_link" use_nominal_extrinsics="false" add_plug="false" use_mesh="true">
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:sensor_d435>
+
+  <!-- Import Robotiq85Gripper -->
+  <xacro:include filename="$(find robotiq85_gripper)/models/robotiq_85.URDF"/>
   
+  <!-- Fixed joint gripper -->
+  <joint name="gripper_robot_joint" type="fixed">
+    <origin xyz="0 0 $(arg ee_z_offset)" rpy="0 0 $(arg ee_rz)"/>
+    <parent link="$(arg ee_parent)"/>
+    <child  link="robotiq_85_base_link"/>
+  </joint>
+
 </robot>
