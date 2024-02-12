@@ -63,14 +63,14 @@ class Coppelia:
         scene_name   = rospy.get_param('~scene_name')
 
         if (package_name == ''):
-            package_name = 'manipulators'
+            package_name = 'dlos_manipulation'
 
         if (scene_name == ''):
             scene_name = 'dlo_manipulation.ttt'
 
         # Get user scene
-        rospack = rospkg.RosPack()
-        package_path = rospack.get_path(package_name)
+        rospack         = rospkg.RosPack()
+        package_path    = rospack.get_path(package_name)
         self.scene_path = package_path + "/scenes/" + scene_name
 
         # Start node execution
@@ -121,7 +121,7 @@ class Coppelia:
         # Setup a controlled rate ROS Python spinner
         spin_rate = rospy.Rate(0.5)
         while not rospy.is_shutdown():
-            spin_rate.sleep()
+            spin_rate.sleep(spin_rate)
         # Closing the node
         rospy.loginfo("Closing the node")
         rospy.signal_shutdown("Shutdown requested")

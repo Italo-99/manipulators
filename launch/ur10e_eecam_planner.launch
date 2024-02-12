@@ -4,8 +4,16 @@
 
   <!-- By default, we are not in debug mode -->
   <arg name="debug" default="false" />
-
   <arg name="sim" default="true" />
+
+  <!-- Args for starting camera position -->
+  <arg name="cam_x_offset"  default="+0.1"/>
+  <arg name="cam_y_offset"  default="+0.1"/>
+  <arg name="cam_z_offset"  default="+0.1"/>
+  <arg name="cam_rx"        default="+0.0"/>
+  <arg name="cam_ry"        default="-1.570796327"/>
+  <arg name="cam_rz"        default="-1.570796327"/>
+  <arg name="cam_parent"    default="tool0"/>
 
   <!-- If true you launch the trajectory converter node.
   This node sends a true value on the topic /trajectory_executed when the trajectory is completed, also in simulation.-->
@@ -14,16 +22,21 @@
   <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
   <include file="$(find manipulators)/launch/planning_context/planning_context_eecam.launch">
     <arg name="load_robot_description" value="true"/>
+    <arg name="cam_x_offset"  value="+0.1"/>
+    <arg name="cam_y_offset"  value="+0.1"/>
+    <arg name="cam_z_offset"  value="+0.1"/>
+    <arg name="cam_rx"        value="+0.0"/>
+    <arg name="cam_ry"        value="-1.570796327"/>
+    <arg name="cam_rz"        value="-1.570796327"/>
+    <arg name="cam_parent"    value="tool0"/>
   </include>
 
-  <!-- If needed, broadcast static tf for robot root -->  
-
+  <!-- If needed, broadcast static tf for robot root -->
   <!-- We do not have a robot connected, so publish fake joint states -->
   <node if="$(arg sim)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
     <param name="/use_gui" value="false"/> 
     <rosparam param="/source_list">[/move_group/fake_controller_joint_states]</rosparam>
-  </node>
-  
+  </node>  
   <!-- Given the published joint states, publish tf for the robot links -->
   <node if="$(arg sim)" name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen" />
 
@@ -47,7 +60,6 @@
   <arg name="planning_plugin" value="ompl_interface/OMPLPlanner" />
   <!-- Adapters: uniform sample filter and optimal parametrization -->
   <arg name="planning_adapters" value="industrial_trajectory_filters/UniformSampleFilter default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints" />
-
   <node name="manipulator_planner" pkg="manipulators" type="manipulator_planner" output="screen">
     <param name="planning_plugin" value="$(arg planning_plugin)" />
     <param name="request_adapters" value="$(arg planning_adapters)" />
@@ -58,6 +70,7 @@
     <!-- THis file contains the names of the manipulator, the joints, the base and the end-effector -->
     <rosparam command="load" file="$(find manipulators)/config/ur10e.yaml" />
   </node>  
+
   <!-- For real UR10 -->
   <!-- <node if="$(arg control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" />  -->
   

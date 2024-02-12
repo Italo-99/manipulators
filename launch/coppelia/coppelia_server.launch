@@ -1,7 +1,7 @@
 <launch>
     <!-- Launch the coppelia_server node -->
     <node name="coppelia_server" pkg="manipulators" type="coppelia_server.py" output="screen">
-        <!-- Set the default value for the 'scene_name' parameter -->
-        <param name="scene_name" type="string" value="UR10.ttt"/>
+        <param name="package_name"  type="string" value="manipulators"/>
+        <param name="scene_name"    type="string" value="UR10.ttt"/>
     </node>
 </launch>
