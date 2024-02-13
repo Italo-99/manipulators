@@ -33,7 +33,14 @@
 
   <!-- Import d435 xacro file -->
   <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro" />
-  <link name="camera_base_link"/>
+  <link name="camera_base_link">
+  <collision>
+    <origin xyz="-0.0061 0.0 +0.0125" rpy="0 0 0"/>
+    <geometry>
+      <box size="0.0083 0.09 0.025"/>
+    </geometry>
+  </collision>
+  </link>
   <xacro:sensor_d435 parent="camera_base_link" use_nominal_extrinsics="false" add_plug="false" use_mesh="true">
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:sensor_d435>

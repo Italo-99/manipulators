@@ -2,16 +2,38 @@
 
   <!-- Get robot name and its package (they may differ as the 
        former can includes grippers and camera)-->
-  <arg name="robot_name"    default="ur10e" />
-  <arg name="robotpkg_name" default="$(arg robot_name)" />
-  <arg name="ur20_pkg"      default="ur20"/>
-  <arg name="ur16e_pkg"     default="ur16e"/>
-  <arg name="ur10e_pkg"     default="ur10e"/>
-  <arg name="ur10_pkg"      default="ur10"/>
-  <arg name="ur5e_pkg"      default="ur5e"/>
-  <arg name="ur5_pkg"       default="ur5"/>
-  <arg name="ur3e_pkg"      default="ur3e"/>
-  <arg name="ur3_pkg"       default="ur3"/>
+    <arg name="robot_name"    default="ur10e" />
+    <arg name="robotpkg_name" default="$(arg robot_name)" />
+    <!-- <arg name="moveit_pkg"    default="$(find ur10e_moveit_config)"/> -->
+
+    <!-- List of all available manipulators -->
+      <arg name="ur20_pkg"    default="false"/>
+      <arg name="ur16e_pkg"   default="false"/>
+      <arg name="ur10e_pkg"   default="false"/>
+      <arg name="ur10_pkg"    default="false"/>
+      <arg name="ur5e_pkg"    default="false"/>
+      <arg name="ur5_pkg"     default="false"/>
+      <arg name="ur3e_pkg"    default="false"/>
+      <arg name="ur3_pkg"     default="false"/>
+    <!-- End of the list -->
+
+    <!-- Get moveit config package of the corresponding robot -->
+      <arg name="moveit_pkg" value="$(find ur20_moveit_config)"
+               if="$(arg ur20_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur16e_moveit_config)"
+               if="$(arg ur16e_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur10e_moveit_config)"
+               if="$(arg ur10e_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur10_moveit_config)"
+               if="$(arg ur10_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur5e_moveit_config)"
+               if="$(arg ur5e_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur5_moveit_config)"
+               if="$(arg ur5_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur3e_moveit_config)"
+               if="$(arg ur3e_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur3_moveit_config)"
+               if="$(arg ur3_pkg)"/>
 
   <!-- Decide if you want to launch the robot default description config; 
        set to false to load custom description config of the manipulators pkg-->
@@ -39,10 +61,18 @@
   <!-- If true, launch the trajectory converter node -->
   <arg name="control"       default ="false" />
 
-  <!-- Load the URDF, SRDF and other .yaml configuration files on the param server --> TODO
-  <include file="$(find manipulators)/launch/planning_context/planning_context.launch">
+  <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
+  <include file="$(find manipulators)/launch/planning_context.launch">
     <arg name="robot_name"    value="$(arg robot_name)"/>
     <arg name="robotpkg_name" value="$(arg robotpkg_name)"/>
+    <arg name="ur20_pkg"      value="$(arg ur20_pkg)"/>
+    <arg name="ur16e_pkg"     value="$(arg ur16e_pkg)"/>
+    <arg name="ur10e_pkg"     value="$(arg ur10e_pkg)"/>
+    <arg name="ur10_pkg"      value="$(arg ur10_pkg)"/>
+    <arg name="ur5e_pkg"      value="$(arg ur5e_pkg)"/>
+    <arg name="ur5_pkg"       value="$(arg ur5_pkg)"/>
+    <arg name="ur3e_pkg"      value="$(arg ur3e_pkg)"/>
+    <arg name="ur3_pkg"       value="$(arg ur3_pkg)"/>
     <arg name="default_desc"  value="$(arg default_desc)"/>
     <arg name="cam_x_offset"  value="$(arg cam_x_offset)"/>
     <arg name="cam_y_offset"  value="$(arg cam_y_offset)"/>
@@ -66,8 +96,17 @@
   <node if="$(arg sim)" name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen" />
 
   <!-- Run the main MoveIt executable without trajectory execution (we do not have controllers configured by default) -->
-  <include file="$(find manipulators)/launch/move_group/move_group.launch"> TODO
+  <include file="$(find manipulators)/launch/move_group.launch">
     <arg name="robotpkg_name" value="$(arg robotpkg_name)" />
+    <arg name="ur20_pkg"      value="$(arg ur20_pkg)"/>
+    <arg name="ur16e_pkg"     value="$(arg ur16e_pkg)"/>
+    <arg name="ur10e_pkg"     value="$(arg ur10e_pkg)"/>
+    <arg name="ur10_pkg"      value="$(arg ur10_pkg)"/>
+    <arg name="ur5e_pkg"      value="$(arg ur5e_pkg)"/>
+    <arg name="ur5_pkg"       value="$(arg ur5_pkg)"/>
+    <arg name="ur3e_pkg"      value="$(arg ur3e_pkg)"/>
+    <arg name="ur3_pkg"       value="$(arg ur3_pkg)"/>
+
     <arg name="allow_trajectory_execution" value="true"/>  
     <arg name="fake_execution" value="true"/>
     <arg name="info" value="true"/>
@@ -92,33 +131,10 @@
     <param name="request_adapters" value="$(arg planning_adapters)" />
     <param name="sample_duration" value="0.01"/>
     <param name="sim" value="$(arg sim)"/>
-    <!-- These files contain the parameters configuration for each possible 6-dof planner for the robot-->
-      <condition if="$(eval 'robotpkg_name == ur20_pkg')">
-        <rosparam command="load" file="$(find ur20_moveit_config)/config/ompl_planning.yaml"/>
-      </condition>
-      <condition if="$(eval 'robotpkg_name == ur16e_pkg')">
-        <rosparam command="load" file="$(find ur16e_moveit_config)/config/ompl_planning.yaml"/>
-      </condition>
-      <condition if="$(eval 'robotpkg_name == ur10e_pkg')">
-        <rosparam command="load" file="$(find ur10e_moveit_config)/config/ompl_planning.yaml"/>
-      </condition>
-      <condition if="$(eval 'robotpkg_name == ur10_pkg')">
-        <rosparam command="load" file="$(find ur10_moveit_config)/config/ompl_planning.yaml"/>
-      </condition>
-      <condition if="$(eval 'robotpkg_name == ur5e_pkg')">
-        <rosparam command="load" file="$(find ur5e_moveit_config)/config/ompl_planning.yaml"/>
-      </condition>
-      <condition if="$(eval 'robotpkg_name == ur5_pkg')">
-        <rosparam command="load" file="$(find ur5_moveit_config)/config/ompl_planning.yaml"/>
-      </condition>
-      <condition if="$(eval 'robotpkg_name == ur3e_pkg')">
-        <rosparam command="load" file="$(find ur3e_moveit_config)/config/ompl_planning.yaml"/>
-      </condition>
-      <condition if="$(eval 'robotpkg_name == ur3_pkg')">
-        <rosparam command="load" file="$(find ur3_moveit_config)/config/ompl_planning.yaml"/>
-      </condition>
+    <!-- This file contains the parameters configuration for each available 6-dof planner for the robot-->
+    <rosparam command="load" file="$(arg moveit_pkg)/config/ompl_planning.yaml"/>
     <!-- This file contains the names of the manipulator, the joints, the base and the end-effector -->
-    <rosparam command="load" file="$(find manipulators)/config/$(arg robot_name).yaml" />
+    <rosparam command="load" file="$(find manipulators)/config/$(arg robotpkg_name).yaml" />
   </node>
 
   <!-- For real robot -->

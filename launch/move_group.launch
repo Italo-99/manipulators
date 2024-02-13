@@ -1,8 +1,38 @@
 <launch>
 
   <!-- Select robot pkg name -->
-  <arg name="robotpkg_name" default="ur10e" />
+    <arg name="robotpkg_name" default="ur10e" />
+    <!-- <arg name="moveit_pkg"    default="$(find ur10e_moveit_config)"/> -->
 
+    <!-- List of all available manipulators -->
+      <arg name="ur20_pkg"    default="false"/>
+      <arg name="ur16e_pkg"   default="false"/>
+      <arg name="ur10e_pkg"   default="false"/>
+      <arg name="ur10_pkg"    default="false"/>
+      <arg name="ur5e_pkg"    default="false"/>
+      <arg name="ur5_pkg"     default="false"/>
+      <arg name="ur3e_pkg"    default="false"/>
+      <arg name="ur3_pkg"     default="false"/>
+    <!-- End of the list -->
+
+    <!-- Get moveit config package of the corresponding robot -->
+      <arg name="moveit_pkg" value="$(find ur20_moveit_config)"
+               if="$(arg ur20_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur16e_moveit_config)"
+               if="$(arg ur16e_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur10e_moveit_config)"
+               if="$(arg ur10e_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur10_moveit_config)"
+               if="$(arg ur10_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur5e_moveit_config)"
+               if="$(arg ur5e_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur5_moveit_config)"
+               if="$(arg ur5_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur3e_moveit_config)"
+               if="$(arg ur3e_pkg)"/>
+      <arg name="moveit_pkg" value="$(find ur3_moveit_config)"
+               if="$(arg ur3_pkg)"/>
+               
   <!-- GDB Debug Option -->
   <arg name="debug" default="false" />
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
@@ -27,19 +57,19 @@
   <arg name="disable_capabilities" default=""/>
 
   <!-- Planning Functionality -->
-  <include ns="move_group" file="$(find $(arg robotpkg_name)_moveit_config)/launch/planning_pipeline.launch.xml">
+  <include ns="move_group" file="$(arg moveit_pkg)/launch/planning_pipeline.launch.xml">
     <arg name="pipeline" value="$(arg pipeline)" />
   </include>
 
   <!-- Trajectory Execution Functionality -->
-  <include ns="move_group" file="$(find $(arg robotpkg_name)_moveit_config)/launch/trajectory_execution.launch.xml" if="$(arg allow_trajectory_execution)">
+  <include ns="move_group" file="$(arg moveit_pkg)/launch/trajectory_execution.launch.xml" if="$(arg allow_trajectory_execution)">
     <arg name="moveit_manage_controllers" value="true" />
     <arg name="moveit_controller_manager" value="$(arg robotpkg_name)" unless="$(arg fake_execution)"/>
     <arg name="moveit_controller_manager" value="fake"                 if="$(arg fake_execution)"/>
   </include>
 
   <!-- Sensors Functionality -->
-  <include ns="move_group" file="$(find $(arg robotpkg_name)_moveit_config)/launch/sensor_manager.launch.xml" if="$(arg allow_trajectory_execution)">
+  <include ns="move_group" file="$(arg moveit_pkg)/launch/sensor_manager.launch.xml" if="$(arg allow_trajectory_execution)">
     <arg name="moveit_sensor_manager" value="$(arg robotpkg_name)" />
   </include>
 
