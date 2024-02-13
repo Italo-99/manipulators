@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
 include_directories(
   include
   srv
+  urdf
+  config
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -30,7 +32,7 @@ generate_messages(
 )
 
 catkin_package(
-  INCLUDE_DIRS include
+  INCLUDE_DIRS include srv urdf config
 )
 
 # Add manipulator class node

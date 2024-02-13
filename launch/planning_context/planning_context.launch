@@ -1,0 +1,70 @@
+<launch>
+
+  <!-- Get robot name and its package (they may differ as the 
+       former can includes grippers and camera)-->
+  <arg name="robot_name"    default="ur10e" />
+  <arg name="robotpkg_name" default="$(arg robot_name)" />
+  <!-- Set the following to false to load custom robot description -->
+  <arg name="default_desc"  default="true"/>
+
+  <!-- The name of the parameter under which the URDF is loaded -->
+  <arg name="robot_description" default="robot_description"/>
+
+  <!-- Args for starting camera position -->
+    <arg name="cam_x_offset"  default="+0.0"/>
+    <arg name="cam_y_offset"  default="+0.05"/>
+    <arg name="cam_z_offset"  default="+0.05"/>
+    <arg name="cam_rx"        default="+0.0"/>
+    <arg name="cam_ry"        default="+0.0"/>
+    <arg name="cam_rz"        default="+0.0"/>
+    <arg name="cam_parent"    default="tool0"/>
+
+  <!-- Args for starting end effector position -->
+    <arg name="ee_z_offset"   default="+0.0"/>
+    <arg name="ee_rz"         default="+0.0"/>
+    <arg name="ee_parent"     default="tool0"/>
+  
+  <!-- Load default universal robot description format (URDF) -->
+  <param  if="$(arg default_desc)" 
+          name="$(arg robot_description)"
+          command="xacro  '$(find ur_description)/urdf/$(arg robotpkg_name).xacro'">
+  </param>
+
+  <!-- Load custom URDF -->
+  <param  unless="$(arg default_desc)" 
+          name="$(arg robot_description)"
+          command="$(find xacro)/xacro --inorder   
+                  '$(find manipulators)/urdf/$(arg robot_name).xacro'
+                  cam_x_offset:=$(arg cam_x_offset)
+                  cam_y_offset:=$(arg cam_y_offset)
+                  cam_z_offset:=$(arg cam_z_offset)
+                        cam_rx:=$(arg cam_rx)
+                        cam_ry:=$(arg cam_ry)
+                        cam_rz:=$(arg cam_rz)
+                    cam_parent:=$(arg cam_parent)
+                   ee_z_offset:=$(arg ee_z_offset)
+                         ee_rz:=$(arg ee_rz)
+                     ee_parent:=$(arg ee_parent)">
+  </param>
+  
+  <!-- The semantic description (SRDF) that corresponds to the URDF, default or custom -->
+  <param  if="$(arg default_desc)" 
+          name="$(arg robot_description)_semantic" 
+          textfile="$(find $(arg robotpkg_name)_moveit_config)/config/$(arg robotpkg_name).srdf">
+  </param>
+  <param  unless="$(arg default_desc)"
+          name="$(arg robot_description)_semantic"
+          textfile="$(find manipulators)/urdf/$(arg robot_name).srdf">
+  </param>
+  
+  <!-- Load updated joint limits (override information from URDF) -->
+  <group ns="$(arg robot_description)_planning">
+    <rosparam command="load" file="$(find $(arg robotpkg_name)_moveit_config)/config/joint_limits.yaml"/>
+  </group>
+
+  <!-- Load default settings for kinematics; these settings are overridden by settings in a node's namespace -->
+  <group ns="$(arg robot_description)_kinematics">
+    <rosparam command="load" file="$(find $(arg robotpkg_name)_moveit_config)/config/kinematics.yaml"/>
+  </group>
+
+</launch>

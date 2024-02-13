@@ -1,0 +1,23 @@
+<launch>
+  <!-- Decide weather you want to launch rviz -->
+  <arg name="rviz" default="true" />
+  <!-- By default, we are not in debug mode -->
+  <arg name="debug" default="false" />
+  <arg name="sim" default="true" />
+  <!-- Args for starting camera position -->
+  <arg name="cam_x_offset"  default="+0.0"/>
+  <arg name="cam_y_offset"  default="+0.05"/>
+  <arg name="cam_z_offset"  default="+0.05"/>
+  <arg name="cam_rx"        default="+0.0"/>
+  <arg name="cam_ry"        default="-1.570796327"/>
+  <arg name="cam_rz"        default="-1.570796327"/>
+  <arg name="cam_parent"    default="tool0"/>
+  <!-- Args for starting end effector position -->
+  <arg name="ee_z_offset"   default="+0.0"/>
+  <arg name="ee_rz"         default="+0.0"/>
+  <arg name="ee_parent"     default="tool0"/>
+  <!-- If true, launch the trajectory converter node -->
+  <arg name="control" default ="false" />
+  
+
+</launch>

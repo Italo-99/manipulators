@@ -1,0 +1,127 @@
+<launch>
+
+  <!-- Get robot name and its package (they may differ as the 
+       former can includes grippers and camera)-->
+  <arg name="robot_name"    default="ur10e" />
+  <arg name="robotpkg_name" default="$(arg robot_name)" />
+  <arg name="ur20_pkg"      default="ur20"/>
+  <arg name="ur16e_pkg"     default="ur16e"/>
+  <arg name="ur10e_pkg"     default="ur10e"/>
+  <arg name="ur10_pkg"      default="ur10"/>
+  <arg name="ur5e_pkg"      default="ur5e"/>
+  <arg name="ur5_pkg"       default="ur5"/>
+  <arg name="ur3e_pkg"      default="ur3e"/>
+  <arg name="ur3_pkg"       default="ur3"/>
+
+  <!-- Decide if you want to launch the robot default description config; 
+       set to false to load custom description config of the manipulators pkg-->
+  <arg name="default_desc"  default="true" />
+  <!-- Decide if you want to launch rviz -->
+  <arg name="rviz"          default="true" />
+  <!-- Decide if you want to launch the robot default rviz config; 
+       set to false to load custom rviz config of the manipulators pkg-->
+  <arg name="def_config"    default="true" />
+  <!-- By default, we are not in debug mode and we want to sim -->
+  <arg name="debug"         default="false" />
+  <arg name="sim"           default="true" />
+  <!-- Args for starting camera position -->
+  <arg name="cam_x_offset"  default="+0.0"/>
+  <arg name="cam_y_offset"  default="+0.05"/>
+  <arg name="cam_z_offset"  default="+0.05"/>
+  <arg name="cam_rx"        default="+0.0"/>
+  <arg name="cam_ry"        default="+0.0"/>
+  <arg name="cam_rz"        default="+0.0"/>
+  <arg name="cam_parent"    default="tool0"/>
+  <!-- Args for starting end effector position -->
+  <arg name="ee_z_offset"   default="+0.0"/>
+  <arg name="ee_rz"         default="+0.0"/>
+  <arg name="ee_parent"     default="tool0"/>
+  <!-- If true, launch the trajectory converter node -->
+  <arg name="control"       default ="false" />
+
+  <!-- Load the URDF, SRDF and other .yaml configuration files on the param server --> TODO
+  <include file="$(find manipulators)/launch/planning_context/planning_context.launch">
+    <arg name="robot_name"    value="$(arg robot_name)"/>
+    <arg name="robotpkg_name" value="$(arg robotpkg_name)"/>
+    <arg name="default_desc"  value="$(arg default_desc)"/>
+    <arg name="cam_x_offset"  value="$(arg cam_x_offset)"/>
+    <arg name="cam_y_offset"  value="$(arg cam_y_offset)"/>
+    <arg name="cam_z_offset"  value="$(arg cam_z_offset)"/>
+    <arg name="cam_rx"        value="$(arg cam_rx)"/>
+    <arg name="cam_ry"        value="$(arg cam_ry)"/>
+    <arg name="cam_rz"        value="$(arg cam_rz)"/>
+    <arg name="cam_parent"    value="$(arg cam_parent)"/>
+    <arg name="ee_z_offset"   value="$(arg ee_z_offset)"/>
+    <arg name="ee_rz"         value="$(arg ee_rz)"/>
+    <arg name="ee_parent"     value="$(arg ee_parent)"/>
+  </include>
+
+  <!-- If needed, broadcast static tf for robot root -->
+  <!-- We do not have a robot connected, so publish fake joint states -->
+  <node if="$(arg sim)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <param name="/use_gui" value="false"/> 
+    <rosparam param="/source_list">[/move_group/fake_controller_joint_states]</rosparam>
+  </node>  
+  <!-- Given the published joint states, publish tf for the robot links -->
+  <node if="$(arg sim)" name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen" />
+
+  <!-- Run the main MoveIt executable without trajectory execution (we do not have controllers configured by default) -->
+  <include file="$(find manipulators)/launch/move_group/move_group.launch"> TODO
+    <arg name="robotpkg_name" value="$(arg robotpkg_name)" />
+    <arg name="allow_trajectory_execution" value="true"/>  
+    <arg name="fake_execution" value="true"/>
+    <arg name="info" value="true"/>
+    <arg name="debug" value="$(arg debug)"/>
+  </include>
+
+  <!-- Run Rviz and load the default config to see the state of the move_group node THE ARG IS CALLED config, NOT rviz_config-->
+  <group if="$(arg rviz)">
+  <include file="$(find manipulators)/launch/moveit_rviz.launch">
+    <arg                            name="debug"  value="$(arg debug)"/>
+    <arg     if="$(arg def_config)" name="config" value="$(find manipulators)/launch/moveit.rviz"/>
+    <arg unless="$(arg def_config)" name="config" value="$(find manipulators)/rviz/$(arg robot_name).rviz"/>
+  </include>
+  </group>
+  
+  <!-- Planner setup -->
+  <arg name="planning_plugin" value="ompl_interface/OMPLPlanner" />
+  <!-- Adapters: uniform sample filter and optimal parametrization -->
+  <arg name="planning_adapters" value="industrial_trajectory_filters/UniformSampleFilter default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints" />
+  <node name="manipulator_planner" pkg="manipulators" type="manipulator_planner" output="screen">
+    <param name="planning_plugin" value="$(arg planning_plugin)" />
+    <param name="request_adapters" value="$(arg planning_adapters)" />
+    <param name="sample_duration" value="0.01"/>
+    <param name="sim" value="$(arg sim)"/>
+    <!-- These files contain the parameters configuration for each possible 6-dof planner for the robot-->
+      <condition if="$(eval 'robotpkg_name == ur20_pkg')">
+        <rosparam command="load" file="$(find ur20_moveit_config)/config/ompl_planning.yaml"/>
+      </condition>
+      <condition if="$(eval 'robotpkg_name == ur16e_pkg')">
+        <rosparam command="load" file="$(find ur16e_moveit_config)/config/ompl_planning.yaml"/>
+      </condition>
+      <condition if="$(eval 'robotpkg_name == ur10e_pkg')">
+        <rosparam command="load" file="$(find ur10e_moveit_config)/config/ompl_planning.yaml"/>
+      </condition>
+      <condition if="$(eval 'robotpkg_name == ur10_pkg')">
+        <rosparam command="load" file="$(find ur10_moveit_config)/config/ompl_planning.yaml"/>
+      </condition>
+      <condition if="$(eval 'robotpkg_name == ur5e_pkg')">
+        <rosparam command="load" file="$(find ur5e_moveit_config)/config/ompl_planning.yaml"/>
+      </condition>
+      <condition if="$(eval 'robotpkg_name == ur5_pkg')">
+        <rosparam command="load" file="$(find ur5_moveit_config)/config/ompl_planning.yaml"/>
+      </condition>
+      <condition if="$(eval 'robotpkg_name == ur3e_pkg')">
+        <rosparam command="load" file="$(find ur3e_moveit_config)/config/ompl_planning.yaml"/>
+      </condition>
+      <condition if="$(eval 'robotpkg_name == ur3_pkg')">
+        <rosparam command="load" file="$(find ur3_moveit_config)/config/ompl_planning.yaml"/>
+      </condition>
+    <!-- This file contains the names of the manipulator, the joints, the base and the end-effector -->
+    <rosparam command="load" file="$(find manipulators)/config/$(arg robot_name).yaml" />
+  </node>
+
+  <!-- For real robot -->
+  <!-- <node if="$(arg control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" />  -->
+  
+</launch>

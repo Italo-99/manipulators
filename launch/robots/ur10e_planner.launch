@@ -1,5 +1,5 @@
 <launch>
-  <!-- Decide weather you want to launch rviz -->
+  <!-- Decide if you want to launch rviz -->
   <arg name="rviz" default="true" />
 
   <!-- By default, we are not in debug mode -->

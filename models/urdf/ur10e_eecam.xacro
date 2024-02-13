@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 
-<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur10e_robot">
+<!-- To convert to urdf use the command:
+     rosrun xacro xacro (minus)(minus)inorder -o model.urdf model.urdf.xacro -->
+
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur10e_eecam_robot">
 
   <!-- Args for starting camera position -->
   <xacro:arg name="cam_x_offset"  default="+0.1"/>
@@ -36,7 +39,7 @@
   </xacro:sensor_d435>
 
   <!-- Import Robotiq85Gripper -->
-  <xacro:include filename="$(find robotiq85_gripper)/models/robotiq_85.URDF"/>
+  <xacro:include filename="$(find robotiq85_gripper)/models/robotiq_85.urdf.xacro"/>
   
   <!-- Fixed joint gripper -->
   <joint name="gripper_robot_joint" type="fixed">

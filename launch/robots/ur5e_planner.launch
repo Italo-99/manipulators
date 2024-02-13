@@ -5,7 +5,7 @@
   <!-- By default, we are not in debug mode -->
   <arg name="debug" default="false" />
 
-  <arg name="sim" default="false" />
+  <arg name="sim" default="true" />
 
   <!-- If true you launch the trajectory converter node.
   This node sends a true value on the topic /trajectory_executed when the trajectory is completed, also in simulation.-->
@@ -55,6 +55,7 @@
     <rosparam command="load" file="$(find ur5e_moveit_config)/config/ompl_planning.yaml"/>
     <rosparam command="load" file="$(find manipulator_planner)/config/ur5e.yaml" />
   </node>  
-  <node if="$(arg control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" />
+  <!-- For real UR5 -->
+  <!-- <node if="$(arg control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" />  -->
   
 </launch>
