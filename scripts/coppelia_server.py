@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""*
+"""LICENSE
  * Software License Agreement (Apache Licence 2.0)
  *
  *  Copyright (c) [2024], [Andrea Pupa] [italo Almirante]
@@ -37,7 +37,16 @@
  *  Created on: [2024-01-17]
  *"""
 
-# SERVER IMPLEMENTATION TO HANDLE COPPELIA SIMULATIONS
+""" SERVER IMPLEMENTATION TO HANDLE COPPELIA SIMULATIONS
+This code responses with the same number of the command sent by the client
+Available commands are the following
+0: open defined scene
+1: start simulation
+2: stop simulation 
+3: save scene
+4: close scene
+5: change the position of an object
+"""
 
 # IMPORT LIBRARY
 from manipulators.srv import CoppeliaMenu                   # Coppelia service
@@ -62,13 +71,28 @@ class Coppelia:
         package_name = rospy.get_param('~package_name')
         scene_name   = rospy.get_param('~scene_name')
 
+        # Get starting positions of camera and end-effector
+        self.cam_parent     = rospy.get_param('~cam_parent')
+        self.obj_connect    = rospy.get_param('~obj_connect')
+        self.name_camera    = rospy.get_param('~name_camera')
+        self.name_gripper   = rospy.get_param('~name_gripper')
+        self.cam_x_offset   = rospy.get_param('~cam_x_offset')
+        self.cam_y_offset   = rospy.get_param('~cam_y_offset')
+        self.cam_z_offset   = rospy.get_param('~cam_z_offset')
+        self.cam_rx         = rospy.get_param('~cam_rx')
+        self.cam_ry         = rospy.get_param('~cam_ry')
+        self.cam_rz         = rospy.get_param('~cam_rz')
+        self.ee_parent      = rospy.get_param('~ee_parent')
+        self.ee_z_offset    = rospy.get_param('~ee_z_offset')
+        self.ee_rz          = rospy.get_param('~ee_rz')
+
+        # Get user scene
         if (package_name == ''):
             package_name = 'dlos_manipulation'
 
         if (scene_name == ''):
             scene_name = 'dlo_manipulation.ttt'
 
-        # Get user scene
         rospack         = rospkg.RosPack()
         package_path    = rospack.get_path(package_name)
         self.scene_path = package_path + "/scenes/" + scene_name
@@ -76,30 +100,100 @@ class Coppelia:
         # Start node execution
         self.coppelia_menu_server()
 
+    def set_camera_pose(self):
+
+        # By default, camera and tool0 axis are aligned as following:
+        # Cam x axis -> tool0 z axis
+        # Cam y axis -> tool0 x axis
+        # Cam z axis -> tool0 y axis
+
+        # Get robot connection pose
+        conn_obj = self.sim.getObject(self.obj_connect) 
+        conn_pos = self.sim.getObjectPosition(conn_obj, -1)
+        conn_rot = self.sim.getObjectOrientation(conn_obj, -1)
+
+        print(conn_pos)
+        print(conn_rot)
+
+        # Get camera pose
+        # camera_pos = []
+        # camera_rot = []
+        # cam_obj = self.sim.getObject(self.name_camera) 
+        # self.sim.setObjectPosition(cam_obj, -1, conn_pos)
+        # self.sim.setObjectOrientation(cam_obj, -1, conn_rot)
+
+        rospy.sleep(1)
+        return True
+
+    def set_ee_pose(self):
+
+        # By default, camera and tool0 axis are aligned
+
+        # Get robot connection pose
+        conn_obj = self.sim.getObject(self.obj_connect) 
+        conn_pos = self.sim.getObjectPosition(conn_obj, -1)
+        conn_rot = self.sim.getObjectOrientation(conn_obj, -1)
+
+        print(conn_pos)
+        print(conn_rot)
+
+        # Get camera pose
+        ee_pos = []
+        ee_rot = []
+        cam_obj = self.sim.getObject(self.name_gripper) 
+        self.sim.setObjectPosition(cam_obj, -1, ee_pos)
+        self.sim.setObjectOrientation(cam_obj, -1, ee_rot)
+
+        rospy.sleep(1)
+        return True
+    
+    # Load Coppelia scene
+    def open_scene(self):
+
+        self.sim.loadScene(self.scene_path)
+        
+        return 0
+
     # Coppelia simulation starting
     def start_sim(self):
         
-        self.sim.loadScene(self.scene_path)
         self.sim.startSimulation()
+        rospy.sleep(1)
 
-        return True
+        return 1
 
     # Coppelia simulation stopping
     def stop_sim(self):
 
         self.sim.stopSimulation()
-        time.sleep(2)
+        rospy.sleep(2)
+        
+        return 2
+
+    # Coppelia scene saving
+    def save_scene(self):
+
         self.sim.saveScene()
-        time.sleep(2)
+        rospy.sleep(2)
+
+        return 3
+    
+    # Coppelia scene closing
+    def close_scene(self):
+
         self.sim.closeScene()
-        
-        return False
+        rospy.sleep(2)
 
+        return 4
+    
+    # Set given object pose in the Coppelia scene
+    def set_obj_pose(self,obj_name):
 
-    # COPPELIA MENU HANDLER
-        
+        # TODO: write function handler
+        return 5
+    
     # Choice among Coppelia functions according to the client request
-    def menu_handler(self,req):
+    def menu_handler(self,req): # TODO: change numbers in menu manipulator, too
 
         if      req.command == 0:
             self.start_sim()
@@ -119,9 +213,30 @@ class Coppelia:
         rospy.Service('coppelia_menu', CoppeliaMenu, self.menu_handler)
         rospy.loginfo("Ready to send commands to CoppeliaSim")
         # Setup a controlled rate ROS Python spinner
-        spin_rate = rospy.Rate(0.5)
-        while not rospy.is_shutdown():
-            spin_rate.sleep(spin_rate)
+        # spin_rate = rospy.Rate(0.5)
+        # while not rospy.is_shutdown():
+        #     spin_rate.sleep(spin_rate)
+
+        # Test pipeline
+        print("OPEN SCENE")
+        self.open_scene()
+        print("SET CAMERA POSE")
+        self.set_camera_pose()
+        print("SET EE POSE")
+        self.set_ee_pose()
+        rospy.sleep(5)
+        print("START SIM")
+        self.start_sim()
+        rospy.sleep(2)
+        print("STOP SIM")
+        self.stop_sim()
+        rospy.sleep(2)
+        print("SAVE SCENE")
+        self.save_scene()
+        rospy.sleep(2)
+        print("CLOSE SCENE")
+        self.close_scene()
+
         # Closing the node
         rospy.loginfo("Closing the node")
         rospy.signal_shutdown("Shutdown requested")
