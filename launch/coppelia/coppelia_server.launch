@@ -1,7 +1,45 @@
 <launch>
-    <!-- Launch the coppelia_server node -->
-    <node name="coppelia_server" pkg="manipulators" type="coppelia_server.py" output="screen">
-        <param name="package_name"  type="string" value="manipulators"/>
-        <param name="scene_name"    type="string" value="UR10.ttt"/>
-    </node>
+    
+    <!-- Sim args for Coppelia scene -->
+  <arg name="package_name"  default="manipulators"/>
+  <arg name="scene_name"    default="UR10_eecam.ttt"/>
+  <arg name="connect_name"  default="./UR10_connection"/>
+  <arg name="camera_name"   default="./d435i_camera"/>
+  <arg name="gripper_name"  default="./robotiq_85_gripper"/>
+
+  <!-- Start RViz sim -->
+  <arg name="rviz"          default="true" />
+  <arg name="output"        default="screen" />
+
+  <!-- Init starting poses of devices -->
+  <arg name="cam_parent"    default="tool0"/>
+  <arg name="cam_x_offset"  default="+0.0"/>
+  <arg name="cam_y_offset"  default="+0.05"/>
+  <arg name="cam_z_offset"  default="+0.05"/>
+  <arg name="cam_rx"        default="+0.0"/>
+  <arg name="cam_ry"        default="-1.570796327"/>
+  <arg name="cam_rz"        default="-1.570796327"/>
+  <arg name="ee_parent"     default="tool0"/>
+  <arg name="ee_z_offset"   default="+0.0"/>
+  <arg name="ee_rz"         default="+0.0"/>
+
+  <!-- Launch the coppelia_server node -->
+  <node name="coppelia_server" pkg="manipulators" type="coppelia_server.py" output="$(arg output)">
+    <param name="package_name"  value="$(arg package_name)"/>
+    <param name="scene_name"    value="$(arg scene_name)"/>
+    <param name="connect_name"  value="$(arg connect_name)"/>
+    <param name="camera_name"   value="$(arg camera_name)"/>
+    <param name="gripper_name"  value="$(arg gripper_name)"/>
+    <param name="cam_parent"    value="$(arg cam_parent)"/>
+    <param name="cam_x_offset"  value="$(arg cam_x_offset)"/>
+    <param name="cam_y_offset"  value="$(arg cam_y_offset)"/>
+    <param name="cam_z_offset"  value="$(arg cam_z_offset)"/>
+    <param name="cam_rx"        value="$(arg cam_rx)"/>
+    <param name="cam_ry"        value="$(arg cam_ry)"/>
+    <param name="cam_rz"        value="$(arg cam_rz)"/>
+    <param name="ee_parent"     value="$(arg ee_parent)"/>
+    <param name="ee_z_offset"   value="$(arg ee_z_offset)"/>
+    <param name="ee_rz"         value="$(arg ee_rz)"/>
+  </node>
+
 </launch>
