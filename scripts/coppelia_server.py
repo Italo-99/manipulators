@@ -51,7 +51,7 @@ Available commands are the following
 # IMPORT LIBRARY
 from manipulators.srv import CoppeliaMenu                   # Coppelia service
 import rospy, rospkg                                        # ROS libraries
-import time, numpy as np                                    # Python libraries
+import time, numpy as np, math as m                         # Python libraries
 from coppeliasim_zmqremoteapi_client import RemoteAPIClient #`Coppelia Remote API`
 from scipy.spatial.transform import Rotation   
 
@@ -100,14 +100,8 @@ class Coppelia:
         # Start node execution
         self.coppelia_menu_server()
 
-    # Compute the position of a point given the rotation matrices
-    def compute_world_pos(self,x,y,z,a,b,c):
-
-        """
-        Inputs: (x,y,z) are the coords according to world frame orientation
-                (a,b,c) are the angles in radians of child frame orientation
-                        referred to world frame orientation
-        """
+    # Compute the 3x3 rotation matrix from fixed xyz triad angles (a,b,c)
+    def rot_mat(self,a,b,c):
 
         # Define rotation matrices
         Rx = np.array([ [1,         0,          0],
@@ -123,7 +117,19 @@ class Coppelia:
                         [        0,          0, 1]])
 
         # Compute composite rotation matrix
-        R = np.dot(Rx, np.dot(Ry, Rz))
+        return np.dot(Rx, np.dot(Ry, Rz))
+
+    # Compute the position of a point given the rotation matrices
+    def compute_world_pos(self,x,y,z,a,b,c):
+
+        """
+        Inputs: (x,y,z) are the coords according to world frame orientation
+                (a,b,c) are the angles in radians of child frame orientation
+                        referred to world frame orientation
+        """
+
+        # Define xyz rotation matrix frame-world
+        R = self.rot_mat(a,b,c)
 
         # Define vector in child frame
         vector_child = np.array([x,y,z])
@@ -137,43 +143,19 @@ class Coppelia:
     def compute_world_rot(self,a,b,c,rx,ry,rz):
 
         # Define rotation matrix for the first frame
-        Rx = np.array([ [1,         0,          0],
-                        [0, np.cos(a), -np.sin(a)],
-                        [0, np.sin(a), np.cos(a)]])
-
-        Ry = np.array([ [np.cos(b), 0,  np.sin(b)],
-                        [0,         1,          0],
-                        [-np.sin(b), 0, np.cos(b)]])
-
-        Rz = np.array([ [np.cos(c), -np.sin(c), 0],
-                        [np.sin(c),  np.cos(c), 0],
-                        [        0,          0, 1]])
-
-        R1 = np.dot(Rx, np.dot(Ry, Rz))
+        R1 = self.rot_mat(a,b,c)
 
         # Define rotation matrix for the second frame
-        Rx = np.array([ [1,          0,           0],
-                        [0, np.cos(rx), -np.sin(rx)],
-                        [0, np.sin(rx), np.cos(rx)]])
-
-        Ry = np.array([ [ np.cos(ry), 0, np.sin(ry)],
-                        [0,           1,          0],
-                        [-np.sin(ry), 0, np.cos(ry)]])
-
-        Rz = np.array([ [np.cos(rz), -np.sin(rz), 0],
-                        [np.sin(rz),  np.cos(rz), 0],
-                        [         0,           0, 1]])
-
-        R2 = np.dot(Rx, np.dot(Ry, Rz))
+        R2 = self.rot_mat(rx,ry,rz)
 
         # Compute total rotation matrix
         R = np.dot(R1,R2)
 
-        ### first transform the matrix to euler angles
+        # Get euler angles from matrix
         r =  Rotation.from_matrix(R)
-        angles = r.as_euler("zyx",degrees=False)
+        angles = r.as_euler("XYZ")
 
-        return angles
+        return angles.tolist()
 
     # Set camera starting position within the sim referred to connection frame
     def set_camera_pose(self):
@@ -185,36 +167,44 @@ class Coppelia:
 
         # Get robot connection pose
         conn_obj = self.sim.getObject(self.connect_name) 
-        conn_pos = self.sim.getObjectPosition(conn_obj, -1)
-        conn_rot = self.sim.getObjectOrientation(conn_obj, -1)
+        conn_pos = self.sim.getObjectPosition(conn_obj)
+        conn_rot = self.sim.getObjectOrientation(conn_obj)
 
+        """
         # Compute camera pose
-        x, y, z = self.compute_world_pos(self.cam_x_offset,
-                                        self.cam_y_offset,
-                                        self.cam_z_offset,
-                                        conn_rot[0],
-                                        conn_rot[1],
-                                        conn_rot[2])
+        # x, y, z = self.compute_world_pos(
+        #                 self.cam_x_offset,self.cam_y_offset,self.cam_z_offset,
+        #                 conn_rot[0],      conn_rot[1],      conn_rot[2])
 
-        # Set camera pose
-        camera_pos = [conn_pos[0]+x,
-                      conn_pos[1]+y,
-                      conn_pos[2]+z]
+        # # Set camera pose
+        # camera_pos = [conn_pos[0]+x,conn_pos[1]+y,conn_pos[2]+z]
 
-        camera_rot = self.compute_world_rot(
-                        conn_rot[0],conn_rot[1],conn_rot[2],
-                        self.cam_rx,self.cam_ry,self.cam_rz)
-        
-        print(camera_rot.tolist())
+        # camera_rot = self.compute_world_rot(
+        #                 self.cam_rx,self.cam_ry,self.cam_rz,
+        #                 conn_rot[0],conn_rot[1],conn_rot[2])
+        """
 
-        # camera_rot = [conn_rot[0]+self.cam_rx,
-        #               conn_rot[1]+self.cam_ry,
-        #               conn_rot[2]+self.cam_rz]
-        
+        print("Tool0 world rotation")
+        print(conn_rot)
+        print("Camera tool rotation")
+        print([self.cam_rx,self.cam_ry,self.cam_rz])
+
         # Update camera pose into sim
         cam_obj = self.sim.getObject(self.camera_name)
-        self.sim.setObjectOrientation(cam_obj, -1, camera_rot) 
-        self.sim.setObjectPosition(cam_obj, -1, camera_pos)
+        # self.sim.setObjectPosition(cam_obj, camera_pos, self.sim.handle_world)
+        # self.sim.setObjectOrientation(cam_obj, camera_rot, self.sim.handle_world) 
+
+        self.sim.setObjectPosition(cam_obj, 
+                                   [self.cam_x_offset,self.cam_y_offset,self.cam_z_offset], 
+                                   conn_obj)
+        
+        yaw, pitch, roll = self.sim.yawPitchRollToAlphaBetaGamma(
+                            self.cam_rx,self.cam_ry,self.cam_rz)
+        self.sim.setObjectOrientation(cam_obj,
+                                      [yaw,
+                                       pitch,
+                                       roll],
+                                      conn_obj) 
 
         rospy.sleep(1)
         return True
@@ -314,25 +304,7 @@ class Coppelia:
         # while not rospy.is_shutdown():
         #     spin_rate.sleep(spin_rate)
 
-        # Test pipeline
-        # print("OPEN SCENE")
-        # self.open_scene()
-        print("SET CAMERA POSE")
         self.set_camera_pose()
-        # print("SET EE POSE")
-        # self.set_ee_pose()
-        # rospy.sleep(5)
-        # print("START SIM")
-        # self.start_sim()
-        # rospy.sleep(2)
-        # print("STOP SIM")
-        # self.stop_sim()
-        # rospy.sleep(2)
-        # print("SAVE SCENE")
-        # self.save_scene()
-        # rospy.sleep(2)
-        # print("CLOSE SCENE")
-        # self.close_scene()
 
         # Closing the node
         rospy.loginfo("Closing the node")
