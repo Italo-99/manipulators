@@ -66,8 +66,10 @@ class ManipulatorMenu
     void spinnerMenu(void);         // Asynchronous spinner for ROS routines with user menu
     void spinner(void);             // Update current robot joints state
 
-    void openCoppeliaSim(void);
-    void closeCoppeliaSim(void);
+    void startCoppeliaSim(void);        // Start simulation on CoppeliaSim
+    void stopCoppeliaSim(void);         // Stop  simulation on CoppeliaSim
+    void saveCoppeliaScene(void);       // Save  scene      on CoppeliaSim
+    void changeCoppeliaCablePose(void); // Changle randomly cable pose on CoppeliaSim
 
     void publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
     void publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner

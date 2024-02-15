@@ -40,19 +40,17 @@
 """ SERVER IMPLEMENTATION TO HANDLE COPPELIA SIMULATIONS
 This code responses with the same number of the command sent by the client
 Available commands are the following
-0: open defined scene
-1: start simulation
-2: stop simulation 
-3: save scene
-4: close scene
-5: change the position of an object
+0: start simulation
+1: stop simulation 
+2: save scene
+3: change the position of an object
 """
 
 # IMPORT LIBRARY
 from manipulators.srv import CoppeliaMenu                   # Coppelia service
 import rospy, rospkg                                        # ROS libraries
-import time, numpy as np, math as m                         # Python libraries
-from coppeliasim_zmqremoteapi_client import RemoteAPIClient #`Coppelia Remote API`
+import time, numpy as np                                    # Python libraries
+from coppeliasim_zmqremoteapi_client import RemoteAPIClient #`Coppelia API`
 from scipy.spatial.transform import Rotation   
 
 # COPPELIA SIM CLASS
@@ -119,7 +117,8 @@ class Coppelia:
         # Compute composite rotation matrix
         return np.dot(Rx, np.dot(Ry, Rz))
 
-    # Compute the position of a point given the rotation matrices
+    # Compute the position of a point referred to a frame oriented as
+    # the triad euler angles (a,b,c)
     def compute_world_pos(self,x,y,z,a,b,c):
 
         """
@@ -139,7 +138,8 @@ class Coppelia:
 
         return vector_world
 
-    # Compute the position of a point given the rotation matrices
+    # Compute the orientation of a frame given the rotation matrices
+    # referred to its parent frame (rx,ry,rz) and parent-world (a,b,c)
     def compute_world_rot(self,a,b,c,rx,ry,rz):
 
         # Define rotation matrix for the first frame
@@ -157,6 +157,32 @@ class Coppelia:
 
         return angles.tolist()
 
+     # Set camera starting position within the sim referred to connection frame
+    
+    # Set object position given its pose list [x,y,z,alpha,beta,gamma]
+    # referred to a parent frame
+    def set_obj_pose(self,obj_name,obj_pose,parent_name):
+
+        # Set world as default parent
+        if parent_name == '':
+            parent_obj= self.sim.handle_world
+        else:
+            # Get parent object
+            parent_obj = self.sim.getObject(parent_name)        
+            
+        # Get child object
+        obj = self.sim.getObject(obj_name)
+
+        # Update obj position into sim
+        self.sim.setObjectPosition(obj,obj_pose[:3],parent_obj)
+        
+        # Update obj orientation into sim
+        obj_rot = self.sim.yawPitchRollToAlphaBetaGamma(
+                        obj_pose[3],obj_pose[4],obj_pose[5])
+        self.sim.setObjectOrientation(obj,obj_rot,parent_obj)
+
+        return True    
+
     # Set camera starting position within the sim referred to connection frame
     def set_camera_pose(self):
 
@@ -165,74 +191,19 @@ class Coppelia:
         # Cam y axis -> tool0 x axis
         # Cam z axis -> tool0 y axis
 
-        # Get robot connection pose
-        conn_obj = self.sim.getObject(self.connect_name) 
-        conn_pos = self.sim.getObjectPosition(conn_obj)
-        conn_rot = self.sim.getObjectOrientation(conn_obj)
-
-        """
-        # Compute camera pose
-        # x, y, z = self.compute_world_pos(
-        #                 self.cam_x_offset,self.cam_y_offset,self.cam_z_offset,
-        #                 conn_rot[0],      conn_rot[1],      conn_rot[2])
-
-        # # Set camera pose
-        # camera_pos = [conn_pos[0]+x,conn_pos[1]+y,conn_pos[2]+z]
-
-        # camera_rot = self.compute_world_rot(
-        #                 self.cam_rx,self.cam_ry,self.cam_rz,
-        #                 conn_rot[0],conn_rot[1],conn_rot[2])
-        """
-
-        print("Tool0 world rotation")
-        print(conn_rot)
-        print("Camera tool rotation")
-        print([self.cam_rx,self.cam_ry,self.cam_rz])
-
-        # Update camera pose into sim
-        cam_obj = self.sim.getObject(self.camera_name)
-        # self.sim.setObjectPosition(cam_obj, camera_pos, self.sim.handle_world)
-        # self.sim.setObjectOrientation(cam_obj, camera_rot, self.sim.handle_world) 
-
-        self.sim.setObjectPosition(cam_obj, 
-                                   [self.cam_x_offset,self.cam_y_offset,self.cam_z_offset], 
-                                   conn_obj)
-        
-        yaw, pitch, roll = self.sim.yawPitchRollToAlphaBetaGamma(
-                            self.cam_rx,self.cam_ry,self.cam_rz)
-        self.sim.setObjectOrientation(cam_obj,
-                                      [yaw,
-                                       pitch,
-                                       roll],
-                                      conn_obj) 
-
-        rospy.sleep(1)
-        return True
+        return self.set_obj_pose(self.camera_name,
+               [self.cam_x_offset,self.cam_y_offset,self.cam_z_offset,
+                self.cam_rx,      self.cam_ry,      self.cam_rz     ],
+                self.connect_name)
 
     # Set camera starting position within the sim referred to connection frame
     def set_ee_pose(self):
 
         # By default, camera and tool0 axis are aligned
 
-        # Get robot connection pose
-        conn_obj = self.sim.getObject(self.connect_name) 
-        conn_pos = self.sim.getObjectPosition(conn_obj, -1)
-        conn_rot = self.sim.getObjectOrientation(conn_obj, -1)
-
-        # # Get ee pose
-        # ee_pos = [conn_pos[0]+self.cam_x_offset,
-        #           conn_pos[1]+self.cam_y_offset,
-        #           conn_pos[2]+self.cam_z_offset]
-        # ee_rot = [conn_rot[0]+self.cam_rx,
-        #               conn_rot[1]+self.cam_ry,
-        #               conn_rot[2]+self.cam_rz]
-        
-        # ee_obj = self.sim.getObject(self.gripper_name) 
-        # self.sim.setObjectPosition(ee_obj, -1, ee_pos)
-        # self.sim.setObjectOrientation(ee_obj, -1, ee_rot)
-
-        rospy.sleep(1)
-        return True
+        return self.set_obj_pose(self.gripper_name,
+                                [0,0,self.ee_z_offset,0,0,self.ee_rz],
+                                self.connect_name)
     
     # Load Coppelia scene
     def open_scene(self):
@@ -246,51 +217,55 @@ class Coppelia:
         
         self.sim.startSimulation()
         rospy.sleep(1)
+        rospy.loginfo("Starting simulation")
 
-        return 1
+        return 0
 
     # Coppelia simulation stopping
     def stop_sim(self):
 
         self.sim.stopSimulation()
-        rospy.sleep(2)
+        rospy.loginfo("Stopping simulation")
+        rospy.sleep(1)
         
-        return 2
+        return 1
 
     # Coppelia scene saving
     def save_scene(self):
 
-        self.sim.saveScene()
-        rospy.sleep(2)
+        rospy.loginfo("Saving scene")
+        self.sim.saveScene(self.scene_path)
+        rospy.sleep(1)
 
-        return 3
+        return 2
     
     # Coppelia scene closing
     def close_scene(self):
 
         self.sim.closeScene()
-        rospy.sleep(2)
+        rospy.sleep(1)
 
         return 4
     
-    # Set given object pose in the Coppelia scene
-    def set_obj_pose(self,obj_name):
+    # Change cable position during simulation
+    def change_cable_pose(self):
 
-        # TODO: write function handler
-        return 5
-    
+        return 3
+
     # Choice among Coppelia functions according to the client request
-    def menu_handler(self,req): # TODO: change numbers in menu manipulator, too
+    def menu_handler(self,req):
 
         if      req.command == 0:
-            self.start_sim()
-            return True
+            return self.start_sim()
         elif    req.command == 1:
-            self.stop_sim()
-            return False
+            return self.stop_sim()
+        elif    req.command == 2:
+            return self.save_scene()
+        elif    req.command == 3:
+            return self.change_cable_pose()
         else:
-            print("Wrong command sent")
-            return False
+            rospy.logwarn("Wrong command sent")
+            return -1
 
     # Service and node declarations
     def coppelia_menu_server(self):
@@ -299,15 +274,27 @@ class Coppelia:
         # Init coppelia service
         rospy.Service('coppelia_menu', CoppeliaMenu, self.menu_handler)
         rospy.loginfo("Ready to send commands to CoppeliaSim")
-        # Setup a controlled rate ROS Python spinner
-        # spin_rate = rospy.Rate(0.5)
-        # while not rospy.is_shutdown():
-        #     spin_rate.sleep(spin_rate)
 
+        # Setup starting scene (CoppeliaSim must be already open)
+        rospy.loginfo("Set scene")
+        self.open_scene()
+        rospy.sleep(1)
+        rospy.loginfo("Set camera pose")
         self.set_camera_pose()
+        rospy.loginfo("Set gripper pose")
+        self.set_ee_pose()
+        rospy.sleep(1)
+        rospy.loginfo("Scene started")
 
+        # Setup a controlled rate ROS Python spinner
+        spin_rate = rospy.Rate(0.5)
+        while not rospy.is_shutdown():
+            spin_rate.sleep()
+
+        # Closing the scene
+        self.close_scene()
         # Closing the node
-        rospy.loginfo("Closing the node")
+        rospy.loginfo("Closing Coppelia Server node")
         rospy.signal_shutdown("Shutdown requested")
 
 # MAIN PYTHON EXECUTABLE FUNCTION

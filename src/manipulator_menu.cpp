@@ -106,17 +106,31 @@ void ManipulatorMenu::spinnerMenu()
 // --------------------- COPPELIASIM HANDLER ---------------------
 
 // Open Coppelia simulation
-void ManipulatorMenu::openCoppeliaSim()
+void ManipulatorMenu::startCoppeliaSim()
 {
-  coppelia_srv_.request.command = 0;  // Set the Coppelia Menu command for starting sim
-  wait_for_response();                // Send the request
+  coppelia_srv_.request.command = 0;
+  wait_for_response();
 }
 
 // Close Coppelia simulation
-void ManipulatorMenu::closeCoppeliaSim()
+void ManipulatorMenu::stopCoppeliaSim()
 {
-  coppelia_srv_.request.command = 1;  // Set the Coppelia Menu command for closing sim
-  wait_for_response();                // Send the request
+  coppelia_srv_.request.command = 1;
+  wait_for_response();
+}
+
+// Save Coppelia scene
+void ManipulatorMenu::saveCoppeliaScene()
+{
+  coppelia_srv_.request.command = 2;
+  wait_for_response();
+}
+
+// Change Coppelia cable pose
+void ManipulatorMenu::changeCoppeliaCablePose()
+{
+  coppelia_srv_.request.command = 3;
+  wait_for_response();
 }
 
 // --------------------- MOVEMENTS HANDLER ---------------------
@@ -687,30 +701,40 @@ std::vector<double> ManipulatorMenu::rad_from_deg(const std::vector<double> join
 
 void ManipulatorMenu::printMenu()
 {
-  std::cout << "\n======= Manipulator Menu =======\n";
-  std::cout << "0. To open twin Coppelia sim scene\n";
+  std::cout << "\n======= MANIPULATOR MENU =======\n";
+  std::cout << "\n======= Joint/tcp moving test options =======\n";
   std::cout << "1. Test a joint goal\n";
   std::cout << "2. Test a TCP goal\n";
   std::cout << "3. Give a joint goal\n";
   std::cout << "4. Give a TCP goal\n";
   std::cout << "5. Give a TCP goal through InvKine\n";
   std::cout << "6. Move a defined joint\n";
+  std::cout << "\n======= Carthesian moving test options =======\n";
   std::cout << "7. Move the robot along x\n";
   std::cout << "8. Move the robot along y\n";
   std::cout << "9. Move the robot along z\n";
+  std::cout << "\n======= Tcp orientation options =======\n";
   std::cout << "10.Change TCP orientation\n";
   std::cout << "11.Rotate the TCP around x\n";
   std::cout << "12.Rotate the TCP around y\n";
   std::cout << "13.Rotate the TCP around z\n";
   std::cout << "14.Get a fixed TCP orientation\n";
+  std::cout << "\n======= Handle objects in the planning scene =======\n";
   std::cout << "15.Add an object to the scene\n";
-  std::cout << "16.Visualize joints state\n";
-  std::cout << "17.Visualize current tcp pose\n";
-  std::cout << "18.Shutdown CoppeliaSim\n";
+  std::cout << "16.Delete an object from the scene\n";
+  std::cout << "\n======= Visualize current robot state =======\n";
+  std::cout << "17.Visualize joints state\n";
+  std::cout << "18.Visualize current tcp pose\n";
+  std::cout << "\n======= Home positions setting =======\n";
   std::cout << "19.Go to home position (gripper down)\n";
   std::cout << "20.Go to home position (gripper at the front)\n";
-  std::cout << "21.Delete an object from the scene\n";
-  std::cout << "22.Shutdown the menu\n";
+  std::cout << "\n======= CoppeliaSim handling =======\n";
+  std::cout << "21. To start twin Coppelia simulation\n";
+  std::cout << "22. To stop  twin Coppelia simulation\n";
+  std::cout << "23. To save  twin CoppeliaSim scene\n";
+  std::cout << "24. To change cable pose in the CoppeliaSim scene\n";
+  std::cout << "======= Closing ROS menu =======\n";
+  std::cout << "25.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -729,11 +753,6 @@ void ManipulatorMenu::processChoice(int choice)
   std::vector<double> ee_pos; // End effector position
   switch (choice)
   {
-  case 0:
-    ROS_INFO("You selected Option 0");
-    openCoppeliaSim();
-    break;
-
   case 1:
     ROS_INFO("You selected Option 1");
     testJointGoal();
@@ -836,14 +855,17 @@ void ManipulatorMenu::processChoice(int choice)
     ROS_INFO("You selected Option 15");
     addCollObj();
     break;
-
   case 16:
     ROS_INFO("You selected Option 16");
+    deleteCollObj();
+    break;
+  case 17:
+    ROS_INFO("You selected Option 17");
     jointStateVisualizer();    
     break;
 
-  case 17:
-    ROS_INFO("You selected Option 17");
+  case 18:
+    ROS_INFO("You selected Option 18");
     ee_pos = getEEpos_rpy();
     std::cout << " EE - X position: " << ee_pos[0] << std::endl;
     std::cout << " EE - Y position: " << ee_pos[1] << std::endl;
@@ -853,11 +875,7 @@ void ManipulatorMenu::processChoice(int choice)
     std::cout << " EE - Z rotation: " << ee_pos[5] << std::endl;
     break;
 
-  case 18:
-    ROS_INFO("You selected Option 18");
-    ROS_INFO("Closing CoppeliaSim...");
-    closeCoppeliaSim();
-    break;
+  
   case 19:
     ROS_INFO("You selected Option 19");
     ROS_INFO("Go to home position, gripper down ...");
@@ -870,9 +888,25 @@ void ManipulatorMenu::processChoice(int choice)
     break;
   case 21:
     ROS_INFO("You selected Option 21");
-    deleteCollObj();
+    ROS_INFO("Start Coppelia simulation");
+    startCoppeliaSim();
     break;
   case 22:
+    ROS_INFO("You selected Option 22");
+    ROS_INFO("Stop Coppelia simulation");
+    stopCoppeliaSim();
+    break;
+  case 23:
+    ROS_INFO("You selected Option 23");
+    ROS_INFO("Save current Coppelia scene");
+    saveCoppeliaScene();
+    break;
+  case 24:
+    ROS_INFO("You selected Option 24");
+    ROS_INFO("Change cable position in the CoppeliaSim scene");
+    changeCoppeliaCablePose();
+    break;
+  case 25:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;
