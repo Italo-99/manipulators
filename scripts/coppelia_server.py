@@ -233,11 +233,15 @@ class Coppelia:
     # Coppelia scene saving
     def save_scene(self):
 
-        rospy.loginfo("Saving scene")
-        self.sim.saveScene(self.scene_path)
-        rospy.sleep(1)
-
-        return 2
+        try:
+            rospy.loginfo("Saving scene")
+            self.sim.saveScene(self.scene_path)
+            rospy.sleep(2)
+            rospy.loginfo("Scene saved successfully")
+            return 2
+        except Exception as e:
+            rospy.logerr("Error saving scene: {}".format(str(e)))
+            return -1
     
     # Coppelia scene closing
     def close_scene(self):
@@ -275,7 +279,7 @@ class Coppelia:
         rospy.Service('coppelia_menu', CoppeliaMenu, self.menu_handler)
         rospy.loginfo("Ready to send commands to CoppeliaSim")
 
-        # Setup starting scene (CoppeliaSim must be already open)
+        # Setup starting scene (CoppeliaSim software must be already open)
         rospy.loginfo("Set scene")
         self.open_scene()
         rospy.sleep(1)
@@ -284,7 +288,7 @@ class Coppelia:
         rospy.loginfo("Set gripper pose")
         self.set_ee_pose()
         rospy.sleep(1)
-        rospy.loginfo("Scene started")
+        rospy.loginfo("Scene ready")
 
         # Setup a controlled rate ROS Python spinner
         spin_rate = rospy.Rate(0.5)
