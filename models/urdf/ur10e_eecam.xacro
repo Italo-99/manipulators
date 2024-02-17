@@ -46,7 +46,7 @@
   </xacro:sensor_d435>
 
   <!-- Import Robotiq85Gripper -->
-  <xacro:include filename="$(find robotiq85_gripper)/models/robotiq_85.urdf.xacro"/>
+  <xacro:include filename="$(find gripper)/models/robotiq_85.urdf.xacro"/>
   
   <!-- Fixed joint gripper -->
   <joint name="gripper_robot_joint" type="fixed">
