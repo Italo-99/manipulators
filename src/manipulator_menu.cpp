@@ -38,39 +38,41 @@
 // CLASS SOURCE IMLEMENTATION OF MANIPULATOR MENU
 // This file is useful to publish some msgs on the topics of a manipulator planner instance
 
-// TODO: together with node launch, UR10 should go immediatly to a preconfigured configuration
-// initial position {0,-90,+90,-90,-90,0}
-
 // IMPORT LIBRARIES
 #include "manipulators/ManipulatorMenu.h"
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu()
+ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name)
 {
-    // --------------------- PUBS & SUBS DELCARATIONS ---------------------
+  // Gripper attribute setting
+  gripper_joint_name_ = gripper_joint_name;
 
-    jointGoalPublisher_       = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
-    tcpPosePublisher_         = nh_.advertise<geometry_msgs::Pose>("/desired_tcp_pose", 1);
-    tcpPoseIKPublisher_       = nh_.advertise<geometry_msgs::Pose>("/desired_tcpIK_pose", 1);
-    jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
-    display_goal_pub_         = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
-    eepose_pub_               = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1, true);
-    collisionObjectPublisher_ = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
+  // Listen static tf from tool0 and tcp_gripper
+  geometry_msgs::PoseStamped ee_offset_pose = getTf("tool0","tcp_gripper");
+  ee_offset_ = ee_offset_pose.pose.position.z;
 
-    // ------------- Fill the initial robot goal msg as default goal msg -------------------
-    
-    // std::vector<double> current_pose = getEEpos_rpy();
-    // publishTcpGoal(current_pose);
+  // --------------------- PUBS & SUBS DELCARATIONS ---------------------
 
-    // --------------------- Global class variables init ---------------------
+  jointGoalPublisher_       = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
+  tcpPosePublisher_         = nh_.advertise<geometry_msgs::Pose>("/desired_tcp_pose", 1);
+  tcpPoseIKPublisher_       = nh_.advertise<geometry_msgs::Pose>("/desired_tcpIK_pose", 1);
+  jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
+  display_goal_pub_         = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
+  eepose_pub_               = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1, true);
+  collisionObjectPublisher_ = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
+  moveGripperPublisher_     = nh_.advertise<std_msgs::Float64>(gripper_joint_name_+"/gripper_control", 1);
 
-    counterJg_ = false;       // choice of test joint goal
-    counterCg_ = false;       // choice of test tcp3D goal
+  // --------------------- Global class variables init ---------------------
 
-    // --------------------- CoppeliaSim client init ---------------------
-    client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
+  counterJg_ = false;       // choice of test joint goal
+  counterCg_ = false;       // choice of test tcp3D goal
 
+  // --------------------- CoppeliaSim client init ---------------------
+  client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
+
+  // --------------------- Gripper client init ---------------------
+  gripper_client_ = nh_.serviceClient<std_srvs::SetBool>(gripper_joint_name_+"/move_gripper");
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
@@ -174,16 +176,33 @@ void ManipulatorMenu::publishTcpGoal(const std::vector<double> position)
 // Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
 void ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position) 
 {
+  // TCP pose
   geometry_msgs::Pose tcpPoseMsg;
-
   tcpPoseMsg.position.x = position[0];
   tcpPoseMsg.position.y = position[1];
   tcpPoseMsg.position.z = position[2];
-
-  // Conversion from euler rotation to pose quaternion
   tcpPoseMsg.orientation = quaternion_from_euler(position[3],position[4],position[5]);
 
-  tcpPoseIKPublisher_.publish(tcpPoseMsg);
+  // The pose to pass to invKine planner must be referred to tool0
+  geometry_msgs::Pose tool0_PoseMsg;
+  tool0_PoseMsg.orientation = tcpPoseMsg.orientation;
+  Eigen::Quaterniond  q(tcpPoseMsg.orientation.w,
+                        tcpPoseMsg.orientation.x,
+                        tcpPoseMsg.orientation.y,
+                        tcpPoseMsg.orientation.z);
+  Eigen::Affine3d transform = Eigen::Translation3d(
+                              tcpPoseMsg.position.x,
+                              tcpPoseMsg.position.y,
+                              tcpPoseMsg.position.z)*q;
+  Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
+  Eigen::Vector3d tool0_pos = transform * vec_offset;
+
+  tool0_PoseMsg.position.x = tool0_pos.x();
+  tool0_PoseMsg.position.y = tool0_pos.y();
+  tool0_PoseMsg.position.z = tool0_pos.z();
+
+  // Plan trajectory through inverse kinematics
+  tcpPoseIKPublisher_.publish(tool0_PoseMsg);
 
   // Display the goal on RViz
   geometry_msgs::PoseStamped robot_goal_msg;
@@ -256,7 +275,7 @@ geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_fram
 geometry_msgs::PoseStamped ManipulatorMenu::getEEpose()
 {
   // Compute the tf between base_link and end-effector
-  current_tcp_pose_ = getTf("base_link","tool0");
+  current_tcp_pose_ = getTf("base_link","tcp_gripper");
   eepose_pub_.publish(current_tcp_pose_);
   return current_tcp_pose_;
 }
@@ -439,6 +458,28 @@ void ManipulatorMenu::addObj(const std::string&   name,
 void ManipulatorMenu::publishCollisionObject(const moveit_msgs::CollisionObject collisionObjectMsg) 
 {
   collisionObjectPublisher_.publish(collisionObjectMsg);
+}
+
+// --------------------- GRIPPER CONTROL ---------------------
+
+// Open the gripper
+void ManipulatorMenu::openGripper()
+{
+  callGripperSrv(false);
+}
+
+// Close the gripper
+void ManipulatorMenu::closeGripper()
+{
+  callGripperSrv(true);
+}
+
+// Move the gripper
+void ManipulatorMenu::moveGripper(const double gripper_position)
+{
+  std_msgs::Float64 gripper_pos_msg;
+  gripper_pos_msg.data = gripper_position;
+  moveGripperPublisher_.publish(gripper_pos_msg);
 }
 
 // --------------------- PRIVATE FUNCTIONS ---------------------
@@ -644,6 +685,47 @@ void ManipulatorMenu::deleteCollObj()
     addObj(obj_name_loc,1,obj_dim_loc,obj_pos_loc,rot_pos_quat_loc,1);
 }
 
+// --------------------- COLLISION OBJECTS PRIVATE MENU HANDLER ---------------------
+// Gripper Moving command from the user
+void ManipulatorMenu::userGripperMove()
+{
+  double gripper_position = 0.;
+
+  // Take user gripper position
+  std::cout << "Enter the value (in %) of gripper move :\n";
+
+  // Gripper position input
+  std::cout << "Gripper opening position: ";
+  std::cin >> gripper_position;
+
+  moveGripper(gripper_position);
+}
+
+// Call the service for open/close gripper
+void ManipulatorMenu::callGripperSrv(const bool command)
+{
+    // Create a request
+    std_srvs::SetBool srv;
+    srv.request.data = command;
+
+    // Call the service
+    if (gripper_client_.call(srv)) 
+    {
+        if (srv.response.success) 
+        {
+            ROS_INFO("Gripper move request succeeded");
+        }
+        else
+        {
+            ROS_ERROR("Gripper move request failed");
+        }
+    }
+    else
+    {
+        ROS_ERROR("Failed to call service robotiq85_gripper/move_gripper");
+    }
+}
+
 // --------------------- QUATERNIONS HANDLER -------------------
 // Conversion from degrees euler angles to quaternion
 geometry_msgs::Quaternion ManipulatorMenu::quaternion_from_euler(double roll, double pitch, double yaw)
@@ -733,8 +815,12 @@ void ManipulatorMenu::printMenu()
   std::cout << "22. To stop  twin Coppelia simulation\n";
   std::cout << "23. To save  twin CoppeliaSim scene\n";
   std::cout << "24. To change cable pose in the CoppeliaSim scene\n";
-  std::cout << "======= Closing ROS menu =======\n";
-  std::cout << "25.Shutdown the menu\n";
+  std::cout << "\n======= Gripper control =======\n";
+  std::cout << "25.Open the gripper\n";
+  std::cout << "26.Close the gripper\n";
+  std::cout << "27.Set the position of the gripper\n";
+  std::cout << "\n======= Closing ROS menu =======\n";
+  std::cout << "28.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -907,10 +993,24 @@ void ManipulatorMenu::processChoice(int choice)
     changeCoppeliaCablePose();
     break;
   case 25:
+    ROS_INFO("You selected Option 25");
+    ROS_INFO("Opening the gripper ...");
+    openGripper();
+    break;
+  case 26:
+    ROS_INFO("You selected Option 26");
+    ROS_INFO("Closing the gripper ...");
+    closeGripper();
+    break;
+  case 27:
+    ROS_INFO("You selected Option 27");
+    ROS_INFO("Gripper moving setting");
+    userGripperMove();
+    break;
+  case 28:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;
-
   default:
     ROS_WARN("Invalid choice. Please choose a valid option.");
     break;

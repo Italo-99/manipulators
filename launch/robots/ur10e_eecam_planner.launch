@@ -22,7 +22,7 @@
   <arg name="ee_parent"     default="tool0"/>
   <arg name="ee_z_offset"   default="+0.0"/>
   <arg name="ee_rz"         default="+0.0"/>
-  <arg name="tcp_offset"    default="+0.122"/>
+  <arg name="tcp_offset"    default="+0.160"/>
   <!-- If true, launch the trajectory converter node -->
   <arg name="control"       default ="false" />
 

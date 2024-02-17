@@ -42,7 +42,9 @@
 
 // IMPORT LIBRARIES
 #include <iostream>
+#include <cmath>
 #include "ros/ros.h"
+#include "std_msgs/Float64.h"
 #include "sensor_msgs/JointState.h"
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/PoseStamped.h"
@@ -54,12 +56,14 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "manipulators/CoppeliaMenu.h"
+#include "std_srvs/SetBool.h"
 
 class ManipulatorMenu
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-    ManipulatorMenu();     // Constructor
+    ManipulatorMenu(std::string gripper_joint_name); // Constructor
+    // ~ManipulatorMenu();                    // Destructor
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
@@ -105,6 +109,11 @@ class ManipulatorMenu
                 double               rot_pos[],
                 uint                 operation);
 
+    // Gripper control
+    void openGripper(void);
+    void closeGripper(void);
+    void moveGripper(const double);
+
  private:
 
   // --------------------- PRIVATE FUNCTIONS ---------------------
@@ -128,7 +137,10 @@ class ManipulatorMenu
 
       // Joint state callback function
       void jointStateCallback(const sensor_msgs::JointState::ConstPtr& msg);
-    
+
+      void userGripperMove(void);       // to perform a gripper move set by the user
+      void callGripperSrv(const bool);  // to call open/close gripper srv
+
     // --------------------- UTILS FUNCTIONS ---------------------
 
       // Function to add a collision object by the user
@@ -151,6 +163,10 @@ class ManipulatorMenu
 
   // ---------------------  PRIVATE VARIABLES ---------------------
 
+    // ---------------------  GRIPPER HANDLER -------------
+      std::string gripper_joint_name_;
+      double ee_offset_;
+
     // ---------------------  ROS HANDLING ---------------------
       ros::NodeHandle nh_;
       ros::Publisher  jointGoalPublisher_;
@@ -160,6 +176,7 @@ class ManipulatorMenu
       ros::Publisher  display_goal_pub_;
       ros::Publisher  eepose_pub_;
       ros::Publisher  collisionObjectPublisher_;
+      ros::Publisher  moveGripperPublisher_;
 
       geometry_msgs::PoseStamped current_tcp_pose_;
       sensor_msgs::JointState current_joint_pose_;
@@ -167,6 +184,9 @@ class ManipulatorMenu
     // ---------------------  COPPELIA HANDLING ---------------------
       ros::ServiceClient client_;
       manipulators::CoppeliaMenu coppelia_srv_;
+
+    // ---------------------  GRIPPER HANDLING ---------------------
+      ros::ServiceClient gripper_client_;
 
     // ---------------------  USEFUL TOOLS ---------------------
 

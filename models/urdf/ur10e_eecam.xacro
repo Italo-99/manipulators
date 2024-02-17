@@ -18,7 +18,7 @@
   <xacro:arg name="ee_parent"     default="tool0"/>
   <xacro:arg name="ee_z_offset"   default="+0.0"/>
   <xacro:arg name="ee_rz"         default="+0.0"/>
-  <xacro:arg name="tcp_offset"    default="+0.122"/>
+  <xacro:arg name="tcp_offset"    default="+0.160"/>
 
   <!-- Import robot ur10 xacro file -->
   <xacro:include filename="$(find ur_description)/urdf/inc/ur10e_macro.xacro"/>

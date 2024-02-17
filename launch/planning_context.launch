@@ -49,7 +49,7 @@
     <arg name="cam_ry"        default="+0.0"/>
     <arg name="cam_rz"        default="+0.0"/>
     <arg name="cam_parent"    default="tool0"/>
-    <arg name="tcp_offset"    default="+0.122"/>
+    <arg name="tcp_offset"    default="+0.160"/>
 
   <!-- Args for starting end effector position -->
     <arg name="ee_z_offset"   default="+0.0"/>
