@@ -18,6 +18,7 @@
   <xacro:arg name="ee_parent"     default="tool0"/>
   <xacro:arg name="ee_z_offset"   default="+0.0"/>
   <xacro:arg name="ee_rz"         default="+0.0"/>
+  <xacro:arg name="tcp_offset"    default="+0.122"/>
 
   <!-- Import robot ur10 xacro file -->
   <xacro:include filename="$(find ur_description)/urdf/inc/ur10e_macro.xacro"/>
@@ -53,6 +54,14 @@
     <origin xyz="0 0 $(arg ee_z_offset)" rpy="0 0 $(arg ee_rz)"/>
     <parent link="$(arg ee_parent)"/>
     <child  link="robotiq_85_base_link"/>
+  </joint>
+
+  <!-- Fixed tcp gripper -->
+  <link name="tcp_gripper"/>
+  <joint name="tcp_gripper_joint" type="fixed">
+    <origin xyz="0 0 $(arg tcp_offset)" rpy="0 0 0"/>
+    <parent link="robotiq_85_base_link"/>
+    <child  link="tcp_gripper"/>
   </joint>
 
 </robot>

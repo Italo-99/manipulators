@@ -49,6 +49,7 @@
     <arg name="cam_ry"        default="+0.0"/>
     <arg name="cam_rz"        default="+0.0"/>
     <arg name="cam_parent"    default="tool0"/>
+    <arg name="tcp_offset"    default="+0.122"/>
 
   <!-- Args for starting end effector position -->
     <arg name="ee_z_offset"   default="+0.0"/>
@@ -74,7 +75,8 @@
                     cam_parent:=$(arg cam_parent)
                    ee_z_offset:=$(arg ee_z_offset)
                          ee_rz:=$(arg ee_rz)
-                     ee_parent:=$(arg ee_parent)">
+                     ee_parent:=$(arg ee_parent)
+                    tcp_offset:=$(arg tcp_offset)">
   </param>
   
   <!-- The semantic description (SRDF) that corresponds to the URDF, default or custom -->
