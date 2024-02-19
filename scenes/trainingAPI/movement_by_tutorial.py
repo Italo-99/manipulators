@@ -1,5 +1,7 @@
 # Code description: Remote API Python to interact with CoppeliaSim
 
+# FATTO DA ME PER LA TIZIA
+
 # IMPORT LIBRARIES
 # Import Coppelia libraries
 from coppeliasim_zmqremoteapi_client import RemoteAPIClient

@@ -1,4 +1,6 @@
+#!/usr/bin/env python
 
+# FATTO DALLA TIZIA
 
 from coppeliasim_zmqremoteapi_client import RemoteAPIClient
 import numpy as np
@@ -18,7 +20,7 @@ def salva_immagine_telecamera():
     simVision = client.require('simVision')
 
     # Carica la tua scena personalizzata
-    sim.loadScene('/Users/saramorandi/Desktop/telecamera_3d_new.ttt')
+    sim.loadScene('/home/italo/Desktop/ars_internship_ros1_ws/src/manipulators/scenes/trainingAPI/telecamera_3d_new.ttt')
 
     # Ottieni l'handle del sensore di visione (sostituisci 'Vision_sensor' con il nome effettivo del tuo sensore)
     visionSensorHandle = sim.getObject('./sensor')
@@ -43,5 +45,5 @@ def salva_immagine_telecamera():
     img.save('immagine_telecamera.png')
     print("Immagine salvata come 'immagine_telecamera.png'")
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     salva_immagine_telecamera()
