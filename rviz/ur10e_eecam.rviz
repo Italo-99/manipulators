@@ -73,6 +73,8 @@ Visualization Manager:
           Value: false
         camera_bottom_screw_frame:
           Value: false
+        camera_color_optical_frame:
+          Value: false
         camera_link:
           Value: false
         flange:
@@ -134,6 +136,8 @@ Visualization Manager:
                               camera_bottom_screw_frame:
                                 camera_link:
                                   {}
+                              camera_color_optical_frame:
+                                {}
                             robotiq_85_base_link:
                               left_inner_knuckle:
                                 left_inner_finger:
