@@ -183,7 +183,7 @@ void ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position)
   tcpPoseMsg.position.z = position[2];
   tcpPoseMsg.orientation = quaternion_from_euler(position[3],position[4],position[5]);
 
-  // The pose to pass to invKine planner must be referred to tool0
+  // The pose to pass as goal to invKine planner must be referred to tool0
   geometry_msgs::Pose tool0_PoseMsg;
   tool0_PoseMsg.orientation = tcpPoseMsg.orientation;
   Eigen::Quaterniond  q(tcpPoseMsg.orientation.w,
