@@ -4,6 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /TF1/Frames1
         - /PlanningScene1/Scene Robot1
       Splitter Ratio: 0.46462714672088623
     Tree Height: 261
@@ -71,13 +72,13 @@ Visualization Manager:
         camera_aligned_depth_to_color_frame:
           Value: false
         camera_base_link:
-          Value: false
+          Value: true
         camera_bottom_screw_frame:
           Value: false
         camera_color_frame:
           Value: false
         camera_color_optical_frame:
-          Value: true
+          Value: false
         camera_depth_frame:
           Value: false
         camera_depth_optical_frame:
@@ -369,12 +370,12 @@ Visualization Manager:
       Class: rviz/Pose
       Color: 52; 101; 164
       Enabled: true
-      Head Length: 0.30000001192092896
-      Head Radius: 0.10000000149011612
+      Head Length: 0.05000000074505806
+      Head Radius: 0.03999999910593033
       Name: Pose
       Queue Size: 10
-      Shaft Length: 1
-      Shaft Radius: 0.05000000074505806
+      Shaft Length: 0.03999999910593033
+      Shaft Radius: 0.019999999552965164
       Shape: Arrow
       Topic: /grabbing_pose
       Unreliable: false
@@ -395,7 +396,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.4281060695648193
+      Distance: 1.8532485961914062
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -403,17 +404,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.132165789604187
-        Y: -0.18025508522987366
+        X: 0.6210984587669373
+        Y: 0.6457594633102417
         Z: -1.563236651236366e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.10979731380939484
+      Pitch: 0.14979730546474457
       Target Frame: base_link
-      Yaw: 0.7817767858505249
+      Yaw: 4.929944038391113
     Saved: ~
 Window Geometry:
   Displays:
