@@ -57,11 +57,12 @@ ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name)
   jointGoalPublisher_       = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
   tcpPosePublisher_         = nh_.advertise<geometry_msgs::Pose>("/desired_tcp_pose", 1);
   tcpPoseIKPublisher_       = nh_.advertise<geometry_msgs::Pose>("/desired_tcpIK_pose", 1);
-  jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
+  carthesianMovePublisher_  = nh_.advertise<geometry_msgs::PoseArray>("/desired_cartesian_move", 1, true);
   display_goal_pub_         = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
   eepose_pub_               = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1, true);
   collisionObjectPublisher_ = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
   moveGripperPublisher_     = nh_.advertise<std_msgs::Float64>(gripper_joint_name_+"/gripper_control", 1);
+  jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
 
   // --------------------- Global class variables init ---------------------
 
@@ -213,6 +214,65 @@ void ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position)
   display_goal_pub_.publish(robot_goal_msg);
 }
 
+// Publish a cartesian goal of poses sequence along the same line
+// Specify axis1 and axis2 as 0 for x, 1 for y and 2 for z
+// Define pos1 and pos2 the final poses along those axis (the 3rd won't change)
+// steps value will define how many waypoints to put in 
+void ManipulatorMenu::publishCartesianMove(const uint   axis1,
+                                           const uint   axis2,
+                                           const double pos1,
+                                           const double pos2,
+                                           const uint   steps) 
+{
+  // Initialize starting and waypoints variables
+  geometry_msgs::PoseStamped current_pose = getTf("base_link","tool0");
+  geometry_msgs::PoseArray   waypoints;
+  waypoints.header.frame_id = "base_link"; 
+  double step_axisX = 0.;
+  double step_axisY = 0.;
+  double step_axisZ = 0.;
+  // Compute axis step
+  if  (axis1 == axis2) {ROS_WARN("Error in axis input!"); return;}
+  else 
+  {
+    if      (axis1 == 0) {step_axisX = pos1 - current_pose.pose.position.x;}
+    else if (axis1 == 1) {step_axisY = pos1 - current_pose.pose.position.y;}
+    else if (axis1 == 2) {step_axisZ = pos1 - current_pose.pose.position.z;}
+    if      (axis2 == 0) {step_axisX = pos2 - current_pose.pose.position.x;}
+    else if (axis2 == 1) {step_axisY = pos2 - current_pose.pose.position.y;}
+    else if (axis2 == 2) {step_axisZ = pos2 - current_pose.pose.position.z;}
+  }
+  // Compute common step
+  step_axisX = step_axisX/static_cast<double>(steps);
+  step_axisY = step_axisY/static_cast<double>(steps);
+  step_axisZ = step_axisZ/static_cast<double>(steps);
+  // Fill waypoints msgs
+  for(unsigned int k = 0; k < steps; k++)
+  {
+    geometry_msgs::Pose wp;
+    // Same orientation for every waypoint
+    wp.orientation  = current_pose.pose.orientation;
+    // Fill the position
+    wp.position.x   = current_pose.pose.position.x + (k+1)*step_axisX; 
+    wp.position.y   = current_pose.pose.position.y + (k+1)*step_axisY; 
+    wp.position.z   = current_pose.pose.position.z + (k+1)*step_axisZ; 
+    // Last position should be accurate
+    if (k == steps-1)
+    {
+      if      (axis1 == 0) {wp.position.x = pos1;}
+      else if (axis2 == 0) {wp.position.x = pos2;}
+      if      (axis1 == 1) {wp.position.y = pos1;}
+      else if (axis2 == 1) {wp.position.y = pos2;}
+      if      (axis1 == 2) {wp.position.z = pos1;}
+      else if (axis2 == 2) {wp.position.z = pos2;}
+    }
+    // Add current computed waypoints to the vector
+    waypoints.poses.push_back(wp);
+  }
+  // Publish the msg
+  carthesianMovePublisher_.publish(waypoints);
+}
+
 // Move a single joint, joint rotation must be in deg
 void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 {
@@ -334,6 +394,10 @@ void ManipulatorMenu::move_along_z(const double z_step)
   // Update position along Z
   publishTcpIKGoal(goal_pose);
 }
+
+// TODO 2: move along 2axes-plane, with a given angle around the
+// the third axis, with multiple pose goals along this line
+// call function of menu to publish (tcpIKGoalSeqCallback)
 
 // -------------------- SIMPLE ROTATIONS AROUND CARTHESIAN AXES -----------------------//
 
@@ -819,8 +883,10 @@ void ManipulatorMenu::printMenu()
   std::cout << "25.Open the gripper\n";
   std::cout << "26.Close the gripper\n";
   std::cout << "27.Set the position of the gripper\n";
+  std::cout << "\n======= Cartesian move =======\n";
+  std::cout << "28.Make a cartesian move\n";
   std::cout << "\n======= Closing ROS menu =======\n";
-  std::cout << "28.Shutdown the menu\n";
+  std::cout << "29.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -1008,6 +1074,21 @@ void ManipulatorMenu::processChoice(int choice)
     userGripperMove();
     break;
   case 28:
+    ROS_INFO("You selected Option 28");
+    ROS_INFO("Setup your cartesian move:");
+    uint   axis1;
+    uint   axis2;
+    double pos1;
+    double pos2;
+    uint   steps;
+    std::cout << "Insert the first axis  (0:x, 1:y, 2:z): "; std::cin >> axis1; 
+    std::cout << "Insert the second axis (0:x, 1:y, 2:z): "; std::cin >> axis2;
+    std::cout << "Insert the final position on axis1    : "; std::cin >> pos1; 
+    std::cout << "Insert the final position on axis2    : "; std::cin >> pos2; 
+    std::cout << "Set the number of waypoints passed    : "; std::cin >> steps;
+    publishCartesianMove(axis1,axis2,pos1,pos2,steps);
+    break;
+  case 29:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;

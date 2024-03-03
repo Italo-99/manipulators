@@ -47,6 +47,7 @@
 #include "std_msgs/Float64.h"
 #include "sensor_msgs/JointState.h"
 #include "geometry_msgs/Pose.h"
+#include "geometry_msgs/PoseArray.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "moveit_msgs/CollisionObject.h"
 #include <tf2/LinearMath/Quaternion.h>
@@ -78,6 +79,11 @@ class ManipulatorMenu
     void publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
     void publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
     void publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planne
+    void publishCartesianMove(const uint   axis1,
+                              const uint   axis2,
+                              const double pos1,
+                              const double pos2,
+                              const uint   steps);            // publish a carthesian move command
     void oneJointMove(const int num, const double joint_rot); // to define a rotation around a single joint
     void goHome(const bool);                                  // to setup home position
 
@@ -161,7 +167,7 @@ class ManipulatorMenu
       int getUserChoice();
       void processChoice(int choice);
 
-  // ---------------------  PRIVATE VARIABLES ---------------------
+  // --------------------- PRIVATE VARIABLES ---------------------
 
     // ---------------------  GRIPPER HANDLER -------------
       std::string gripper_joint_name_;
@@ -172,11 +178,12 @@ class ManipulatorMenu
       ros::Publisher  jointGoalPublisher_;
       ros::Publisher  tcpPosePublisher_;
       ros::Publisher  tcpPoseIKPublisher_;
-      ros::Subscriber jointStateSubscriber_;
+      ros::Publisher  carthesianMovePublisher_;
       ros::Publisher  display_goal_pub_;
       ros::Publisher  eepose_pub_;
       ros::Publisher  collisionObjectPublisher_;
       ros::Publisher  moveGripperPublisher_;
+      ros::Subscriber jointStateSubscriber_;
 
       geometry_msgs::PoseStamped current_tcp_pose_;
       sensor_msgs::JointState current_joint_pose_;

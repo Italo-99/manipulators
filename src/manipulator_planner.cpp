@@ -43,7 +43,7 @@
 // IMPORT LIBRARIES
 #include "manipulators/ManipulatorPlanner.h"
 
-// ---------------------  PUBLIC CONSTRUCTOR ---------------------
+// --------------------- PUBLIC CONSTRUCTOR ---------------------
 
 ManipulatorPlanner::ManipulatorPlanner()
 {
@@ -51,12 +51,13 @@ ManipulatorPlanner::ManipulatorPlanner()
 
   tcp_goal_sub_   = nh_.subscribe("/desired_tcp_pose",   1, &ManipulatorPlanner::tcpGoalCallback,    this);
   joint_goal_sub_ = nh_.subscribe("/desired_joint_pose", 1, &ManipulatorPlanner::jointsGoalCallback, this);
-
-  tcp_goalIK_sub_ = nh_.subscribe("/desired_tcpIK_pose", 1, &ManipulatorPlanner::tcpGoalIKCallback,this);
-
+  tcp_goalIK_sub_ = nh_.subscribe("/desired_tcpIK_pose", 1, &ManipulatorPlanner::tcpGoalIKCallback,  this);
 
   // tcp_goalSeq_sub_   = nh_.subscribe("/desired_tcpSeq_poses",   1, &ManipulatorPlanner::tcpGoalSeqCallback,    this);
+  // tcpIK_goalSeq_sub_ = nh_.subscribe("/desired_tcpIKSeq_poses", 1, &ManipulatorPlanner::tcpIKGoalSeqCallback,  this);
   // joint_goalSeq_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
+
+  carthesian_move_sub_ = nh_.subscribe("/desired_cartesian_move", 1, &ManipulatorPlanner::cartesianMoveCallback, this);
 
   // ---------------------  ADD COLLISION OBJECT SUBSCRIBER  ---------------------
 
@@ -79,7 +80,6 @@ ManipulatorPlanner::ManipulatorPlanner()
   double pos_obj[]            = {0.,0.,-0.04};
   double rot_obj[]            = {0.,0.,0.,1.};
   createObj("table", 1, dim_obj, pos_obj,rot_obj,0);
-
 }
 
 // Destructor of the object manipulator planner's class
@@ -278,7 +278,7 @@ void ManipulatorPlanner::tcpGoalCallback(const geometry_msgs::Pose::ConstPtr& p)
   quat_tf.normalize();
   goal.pose.orientation = tf2::toMsg(quat_tf);
 
-  // Send the goal to the planner
+  // Send the goal to the dynamic planner V6 
   planner_->plan(goal, ee_name_);
 }
 
@@ -295,7 +295,7 @@ void ManipulatorPlanner::tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& 
   sensor_msgs::JointState js;
   for (unsigned int k = 0; k < 6; k++) {js.position.push_back(joint_values[k]);}
 
-  // Send to joint goal planner
+  // Send to joint goal dynamic planner V1
   planner_->plan(js.position);
 }
 
@@ -309,53 +309,75 @@ void ManipulatorPlanner::jointsGoalCallback(const sensor_msgs::JointState::Const
     return;
   }
 
-  // Send the goal to the planner -> FIND THIS FUNCTION IN THE DYNAMIC PLANNER CLASS TO UNDERSTAND !!!!!!!!!!!!
+  // Send the goal to the dynamic planner V1
   planner_->plan(js->position);
 }
 
+// Callback function for goals in the 3D cartesian space for the robot TCP
+// Joint positions are computed through InvKine of inputs
+// DYNAMIC PLANNER V9 and move along a carthesian direction
+void ManipulatorPlanner::cartesianMoveCallback(const geometry_msgs::PoseArray::ConstPtr& p_seq)
+{
+  geometry_msgs::PoseArray ps = *p_seq;
+  std::vector<geometry_msgs::Pose> waypoints;
+  for (unsigned int k = 0; k < ps.poses.size(); k++)
+  {
+    waypoints.push_back(ps.poses[k]);
+  }
+
+  // Send to joint goal dynamic planner V4
+  double fraction = planner_->cartesianPlan(waypoints,0.02);
+  if (fraction < 0.01) {fraction = planner_->cartesianPlan(waypoints,0.05);}
+  if (fraction < 0.01) {fraction = planner_->cartesianPlan(waypoints,0.10);}
+  if (fraction < 0.01) {ROS_WARN("Cartesian trajectory unfeasible");}
+}
+
+// TODO: the following two functions give an allocator error on the compiler
+// because ROS doesn't accept vector as msgs
 /*
-  // TODO: the following two functions give an allocator error on the compiler
-  // // Callback function for goals in the 3D cartesian space for the robot TCP
-  // void ManipulatorPlanner::tcpGoalSeqCallback(const std::vector<geometry_msgs::Pose>& p_seq)
-  // { 
-  //   // // Create a vector of PoseStamped msgs
-  //   // std::vector<const geometry_msgs::PoseStamped> p_stamp_seq;
+  // Callback function for goals in the 3D cartesian space for the robot TCP
+  // DYNAMIC PLANNER V9
+  void ManipulatorPlanner::tcpGoalSeqCallback(const std::vector<geometry_msgs::Pose>& p_seq)
+  { 
+    // Create a vector of PoseStamped msgs
+    std::vector<const geometry_msgs::PoseStamped> p_stamp_seq;
     
-  //   // // Convert each pose of the input vector into PoseStamped goals
-  //   // for (const auto& p : p_stamp_seq)
-  //   // {   
-  //   //   // Declaration of the goal variable as PS
-  //   //   geometry_msgs::PoseStamped goal;
+    // Convert each pose of the input vector into PoseStamped goals
+    for (const auto& p : p_stamp_seq)
+    {   
+      // Declaration of the goal variable as PS
+      geometry_msgs::PoseStamped goal;
 
-  //   //   // Fill the fields of the goal variable
-  //   //   goal.header.frame_id = base_name_;
-  //   //   // Set the pose as passed from the publisher
-  //   //   goal.pose            = *p;                              
+      // Fill the fields of the goal variable
+      goal.header.frame_id = base_name_;
+      // Set the pose as passed from the publisher
+      goal.pose            = *p;                              
 
-  //   //   // Check if the quaternion has unit norm, if not return an error
-  //   //   tf2::Quaternion quat_tf;
-  //   //   tf2::convert(goal.pose.orientation, quat_tf);
-  //   //   if (quat_tf.length() >= 1.1 || quat_tf.length() <= 0.9)
-  //   //   {
-  //   //     ROS_ERROR("Quaternion must have unit norm.");
-  //   //     return;
-  //   //   }
-  //   //   // If the norm is not so far from the unit, normalize the orientation quaternion
-  //   //   quat_tf.normalize();
-  //   //   goal.pose.orientation = tf2::toMsg(quat_tf);
+      // Check if the quaternion has unit norm, if not return an error
+      tf2::Quaternion quat_tf;
+      tf2::convert(goal.pose.orientation, quat_tf);
+      if (quat_tf.length() >= 1.1 || quat_tf.length() <= 0.9)
+      {
+        ROS_ERROR("Quaternion must have unit norm.");
+        return;
+      }
+      // If the norm is not so far from the unit, normalize the orientation quaternion
+      quat_tf.normalize();
+      goal.pose.orientation = tf2::toMsg(quat_tf);
 
-  //   //   // Push back the goal
-  //   //   p_stamp_seq.push_back(goal);
-  //   // }
+      // Push back the goal
+      p_stamp_seq.push_back(goal);
+    }
 
-  //   // // Call the sequencial planner
-  //   // planner_->plan(p_seq, ee_name_); 
-  // }
+    // Call the sequencial planner
+    planner_->plan(p_seq, ee_name_); 
+  }
 
-  // // // Callback function for goals in the joint space
-  // void ManipulatorPlanner::jointsGoalSeqCallback(const std::vector<std::vector<double>>& js_seq)
-  // {
-  //   // Call the sequential planner
-  //   planner_->plan(js_seq);
-  // }
+  // Callback function for goals in the joint space
+  // DYNAMIC PLANNER V5
+  void ManipulatorPlanner::jointsGoalSeqCallback(const std::vector<std::vector<double>>& js_seq)
+  {
+    // Call the sequential planner
+    planner_->plan(js_seq);
+  }
 */

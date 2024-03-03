@@ -7,7 +7,7 @@ Panels:
         - /TF1/Frames1
         - /PlanningScene1/Scene Robot1
       Splitter Ratio: 0.46462714672088623
-    Tree Height: 261
+    Tree Height: 252
   - Class: rviz/Help
     Name: Help
   - Class: rviz/Views
@@ -69,19 +69,11 @@ Visualization Manager:
           Value: false
         base_link_inertia:
           Value: false
-        camera_aligned_depth_to_color_frame:
-          Value: false
         camera_base_link:
           Value: true
         camera_bottom_screw_frame:
           Value: false
-        camera_color_frame:
-          Value: false
         camera_color_optical_frame:
-          Value: false
-        camera_depth_frame:
-          Value: false
-        camera_depth_optical_frame:
           Value: false
         camera_link:
           Value: false
@@ -143,14 +135,9 @@ Visualization Manager:
                             camera_base_link:
                               camera_bottom_screw_frame:
                                 camera_link:
-                                  camera_aligned_depth_to_color_frame:
-                                    camera_color_optical_frame:
-                                      {}
-                                  camera_color_frame:
-                                    {}
-                                  camera_depth_frame:
-                                    camera_depth_optical_frame:
-                                      {}
+                                  {}
+                              camera_color_optical_frame:
+                                {}
                             robotiq_85_base_link:
                               left_inner_knuckle:
                                 left_inner_finger:
@@ -325,7 +312,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /camera/color/image_raw
+      Image Topic: /coppelia/color_image
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -337,7 +324,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /camera/aligned_depth_to_color/image_raw
+      Image Topic: /coppelia/depth_image
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -377,7 +364,7 @@ Visualization Manager:
       Shaft Length: 0.03999999910593033
       Shaft Radius: 0.019999999552965164
       Shape: Arrow
-      Topic: /grabbing_pose
+      Topic: /example_grab_pose
       Unreliable: false
       Value: true
   Enabled: true
@@ -396,7 +383,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 1.8532485961914062
+      Distance: 1.374045491218567
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -404,31 +391,31 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.6210984587669373
-        Y: 0.6457594633102417
-        Z: -1.563236651236366e-07
+        X: 0.8163533210754395
+        Y: 0.15735620260238647
+        Z: -9.671902034824598e-08
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.14979730546474457
+      Pitch: 1.2647963762283325
       Target Frame: base_link
-      Yaw: 4.929944038391113
+      Yaw: 3.054918050765991
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1043
+  Height: 1016
   Help:
     collapsed: false
   Hide Left Dock: false
   Hide Right Dock: false
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000001000000000000020d000003b9fc020000000bfb000000100044006900730070006c006100790073010000003d00000142000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a0056006900650077007300000003b0000000b0000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006700000001750000017d0000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000016a000001880000000000000000fb0000000a0049006d0061006700650100000185000001350000001600fffffffb0000000a0049006d00610067006501000002c0000001360000001600ffffff0000056d000003b900000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000001000000000000020d0000039efc020000000bfb000000100044006900730070006c006100790073010000003d00000139000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a0056006900650077007300000003b0000000b0000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006700000001750000017d0000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000016a000001880000000000000000fb0000000a0049006d006100670065010000017c0000012c0000001600fffffffb0000000a0049006d00610067006501000002ae0000012d0000001600ffffff000005250000039e00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
-  Width: 1920
-  X: 1920
-  Y: 0
+  Width: 1848
+  X: 72
+  Y: 27
