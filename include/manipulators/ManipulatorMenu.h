@@ -119,6 +119,8 @@ class ManipulatorMenu
     void openGripper(void);
     void closeGripper(void);
     void moveGripper(const double);
+    void grabObjGripper(void);
+    void detachObjGripper(void);
 
  private:
 
@@ -127,7 +129,7 @@ class ManipulatorMenu
     // ---------------  PRIVATE COPPELIA METHODS ---------------------
       void wait_for_response(void);     // Send the request and show the response
 
-    // ---------------------  PRIVATE PUBS/SUBS ---------------------
+    // --------------------- PRIVATE PUBS/SUBS ---------------------
 
       void jointStateVisualizer();      // listen to joint state publisher
 
@@ -135,17 +137,19 @@ class ManipulatorMenu
 
       void testJointGoal(void);   // to test a joint goal
       void userJointGoal(void);   // to perform a joint goal set by the user 
-      void oneJointMove_user();
+      void oneJointMove_user();   // to move only a single joint
 
-      void testTcpGoal(void);     // to test a tcp goal
-      void userTcpGoal(void);     // to perform a tcp goal set by the user 
-      void userTcpIKGoal(void);   // to perform a tcpIK goal set by the user 
+      void testTcpGoal(void);       // to test a tcp goal
+      void userTcpGoal(void);       // to perform a tcp goal set by the user 
+      void userTcpIKGoal(void);     // to perform a tcpIK goal set by the user 
+      void userCartesianMove(void); // to perform a cartesian move set by the user
 
       // Joint state callback function
       void jointStateCallback(const sensor_msgs::JointState::ConstPtr& msg);
 
       void userGripperMove(void);       // to perform a gripper move set by the user
       void callGripperSrv(const bool);  // to call open/close gripper srv
+      void callGrabbingSrv(const bool); // to call grab/detach gripper srv
 
     // --------------------- UTILS FUNCTIONS ---------------------
 
@@ -194,6 +198,7 @@ class ManipulatorMenu
 
     // ---------------------  GRIPPER HANDLING ---------------------
       ros::ServiceClient gripper_client_;
+      ros::ServiceClient grab_client_;
 
     // ---------------------  USEFUL TOOLS ---------------------
 

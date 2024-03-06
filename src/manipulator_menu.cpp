@@ -74,6 +74,7 @@ ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name)
 
   // --------------------- Gripper client init ---------------------
   gripper_client_ = nh_.serviceClient<std_srvs::SetBool>(gripper_joint_name_+"/move_gripper");
+  grab_client_    = nh_.serviceClient<std_srvs::SetBool>(gripper_joint_name_+"/grabbing_gripper");
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
@@ -546,6 +547,17 @@ void ManipulatorMenu::moveGripper(const double gripper_position)
   moveGripperPublisher_.publish(gripper_pos_msg);
 }
 
+// Grab an object at the gripper
+void ManipulatorMenu::grabObjGripper()
+{
+  callGrabbingSrv(true);
+}
+// Detach an object from the gripper
+void ManipulatorMenu::detachObjGripper()
+{
+  callGrabbingSrv(false); 
+}
+
 // --------------------- PRIVATE FUNCTIONS ---------------------
 
 // --------------------- COPPELIA HANDLER ---------------------
@@ -679,6 +691,23 @@ void ManipulatorMenu::userTcpIKGoal()
   publishTcpIKGoal(position);
 }
 
+// --------------------- USER CARTESIAN MOVES HANDLER ---------------------
+void ManipulatorMenu::userCartesianMove()
+{
+  ROS_INFO("Setup your cartesian move:");
+  uint   axis1;
+  uint   axis2;
+  double pos1;
+  double pos2;
+  uint   steps;
+  std::cout << "Insert the first axis  (0:x, 1:y, 2:z): "; std::cin >> axis1; 
+  std::cout << "Insert the second axis (0:x, 1:y, 2:z): "; std::cin >> axis2;
+  std::cout << "Insert the final position on axis1    : "; std::cin >> pos1; 
+  std::cout << "Insert the final position on axis2    : "; std::cin >> pos2; 
+  std::cout << "Set the number of waypoints passed    : "; std::cin >> steps;
+  publishCartesianMove(axis1,axis2,pos1,pos2,steps);
+}
+
 // --------------------- SUBS HANDLER ---------------------
 
 void ManipulatorMenu::jointStateVisualizer() 
@@ -765,6 +794,7 @@ void ManipulatorMenu::userGripperMove()
   moveGripper(gripper_position);
 }
 
+// --------------------- GRIPPER SERVICES ---------------------
 // Call the service for open/close gripper
 void ManipulatorMenu::callGripperSrv(const bool command)
 {
@@ -786,7 +816,32 @@ void ManipulatorMenu::callGripperSrv(const bool command)
     }
     else
     {
-        ROS_ERROR("Failed to call service robotiq85_gripper/move_gripper");
+        ROS_ERROR("Failed to call service to move the gripper");
+    }
+}
+
+// Call the service for grab/detach an object at the gripper
+void ManipulatorMenu::callGrabbingSrv(const bool command)
+{
+    // Create a request
+    std_srvs::SetBool srv;
+    srv.request.data = command;
+
+    // Call the service
+    if (grab_client_.call(srv)) 
+    {
+        if (srv.response.success) 
+        {
+            ROS_INFO("Gripper grabbing request succeeded");
+        }
+        else
+        {
+            ROS_ERROR("Gripper grabbing request failed");
+        }
+    }
+    else
+    {
+        ROS_ERROR("Failed to call service for gripper grabbing");
     }
 }
 
@@ -879,14 +934,16 @@ void ManipulatorMenu::printMenu()
   std::cout << "22. To stop  twin Coppelia simulation\n";
   std::cout << "23. To save  twin CoppeliaSim scene\n";
   std::cout << "24. To change cable pose in the CoppeliaSim scene\n";
-  std::cout << "\n======= Gripper control =======\n";
-  std::cout << "25.Open the gripper\n";
-  std::cout << "26.Close the gripper\n";
-  std::cout << "27.Set the position of the gripper\n";
   std::cout << "\n======= Cartesian move =======\n";
-  std::cout << "28.Make a cartesian move\n";
+  std::cout << "25.Make a cartesian move\n";
+  std::cout << "\n======= Gripper control =======\n";
+  std::cout << "26.Open the gripper\n";
+  std::cout << "27.Close the gripper\n";
+  std::cout << "28.Set the position of the gripper\n";
+  std::cout << "29.Grab an object at the gripper\n";
+  std::cout << "30.Detach an object from the gripper\n";
   std::cout << "\n======= Closing ROS menu =======\n";
-  std::cout << "29.Shutdown the menu\n";
+  std::cout << "31.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -1060,35 +1117,34 @@ void ManipulatorMenu::processChoice(int choice)
     break;
   case 25:
     ROS_INFO("You selected Option 25");
-    ROS_INFO("Opening the gripper ...");
-    openGripper();
+    userCartesianMove();
     break;
   case 26:
     ROS_INFO("You selected Option 26");
-    ROS_INFO("Closing the gripper ...");
-    closeGripper();
+    ROS_INFO("Opening the gripper ...");
+    openGripper();
     break;
   case 27:
     ROS_INFO("You selected Option 27");
-    ROS_INFO("Gripper moving setting");
-    userGripperMove();
+    ROS_INFO("Closing the gripper ...");
+    closeGripper();
     break;
   case 28:
     ROS_INFO("You selected Option 28");
-    ROS_INFO("Setup your cartesian move:");
-    uint   axis1;
-    uint   axis2;
-    double pos1;
-    double pos2;
-    uint   steps;
-    std::cout << "Insert the first axis  (0:x, 1:y, 2:z): "; std::cin >> axis1; 
-    std::cout << "Insert the second axis (0:x, 1:y, 2:z): "; std::cin >> axis2;
-    std::cout << "Insert the final position on axis1    : "; std::cin >> pos1; 
-    std::cout << "Insert the final position on axis2    : "; std::cin >> pos2; 
-    std::cout << "Set the number of waypoints passed    : "; std::cin >> steps;
-    publishCartesianMove(axis1,axis2,pos1,pos2,steps);
-    break;
+    ROS_INFO("Gripper moving setting");
+    userGripperMove();
+    break;  
   case 29:
+    ROS_INFO("You selected Option 29");
+    ROS_INFO("Grab an object to the gripper");
+    grabObjGripper();
+    break;
+  case 30:
+    ROS_INFO("You selected Option 30");
+    ROS_INFO("Detach an object from the gripper");
+    detachObjGripper();
+    break;
+  case 31:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;
