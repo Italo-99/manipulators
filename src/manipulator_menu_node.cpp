@@ -43,7 +43,7 @@
 // MAIN FUNCTION IMPLEMENTATION
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "manipulator_menu");
+  ros::init(argc, argv, "manipulator_menu_node");
 
   ManipulatorMenu Menu("robotiq85_gripper/finger_joint");
 

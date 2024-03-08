@@ -9,3 +9,7 @@ joint_names: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_join
 ee_name: tcp_gripper
 
 base_name: base_link
+
+vel_factor: 0.1
+
+acc_factor: 0.1

@@ -32,6 +32,9 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include srv
+  LIBRARIES manipulator_menu
+  INCLUDE_DIRS
+  ${THIS_PACKAGE_INCLUDE_DIRS}
 )
 
 # Add manipulator class node
@@ -39,7 +42,12 @@ add_executable(manipulator_planner src/manipulator_planner.cpp src/manipulator_p
 target_link_libraries(manipulator_planner ${catkin_LIBRARIES})
 add_dependencies(manipulator_planner ${catkin_EXPORTED_TARGETS})
 
-# Add manipulator menu node
-add_executable(manipulator_menu src/manipulator_menu.cpp src/manipulator_menu_node.cpp)
+# Add manipulator_menu library
+add_library(manipulator_menu src/manipulator_menu.cpp)
 target_link_libraries(manipulator_menu ${catkin_LIBRARIES})
 add_dependencies(manipulator_menu ${catkin_EXPORTED_TARGETS})
+
+# Add manipulator menu node
+add_executable(manipulator_menu_node src/manipulator_menu_node.cpp)
+target_link_libraries(manipulator_menu_node manipulator_menu ${catkin_LIBRARIES})
+add_dependencies(manipulator_menu_node ${catkin_EXPORTED_TARGETS})
