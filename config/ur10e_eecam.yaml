@@ -10,6 +10,6 @@ ee_name: tcp_gripper
 
 base_name: base_link
 
-vel_factor: 0.1
+vel_factor: 0.5
 
-acc_factor: 0.1
+acc_factor: 0.5

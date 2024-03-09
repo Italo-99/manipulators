@@ -140,7 +140,7 @@ void ManipulatorMenu::changeCoppeliaCablePose()
 // --------------------- MOVEMENTS HANDLER ---------------------
 
 // Publish a joint goal by passing a vector of joints in deg
-void ManipulatorMenu::publishJointGoal(const std::vector<double> joints) 
+sensor_msgs::JointState ManipulatorMenu::publishJointGoal(const std::vector<double> joints) 
 {
   // Fill the joint msg with degToRad conversion
   sensor_msgs::JointState jointStateMsg;
@@ -150,10 +150,17 @@ void ManipulatorMenu::publishJointGoal(const std::vector<double> joints)
 
   // Publish the JointState message
   jointGoalPublisher_.publish(jointStateMsg);
+  return jointStateMsg;
+}
+
+// Publish a joint goal by passing a JointState msg
+void ManipulatorMenu::publishJointGoal(const sensor_msgs::JointState joints)
+{
+  jointGoalPublisher_.publish(joints);
 }
 
 // Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
-void ManipulatorMenu::publishTcpGoal(const std::vector<double> position) 
+geometry_msgs::Pose ManipulatorMenu::publishTcpGoal(const std::vector<double> position) 
 {
   geometry_msgs::Pose tcpPoseMsg;
 
@@ -173,10 +180,18 @@ void ManipulatorMenu::publishTcpGoal(const std::vector<double> position)
   robot_goal_msg.pose = tcpPoseMsg,
   
   display_goal_pub_.publish(robot_goal_msg);
+
+  return tcpPoseMsg;
+}
+
+// Publish a Tcp goal by passing a geometry_msgs::Pose
+void ManipulatorMenu::publishTcpGoal(const geometry_msgs::Pose position)
+{
+  tcpPosePublisher_.publish(position);
 }
 
 // Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
-void ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position) 
+geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position) 
 {
   // TCP pose
   geometry_msgs::Pose tcpPoseMsg;
@@ -213,27 +228,35 @@ void ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position)
   robot_goal_msg.pose = tcpPoseMsg;
   
   display_goal_pub_.publish(robot_goal_msg);
+
+  return tcpPoseMsg;
 }
 
+// Publish a Tcp goal by passing a geometry_msgs::Pose
+void ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::Pose position) 
+{
+  tcpPoseIKPublisher_.publish(position);
+}
 // Publish a cartesian goal of poses sequence along the same line
 // Specify axis1 and axis2 as 0 for x, 1 for y and 2 for z
 // Define pos1 and pos2 the final poses along those axis (the 3rd won't change)
 // steps value will define how many waypoints to put in 
-void ManipulatorMenu::publishCartesianMove(const uint   axis1,
-                                           const uint   axis2,
-                                           const double pos1,
-                                           const double pos2,
-                                           const uint   steps) 
+geometry_msgs::Pose ManipulatorMenu::publishCartesianMove(const uint   axis1,
+                                                          const uint   axis2,
+                                                          const double pos1,
+                                                          const double pos2,
+                                                          const uint   steps) 
 {
   // Initialize starting and waypoints variables
   geometry_msgs::PoseStamped current_pose = getTf("base_link","tool0");
   geometry_msgs::PoseArray   waypoints;
+  geometry_msgs::Pose        final_pose;
   waypoints.header.frame_id = "base_link"; 
   double step_axisX = 0.;
   double step_axisY = 0.;
   double step_axisZ = 0.;
   // Compute axis step
-  if  (axis1 == axis2) {ROS_WARN("Error in axis input!"); return;}
+  if  (axis1 == axis2) {ROS_WARN("Error in axis input!"); return final_pose;}
   else 
   {
     if      (axis1 == 0) {step_axisX = pos1 - current_pose.pose.position.x;}
@@ -266,12 +289,15 @@ void ManipulatorMenu::publishCartesianMove(const uint   axis1,
       else if (axis2 == 1) {wp.position.y = pos2;}
       if      (axis1 == 2) {wp.position.z = pos1;}
       else if (axis2 == 2) {wp.position.z = pos2;}
+      final_pose = wp;
     }
     // Add current computed waypoints to the vector
     waypoints.poses.push_back(wp);
   }
   // Publish the msg
   carthesianMovePublisher_.publish(waypoints);
+
+  return final_pose;
 }
 
 // Move a single joint, joint rotation must be in deg
@@ -291,7 +317,7 @@ void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 }
 
 // Go to pre configured home position
-void ManipulatorMenu::goHome(const bool ee_orient)
+sensor_msgs::JointState ManipulatorMenu::goHome(const bool ee_orient)
 {
   std::vector<double> start_joint_pose = {0.,0.,0.,0.,0.,0};
   if (!ee_orient) // gripper down
@@ -299,7 +325,7 @@ void ManipulatorMenu::goHome(const bool ee_orient)
   else // gripper at the front
   {start_joint_pose = {0.,-90.,+90.,  0.,+90.,0};}
   // Publishe home joint goal 
-  publishJointGoal(start_joint_pose);
+  return publishJointGoal(start_joint_pose);
 }
 
 // -------------------- TF END EFFECTOR LISTENER -----------------------//
@@ -341,7 +367,7 @@ geometry_msgs::PoseStamped ManipulatorMenu::getEEpose()
   return current_tcp_pose_;
 }
 
-// Get EE pos as vector with RPY euler angles
+// Get EE pose as vector with RPY euler angles
 std::vector<double> ManipulatorMenu::getEEpos_rpy()
 {
   // Read current EE pose by TF
@@ -367,43 +393,39 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
 // -------------------- SIMPLE MOVES ALONG CARTHESIAN AXES -----------------------//
 
 // Set a carthesian move along x axis in metres
-void ManipulatorMenu::move_along_x(const double x_step)
+geometry_msgs::Pose ManipulatorMenu::move_along_x(const double x_step)
 {
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update position along X
   goal_pose[0] = goal_pose[0] + x_step;
-  publishTcpIKGoal(goal_pose);
+  return publishTcpIKGoal(goal_pose);
 }
 
 // Set a carthesian move along x axis in metres
-void ManipulatorMenu::move_along_y(const double y_step)
+geometry_msgs::Pose ManipulatorMenu::move_along_y(const double y_step)
 {
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update position along Y
   goal_pose[1] = goal_pose[1] + y_step;
-  publishTcpIKGoal(goal_pose);
+  return publishTcpIKGoal(goal_pose);
 }
 
 // Set a carthesian move along x axis in metres
-void ManipulatorMenu::move_along_z(const double z_step)
+geometry_msgs::Pose ManipulatorMenu::move_along_z(const double z_step)
 {
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   goal_pose[2] = goal_pose[2] + z_step;
   // Update position along Z
-  publishTcpIKGoal(goal_pose);
+  return publishTcpIKGoal(goal_pose);
 }
-
-// TODO 2: move along 2axes-plane, with a given angle around the
-// the third axis, with multiple pose goals along this line
-// call function of menu to publish (tcpIKGoalSeqCallback)
 
 // -------------------- SIMPLE ROTATIONS AROUND CARTHESIAN AXES -----------------------//
 
 // Set a RELATIVE ee rotation around the 3 carthesian axis (in degrees)
-void ManipulatorMenu::make_tcp_rot(const std::vector<double> rot_vec)
+geometry_msgs::Pose ManipulatorMenu::make_tcp_rot(const std::vector<double> rot_vec)
 {
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
@@ -411,11 +433,11 @@ void ManipulatorMenu::make_tcp_rot(const std::vector<double> rot_vec)
   goal_pose[3] = goal_pose[3] + rot_vec[0];
   goal_pose[4] = goal_pose[4] + rot_vec[1];
   goal_pose[5] = goal_pose[5] + rot_vec[2];
-  publishTcpIKGoal(goal_pose);
+  return publishTcpIKGoal(goal_pose);
 }
 
 // Set an ABSOLUTE orientation ee position around the 3 carthesian axis (in degrees)
-void ManipulatorMenu::change_tcp_orient(const std::vector<double> rot_vec)
+geometry_msgs::Pose ManipulatorMenu::change_tcp_orient(const std::vector<double> rot_vec)
 {
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
@@ -423,37 +445,37 @@ void ManipulatorMenu::change_tcp_orient(const std::vector<double> rot_vec)
   goal_pose[3] = rot_vec[0];
   goal_pose[4] = rot_vec[1];
   goal_pose[5] = rot_vec[2];
-  publishTcpIKGoal(goal_pose);
+  return publishTcpIKGoal(goal_pose);
 }
 
 // Set a relative rotation around x axis (in degrees)
-void ManipulatorMenu::rotate_around_x(const double x_rot_step)
+geometry_msgs::Pose ManipulatorMenu::rotate_around_x(const double x_rot_step)
 {
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update tcp orient goal
   goal_pose[3] = goal_pose[3] + x_rot_step;
-  publishTcpIKGoal(goal_pose);
+  return publishTcpIKGoal(goal_pose);
 }
 
 // Set a relative rotation around y axis (in degrees)
-void ManipulatorMenu::rotate_around_y(const double y_rot_step)
+geometry_msgs::Pose ManipulatorMenu::rotate_around_y(const double y_rot_step)
 {
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update tcp orient goal
   goal_pose[4] = goal_pose[4] + y_rot_step;
-  publishTcpIKGoal(goal_pose);
+  return publishTcpIKGoal(goal_pose);
 }
 
 // Set a relative rotation around z axis (in degrees)
-void ManipulatorMenu::rotate_around_z(const double z_rot_step)
+geometry_msgs::Pose ManipulatorMenu::rotate_around_z(const double z_rot_step)
 {
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update tcp orient goal
   goal_pose[5] = goal_pose[5] + z_rot_step;
-  publishTcpIKGoal(goal_pose);
+  return publishTcpIKGoal(goal_pose);
 }
 
 // --------------------- COLLISION OBJECTS HANDLER ---------------------
@@ -873,6 +895,13 @@ std::vector<double> ManipulatorMenu::euler_from_quaternion(const geometry_msgs::
 
   // Store the angles in a vector
   std::vector<double> euler_angles = {roll*180.0/M_PI,pitch*180.0/M_PI,yaw*180.0/M_PI};
+
+  // Check if angles are in the interval (-180,180]
+  for (unsigned int k = 0; k < 3; k++)
+  {
+    if      (euler_angles[k] < -179.9999999999) {euler_angles[k] += 360.;}
+    else if (euler_angles[k] > +180.          ) {euler_angles[k] -= 360.;}
+  }
 
   return euler_angles; 
 }

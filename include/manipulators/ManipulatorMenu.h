@@ -76,16 +76,19 @@ class ManipulatorMenu
     void saveCoppeliaScene(void);       // Save  scene      on CoppeliaSim
     void changeCoppeliaCablePose(void); // Changle randomly cable pose on CoppeliaSim
 
-    void publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
-    void publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
-    void publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planne
-    void publishCartesianMove(const uint   axis1,
+    sensor_msgs::JointState publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
+    void publishJointGoal(const sensor_msgs::JointState joints);
+    geometry_msgs::Pose publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
+    void publishTcpGoal(const geometry_msgs::Pose position);
+    geometry_msgs::Pose publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planne
+    void publishTcpIKGoal(const geometry_msgs::Pose position); 
+    geometry_msgs::Pose publishCartesianMove(const uint   axis1,
                               const uint   axis2,
                               const double pos1,
                               const double pos2,
                               const uint   steps);            // publish a carthesian move command
     void oneJointMove(const int num, const double joint_rot); // to define a rotation around a single joint
-    void goHome(const bool);                                  // to setup home position
+    sensor_msgs::JointState goHome(const bool);               // to setup home position
 
     // Get the position and orientation of the end effector (they contain a ros spin once)
     geometry_msgs::PoseStamped getEEpose();
@@ -95,16 +98,16 @@ class ManipulatorMenu
     geometry_msgs::PoseStamped getTf(const std::string& source_frame, const std::string& target_frame);
 
     // Move along axes
-    void move_along_x(const double x_step);
-    void move_along_y(const double y_step);
-    void move_along_z(const double z_step);
+    geometry_msgs::Pose move_along_x(const double x_step);
+    geometry_msgs::Pose move_along_y(const double y_step);
+    geometry_msgs::Pose move_along_z(const double z_step);
 
     // Tcp orientation handling
-    void make_tcp_rot(const std::vector<double> rot_vec);
-    void rotate_around_x(const double x_rot_step);
-    void rotate_around_y(const double y_rot_step);
-    void rotate_around_z(const double z_rot_step);
-    void change_tcp_orient(const std::vector<double> rot_vec);
+    geometry_msgs::Pose make_tcp_rot(const std::vector<double> rot_vec);
+    geometry_msgs::Pose rotate_around_x(const double x_rot_step);
+    geometry_msgs::Pose rotate_around_y(const double y_rot_step);
+    geometry_msgs::Pose rotate_around_z(const double z_rot_step);
+    geometry_msgs::Pose change_tcp_orient(const std::vector<double> rot_vec);
 
     // Add collision objects
     void publishCollisionObject(const moveit_msgs::CollisionObject collisionObjectMsg);
@@ -121,6 +124,14 @@ class ManipulatorMenu
     void moveGripper(const double);
     void grabObjGripper(void);
     void detachObjGripper(void);
+
+    // Quaternions handling
+    geometry_msgs::Quaternion quaternion_from_euler(double roll, double pitch, double yaw);
+    std::vector<double> euler_from_quaternion(const geometry_msgs::Quaternion quat);
+
+    // Degrees and radians conversions
+    std::vector<double> deg_from_rad(const std::vector<double>);
+    std::vector<double> rad_from_deg(const std::vector<double>);      
 
  private:
 
@@ -158,14 +169,6 @@ class ManipulatorMenu
       // Function to delete a given collision object from the user menu
       void deleteCollObj(void);
 
-      // Quaternions handling
-      geometry_msgs::Quaternion quaternion_from_euler(double roll, double pitch, double yaw);
-      std::vector<double> euler_from_quaternion(const geometry_msgs::Quaternion quat);
-
-      // Degrees and radians conversions
-      std::vector<double> deg_from_rad(const std::vector<double>);
-      std::vector<double> rad_from_deg(const std::vector<double>);
-      
       //Menu handling
       void printMenu();
       int getUserChoice();
