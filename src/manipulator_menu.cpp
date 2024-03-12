@@ -146,17 +146,19 @@ sensor_msgs::JointState ManipulatorMenu::publishJointGoal(const std::vector<doub
   sensor_msgs::JointState jointStateMsg;
   jointStateMsg.header.stamp = ros::Time::now();
   for (unsigned int k = 0; k < joints.size(); k++)
-      {jointStateMsg.position.push_back(joints[k]*M_PI/180);}
-
-  // Publish the JointState message
-  jointGoalPublisher_.publish(jointStateMsg);
-  return jointStateMsg;
+  {
+    jointStateMsg.position.push_back(joints[k]*M_PI/180);
+  }
+  
+  return publishJointGoal(jointStateMsg);
 }
 
 // Publish a joint goal by passing a JointState msg
-void ManipulatorMenu::publishJointGoal(const sensor_msgs::JointState joints)
+sensor_msgs::JointState ManipulatorMenu::publishJointGoal(const sensor_msgs::JointState jointStateMsg)
 {
-  jointGoalPublisher_.publish(joints);
+  // Publish the JointState message
+  jointGoalPublisher_.publish(jointStateMsg);
+  return jointStateMsg;
 }
 
 // Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
@@ -171,6 +173,12 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpGoal(const std::vector<double> po
   // Conversion from euler rotation to pose quaternion
   tcpPoseMsg.orientation = quaternion_from_euler(position[3],position[4],position[5]);
 
+  return publishTcpGoal(tcpPoseMsg);
+}
+
+// Publish a Tcp goal by passing a geometry_msgs::Pose
+geometry_msgs::Pose ManipulatorMenu::publishTcpGoal(const geometry_msgs::Pose tcpPoseMsg)
+{
   tcpPosePublisher_.publish(tcpPoseMsg);
 
   // Display the goal on RViz
@@ -184,12 +192,6 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpGoal(const std::vector<double> po
   return tcpPoseMsg;
 }
 
-// Publish a Tcp goal by passing a geometry_msgs::Pose
-void ManipulatorMenu::publishTcpGoal(const geometry_msgs::Pose position)
-{
-  tcpPosePublisher_.publish(position);
-}
-
 // Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
 geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position) 
 {
@@ -200,6 +202,12 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const std::vector<double> 
   tcpPoseMsg.position.z = position[2];
   tcpPoseMsg.orientation = quaternion_from_euler(position[3],position[4],position[5]);
 
+  return publishTcpIKGoal(tcpPoseMsg);
+}
+
+// Publish a Tcp goal by passing a geometry_msgs::Pose
+geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::Pose tcpPoseMsg) 
+{
   // The pose to pass as goal to invKine planner must be referred to tool0
   geometry_msgs::Pose tool0_PoseMsg;
   tool0_PoseMsg.orientation = tcpPoseMsg.orientation;
@@ -232,11 +240,6 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const std::vector<double> 
   return tcpPoseMsg;
 }
 
-// Publish a Tcp goal by passing a geometry_msgs::Pose
-void ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::Pose position) 
-{
-  tcpPoseIKPublisher_.publish(position);
-}
 // Publish a cartesian goal of poses sequence along the same line
 // Specify axis1 and axis2 as 0 for x, 1 for y and 2 for z
 // Define pos1 and pos2 the final poses along those axis (the 3rd won't change)
@@ -301,7 +304,7 @@ geometry_msgs::Pose ManipulatorMenu::publishCartesianMove(const uint   axis1,
 }
 
 // Move a single joint, joint rotation must be in deg
-void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
+sensor_msgs::JointState ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 {
   // Read from subscribers the current joints state
   spinner();
@@ -313,7 +316,7 @@ void ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
   }
   // Change the joint target position
   joint_target[num] = joint_target[num] + joint_rot;
-  publishJointGoal(joint_target);
+  return publishJointGoal(joint_target);
 }
 
 // Go to pre configured home position

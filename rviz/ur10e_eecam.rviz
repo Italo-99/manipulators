@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /PlanningScene1/Scene Robot1
+        - /Pose4
       Splitter Ratio: 0.46462714672088623
     Tree Height: 384
   - Class: rviz/Help
@@ -69,7 +70,7 @@ Visualization Manager:
         base_link_inertia:
           Value: false
         camera_base_link:
-          Value: true
+          Value: false
         camera_bottom_screw_frame:
           Value: false
         camera_color_optical_frame:
@@ -117,7 +118,7 @@ Visualization Manager:
       Name: TF
       Show Arrows: false
       Show Axes: true
-      Show Names: true
+      Show Names: false
       Tree:
         base_link:
           base:
@@ -432,7 +433,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 1.50631582736969
+      Distance: 0.9763351678848267
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -440,17 +441,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.4241418242454529
-        Y: 0.08189765363931656
-        Z: -9.660260502641904e-08
+        X: 0.7991957068443298
+        Y: 0.14196817576885223
+        Z: -8.170144383257139e-08
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.13479752838611603
+      Pitch: 0.5597975254058838
       Target Frame: base_link
-      Yaw: 4.073051452636719
+      Yaw: 3.5011966228485107
     Saved: ~
 Window Geometry:
   Displays:

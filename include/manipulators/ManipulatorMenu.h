@@ -77,17 +77,17 @@ class ManipulatorMenu
     void changeCoppeliaCablePose(void); // Changle randomly cable pose on CoppeliaSim
 
     sensor_msgs::JointState publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
-    void publishJointGoal(const sensor_msgs::JointState joints);
+    sensor_msgs::JointState publishJointGoal(const sensor_msgs::JointState jointStateMsg);
     geometry_msgs::Pose publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
-    void publishTcpGoal(const geometry_msgs::Pose position);
+    geometry_msgs::Pose publishTcpGoal(const geometry_msgs::Pose tcpPoseMsg);
     geometry_msgs::Pose publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planne
-    void publishTcpIKGoal(const geometry_msgs::Pose position); 
-    geometry_msgs::Pose publishCartesianMove(const uint   axis1,
-                              const uint   axis2,
-                              const double pos1,
-                              const double pos2,
-                              const uint   steps);            // publish a carthesian move command
-    void oneJointMove(const int num, const double joint_rot); // to define a rotation around a single joint
+    geometry_msgs::Pose publishTcpIKGoal(const geometry_msgs::Pose tcpPoseMsg); 
+    geometry_msgs::Pose publishCartesianMove(const uint   axis1,  // publish a carthesian move command
+                                             const uint   axis2,
+                                             const double pos1,
+                                             const double pos2,
+                                             const uint   steps);
+    sensor_msgs::JointState oneJointMove(const int num, const double joint_rot); // to define a rotation around a single joint
     sensor_msgs::JointState goHome(const bool);               // to setup home position
 
     // Get the position and orientation of the end effector (they contain a ros spin once)
