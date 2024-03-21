@@ -75,6 +75,9 @@ ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name)
   // --------------------- Gripper client init ---------------------
   gripper_client_ = nh_.serviceClient<std_srvs::SetBool>(gripper_joint_name_+"/move_gripper");
   grab_client_    = nh_.serviceClient<std_srvs::SetBool>(gripper_joint_name_+"/grabbing_gripper");
+
+  // Real gripper client init
+  real_gripper_client_ = nh_.serviceClient<gripper::RobotiQGripperControl>("/ur_rtde/robotiq_gripper/command");
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
@@ -583,6 +586,24 @@ void ManipulatorMenu::detachObjGripper()
   callGrabbingSrv(false); 
 }
 
+// Open real gripper
+void ManipulatorMenu::openRealGripper()
+{
+  callRealGripperSrv(100.);
+}
+
+// Close real gripper
+void ManipulatorMenu::closeRealGripper()
+{
+  callRealGripperSrv(0.);
+}
+
+// Move real gripper (input is in range [0,100])
+void ManipulatorMenu::moveRealGripper(const float command)
+{
+  callRealGripperSrv(command);
+}
+
 // --------------------- PRIVATE FUNCTIONS ---------------------
 
 // --------------------- COPPELIA HANDLER ---------------------
@@ -870,6 +891,33 @@ void ManipulatorMenu::callGrabbingSrv(const bool command)
     }
 }
 
+// Call the service to open/close the real gripper
+void ManipulatorMenu::callRealGripperSrv(const float command)
+{
+    // Create a request
+    gripper::RobotiQGripperControl srv;
+    srv.request.position = command;
+    srv.request.speed    = 50;
+    srv.request.force    = 50;
+
+    // Call the service
+    if (real_gripper_client_.call(srv)) 
+    {
+        if (srv.response.success) 
+        {
+            ROS_INFO("Gripper move request succeeded");
+        }
+        else
+        {
+            ROS_ERROR("Gripper move request failed");
+        }
+    }
+    else
+    {
+        ROS_ERROR("Failed to call service to move the gripper");
+    }
+}
+
 // --------------------- QUATERNIONS HANDLER -------------------
 // Conversion from degrees euler angles to quaternion
 geometry_msgs::Quaternion ManipulatorMenu::quaternion_from_euler(double roll, double pitch, double yaw)
@@ -968,14 +1016,18 @@ void ManipulatorMenu::printMenu()
   std::cout << "24. To change cable pose in the CoppeliaSim scene\n";
   std::cout << "\n======= Cartesian move =======\n";
   std::cout << "25.Make a cartesian move\n";
-  std::cout << "\n======= Gripper control =======\n";
+  std::cout << "\n======= Fake gripper control =======\n";
   std::cout << "26.Open the gripper\n";
   std::cout << "27.Close the gripper\n";
   std::cout << "28.Set the position of the gripper\n";
   std::cout << "29.Grab an object at the gripper\n";
   std::cout << "30.Detach an object from the gripper\n";
+  std::cout << "\n======= Real gripper control =======\n";
+  std::cout << "31.Open  real gripper\n";
+  std::cout << "32.Close real gripper\n";
+  std::cout << "33.Move  real gripper to a given position \n";
   std::cout << "\n======= Closing ROS menu =======\n";
-  std::cout << "31.Shutdown the menu\n";
+  std::cout << "34.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -1177,6 +1229,23 @@ void ManipulatorMenu::processChoice(int choice)
     detachObjGripper();
     break;
   case 31:
+    ROS_INFO("You selected Option 31");
+    ROS_INFO("Opening real gripper");
+    openRealGripper();
+    break;
+  case 32:
+    ROS_INFO("You selected Option 32");
+    ROS_INFO("Closing real gripper");
+    closeRealGripper();
+    break;
+  case 33:
+    ROS_INFO("You selected Option 33");
+    ROS_INFO("Set a real gripper position");
+    float gripper_pos;
+    std::cin >> gripper_pos;
+    moveRealGripper(gripper_pos);
+    break;
+  case 34:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;

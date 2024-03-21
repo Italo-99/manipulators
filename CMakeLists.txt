@@ -5,19 +5,14 @@ project(manipulators)
 add_compile_options(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS
+  dynamic_planner
+  geometry_msgs
+  gripper
+  message_generation
   roscpp
   rospy
   std_srvs
   std_msgs
-  geometry_msgs
-  dynamic_planner
-  message_generation
-)
-
-include_directories(
-  include
-  srv
-  ${catkin_INCLUDE_DIRS}
 )
 
 add_service_files(
@@ -33,8 +28,13 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include srv
   LIBRARIES manipulator_menu
-  INCLUDE_DIRS
   ${THIS_PACKAGE_INCLUDE_DIRS}
+)
+
+include_directories(
+  include
+  srv
+  ${catkin_INCLUDE_DIRS}
 )
 
 # Add manipulator class node

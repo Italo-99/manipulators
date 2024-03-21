@@ -59,6 +59,7 @@
   <arg name="ee_rz"         default="+0.0"/>
   <arg name="ee_parent"     default="tool0"/>
   <arg name="tcp_offset"    default="+0.160"/>
+  <arg name="pub_js_state"  default="false"/>
   <!-- If true, launch the trajectory converter node -->
   <arg name="control"       default ="false" />
 
@@ -90,12 +91,13 @@
 
   <!-- If needed, broadcast static tf for robot root -->
   <!-- We do not have a robot connected, so publish fake joint states -->
-  <node if="$(arg sim)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+  <node if="$(arg pub_js_state)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
     <param name="/use_gui" value="false"/> 
     <rosparam param="/source_list">[/move_group/fake_controller_joint_states]</rosparam>
-  </node>  
+  </node>
+
   <!-- Given the published joint states, publish tf for the robot links -->
-  <node if="$(arg sim)" name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen" />
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen" />
 
   <!-- Run the main MoveIt executable without trajectory execution (we do not have controllers configured by default) -->
   <include file="$(find manipulators)/launch/move_group.launch">
@@ -140,6 +142,6 @@
   </node>
 
   <!-- For real robot -->
-  <!-- <node if="$(arg control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" />  -->
+  <node if="$(arg control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" /> 
   
 </launch>

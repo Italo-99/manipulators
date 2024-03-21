@@ -12,17 +12,18 @@
   <arg name="sim"           default="true" />
   <!-- Starting camera position -->
   <arg name="cam_parent"    default="tool0"/>
-  <arg name="cam_x_offset"  default="+0.0"/>
+  <arg name="cam_x_offset"  default="+0.00"/>
   <arg name="cam_y_offset"  default="+0.05"/>
   <arg name="cam_z_offset"  default="+0.05"/>
   <arg name="cam_rx"        default="+0.0"/>
   <arg name="cam_ry"        default="-1.570796327"/>
-  <arg name="cam_rz"        default="-1.570796327"/>
+  <arg name="cam_rz"        default="-1.57079632"/>
   <!-- Starting end effector position -->
   <arg name="ee_parent"     default="tool0"/>
   <arg name="ee_z_offset"   default="+0.0"/>
   <arg name="ee_rz"         default="+0.0"/>
   <arg name="tcp_offset"    default="+0.160"/>
+  <arg name="pub_js_state"  default="false"/>
   <!-- If true, launch the trajectory converter node -->
   <arg name="control"       default ="false" />
 
@@ -35,6 +36,7 @@
     <arg name="rviz"          value="$(arg rviz)" />
     <arg name="def_config"    value="$(arg def_config)" />
     <arg name="debug"         value="$(arg debug)" />
+    <arg name="pub_js_state"  value="$(arg pub_js_state)" />
     <arg name="sim"           value="$(arg sim)" />
     <arg name="cam_x_offset"  value="$(arg cam_x_offset)"/>
     <arg name="cam_y_offset"  value="$(arg cam_y_offset)"/>

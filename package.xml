@@ -17,20 +17,23 @@
   <build_depend>std_msgs</build_depend>
   <build_depend>std_srv</build_depend>
   <build_depend>dynamic_planner</build_depend>
+  <build_depend>gripper</build_depend>
   <build_depend>message_generation</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
   <build_export_depend>std_srv</build_export_depend>
   <build_export_depend>dynamic_planner</build_export_depend>
+  <build_export_depend>gripper</build_export_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>std_srv</exec_depend>
   <exec_depend>dynamic_planner</exec_depend>
+  <exec_depend>gripper</exec_depend>
   <exec_depend>message_runtime</exec_depend>
 
   <export>
-
   </export>
+
 </package>

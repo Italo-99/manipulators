@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /PlanningScene1/Scene Robot1
-        - /Pose4
       Splitter Ratio: 0.46462714672088623
     Tree Height: 384
   - Class: rviz/Help
@@ -69,11 +68,19 @@ Visualization Manager:
           Value: false
         base_link_inertia:
           Value: false
+        camera_aligned_depth_to_color_frame:
+          Value: false
         camera_base_link:
           Value: false
         camera_bottom_screw_frame:
           Value: false
+        camera_color_frame:
+          Value: false
         camera_color_optical_frame:
+          Value: false
+        camera_depth_frame:
+          Value: false
+        camera_depth_optical_frame:
           Value: false
         camera_link:
           Value: false
@@ -135,9 +142,14 @@ Visualization Manager:
                             camera_base_link:
                               camera_bottom_screw_frame:
                                 camera_link:
-                                  {}
-                              camera_color_optical_frame:
-                                {}
+                                  camera_aligned_depth_to_color_frame:
+                                    camera_color_optical_frame:
+                                      {}
+                                  camera_color_frame:
+                                    {}
+                                  camera_depth_frame:
+                                    camera_depth_optical_frame:
+                                      {}
                             robotiq_85_base_link:
                               left_inner_knuckle:
                                 left_inner_finger:
@@ -312,7 +324,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /coppelia/color_image
+      Image Topic: /camera/color/image_raw
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -324,7 +336,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /coppelia/depth_image
+      Image Topic: /camera/depth/image_rect_raw
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -433,7 +445,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 0.9763351678848267
+      Distance: 1.4082353115081787
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -441,17 +453,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.7991957068443298
-        Y: 0.14196817576885223
-        Z: -8.170144383257139e-08
+        X: 1.0329041481018066
+        Y: 0.036667779088020325
+        Z: -1.41306088607962e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5597975254058838
+      Pitch: 0.29479777812957764
       Target Frame: base_link
-      Yaw: 3.5011966228485107
+      Yaw: 2.7661795616149902
     Saved: ~
 Window Geometry:
   Displays:
