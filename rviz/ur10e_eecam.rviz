@@ -336,7 +336,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /camera/depth/image_rect_raw
+      Image Topic: /camera/aligned_depth_to_color/image_raw
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -423,7 +423,7 @@ Visualization Manager:
       Head Radius: 0.00800000037997961
       Name: Pose
       Queue Size: 10
-      Shaft Length: 0.00800000037997961
+      Shaft Length: 0.10000000149011612
       Shaft Radius: 0.004999999888241291
       Shape: Arrow
       Topic: /grabbing_goal
@@ -445,7 +445,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 1.4082353115081787
+      Distance: 1.9228602647781372
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -453,17 +453,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 1.0329041481018066
-        Y: 0.036667779088020325
-        Z: -1.41306088607962e-07
+        X: 0.03807854652404785
+        Y: 0.8020349144935608
+        Z: -3.797246677095245e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.29479777812957764
+      Pitch: 0.21979783475399017
       Target Frame: base_link
-      Yaw: 2.7661795616149902
+      Yaw: 3.516190767288208
     Saved: ~
 Window Geometry:
   Displays:

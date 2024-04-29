@@ -1,7 +1,7 @@
 <launch>
 
   <!-- Select robot pkg name -->
-    <arg name="robotpkg_name" default="ur10e" />
+    <arg name="robotpkg_name" default="" />
     <!-- <arg name="moveit_pkg"    default="$(find ur10e_moveit_config)"/> -->
 
     <!-- List of all available manipulators -->
