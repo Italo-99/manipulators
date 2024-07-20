@@ -50,7 +50,7 @@ Available commands are the following
 from manipulators.srv import CoppeliaMenu                   # Coppelia service
 import rospy, rospkg                                        # ROS libraries
 import time, numpy as np                                    # Python libraries
-from coppeliasim_zmqremoteapi_client import RemoteAPIClient #`Coppelia API`
+from coppeliasim_zmqremoteapi_client import RemoteAPIClient # Coppelia API
 from scipy.spatial.transform import Rotation   
 
 # COPPELIA SIM CLASS

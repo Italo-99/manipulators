@@ -13,6 +13,7 @@
       <arg name="ur5_pkg"     default="false"/>
       <arg name="ur3e_pkg"    default="false"/>
       <arg name="ur3_pkg"     default="false"/>
+      <arg name="custom_pkg"  default="false"/>
     <!-- End of the list -->
 
     <!-- Get moveit config package of the corresponding robot -->
@@ -32,12 +33,14 @@
                if="$(arg ur3e_pkg)"/>
       <arg name="moveit_pkg" value="$(find ur3_moveit_config)"
                if="$(arg ur3_pkg)"/>
+      <arg name="moveit_pkg" value="$(arg robotpkg_name)"
+               if="$(arg custom_pkg)"/>
                
   <!-- GDB Debug Option -->
   <arg name="debug" default="false" />
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
   <arg     if="$(arg debug)" name="launch_prefix"
-           value="gdb -x $(find $(arg robotpkg_name)_moveit_config)/launch/gdb_settings.gdb --ex run --args" />
+           value="gdb -x $(arg robotpkg_name)_moveit_config)/launch/gdb_settings.gdb --ex run --args" />
 
   <!-- Verbose Mode Option -->
   <arg name="info" default="$(arg debug)" />
@@ -69,9 +72,12 @@
   </include>
 
   <!-- Sensors Functionality -->
-  <include ns="move_group" file="$(arg moveit_pkg)/launch/sensor_manager.launch.xml" if="$(arg allow_trajectory_execution)">
-    <arg name="moveit_sensor_manager" value="$(arg robotpkg_name)" />
-  </include>
+  <arg name="sensor_manager" default="true"/>
+  <group if="$(arg sensor_manager)">
+    <include ns="move_group" file="$(arg moveit_pkg)/launch/sensor_manager.launch.xml" if="$(arg allow_trajectory_execution)">
+      <arg name="moveit_sensor_manager" value="$(arg robotpkg_name)" />
+    </include>
+  </group>
 
   <!-- Start the actual move_group node/action server -->
   <node name="move_group" launch-prefix="$(arg launch_prefix)" pkg="moveit_ros_move_group" type="move_group" respawn="false" output="screen" args="$(arg command_args)">

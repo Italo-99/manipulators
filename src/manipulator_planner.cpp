@@ -76,10 +76,16 @@ ManipulatorPlanner::ManipulatorPlanner()
   // --------------------- ENVIRONMENT SETUP ---------------------
 
   // // Add a table to the scene
-  std::vector<double> dim_obj = {4.,4.,0.079};
-  double pos_obj[]            = {0.,0.,-0.04};
-  double rot_obj[]            = {0.,0.,0.,1.};
-  createObj("table", 1, dim_obj, pos_obj,rot_obj,0);
+  // std::vector<double> dim_obj = {4.,4.,0.079};
+  // double pos_obj[]            = {0.,0.,-0.04};
+  // double rot_obj[]            = {0.,0.,0.,1.};
+  // createObj("table", 1, dim_obj, pos_obj,rot_obj,0);
+
+  // std::vector<double> dim_obj = {0.05,0.7,0.25};
+  // double pos_obj[]            = {-0.15,0.,0.};
+  // double rot_obj[]            = {0.,0.,0.,1.};
+  // createObj("table", 1, dim_obj, pos_obj,rot_obj,0);
+  
 }
 
 // Destructor of the object manipulator planner's class

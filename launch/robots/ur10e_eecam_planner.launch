@@ -23,7 +23,7 @@
   <arg name="ee_z_offset"   default="+0.0"/>
   <arg name="ee_rz"         default="+0.0"/>
   <arg name="tcp_offset"    default="+0.160"/>
-  <arg name="pub_js_state"  default="false"/>
+  <arg name="pub_js_state"  default="true"/>
   <!-- If true, launch the trajectory converter node -->
   <arg name="control"       default ="false" />
 

@@ -45,7 +45,7 @@ PROJECTRED 2021 NAVIGATION SIMULATION
 
     LOCALIZATION:   
     
-        oslaunch localization odometry.launch
+        roslaunch localization odometry.launch
                     roslaunch mrpt_localization ro_localization.launch 
 
     CONFIG FILES LAUNCHER PYTHON: 

@@ -15,7 +15,12 @@
       <arg name="ur5_pkg"     default="false"/>
       <arg name="ur3e_pkg"    default="false"/>
       <arg name="ur3_pkg"     default="false"/>
+      <arg name="custom_pkg"  default="false"/>
     <!-- End of the list -->
+
+    <!-- Custom srdf and xacro files if needed -->
+      <arg name="xacro_file"  default=""/>
+      <arg name="srdf_file"   default=""/>
 
     <!-- Get moveit config package of the corresponding robot -->
       <arg name="moveit_pkg" value="$(find ur20_moveit_config)"
@@ -34,6 +39,8 @@
                if="$(arg ur3e_pkg)"/>
       <arg name="moveit_pkg" value="$(find ur3_moveit_config)"
                if="$(arg ur3_pkg)"/>
+      <arg name="moveit_pkg" value="$(arg robotpkg_name)"
+               if="$(arg custom_pkg)"/>
 
   <!-- Set the following to false to load custom robot description -->
     <arg name="default_desc"  default="true"/>
@@ -62,32 +69,48 @@
           command="xacro  '$(find ur_description)/urdf/$(arg robotpkg_name).xacro'">
   </param>
   <!-- Load custom URDF -->
-  <param  unless="$(arg default_desc)" 
-          name="$(arg robot_description)"
-          command="$(find xacro)/xacro --inorder   
-                  '$(find manipulators)/models/urdf/$(arg robot_name).xacro'
-                  cam_x_offset:=$(arg cam_x_offset)
-                  cam_y_offset:=$(arg cam_y_offset)
-                  cam_z_offset:=$(arg cam_z_offset)
-                        cam_rx:=$(arg cam_rx)
-                        cam_ry:=$(arg cam_ry)
-                        cam_rz:=$(arg cam_rz)
-                    cam_parent:=$(arg cam_parent)
-                   ee_z_offset:=$(arg ee_z_offset)
-                         ee_rz:=$(arg ee_rz)
-                     ee_parent:=$(arg ee_parent)
-                    tcp_offset:=$(arg tcp_offset)">
-  </param>
+  <group unless="$(arg custom_pkg)">
+    <param  unless="$(arg default_desc)" 
+            name="$(arg robot_description)"
+            command="xacro 
+                    '$(find manipulators)/models/urdf/$(arg robot_name).xacro'
+                    cam_x_offset:=$(arg cam_x_offset)
+                    cam_y_offset:=$(arg cam_y_offset)
+                    cam_z_offset:=$(arg cam_z_offset)
+                          cam_rx:=$(arg cam_rx)
+                          cam_ry:=$(arg cam_ry)
+                          cam_rz:=$(arg cam_rz)
+                      cam_parent:=$(arg cam_parent)
+                    ee_z_offset:=$(arg ee_z_offset)
+                          ee_rz:=$(arg ee_rz)
+                      ee_parent:=$(arg ee_parent)
+                      tcp_offset:=$(arg tcp_offset)">
+    </param>
+  </group>
+  <group if="$(arg custom_pkg)">
+    <param  unless="$(arg default_desc)" 
+            name="$(arg robot_description)"
+            command="xacro $(arg xacro_file)">
+    </param>
+  </group>
   
   <!-- The semantic description (SRDF) that corresponds to the URDF, default or custom -->
   <param  if="$(arg default_desc)" 
           name="$(arg robot_description)_semantic" 
           textfile="$(arg moveit_pkg)/config/$(arg robotpkg_name).srdf">
   </param>
-  <param  unless="$(arg default_desc)"
-          name="$(arg robot_description)_semantic"
-          textfile="$(find manipulators)/models/srdf/$(arg robot_name).srdf">
-  </param>
+  <group unless="$(arg custom_pkg)">
+    <param  unless="$(arg default_desc)"
+            name="$(arg robot_description)_semantic"
+            textfile="$(find manipulators)/models/srdf/$(arg robot_name).srdf">
+    </param>
+  </group>
+    <group if="$(arg custom_pkg)">
+    <param  unless="$(arg default_desc)"
+            name="$(arg robot_description)_semantic"
+            textfile="$(arg srdf_file)">
+    </param>
+  </group>
   
   <!-- Load updated joint limits (override information from URDF) -->
   <group ns="$(arg robot_description)_planning">

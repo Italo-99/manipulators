@@ -15,6 +15,7 @@
       <arg name="ur5_pkg"     default="false"/>
       <arg name="ur3e_pkg"    default="false"/>
       <arg name="ur3_pkg"     default="false"/>
+      <arg name="custom_pkg"  default="false"/>
     <!-- End of the list -->
 
     <!-- Get moveit config package of the corresponding robot -->
@@ -34,6 +35,12 @@
                if="$(arg ur3e_pkg)"/>
       <arg name="moveit_pkg" value="$(find ur3_moveit_config)"
                if="$(arg ur3_pkg)"/>
+      <arg name="moveit_pkg" value="$(arg robotpkg_name)"
+               if="$(arg custom_pkg)"/>
+  
+    <!-- Custom srdf and xacro files if needed -->
+      <arg name="xacro_file"  default=""/>
+      <arg name="srdf_file"   default=""/>
 
   <!-- Decide if you want to launch the robot default description config; 
        set to false to load custom description config of the manipulators pkg-->
@@ -43,6 +50,7 @@
   <!-- Decide if you want to launch the robot default rviz config; 
        set to false to load custom rviz config of the manipulators pkg-->
   <arg name="def_config"    default="true" />
+  <arg name="sensor_manager" default="true"/>
   <!-- By default, we are not in debug mode and we want to sim -->
   <arg name="debug"         default="false" />
   <arg name="sim"           default="true" />
@@ -65,6 +73,7 @@
 
   <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
   <include file="$(find manipulators)/launch/planning_context.launch">
+    <arg name="custom_pkg"    value="$(arg custom_pkg)"/>
     <arg name="robot_name"    value="$(arg robot_name)"/>
     <arg name="robotpkg_name" value="$(arg robotpkg_name)"/>
     <arg name="ur20_pkg"      value="$(arg ur20_pkg)"/>
@@ -76,6 +85,8 @@
     <arg name="ur3e_pkg"      value="$(arg ur3e_pkg)"/>
     <arg name="ur3_pkg"       value="$(arg ur3_pkg)"/>
     <arg name="default_desc"  value="$(arg default_desc)"/>
+    <arg name="xacro_file"    value="$(arg xacro_file)"/>
+    <arg name="srdf_file"     value="$(arg srdf_file)"/>
     <arg name="cam_x_offset"  value="$(arg cam_x_offset)"/>
     <arg name="cam_y_offset"  value="$(arg cam_y_offset)"/>
     <arg name="cam_z_offset"  value="$(arg cam_z_offset)"/>
@@ -101,6 +112,7 @@
 
   <!-- Run the main MoveIt executable without trajectory execution (we do not have controllers configured by default) -->
   <include file="$(find manipulators)/launch/move_group.launch">
+    <arg name="custom_pkg"    value="$(arg custom_pkg)"/>
     <arg name="robotpkg_name" value="$(arg robotpkg_name)" />
     <arg name="ur20_pkg"      value="$(arg ur20_pkg)"/>
     <arg name="ur16e_pkg"     value="$(arg ur16e_pkg)"/>
@@ -115,6 +127,8 @@
     <arg name="fake_execution" value="true"/>
     <arg name="info" value="true"/>
     <arg name="debug" value="$(arg debug)"/>
+
+    <arg name="sensor_manager" value="$(arg sensor_manager)"/>
   </include>
 
   <!-- Run Rviz and load the default config to see the state of the move_group node THE ARG IS CALLED config, NOT rviz_config-->
@@ -138,7 +152,8 @@
     <!-- This file contains the parameters configuration for each available 6-dof planner for the robot-->
     <rosparam command="load" file="$(arg moveit_pkg)/config/ompl_planning.yaml"/>
     <!-- This file contains the names of the manipulator, the joints, the base and the end-effector -->
-    <rosparam command="load" file="$(find manipulators)/config/$(arg robot_name).yaml" />
+    <rosparam unless="$(arg custom_pkg)" command="load" file="$(find manipulators)/config/$(arg robot_name).yaml" />
+    <rosparam     if="$(arg custom_pkg)" command="load" file="$(arg moveit_pkg)/config/$(arg robot_name).yaml" />
   </node>
 
   <!-- For real robot -->
