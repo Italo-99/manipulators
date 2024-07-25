@@ -43,14 +43,28 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name)
+ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name,
+                                 std::string last_robot_link)
 {
   // Gripper attribute setting
   gripper_joint_name_ = gripper_joint_name;
+  last_robot_link_    = last_robot_link;
 
   // Listen static tf from tool0 and tcp_gripper
-  geometry_msgs::PoseStamped ee_offset_pose = getTf("tool0","tcp_gripper");
-  ee_offset_ = ee_offset_pose.pose.position.z;
+  geometry_msgs::PoseStamped ee_offset_pose = getTf(last_robot_link_,"tcp_gripper");
+  if      (last_robot_link_ == "tool0") 
+  {
+    ee_offset_ = ee_offset_pose.pose.position.z;
+  }
+  else if (last_robot_link_ == "link_6") 
+  {
+    ee_offset_ = ee_offset_pose.pose.position.x;
+    ROS_INFO("ProjectRED robot-gripper setup");
+  }
+  else
+  {
+    ee_offset_ = ee_offset_pose.pose.position.z;
+  }  
 
   // --------------------- PUBS & SUBS DELCARATIONS ---------------------
 
@@ -223,6 +237,13 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::Pose 
                               tcpPoseMsg.position.y,
                               tcpPoseMsg.position.z)*q;
   Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
+  // Correction if link_6 has x offset, while standard tool0 frame has z offset
+  if (last_robot_link_ == "link_6")
+  {
+    vec_offset[0] = -ee_offset_;
+    vec_offset[1] = 0.0;
+    vec_offset[2] = 0.0;
+  }
   Eigen::Vector3d tool0_pos = transform * vec_offset;
 
   tool0_PoseMsg.position.x = tool0_pos.x();
@@ -231,6 +252,7 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::Pose 
 
   // Plan trajectory through inverse kinematics
   tcpPoseIKPublisher_.publish(tool0_PoseMsg);
+  // tcpPoseIKPublisher_.publish(tcpPoseMsg);
 
   // Display the goal on RViz
   geometry_msgs::PoseStamped robot_goal_msg;
@@ -254,7 +276,7 @@ geometry_msgs::Pose ManipulatorMenu::publishCartesianMove(const uint   axis1,
                                                           const uint   steps) 
 {
   // Initialize starting and waypoints variables
-  geometry_msgs::PoseStamped current_pose = getTf("base_link","tool0");
+  geometry_msgs::PoseStamped current_pose = getTf("base_link",last_robot_link_);
   geometry_msgs::PoseArray   waypoints;
   geometry_msgs::Pose        final_pose;
   waypoints.header.frame_id = "base_link"; 
