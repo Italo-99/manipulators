@@ -68,7 +68,8 @@ class ManipulatorMenu
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-    ManipulatorMenu(std::string gripper_joint_name); // Constructor
+    ManipulatorMenu(std::string gripper_joint_name,
+                    std::string last_robot_link); // Constructor
     // ~ManipulatorMenu();                    // Destructor
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
@@ -198,6 +199,7 @@ class ManipulatorMenu
 
     // ---------------------  GRIPPER HANDLER -------------
       std::string gripper_joint_name_;
+      std::string last_robot_link_;
       double ee_offset_;
 
     // ---------------------  ROS HANDLING ---------------------
@@ -217,14 +219,14 @@ class ManipulatorMenu
       geometry_msgs::PoseStamped current_tcp_pose_;
       sensor_msgs::JointState current_joint_pose_;
 
-    // ---------------------  COPPELIA HANDLING ---------------------
-      ros::ServiceClient client_;
-      manipulators::CoppeliaMenu coppelia_srv_;
+      // ---------------------  COPPELIA HANDLING ---------------------
+        ros::ServiceClient client_;
+        manipulators::CoppeliaMenu coppelia_srv_;
 
-    // ---------------------  GRIPPER HANDLING ---------------------
-      ros::ServiceClient gripper_client_;
-      ros::ServiceClient grab_client_;
-      ros::ServiceClient real_gripper_client_;
+      // ---------------------  GRIPPER HANDLING ---------------------
+        ros::ServiceClient gripper_client_;
+        ros::ServiceClient grab_client_;
+        ros::ServiceClient real_gripper_client_;
 
     // ---------------------  USEFUL TOOLS ---------------------
 

@@ -300,6 +300,7 @@ void ManipulatorPlanner::tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& 
 
   // Make the inverse kinematics
   std::vector<double> joint_values = planner_->invKine(goal,ee_name_);
+  // std::vector<double> joint_values = planner_->invKine(goal,"link_6");
   sensor_msgs::JointState js;
   for (unsigned int k = 0; k < 6; k++) {js.position.push_back(joint_values[k]);}
 
