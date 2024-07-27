@@ -87,8 +87,10 @@ class ManipulatorMenu
       sensor_msgs::JointState publishJointGoal(const sensor_msgs::JointState jointStateMsg);
       geometry_msgs::Pose publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
       geometry_msgs::Pose publishTcpGoal(const geometry_msgs::Pose tcpPoseMsg);
-      geometry_msgs::Pose publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planne
+      geometry_msgs::Pose publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planner
       geometry_msgs::Pose publishTcpIKGoal(const geometry_msgs::Pose tcpPoseMsg); 
+      geometry_msgs::Pose publishTcpIK_noplanner_Goal(const std::vector<double> position);// publish a tcpIK goal to the manipulator fake controller
+      geometry_msgs::Pose publishTcpIK_noplanner_Goal(const geometry_msgs::Pose tcpPoseMsg); 
       geometry_msgs::Pose publishCartesianMove(const uint   axis1,  // publish a carthesian move command
                                               const uint   axis2,
                                               const double pos1,
@@ -155,14 +157,16 @@ class ManipulatorMenu
 
     // --------------------- MOVE FUNCTIONS ---------------------
 
-      void testJointGoal(void);   // to test a joint goal
-      void userJointGoal(void);   // to perform a joint goal set by the user 
-      void oneJointMove_user();   // to move only a single joint
+      void testJointGoal(void);             // to test a joint goal
+      void userJointGoal(void);             // to perform a joint goal set by the user 
+      void oneJointMove_user();             // to move only a single joint
 
-      void testTcpGoal(void);       // to test a tcp goal
-      void userTcpGoal(void);       // to perform a tcp goal set by the user 
-      void userTcpIKGoal(void);     // to perform a tcpIK goal set by the user 
-      void userCartesianMove(void); // to perform a cartesian move set by the user
+      void testTcpGoal(void);               // to test a tcp goal
+      void userTcpGoal(void);               // to perform a tcp goal set by the user 
+      void userTcpIKGoal(void);             // to perform a tcpIK goal set by the user 
+      void userTcpIK_no_planner_Goal(void); // to perform a tcpIK goal (with fake controller) set by the user 
+
+      void userCartesianMove(void);         // to perform a cartesian move set by the user
 
       // Joint state callback function
       void jointStateCallback(const sensor_msgs::JointState::ConstPtr& msg);
@@ -201,6 +205,7 @@ class ManipulatorMenu
       ros::Publisher  jointGoalPublisher_;
       ros::Publisher  tcpPosePublisher_;
       ros::Publisher  tcpPoseIKPublisher_;
+      ros::Publisher  tcpPoseIK_noplannerPub_;      
       ros::Publisher  carthesianMovePublisher_;
       ros::Publisher  display_goal_pub_;
       ros::Publisher  eepose_pub_;

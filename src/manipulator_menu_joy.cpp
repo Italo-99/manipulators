@@ -43,10 +43,10 @@
 // MAIN FUNCTION IMPLEMENTATION
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "manipulator_menu_node");
+  ros::init(argc, argv, "manipulator_menu_joy");
 
-  // ManipulatorMenu Menu("robotiq85_gripper/finger_joint","tool0");
-  ManipulatorMenu Menu("robotiq85_gripper/finger_joint","link_6");
+  ManipulatorMenu Menu("robotiq85_gripper/finger_joint","tool0");
+  // ManipulatorMenu Menu("robotiq85_gripper/finger_joint","link_6");
 
   // Setup a rate for ROS loop execution
   ros::Rate r(10);

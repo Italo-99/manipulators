@@ -18,7 +18,7 @@
  *      products derived from this software without specific prior
  *      written permission.
  *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS  dx_des_ = Eigen::MatrixXd::Zero(6, 1);
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
  *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
  *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -68,13 +68,14 @@ ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name,
   jointGoalPublisher_       = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
   tcpPosePublisher_         = nh_.advertise<geometry_msgs::Pose>("/desired_tcp_pose", 1);
   tcpPoseIKPublisher_       = nh_.advertise<geometry_msgs::Pose>("/desired_tcpIK_pose", 1);
+  tcpPoseIK_noplannerPub_   = nh_.advertise<geometry_msgs::Pose>("/noplan_tcpIK_pose", 1);
   carthesianMovePublisher_  = nh_.advertise<geometry_msgs::PoseArray>("/desired_cartesian_move", 1, true);
   display_goal_pub_         = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
   eepose_pub_               = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1, true);
   collisionObjectPublisher_ = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
   moveGripperPublisher_     = nh_.advertise<std_msgs::Float64>(gripper_joint_name_+"/gripper_control", 1);
   jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
-  joy_sub_  = nh_.subscribe("/joy", 1, &ManipulatorMenu::joyCallback, this);
+  joy_sub_                  = nh_.subscribe("/joy", 1, &ManipulatorMenu::joyCallback, this);
 
   // --------------------- Global class variables init ---------------------
 
@@ -208,7 +209,7 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpGoal(const geometry_msgs::Pose tc
   return tcpPoseMsg;
 }
 
-// Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
+// Publish a TcpIK goal by passing a vector (rotations must be expressed in deg)
 geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position) 
 {
   // TCP pose
@@ -221,7 +222,7 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const std::vector<double> 
   return publishTcpIKGoal(tcpPoseMsg);
 }
 
-// Publish a Tcp goal by passing a geometry_msgs::Pose
+// Publish a TcpIK goal by passing a geometry_msgs::Pose
 geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::Pose tcpPoseMsg) 
 {
   // The pose to pass as goal to invKine planner must be referred to tool0
@@ -251,6 +252,61 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::Pose 
 
   // Plan trajectory through inverse kinematics
   tcpPoseIKPublisher_.publish(tool0_PoseMsg);
+
+  // Display the goal on RViz
+  geometry_msgs::PoseStamped robot_goal_msg;
+  robot_goal_msg.header.frame_id = "base_link";
+  robot_goal_msg.header.stamp = ros::Time::now();
+  robot_goal_msg.pose = tcpPoseMsg;
+  
+  display_goal_pub_.publish(robot_goal_msg);
+
+  return tcpPoseMsg;
+}
+
+// Publish a TcpIK goal, with fake moveit controller, by passing a vector (rotations must be expressed in deg)
+geometry_msgs::Pose ManipulatorMenu::publishTcpIK_noplanner_Goal(const std::vector<double> position) 
+{
+  // TCP pose
+  geometry_msgs::Pose tcpPoseMsg;
+  tcpPoseMsg.position.x = position[0];
+  tcpPoseMsg.position.y = position[1];
+  tcpPoseMsg.position.z = position[2];
+  tcpPoseMsg.orientation = quaternion_from_euler(position[3],position[4],position[5]);
+
+  return publishTcpIK_noplanner_Goal(tcpPoseMsg);
+}
+
+// Publish a TcpIK goal, with fake moveit controller, by passing a geometry_msgs::Pose
+geometry_msgs::Pose ManipulatorMenu::publishTcpIK_noplanner_Goal(const geometry_msgs::Pose tcpPoseMsg) 
+{
+  // The pose to pass as goal to invKine planner must be referred to tool0
+  geometry_msgs::Pose tool0_PoseMsg;
+  tool0_PoseMsg.orientation = tcpPoseMsg.orientation;
+  Eigen::Quaterniond  q(tcpPoseMsg.orientation.w,
+                        tcpPoseMsg.orientation.x,
+                        tcpPoseMsg.orientation.y,
+                        tcpPoseMsg.orientation.z);
+  Eigen::Affine3d transform = Eigen::Translation3d(
+                              tcpPoseMsg.position.x,
+                              tcpPoseMsg.position.y,
+                              tcpPoseMsg.position.z)*q;
+  Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
+  // Correction if link_6 has x offset, while standard tool0 frame has z offset
+  if (last_robot_link_ == "link_6")
+  {
+    vec_offset[0] = -ee_offset_;
+    vec_offset[1] = 0.0;
+    vec_offset[2] = 0.0;
+  }
+  Eigen::Vector3d tool0_pos = transform * vec_offset;
+
+  tool0_PoseMsg.position.x = tool0_pos.x();
+  tool0_PoseMsg.position.y = tool0_pos.y();
+  tool0_PoseMsg.position.z = tool0_pos.z();
+
+  // Plan trajectory through inverse kinematics
+  tcpPoseIK_noplannerPub_.publish(tool0_PoseMsg);
 
   // Display the goal on RViz
   geometry_msgs::PoseStamped robot_goal_msg;
@@ -755,6 +811,35 @@ void ManipulatorMenu::userTcpIKGoal()
   publishTcpIKGoal(position);
 }
 
+void ManipulatorMenu::userTcpIK_no_planner_Goal()
+{
+  // Declare the empty vector of joints goals
+  std::vector<double> position = {0.,0.,0.,0.,0.,0.};
+  
+  // Take user degree angle for each joint
+  std::cout << "Enter the values of the tcp goal through InvKine, with fake moveit controller, with rotation angles in degrees:\n";
+
+  // X position input
+  std::cout << "X position:  ";
+  std::cin >> position[0];
+  // Y position input
+  std::cout << "Y position:  ";
+  std::cin >> position[1];
+  // Z position input
+  std::cout << "Z position:  ";
+  std::cin >> position[2];
+
+  // Deg RPY angles input
+  std::cout << "Rx: ";
+  std::cin >> position[3];
+  std::cout << "Ry: ";
+  std::cin >> position[4];
+  std::cout << "Rz: ";
+  std::cin >> position[5];
+
+  publishTcpIK_noplanner_Goal(position);
+}
+
 // --------------------- USER CARTESIAN MOVES HANDLER ---------------------
 void ManipulatorMenu::userCartesianMove()
 {
@@ -1014,8 +1099,8 @@ void ManipulatorMenu::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 // Joystick move
 geometry_msgs::Pose ManipulatorMenu::move_Joystick(const std::vector<double> dx)
 { 
-  ROS_INFO("dx_des(0): %f, dx_des(1): %f, dx_des(2): %f, dx_des(3): %f, dx_des(4): %f, dx_des(5): %f",
-                dx[0],         dx[1],         dx[2],         dx[3],         dx[4],         dx[5]);
+  // ROS_INFO("dx_des(0): %f, dx_des(1): %f, dx_des(2): %f, dx_des(3): %f, dx_des(4): %f, dx_des(5): %f",
+  //               dx[0],         dx[1],         dx[2],         dx[3],         dx[4],         dx[5]);
   
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
@@ -1026,7 +1111,8 @@ geometry_msgs::Pose ManipulatorMenu::move_Joystick(const std::vector<double> dx)
   // goal_pose[4] = goal_pose[4] + dx[4];
   // goal_pose[5] = goal_pose[5] + dx[5];
 
-  return publishTcpIKGoal(goal_pose);
+  // return publishTcpIKGoal(goal_pose);
+  return publishTcpIK_noplanner_Goal(goal_pose);
 }
 
 
@@ -1036,6 +1122,7 @@ void ManipulatorMenu::printMenu()
 {
   std::cout << "\n======= MANIPULATOR MENU =======\n";
   std::cout << "\n======= Joint/tcp moving test options =======\n";
+  std::cout << "0. Give a TCP goal through InvKine, with fake controller\n";
   std::cout << "1. Test a joint goal\n";
   std::cout << "2. Test a TCP goal\n";
   std::cout << "3. Give a joint goal\n";
@@ -1080,8 +1167,6 @@ void ManipulatorMenu::printMenu()
   std::cout << "33.Move  real gripper to a given position \n";
   std::cout << "\n======= Closing ROS menu =======\n";
   std::cout << "34.Shutdown the menu\n";
-  //Aggiunto da Gio
-  std::cout << "35.Joystick control\n";
 
   std::cout << "=====================\n";
 }
@@ -1101,11 +1186,14 @@ void ManipulatorMenu::processChoice(int choice)
   std::vector<double> ee_pos; // End effector position
   switch (choice)
   {
+  case 0:
+    ROS_INFO("You selected Option 0");
+    userTcpIK_no_planner_Goal();
+    break;
   case 1:
     ROS_INFO("You selected Option 1");
     testJointGoal();
     break;
-
   case 2:
     ROS_INFO("You selected Option 2");
     testTcpGoal();
@@ -1307,13 +1395,5 @@ void ManipulatorMenu::processChoice(int choice)
   default:
     ROS_WARN("Invalid choice. Please choose a valid option.");
     break;
-  
-  //Aggiunto Gio
-  case 35:
-     ROS_INFO("You selected Option 35");
-     ROS_INFO("Set the joystick control");
-     //move_Joystick(step_);
-     break;
-
-}
+  }
 }

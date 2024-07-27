@@ -45,8 +45,8 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "manipulator_menu_node");
 
-  // ManipulatorMenu Menu("robotiq85_gripper/finger_joint","tool0");
-  ManipulatorMenu Menu("robotiq85_gripper/finger_joint","link_6");
+  ManipulatorMenu Menu("robotiq85_gripper/finger_joint","tool0");
+  // ManipulatorMenu Menu("robotiq85_gripper/finger_joint","link_6");
 
   Menu.spinnerMenu();
 
