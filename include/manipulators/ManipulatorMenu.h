@@ -60,6 +60,10 @@
 #include "gripper/RobotiQGripperControl.h"
 #include "std_srvs/SetBool.h"
 
+//Aggiunto da Gio
+#include <sensor_msgs/Joy.h>
+
+
 class ManipulatorMenu
 {
  public:
@@ -138,12 +142,18 @@ class ManipulatorMenu
 
     // Degrees and radians conversions
       std::vector<double> deg_from_rad(const std::vector<double>);
-      std::vector<double> rad_from_deg(const std::vector<double>);      
+      std::vector<double> rad_from_deg(const std::vector<double>); 
+
+    //Controllo Joystick
+    //geometry_msgs::Pose move_Joystick(const double step_);
+
 
  private:
 
   // --------------------- PRIVATE FUNCTIONS ---------------------
-
+    //AGGGIUNTO DA gIO
+      typedef Eigen::Matrix<double, 6, 1> Vector6d;
+      Vector6d dx_des_;
     // ---------------  PRIVATE COPPELIA METHODS ---------------------
       void wait_for_response(void);     // Send the request and show the response
 
@@ -169,6 +179,8 @@ class ManipulatorMenu
       void callGripperSrv(const bool);     // to call open/close gripper srv
       void callGrabbingSrv(const bool);    // to call grab/detach gripper srv
       void callRealGripperSrv(const float);// to call real gripper open close
+      //Aggiunto da Gio
+      //void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
 
     // --------------------- UTILS FUNCTIONS ---------------------
 
@@ -199,6 +211,8 @@ class ManipulatorMenu
       ros::Publisher  collisionObjectPublisher_;
       ros::Publisher  moveGripperPublisher_;
       ros::Subscriber jointStateSubscriber_;
+      //Aggiunto Gio
+      ros::Subscriber joy_sub_;
 
       geometry_msgs::PoseStamped current_tcp_pose_;
       sensor_msgs::JointState current_joint_pose_;
@@ -215,7 +229,9 @@ class ManipulatorMenu
     // ---------------------  USEFUL TOOLS ---------------------
 
       bool counterJg_;
-      bool counterCg_; 
+      bool counterCg_;
+      //Aggiunto Gio 
+      int step_;
 };
 
 #endif /* MANIPULATOR_MENU_H */
