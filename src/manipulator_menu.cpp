@@ -18,10 +18,7 @@
  *      products derived from this software without specific prior
  *      written permission.
  *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS  dx_des_ = Eigen::MatrixXd::Zero(6, 1);
  *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
  *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
  *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -77,11 +74,19 @@ ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name,
   collisionObjectPublisher_ = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
   moveGripperPublisher_     = nh_.advertise<std_msgs::Float64>(gripper_joint_name_+"/gripper_control", 1);
   jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
+//Aggiunta Gio
+  joy_sub_                  = nh_.subscribe("/joy", 1, &ManipulatorMenu::joyCallback, this);
 
   // --------------------- Global class variables init ---------------------
 
   counterJg_ = false;       // choice of test joint goal
   counterCg_ = false;       // choice of test tcp3D goal
+  //Aggiunta Gio
+  step_= 0.1;  //Da volutare con Italo come scrivere una funzione che prenda solo il valore non nullo di axis
+  dx_des_.setZero();
+  
+  
+
 
   // --------------------- CoppeliaSim client init ---------------------
   client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
@@ -726,9 +731,7 @@ void ManipulatorMenu::userTcpGoal()
   std::cin >> position[4];
   std::cout << "Rz: ";
   std::cin >> position[5];
-
-  publishTcpGoal(position);
-}
+} 
 
 void ManipulatorMenu::userTcpIKGoal()
 {
@@ -1000,6 +1003,55 @@ std::vector<double> ManipulatorMenu::rad_from_deg(const std::vector<double> join
   return joint_rad;
 }
 
+
+
+//Aggiunto da Gio
+void ManipulatorMenu::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
+
+ {
+         dx_des_ = Eigen::MatrixXd::Zero(6, 1);
+         dx_des_(1)=  -joy->axes[2];     //  asse x
+         dx_des_(2) = -joy->axes[1];     //  asse y
+        //dx_des_(3) = -joy->axes[3];     //  asse z
+
+    }
+
+//Aggiunto da Gio
+
+
+//Muovo il robot lungo x in maniera Cartesiana
+geometry_msgs::Pose ManipulatorMenu::move_Joystick(const double step_)
+{
+  geometry_msgs::Pose pose;
+    // Logica per muovere il joystick
+    return pose;
+  ROS_INFO("dx_des(0): %f, dx_des(1): %f, dx_des(2): %f, dx_des(3): %f, dx_des(4): %f, dx_des(5): %f",
+         dx_des_(0), dx_des_(1), dx_des_(2), dx_des_(3), dx_des_(4), dx_des_(5));
+    int X_Axes = static_cast<int>(dx_des_(1));   //Convert axes[1] value in int for the switch
+    switch (X_Axes)
+  {
+    case 1:
+    while (X_Axes=1){
+      // Get current EE pose
+  std::vector<double> goal_pose = getEEpos_rpy();
+  // Update position along X
+  goal_pose[0] = goal_pose[0] + step_;
+  return publishTcpIKGoal(goal_pose);
+  break;
+}
+    case 2:
+    while (X_Axes=0){
+      // Get current EE pose
+  std::vector<double> goal_pose = getEEpos_rpy();
+  return publishTcpIKGoal(goal_pose);
+  break;
+  }
+}
+}
+
+
+
+
 // --------------------- MENU HANDLER ---------------------
 
 void ManipulatorMenu::printMenu()
@@ -1050,6 +1102,9 @@ void ManipulatorMenu::printMenu()
   std::cout << "33.Move  real gripper to a given position \n";
   std::cout << "\n======= Closing ROS menu =======\n";
   std::cout << "34.Shutdown the menu\n";
+  //Aggiunto da Gio
+  std::cout << "35.Joystick control\n";
+
   std::cout << "=====================\n";
 }
 
@@ -1274,5 +1329,13 @@ void ManipulatorMenu::processChoice(int choice)
   default:
     ROS_WARN("Invalid choice. Please choose a valid option.");
     break;
-  }
+  
+  //Aggiunto Gio
+  case 35:
+     ROS_INFO("You selected Option 35");
+     ROS_INFO("Set the joystick control");
+     //move_Joystick(step_);
+     break;
+
+}
 }
