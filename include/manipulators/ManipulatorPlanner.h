@@ -104,11 +104,9 @@ class ManipulatorPlanner
     ros::Subscriber joint_goal_sub_;        // Subscriber to joint goal
     ros::Subscriber tcp_goalIK_sub_;        // Subscriber to TCP goal with InvKine
     ros::Subscriber carthesian_move_sub_;   // Subscriber to carthesian move
-    // ros::Subscriber tcp_goalSeq_sub_;       // Subscriber to the sequence of TCP goal
-    // ros::Subscriber joint_goalSeq_sub_;     // Subscriber to the sequence of joint goal
+    // ros::Subscriber tcp_goalSeq_sub_;    // Subscriber to the sequence of TCP goal
+    // ros::Subscriber joint_goalSeq_sub_;  // Subscriber to the sequence of joint goal
     ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
-
-    ros::Publisher VERIFY_PUB_COLL_OBJ;
 
     // Planner args
     std::string manipulator_name_;          // Manipulator name

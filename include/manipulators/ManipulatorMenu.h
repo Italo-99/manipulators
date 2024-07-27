@@ -141,6 +141,9 @@ class ManipulatorMenu
       std::vector<double> deg_from_rad(const std::vector<double>);
       std::vector<double> rad_from_deg(const std::vector<double>);      
 
+    // Joy handlers
+      
+ 
  private:
 
   // --------------------- PRIVATE FUNCTIONS ---------------------
