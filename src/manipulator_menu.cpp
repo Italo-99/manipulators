@@ -74,19 +74,13 @@ ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name,
   collisionObjectPublisher_ = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
   moveGripperPublisher_     = nh_.advertise<std_msgs::Float64>(gripper_joint_name_+"/gripper_control", 1);
   jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
-//Aggiunta Gio
-  joy_sub_                  = nh_.subscribe("/joy", 1, &ManipulatorMenu::joyCallback, this);
+  joy_sub_  = nh_.subscribe("/joy", 1, &ManipulatorMenu::joyCallback, this);
 
   // --------------------- Global class variables init ---------------------
 
+  joy_step_   = 0.01;       // Vel speed from joy
   counterJg_ = false;       // choice of test joint goal
   counterCg_ = false;       // choice of test tcp3D goal
-  //Aggiunta Gio
-  step_= 0.1;  //Da volutare con Italo come scrivere una funzione che prenda solo il valore non nullo di axis
-  dx_des_.setZero();
-  
-  
-
 
   // --------------------- CoppeliaSim client init ---------------------
   client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
@@ -257,7 +251,6 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::Pose 
 
   // Plan trajectory through inverse kinematics
   tcpPoseIKPublisher_.publish(tool0_PoseMsg);
-  // tcpPoseIKPublisher_.publish(tcpPoseMsg);
 
   // Display the goal on RViz
   geometry_msgs::PoseStamped robot_goal_msg;
@@ -1003,53 +996,38 @@ std::vector<double> ManipulatorMenu::rad_from_deg(const std::vector<double> join
   return joint_rad;
 }
 
+// --------------------- JOYSTICK HANDLER -------------------
 
-
-//Aggiunto da Gio
+// Joy callback
 void ManipulatorMenu::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
-
- {
-         dx_des_ = Eigen::MatrixXd::Zero(6, 1);
-         dx_des_(1)=  -joy->axes[2];     //  asse x
-         dx_des_(2) = -joy->axes[1];     //  asse y
-        //dx_des_(3) = -joy->axes[3];     //  asse z
-
-    }
-
-//Aggiunto da Gio
-
-
-//Muovo il robot lungo x in maniera Cartesiana
-geometry_msgs::Pose ManipulatorMenu::move_Joystick(const double step_)
 {
-  geometry_msgs::Pose pose;
-    // Logica per muovere il joystick
-    return pose;
+  std::vector<double> dx_des = {0.,0.,0.,0.,0.,0.};
+  dx_des[0]=  joy->axes[1]*joy_step_;       //  asse x
+  dx_des[1] = joy->axes[0]*joy_step_;       //  asse y
+  // dx_des(2) = -joy->axes[2]*joy_step_;       //  asse z
+  // dx_des(3) = -joy->axes[3]*joy_step_;       //  asse rx
+  // dx_des(4) = -joy->axes[4]*joy_step_;       //  asse ry
+  // dx_des(5) = -joy->axes[5]*joy_step_;       //  asse rz
+  move_Joystick(dx_des);
+}
+
+// Joystick move
+geometry_msgs::Pose ManipulatorMenu::move_Joystick(const std::vector<double> dx)
+{ 
   ROS_INFO("dx_des(0): %f, dx_des(1): %f, dx_des(2): %f, dx_des(3): %f, dx_des(4): %f, dx_des(5): %f",
-         dx_des_(0), dx_des_(1), dx_des_(2), dx_des_(3), dx_des_(4), dx_des_(5));
-    int X_Axes = static_cast<int>(dx_des_(1));   //Convert axes[1] value in int for the switch
-    switch (X_Axes)
-  {
-    case 1:
-    while (X_Axes=1){
-      // Get current EE pose
+                dx[0],         dx[1],         dx[2],         dx[3],         dx[4],         dx[5]);
+  
+  // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
-  // Update position along X
-  goal_pose[0] = goal_pose[0] + step_;
-  return publishTcpIKGoal(goal_pose);
-  break;
-}
-    case 2:
-    while (X_Axes=0){
-      // Get current EE pose
-  std::vector<double> goal_pose = getEEpos_rpy();
-  return publishTcpIKGoal(goal_pose);
-  break;
-  }
-}
-}
+  goal_pose[0] = goal_pose[0] + dx[0];
+  goal_pose[1] = goal_pose[1] + dx[1];
+  // goal_pose[2] = goal_pose[2] + dx[2];
+  // goal_pose[3] = goal_pose[3] + dx[3];
+  // goal_pose[4] = goal_pose[4] + dx[4];
+  // goal_pose[5] = goal_pose[5] + dx[5];
 
-
+  return publishTcpIKGoal(goal_pose);
+}
 
 
 // --------------------- MENU HANDLER ---------------------

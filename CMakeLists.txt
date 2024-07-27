@@ -51,3 +51,8 @@ add_dependencies(manipulator_menu ${catkin_EXPORTED_TARGETS})
 add_executable(manipulator_menu_node src/manipulator_menu_node.cpp)
 target_link_libraries(manipulator_menu_node manipulator_menu ${catkin_LIBRARIES})
 add_dependencies(manipulator_menu_node ${catkin_EXPORTED_TARGETS})
+
+# Add manipulator menu node
+add_executable(manipulator_menu_joy src/manipulator_menu_joy.cpp)
+target_link_libraries(manipulator_menu_joy manipulator_menu ${catkin_LIBRARIES})
+add_dependencies(manipulator_menu_joy ${catkin_EXPORTED_TARGETS})

@@ -48,7 +48,14 @@ int main(int argc, char **argv)
   // ManipulatorMenu Menu("robotiq85_gripper/finger_joint","tool0");
   ManipulatorMenu Menu("robotiq85_gripper/finger_joint","link_6");
 
-  Menu.spinnerMenu();
+  // Setup a rate for ROS loop execution
+  ros::Rate r(10);
+
+  while(ros::ok())
+  {
+    Menu.spinner();
+    r.sleep();
+  }
 
   return 0;
 }

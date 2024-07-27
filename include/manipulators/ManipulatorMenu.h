@@ -59,8 +59,6 @@
 #include "manipulators/CoppeliaMenu.h"
 #include "gripper/RobotiQGripperControl.h"
 #include "std_srvs/SetBool.h"
-
-//Aggiunto da Gio
 #include <sensor_msgs/Joy.h>
 
 
@@ -144,20 +142,10 @@ class ManipulatorMenu
     // Degrees and radians conversions
       std::vector<double> deg_from_rad(const std::vector<double>);
       std::vector<double> rad_from_deg(const std::vector<double>); 
-
-    //Controllo Joystick
-    //geometry_msgs::Pose move_Joystick(const double step_);
-
-
-    // Joy handlers
-      
  
  private:
 
   // --------------------- PRIVATE FUNCTIONS ---------------------
-    //AGGGIUNTO DA gIO
-      typedef Eigen::Matrix<double, 6, 1> Vector6d;
-      Vector6d dx_des_;
     // ---------------  PRIVATE COPPELIA METHODS ---------------------
       void wait_for_response(void);     // Send the request and show the response
 
@@ -183,8 +171,6 @@ class ManipulatorMenu
       void callGripperSrv(const bool);     // to call open/close gripper srv
       void callGrabbingSrv(const bool);    // to call grab/detach gripper srv
       void callRealGripperSrv(const float);// to call real gripper open close
-      //Aggiunto da Gio
-      //void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
 
     // --------------------- UTILS FUNCTIONS ---------------------
 
@@ -194,9 +180,13 @@ class ManipulatorMenu
       void deleteCollObj(void);
 
       //Menu handling
-      void printMenu();
-      int getUserChoice();
-      void processChoice(int choice);
+      void  printMenu();
+      int   getUserChoice();
+      void  processChoice(int choice);
+
+      // Joy handlers
+      void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
+      geometry_msgs::Pose move_Joystick(const std::vector<double>);
 
   // --------------------- PRIVATE VARIABLES ---------------------
 
@@ -207,6 +197,7 @@ class ManipulatorMenu
 
     // ---------------------  ROS HANDLING ---------------------
       ros::NodeHandle nh_;
+
       ros::Publisher  jointGoalPublisher_;
       ros::Publisher  tcpPosePublisher_;
       ros::Publisher  tcpPoseIKPublisher_;
@@ -216,7 +207,6 @@ class ManipulatorMenu
       ros::Publisher  collisionObjectPublisher_;
       ros::Publisher  moveGripperPublisher_;
       ros::Subscriber jointStateSubscriber_;
-      //Aggiunto Gio
       ros::Subscriber joy_sub_;
 
       geometry_msgs::PoseStamped current_tcp_pose_;
@@ -235,8 +225,8 @@ class ManipulatorMenu
 
       bool counterJg_;
       bool counterCg_;
-      //Aggiunto Gio 
-      int step_;
+
+      double joy_step_;
 };
 
 #endif /* MANIPULATOR_MENU_H */

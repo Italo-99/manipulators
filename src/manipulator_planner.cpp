@@ -242,7 +242,7 @@ void ManipulatorPlanner::addCollObjCallback(const moveit_msgs::CollisionObject& 
 
 // --------------------- JACOBIAN-FKINE FUNCTIONS -------------------- //
 
-// THE FOLLOWING FUNCTION CANNOT BE USED SINCE DYNAMIC PLANNER METHODS CALLED DOENS'T WORK
+// THE FOLLOWING FUNCTION CANNOT BE USED SINCE DYNAMIC PLANNER METHODS CALLED DOENS'T WORK!! TODO
 // Get the tcp pose through FKINE of a given joint pose
 const geometry_msgs::PoseStamped ManipulatorPlanner::get_manip_FKine()
 {
@@ -300,13 +300,21 @@ void ManipulatorPlanner::tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& 
 
   // Make the inverse kinematics
   std::vector<double> joint_values = planner_->invKine(goal,ee_name_);
-  // std::vector<double> joint_values = planner_->invKine(goal,"link_6");
+
+  if (joint_values.size() < joint_names_.size())
+  {
+    ROS_WARN("InvKine failed: goal not sent to MoveIt!");
+    return;
+  }
+
   sensor_msgs::JointState js;
   for (unsigned int k = 0; k < 6; k++) {js.position.push_back(joint_values[k]);}
 
   // Send to joint goal dynamic planner V1
   planner_->plan(js.position);
 }
+
+// TODO: IK callback directly sent to move_fake_controller (which will publish to /joint_state)
 
 // Callback function to handle a joint goal
 void ManipulatorPlanner::jointsGoalCallback(const sensor_msgs::JointState::ConstPtr& js)
