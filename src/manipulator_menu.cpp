@@ -292,6 +292,7 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIK_noplanner_Goal(const geometry_
                               tcpPoseMsg.position.y,
                               tcpPoseMsg.position.z)*q;
   Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
+  
   // Correction if link_6 has x offset, while standard tool0 frame has z offset
   if (last_robot_link_ == "link_6")
   {

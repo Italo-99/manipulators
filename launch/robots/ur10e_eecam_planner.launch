@@ -10,6 +10,8 @@
   <arg name="def_config"    default="false" />
   <arg name="debug"         default="false" />
   <arg name="sim"           default="true" />
+  <!-- Whether publish joint state from moveit -->
+  <arg name="pub_js_state"  default="true"/>
   <!-- Starting camera position -->
   <arg name="cam_parent"    default="tool0"/>
   <arg name="cam_x_offset"  default="+0.00"/>
@@ -23,9 +25,11 @@
   <arg name="ee_z_offset"   default="+0.0"/>
   <arg name="ee_rz"         default="+0.0"/>
   <arg name="tcp_offset"    default="+0.160"/>
-  <arg name="pub_js_state"  default="true"/>
   <!-- If true, launch the trajectory converter node -->
   <arg name="control"       default ="false" />
+  <!-- Models -->
+  <arg name="xacro_file"    default=""/>
+  <arg name="srdf_file"     default=""/>
 
   <!-- Launch ur10 planner -->
   <include file="$(find manipulators)/launch/planner.launch">
@@ -50,6 +54,8 @@
     <arg name="ee_parent"     value="$(arg ee_parent)"/>
     <arg name="tcp_offset"    value="$(arg tcp_offset)"/>
     <arg name="control"       value="$(arg control)" />
+    <arg name="xacro_file"    value="$(arg xacro_file)"/>
+    <arg name="srdf_file"     value="$(arg srdf_file)"/>
   </include>
 
   <!-- Include gripper controller launcher -->
