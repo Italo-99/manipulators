@@ -79,19 +79,25 @@ ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name,
 
   // --------------------- Global class variables init ---------------------
 
-  joy_step_   = 0.01;       // Vel speed from joy
   counterJg_ = false;       // choice of test joint goal
   counterCg_ = false;       // choice of test tcp3D goal
+
+  // --------------------- Joystick variables ---------------------
+  joy_step_   = 0.01;       // Vel speed from joy
 
   // --------------------- CoppeliaSim client init ---------------------
   client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
 
   // --------------------- Gripper client init ---------------------
-  gripper_client_ = nh_.serviceClient<std_srvs::SetBool>(gripper_joint_name_+"/move_gripper");
-  grab_client_    = nh_.serviceClient<std_srvs::SetBool>(gripper_joint_name_+"/grabbing_gripper");
+  if (gripper_joint_name_ != "")
+  {
+    // grab_client_    = nh_.serviceClient<std_srvs::SetBool>(gripper_joint_name_+"/grabbing_gripper");
+    gripper_client_ = nh_.serviceClient<std_srvs::SetBool>(gripper_joint_name_+"/move_gripper");
 
-  // Real gripper client init
-  real_gripper_client_ = nh_.serviceClient<gripper::RobotiQGripperControl>("/ur_rtde/robotiq_gripper/command");
+    // Real gripper client init
+    real_gripper_client_ = nh_.serviceClient<gripper::RobotiQGripperControl>("/ur_rtde/robotiq_gripper/command");
+  }
+
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
@@ -1112,7 +1118,6 @@ geometry_msgs::Pose ManipulatorMenu::move_Joystick(const std::vector<double> dx)
   // goal_pose[4] = goal_pose[4] + dx[4];
   // goal_pose[5] = goal_pose[5] + dx[5];
 
-  // return publishTcpIKGoal(goal_pose);
   return publishTcpIK_noplanner_Goal(goal_pose);
 }
 

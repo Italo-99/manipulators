@@ -54,8 +54,6 @@ ManipulatorPlanner::ManipulatorPlanner()
   tcp_goalIK_sub_         = nh_.subscribe("/desired_tcpIK_pose", 1, &ManipulatorPlanner::tcpGoalIKCallback,             this);
   tcp_goalIK_noplan_sub_  = nh_.subscribe("/noplan_tcpIK_pose",  1, &ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback,  this);
 
-  jointGoalFake_pub_      = nh_.advertise<sensor_msgs::JointState>("/joint_states", 1);
-
   // tcp_goalSeq_sub_   = nh_.subscribe("/desired_tcpSeq_poses",   1, &ManipulatorPlanner::tcpGoalSeqCallback,    this);
   // tcpIK_goalSeq_sub_ = nh_.subscribe("/desired_tcpIKSeq_poses", 1, &ManipulatorPlanner::tcpIKGoalSeqCallback,  this);
   // joint_goalSeq_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
@@ -311,13 +309,13 @@ void ManipulatorPlanner::tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& 
   }
 
   sensor_msgs::JointState js;
+  js.name = joint_names_;
   for (unsigned int k = 0; k < 6; k++) {js.position.push_back(joint_values[k]);}
 
   // Send to joint goal dynamic planner V1
   planner_->plan(js.position);
 }
 
-// TODO: IK callback directly sent to move_fake_controller (which will publish to /joint_state)
 // Callback function to handle a tcp 3D goal with the inverse kinematics
 void ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback(const geometry_msgs::Pose::ConstPtr& p)
 {
@@ -340,7 +338,6 @@ void ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback(const geometry_msgs::Pose:
   for (unsigned int k = 0; k < 6; k++) {js.position.push_back(joint_values[k]);}
 
   // Send the joint goal to the fake move group controller
-  // jointGoalFake_pub_.publish(js);
   planner_->moveRobot(js);
 }
 

@@ -111,8 +111,6 @@ class ManipulatorPlanner
     // ros::Subscriber joint_goalSeq_sub_;  // Subscriber to the sequence of joint goal
     ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
 
-    ros::Publisher jointGoalFake_pub_;      // Fake joint state publisher
-
     // Planner args
     std::string manipulator_name_;          // Manipulator name
     double vel_factor_, acc_factor_;        // Scale factor for joint velocities and accelerations
