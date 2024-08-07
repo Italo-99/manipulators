@@ -36,6 +36,7 @@
  */
 
 // NODE IMPLEMENTATINO OF A MANIPULATOR MENU INSTANCE
+// Example of run command: rosrun manipulators manipulator_menu_node_Nouser _ros_freq:=10 _ee_joint_name:="robotiq85_gripper/finger_joint"
 
 // IMPORT LIBRARIES
 #include "manipulators/ManipulatorMenu.h"
@@ -43,19 +44,13 @@
 // MAIN FUNCTION IMPLEMENTATION
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "manipulator_menu_joy");
+  std::string node_name = "manipulator_menu_node_Nouser";
 
-  ManipulatorMenu Menu("robotiq85_gripper/finger_joint","tool0");
-  // ManipulatorMenu Menu("robotiq85_gripper/finger_joint","link_6");
+  ros::init(argc, argv, node_name);
 
-  // Setup a rate for ROS loop execution
-  ros::Rate r(10);
+  ManipulatorMenu Menu(node_name,"",10);
 
-  while(ros::ok())
-  {
-    Menu.spinner();
-    r.sleep();
-  }
+  Menu.spinner();
 
   return 0;
 }

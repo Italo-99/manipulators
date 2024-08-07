@@ -47,12 +47,12 @@ add_library(manipulator_menu src/manipulator_menu.cpp)
 target_link_libraries(manipulator_menu ${catkin_LIBRARIES})
 add_dependencies(manipulator_menu ${catkin_EXPORTED_TARGETS})
 
-# Add manipulator menu node
-add_executable(manipulator_menu_node src/manipulator_menu_node.cpp)
-target_link_libraries(manipulator_menu_node manipulator_menu ${catkin_LIBRARIES})
-add_dependencies(manipulator_menu_node ${catkin_EXPORTED_TARGETS})
+# Add manipulator menu node user
+add_executable(manipulator_menu_node_user src/manipulator_menu_node_user.cpp)
+target_link_libraries(manipulator_menu_node_user manipulator_menu ${catkin_LIBRARIES})
+add_dependencies(manipulator_menu_node_user ${catkin_EXPORTED_TARGETS})
 
-# Add manipulator menu node
-add_executable(manipulator_menu_joy src/manipulator_menu_joy.cpp)
-target_link_libraries(manipulator_menu_joy manipulator_menu ${catkin_LIBRARIES})
-add_dependencies(manipulator_menu_joy ${catkin_EXPORTED_TARGETS})
+# Add manipulator menu node no user
+add_executable(manipulator_menu_node_Nouser src/manipulator_menu_node_Nouser.cpp)
+target_link_libraries(manipulator_menu_node_Nouser manipulator_menu ${catkin_LIBRARIES})
+add_dependencies(manipulator_menu_node_Nouser ${catkin_EXPORTED_TARGETS})

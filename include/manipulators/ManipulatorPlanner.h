@@ -48,8 +48,8 @@ class ManipulatorPlanner
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-      ManipulatorPlanner();                   // Constructor
-      ~ManipulatorPlanner();                  // Destructor
+      ManipulatorPlanner(std::string node_name);  // Constructor
+      ~ManipulatorPlanner();                      // Destructor
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
@@ -57,7 +57,7 @@ class ManipulatorPlanner
 
  private:
 
-  // --------------------- PRIVATE FUNCTIONS ---------------------
+  // ---------------------  PRIVATE FUNCTIONS ---------------------
     // --------------------- UTILS FUNCTIONS ---------------------
 
       // Check parameters passed to the manipulator
@@ -86,10 +86,12 @@ class ManipulatorPlanner
       void tcpGoalCallback(const geometry_msgs::Pose::ConstPtr& p);
       // Callback function for goals in the 3D cartesian space for the robot TCP computed through Inverse Kinematics
       void tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& p);
-      // Callback function for moveit fake controller of the TCP computed through Inverse Kinematics
-      void tcpGoalIK_NoPlanner_Callback(const geometry_msgs::Pose::ConstPtr& p);
       // Callback function for goals in the joint space
       void jointsGoalCallback(const sensor_msgs::JointState::ConstPtr& js);
+      // Callback function for moveit fake controller as Joint controller
+      void jointsGoal_NoPlanner_Callback(const sensor_msgs::JointState::ConstPtr& js);     
+      // Callback function for moveit fake controller of the TCP computed through Inverse Kinematics
+      void tcpGoalIK_NoPlanner_Callback(const geometry_msgs::Pose::ConstPtr& p);
       // Callback function for goals as carthesian move
       void cartesianMoveCallback(const geometry_msgs::PoseArray::ConstPtr& p_seq);
 
@@ -101,21 +103,27 @@ class ManipulatorPlanner
 
   // ---------------------  PRIVATE VARIABLES ---------------------
 
+    std::string node_name_;                 // Node name
     ros::NodeHandle nh_;                    // Node object
     ros::Subscriber tcp_goal_sub_;          // Subscriber to TCP goal
     ros::Subscriber joint_goal_sub_;        // Subscriber to joint goal
     ros::Subscriber tcp_goalIK_sub_;        // Subscriber to TCP goal with InvKine
     ros::Subscriber tcp_goalIK_noplan_sub_; // Subscriber to TCP goal with InvKine fake controller
+    ros::Subscriber joint_goal_noplan_sub_; // Subscriber to joint goal fake controller
     ros::Subscriber carthesian_move_sub_;   // Subscriber to carthesian move
     // ros::Subscriber tcp_goalSeq_sub_;    // Subscriber to the sequence of TCP goal
     // ros::Subscriber joint_goalSeq_sub_;  // Subscriber to the sequence of joint goal
+
+    // Environment objects handler
     ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
 
     // Planner args
     std::string manipulator_name_;          // Manipulator name
     double vel_factor_, acc_factor_;        // Scale factor for joint velocities and accelerations
-    bool sim_;
+    bool sim_, dynamic_behaviour_;          // Simulation or debug, dynamic behaviour enabler
+    double ros_freq_;                       // ROS node loop frequency
 
+    // Manipulator attributes
     std::vector<std::string> joint_names_;  // Joints' names
     std::string ee_name_;                   // End-effector's name
     std::string base_name_;                 // Robot base's name

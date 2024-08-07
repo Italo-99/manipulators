@@ -43,26 +43,17 @@
 // MAIN FUNCTION: this is a node
 int main(int argc, char** argv)
 {
+  // Init the node name
+  std::string node_name = "manipulator_planner";
 
   // Initialize node
-  ros::init(argc, argv, "manipulator_planner");
+  ros::init(argc, argv, node_name);
 
   // Istantiate an object of the class ManipulatorPlanner
-  ManipulatorPlanner ce;
+  ManipulatorPlanner mp(node_name);
 
-  // Setup a rate for ROS loop execution
-  ros::Rate r(10);
+  mp.spinner();
 
-  // ROS loop
-  while (ros::ok())
-  {
-    // Call the spinner for object related fuctions
-    ce.spinner();
-
-    // Wait for next loop time
-    r.sleep();
-  }
-
-  // FILE END
+  // File end
   return 0;
 }

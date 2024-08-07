@@ -59,16 +59,13 @@
 #include "manipulators/CoppeliaMenu.h"
 #include "gripper/RobotiQGripperControl.h"
 #include "std_srvs/SetBool.h"
-#include <sensor_msgs/Joy.h>
 
 
 class ManipulatorMenu
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-    ManipulatorMenu(std::string gripper_joint_name,
-                    std::string last_robot_link); // Constructor
-    // ~ManipulatorMenu();                    // Destructor
+    ManipulatorMenu(std::string node_name,std::string ee_joint_name, double ros_freq); // Constructor
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
@@ -88,9 +85,11 @@ class ManipulatorMenu
       geometry_msgs::Pose publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
       geometry_msgs::Pose publishTcpGoal(const geometry_msgs::Pose tcpPoseMsg);
       geometry_msgs::Pose publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planner
-      geometry_msgs::Pose publishTcpIKGoal(const geometry_msgs::Pose tcpPoseMsg); 
+      geometry_msgs::Pose publishTcpIKGoal(const geometry_msgs::Pose tcpPoseMsg);
       geometry_msgs::Pose publishTcpIK_noplanner_Goal(const std::vector<double> position);// publish a tcpIK goal to the manipulator fake controller
-      geometry_msgs::Pose publishTcpIK_noplanner_Goal(const geometry_msgs::Pose tcpPoseMsg); 
+      geometry_msgs::Pose publishTcpIK_noplanner_Goal(const geometry_msgs::Pose tcpPoseMsg);
+      sensor_msgs::JointState publishJointGoal_NoPlanner(const std::vector<double> joints); // publish a joint goal to the manipulator fake controller
+      sensor_msgs::JointState publishJointGoal_NoPlanner(sensor_msgs::JointState jointStateMsg);
       geometry_msgs::Pose publishCartesianMove(const uint   axis1,  // publish a carthesian move command
                                               const uint   axis2,
                                               const double pos1,
@@ -164,7 +163,8 @@ class ManipulatorMenu
       void testTcpGoal(void);               // to test a tcp goal
       void userTcpGoal(void);               // to perform a tcp goal set by the user 
       void userTcpIKGoal(void);             // to perform a tcpIK goal set by the user 
-      void userTcpIK_no_planner_Goal(void); // to perform a tcpIK goal (with fake controller) set by the user 
+      void userTcpIK_no_planner_Goal(void); // to perform a tcpIK goal (with fake controller) set by the user
+      void userJoint_no_planner_Goal(void); // to perform a joint goal (with fake controller) set by the user
 
       void userCartesianMove(void);         // to perform a cartesian move set by the user
 
@@ -188,21 +188,13 @@ class ManipulatorMenu
       int   getUserChoice();
       void  processChoice(int choice);
 
-      // Joy handlers
-      void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
-      geometry_msgs::Pose move_Joystick(const std::vector<double>);
-
   // --------------------- PRIVATE VARIABLES ---------------------
-
-    // ---------------------  GRIPPER HANDLER -------------
-      std::string gripper_joint_name_;
-      std::string last_robot_link_;
-      double ee_offset_;
 
     // ---------------------  ROS HANDLING ---------------------
       ros::NodeHandle nh_;
 
       ros::Publisher  jointGoalPublisher_;
+      ros::Publisher  jointGoalPublisherNoPlanner_;      
       ros::Publisher  tcpPosePublisher_;
       ros::Publisher  tcpPoseIKPublisher_;
       ros::Publisher  tcpPoseIK_noplannerPub_;      
@@ -212,26 +204,27 @@ class ManipulatorMenu
       ros::Publisher  collisionObjectPublisher_;
       ros::Publisher  moveGripperPublisher_;
       ros::Subscriber jointStateSubscriber_;
-      ros::Subscriber joy_sub_;
 
       geometry_msgs::PoseStamped current_tcp_pose_;
       sensor_msgs::JointState current_joint_pose_;
 
-      // ---------------------  COPPELIA HANDLING ---------------------
-        ros::ServiceClient client_;
-        manipulators::CoppeliaMenu coppelia_srv_;
+      std::string node_name_;
+      double      ros_freq_;
 
-      // ---------------------  GRIPPER HANDLING ---------------------
-        ros::ServiceClient gripper_client_;
-        ros::ServiceClient grab_client_;
-        ros::ServiceClient real_gripper_client_;
+    // ---------------------  COPPELIA HANDLING ---------------------
+      ros::ServiceClient client_;
+      manipulators::CoppeliaMenu coppelia_srv_;
 
+    // ---------------------  GRIPPER HANDLING ---------------------
+      ros::ServiceClient gripper_client_;
+      ros::ServiceClient grab_client_;
+      ros::ServiceClient real_gripper_client_;
+      double      ee_offset_;
+      std::string ee_joint_name_;
+    
     // ---------------------  USEFUL TOOLS ---------------------
-
       bool counterJg_;
       bool counterCg_;
-
-      double joy_step_;
 };
 
 #endif /* MANIPULATOR_MENU_H */

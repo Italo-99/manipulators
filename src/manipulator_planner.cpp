@@ -35,7 +35,7 @@
  *  Created on: [2024-01-17]
  */
 
-// CLASS SOURCE IMLEMENTATION OF MANIPULATOR PLANNER -> CHILD OF DYNAMIC PLANNER 
+// CLASS SOURCE IMLEMENTATION OF MANIPULATOR PLANNER -> CALLS AN OBJECT OF DYNAMIC PLANNER 
 
 // The following code introduces the class of manipulator planner, an instance of the
 // dynamic planner, plus a table object in RViz to test planning
@@ -45,13 +45,17 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorPlanner::ManipulatorPlanner()
+ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
 {
   // ---------------------  TCP AND JOINT GOALS SUBSCRIBERS ---------------------
 
+  // Planning callbacks
   tcp_goal_sub_           = nh_.subscribe("/desired_tcp_pose",   1, &ManipulatorPlanner::tcpGoalCallback,               this);
   joint_goal_sub_         = nh_.subscribe("/desired_joint_pose", 1, &ManipulatorPlanner::jointsGoalCallback,            this);
   tcp_goalIK_sub_         = nh_.subscribe("/desired_tcpIK_pose", 1, &ManipulatorPlanner::tcpGoalIKCallback,             this);
+
+  // No planning callbacks
+  joint_goal_noplan_sub_  = nh_.subscribe("/noplan_joint_pose",  1, &ManipulatorPlanner::jointsGoal_NoPlanner_Callback, this);
   tcp_goalIK_noplan_sub_  = nh_.subscribe("/noplan_tcpIK_pose",  1, &ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback,  this);
 
   // tcp_goalSeq_sub_   = nh_.subscribe("/desired_tcpSeq_poses",   1, &ManipulatorPlanner::tcpGoalSeqCallback,    this);
@@ -66,27 +70,26 @@ ManipulatorPlanner::ManipulatorPlanner()
 
   // ---------------------  PRIVATE VARIABLES SETUP  ---------------------------
 
+  node_name_ = node_name;
   check_param();
+  dynamic_behaviour_ = false;   // No replanning
 
   // Call to the dynamic planner constructor
-  planner_ = new DynamicPlanner(manipulator_name_, joint_names_, vel_factor_, acc_factor_, false);  
+  planner_ = new DynamicPlanner(manipulator_name_, joint_names_, vel_factor_, acc_factor_, dynamic_behaviour_);  
 
   // Set the sim mode for the dynamic planner
   planner_->setSimMode(sim_);
 
   // --------------------- ENVIRONMENT SETUP ---------------------
 
-  // // Add a table to the scene
+  // // How to add a table to the scene
   // std::vector<double> dim_obj = {4.,4.,0.079};
   // double pos_obj[]            = {0.,0.,-0.04};
   // double rot_obj[]            = {0.,0.,0.,1.};
   // createObj("table", 1, dim_obj, pos_obj,rot_obj,0);
 
-  // std::vector<double> dim_obj = {0.05,0.7,0.25};
-  // double pos_obj[]            = {-0.15,0.,0.};
-  // double rot_obj[]            = {0.,0.,0.,1.};
-  // createObj("table", 1, dim_obj, pos_obj,rot_obj,0);
-  
+  // // How to delete from the scene
+  // createObj("table", 1, dim_obj, pos_obj,rot_obj,1);  
 }
 
 // Destructor of the object manipulator planner's class
@@ -94,8 +97,23 @@ ManipulatorPlanner::~ManipulatorPlanner() {delete planner_;}
 
 // ---------------------  PUBLIC FUNCTIONS --------------------- //
 
-// Manipulator planner spin function -> NOTE: the sleep rate is set in the node
-void ManipulatorPlanner::spinner()  {planner_->spinner();} 
+// Manipulator planner spin function
+void ManipulatorPlanner::spinner()
+{
+
+  // Setup a rate for ROS loop execution
+  ros::Rate r(ros_freq_);
+
+  // ROS loop
+  while (ros::ok())
+  {
+    // Call the spinner for object related fuctions
+    planner_->spinner();
+
+    // Wait for next loop time
+    r.sleep();
+  }
+}
 
 // ---------------------  PRIVATE FUNCTIONS --------------------- //
 
@@ -108,7 +126,7 @@ void ManipulatorPlanner::check_param()
   // The names of the params are passed with the prefix of the name of the node
 
   // Check for manipulator name parameter
-  if (!nh_.getParam("manipulator_planner/manipulator_name", manipulator_name_))
+  if (!nh_.getParam(node_name_+"/manipulator_name", manipulator_name_))
   {
     ROS_ERROR("Manipulator name not defined");
     ros::shutdown();
@@ -116,7 +134,7 @@ void ManipulatorPlanner::check_param()
   }
 
   // Check for joint names parameter
-  if (!nh_.getParam("manipulator_planner/joint_names", joint_names_))
+  if (!nh_.getParam(node_name_+"/joint_names", joint_names_))
   {
     ROS_ERROR("Joint names not defined");
     ros::shutdown();
@@ -124,7 +142,7 @@ void ManipulatorPlanner::check_param()
   }
 
   // Check for ee name parameter
-  if (!nh_.getParam("manipulator_planner/ee_name", ee_name_))
+  if (!nh_.getParam(node_name_+"/ee_name", ee_name_))
   {
     ROS_ERROR("End-effector name not defined");
     ros::shutdown();
@@ -132,7 +150,7 @@ void ManipulatorPlanner::check_param()
   }
 
   // Check for robot base name parameter
-  if (!nh_.getParam("manipulator_planner/base_name", base_name_))
+  if (!nh_.getParam(node_name_+"/base_name", base_name_))
   {
     ROS_ERROR("Base name not defined");
     ros::shutdown();
@@ -141,7 +159,7 @@ void ManipulatorPlanner::check_param()
 
   // The following parameters can also be unset, but it's better to show a warning to the console to make the user aware
   // Check for velocity factor parameter
-  if (!nh_.getParam("manipulator_planner/vel_factor", vel_factor_))
+  if (!nh_.getParam(node_name_+"/vel_factor", vel_factor_))
   {
     ROS_WARN("Velocity factor not defined, assuming 0.5");
     // If the parameter has not been set by the user, it is set here
@@ -149,7 +167,7 @@ void ManipulatorPlanner::check_param()
   }
 
   // Check for acceleration factor parameter
-  if (!nh_.getParam("manipulator_planner/acc_factor", acc_factor_))
+  if (!nh_.getParam(node_name_+"/acc_factor", acc_factor_))
   {
     ROS_WARN("Acceleration factor not defined, assuming 0.5");
 
@@ -157,8 +175,17 @@ void ManipulatorPlanner::check_param()
     acc_factor_ = 0.5;
   }
 
+  // Check for ROS node loop frequency parameter
+  if (!nh_.getParam(node_name_+"/ros_freq", ros_freq_))
+  {
+    ROS_WARN("ROS node loop frequency not defined, assuming 10 Hz.");
+
+    // If the parameter has not been set by the user, it is set here
+    ros_freq_ = 10;
+  }
+
   // Get simulation status from the user (simulation or debug)
-  nh_.getParam("manipulator_planner/sim", sim_);
+  nh_.getParam(node_name_+"/sim", sim_);
 }
 
 // Creation of a collision object
@@ -291,6 +318,20 @@ void ManipulatorPlanner::tcpGoalCallback(const geometry_msgs::Pose::ConstPtr& p)
   planner_->plan(goal, ee_name_);
 }
 
+// Callback function to handle a joint goal
+void ManipulatorPlanner::jointsGoalCallback(const sensor_msgs::JointState::ConstPtr& js)
+{
+  // Verify if the joint name vector size is the same as the joint goal passed from the publisher
+  if (js->position.size() != joint_names_.size())
+  {
+    ROS_ERROR("Joint goal size is not the same as joint names.");
+    return;
+  }
+
+  // Send the goal to the dynamic planner V1
+  planner_->plan(js->position);
+}
+
 // Callback function to handle a tcp 3D goal with the inverse kinematics
 void ManipulatorPlanner::tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& p)
 {
@@ -314,6 +355,25 @@ void ManipulatorPlanner::tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& 
 
   // Send to joint goal dynamic planner V1
   planner_->plan(js.position);
+}
+
+// Callback function to handle a joint goal without planner
+void ManipulatorPlanner::jointsGoal_NoPlanner_Callback(const sensor_msgs::JointState::ConstPtr& js)
+{
+  // Verify if the joint name vector size is the same as the joint goal passed from the publisher
+  if (js->position.size() != joint_names_.size())
+  {
+    ROS_ERROR("Joint goal size is not the same as joint names.");
+    return;
+  }
+
+  // Fill joint names
+  sensor_msgs::JointState js_new;
+  js_new.name     = joint_names_;
+  js_new.position = js->position;
+
+  // Send the goal to the dynamic planner V1
+  planner_->moveRobot(js_new);
 }
 
 // Callback function to handle a tcp 3D goal with the inverse kinematics
@@ -341,20 +401,6 @@ void ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback(const geometry_msgs::Pose:
   planner_->moveRobot(js);
 }
 
-
-// Callback function to handle a joint goal
-void ManipulatorPlanner::jointsGoalCallback(const sensor_msgs::JointState::ConstPtr& js)
-{
-  // Verify if the joint name vector size is the same as the joint goal passed from the publisher
-  if (js->position.size() != joint_names_.size())
-  {
-    ROS_ERROR("Joint goal size is not the same as joint names.");
-    return;
-  }
-
-  // Send the goal to the dynamic planner V1
-  planner_->plan(js->position);
-}
 
 // Callback function for goals in the 3D cartesian space for the robot TCP
 // Joint positions are computed through InvKine of inputs

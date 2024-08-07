@@ -40,59 +40,54 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name,
-                                 std::string last_robot_link)
+ManipulatorMenu::ManipulatorMenu(std::string node_name,std::string ee_joint_name, double ros_freq)
 {
-  // Gripper attribute setting
-  gripper_joint_name_ = gripper_joint_name;
-  last_robot_link_    = last_robot_link;
+  node_name_ = node_name;
+  // Check for parameters
+  if (!nh_.getParam(node_name_+"/ee_joint_name", ee_joint_name_))
+  {
+    ROS_WARN("EE joint name param not defined! Assuming EE passed as object arg.");
+    ee_joint_name_  = ee_joint_name;
+    // ee_joint_name_  = "robotiq85_gripper/finger_joint";
+  }
+  if (!nh_.getParam(node_name_+"/ros_freq", ros_freq_))
+  {
+    ROS_WARN("ROS loop frequency param not defined! Assuming value passed as object arg, or 10 Hz as default.");
+    ros_freq_ = ros_freq;
+    if (ros_freq_==0) {ros_freq_ = 10;}
+  }
 
   // Listen static tf from tool0 and tcp_gripper
-  geometry_msgs::PoseStamped ee_offset_pose = getTf(last_robot_link_,"tcp_gripper");
-  if      (last_robot_link_ == "tool0") 
-  {
-    ee_offset_ = ee_offset_pose.pose.position.z;
-  }
-  else if (last_robot_link_ == "link_6") 
-  {
-    ee_offset_ = ee_offset_pose.pose.position.x;
-    ROS_INFO("ProjectRED robot-gripper setup");
-  }
-  else
-  {
-    ee_offset_ = ee_offset_pose.pose.position.z;
-  }  
+  geometry_msgs::PoseStamped ee_offset_pose = getTf("tool0","tcp_gripper");
+  ee_offset_ = ee_offset_pose.pose.position.z;
 
   // --------------------- PUBS & SUBS DELCARATIONS ---------------------
 
-  jointGoalPublisher_       = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
-  tcpPosePublisher_         = nh_.advertise<geometry_msgs::Pose>("/desired_tcp_pose", 1);
-  tcpPoseIKPublisher_       = nh_.advertise<geometry_msgs::Pose>("/desired_tcpIK_pose", 1);
-  tcpPoseIK_noplannerPub_   = nh_.advertise<geometry_msgs::Pose>("/noplan_tcpIK_pose", 1);
-  carthesianMovePublisher_  = nh_.advertise<geometry_msgs::PoseArray>("/desired_cartesian_move", 1, true);
-  display_goal_pub_         = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
-  eepose_pub_               = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1, true);
-  collisionObjectPublisher_ = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
-  moveGripperPublisher_     = nh_.advertise<std_msgs::Float64>(gripper_joint_name_+"/gripper_control", 1);
-  jointStateSubscriber_     = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
-  joy_sub_                  = nh_.subscribe("/joy", 1, &ManipulatorMenu::joyCallback, this);
+  jointGoalPublisher_           = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
+  jointGoalPublisherNoPlanner_  = nh_.advertise<sensor_msgs::JointState>("/noplan_joint_pose", 1);
+  tcpPosePublisher_             = nh_.advertise<geometry_msgs::Pose>("/desired_tcp_pose", 1);
+  tcpPoseIKPublisher_           = nh_.advertise<geometry_msgs::Pose>("/desired_tcpIK_pose", 1);
+  tcpPoseIK_noplannerPub_       = nh_.advertise<geometry_msgs::Pose>("/noplan_tcpIK_pose", 1);
+  carthesianMovePublisher_      = nh_.advertise<geometry_msgs::PoseArray>("/desired_cartesian_move", 1, true);
+  display_goal_pub_             = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
+  eepose_pub_                   = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1, true);
+  collisionObjectPublisher_     = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
+  moveGripperPublisher_         = nh_.advertise<std_msgs::Float64>(ee_joint_name_+"/gripper_control", 1);
+  jointStateSubscriber_         = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
 
   // --------------------- Global class variables init ---------------------
 
   counterJg_ = false;       // choice of test joint goal
   counterCg_ = false;       // choice of test tcp3D goal
 
-  // --------------------- Joystick variables ---------------------
-  joy_step_   = 0.01;       // Vel speed from joy
-
   // --------------------- CoppeliaSim client init ---------------------
   client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
 
   // --------------------- Gripper client init ---------------------
-  if (gripper_joint_name_ != "")
+  if (ee_joint_name_ != "")
   {
-    // grab_client_    = nh_.serviceClient<std_srvs::SetBool>(gripper_joint_name_+"/grabbing_gripper");
-    gripper_client_ = nh_.serviceClient<std_srvs::SetBool>(gripper_joint_name_+"/move_gripper");
+    // grab_client_    = nh_.serviceClient<std_srvs::SetBool>(ee_joint_name_+"/grabbing_gripper");
+    gripper_client_ = nh_.serviceClient<std_srvs::SetBool>(ee_joint_name_+"/move_gripper");
 
     // Real gripper client init
     real_gripper_client_ = nh_.serviceClient<gripper::RobotiQGripperControl>("/ur_rtde/robotiq_gripper/command");
@@ -107,7 +102,23 @@ ManipulatorMenu::ManipulatorMenu(std::string gripper_joint_name,
 // Asynchronous spinner for ROS routines without user menu
 void ManipulatorMenu::spinner()
 {
-  ros::spinOnce();  // The loop rate is set in the child class node
+    // Setup a rate for ROS loop execution
+    ros::Rate r(ros_freq_);
+    
+    // ROS loop
+    while (ros::ok())
+    {
+        // ROS spinner        
+        ros::spinOnce();
+        getEEpose();
+
+        // Wait for next loop time
+        r.sleep();
+    }
+
+    // // Shutdown ROS if Ctrl+C or Ctrl+D are pressed
+    ros::shutdown();
+
 }
 
 // Asynchronous spinner for ROS routines with user menu
@@ -118,7 +129,7 @@ void ManipulatorMenu::spinnerMenu()
 
   while (ros::ok())
   {
-    spinner();                      // ROS Once spinner
+    ros::spinOnce();                // ROS Once spinner
     getEEpos_rpy();                 // Update current robot pose
     printMenu();                    // Print choice menu
     userChoice = getUserChoice();   // Get user choice from the terminal
@@ -184,6 +195,28 @@ sensor_msgs::JointState ManipulatorMenu::publishJointGoal(const sensor_msgs::Joi
   return jointStateMsg;
 }
 
+// Publish a joint goal (with no planner) by passing a vector of joints in deg
+sensor_msgs::JointState ManipulatorMenu::publishJointGoal_NoPlanner(const std::vector<double> joints) 
+{
+  // Fill the joint msg with degToRad conversion
+  sensor_msgs::JointState jointStateMsg;
+  jointStateMsg.header.stamp = ros::Time::now();
+  for (unsigned int k = 0; k < joints.size(); k++)
+  {
+    jointStateMsg.position.push_back(joints[k]*M_PI/180);
+  }
+  
+  return publishJointGoal_NoPlanner(jointStateMsg);
+}
+
+// Publish a joint goal by passing a JointState msg, without calling the planner
+sensor_msgs::JointState ManipulatorMenu::publishJointGoal_NoPlanner(const sensor_msgs::JointState jointStateMsg)
+{
+  // Publish the JointState message
+  jointGoalPublisherNoPlanner_.publish(jointStateMsg);
+  return jointStateMsg;
+}
+
 // Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
 geometry_msgs::Pose ManipulatorMenu::publishTcpGoal(const std::vector<double> position) 
 {
@@ -243,13 +276,6 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::Pose 
                               tcpPoseMsg.position.y,
                               tcpPoseMsg.position.z)*q;
   Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
-  // Correction if link_6 has x offset, while standard tool0 frame has z offset
-  if (last_robot_link_ == "link_6")
-  {
-    vec_offset[0] = -ee_offset_;
-    vec_offset[1] = 0.0;
-    vec_offset[2] = 0.0;
-  }
   Eigen::Vector3d tool0_pos = transform * vec_offset;
 
   tool0_PoseMsg.position.x = tool0_pos.x();
@@ -298,14 +324,6 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIK_noplanner_Goal(const geometry_
                               tcpPoseMsg.position.y,
                               tcpPoseMsg.position.z)*q;
   Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
-  
-  // Correction if link_6 has x offset, while standard tool0 frame has z offset
-  if (last_robot_link_ == "link_6")
-  {
-    vec_offset[0] = -ee_offset_;
-    vec_offset[1] = 0.0;
-    vec_offset[2] = 0.0;
-  }
   Eigen::Vector3d tool0_pos = transform * vec_offset;
 
   tool0_PoseMsg.position.x = tool0_pos.x();
@@ -337,7 +355,7 @@ geometry_msgs::Pose ManipulatorMenu::publishCartesianMove(const uint   axis1,
                                                           const uint   steps) 
 {
   // Initialize starting and waypoints variables
-  geometry_msgs::PoseStamped current_pose = getTf("base_link",last_robot_link_);
+  geometry_msgs::PoseStamped current_pose = getTf("base_link","tool0");
   geometry_msgs::PoseArray   waypoints;
   geometry_msgs::Pose        final_pose;
   waypoints.header.frame_id = "base_link"; 
@@ -847,6 +865,23 @@ void ManipulatorMenu::userTcpIK_no_planner_Goal()
   publishTcpIK_noplanner_Goal(position);
 }
 
+void ManipulatorMenu::userJoint_no_planner_Goal()
+{
+  // Declare the empty vector of joints goals
+  std::vector<double> joints = {0.,0.,0.,0.,0.,0.};
+  
+  // Take user degree angle for each joint
+  std::cout << "Enter the values of the joint goal in degrees: \n";
+
+  for (unsigned int k = 0; k < 6; k++)
+  {
+    std::cout << "Joint " << k+1 << " : ";
+    std::cin >> joints[k];
+  }
+
+  publishJointGoal_NoPlanner(joints);
+}
+
 // --------------------- USER CARTESIAN MOVES HANDLER ---------------------
 void ManipulatorMenu::userCartesianMove()
 {
@@ -1088,40 +1123,6 @@ std::vector<double> ManipulatorMenu::rad_from_deg(const std::vector<double> join
   return joint_rad;
 }
 
-// --------------------- JOYSTICK HANDLER -------------------
-
-// Joy callback
-void ManipulatorMenu::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
-{
-  std::vector<double> dx_des = {0.,0.,0.,0.,0.,0.};
-  dx_des[0]=  joy->axes[1]*joy_step_;       //  asse x
-  dx_des[1] = joy->axes[0]*joy_step_;       //  asse y
-  // dx_des(2) = -joy->axes[2]*joy_step_;       //  asse z
-  // dx_des(3) = -joy->axes[3]*joy_step_;       //  asse rx
-  // dx_des(4) = -joy->axes[4]*joy_step_;       //  asse ry
-  // dx_des(5) = -joy->axes[5]*joy_step_;       //  asse rz
-  move_Joystick(dx_des);
-}
-
-// Joystick move
-geometry_msgs::Pose ManipulatorMenu::move_Joystick(const std::vector<double> dx)
-{ 
-  // ROS_INFO("dx_des(0): %f, dx_des(1): %f, dx_des(2): %f, dx_des(3): %f, dx_des(4): %f, dx_des(5): %f",
-  //               dx[0],         dx[1],         dx[2],         dx[3],         dx[4],         dx[5]);
-  
-  // Get current EE pose
-  std::vector<double> goal_pose = getEEpos_rpy();
-  goal_pose[0] = goal_pose[0] + dx[0];
-  goal_pose[1] = goal_pose[1] + dx[1];
-  // goal_pose[2] = goal_pose[2] + dx[2];
-  // goal_pose[3] = goal_pose[3] + dx[3];
-  // goal_pose[4] = goal_pose[4] + dx[4];
-  // goal_pose[5] = goal_pose[5] + dx[5];
-
-  return publishTcpIK_noplanner_Goal(goal_pose);
-}
-
-
 // --------------------- MENU HANDLER ---------------------
 
 void ManipulatorMenu::printMenu()
@@ -1129,6 +1130,7 @@ void ManipulatorMenu::printMenu()
   std::cout << "\n======= MANIPULATOR MENU =======\n";
   std::cout << "\n======= Joint/tcp moving test options =======\n";
   std::cout << "0. Give a TCP goal through InvKine, with fake controller\n";
+  std::cout << "34.Give a joint goal, with fake controller\n";
   std::cout << "1. Test a joint goal\n";
   std::cout << "2. Test a TCP goal\n";
   std::cout << "3. Give a joint goal\n";
@@ -1172,7 +1174,7 @@ void ManipulatorMenu::printMenu()
   std::cout << "32.Close real gripper\n";
   std::cout << "33.Move  real gripper to a given position \n";
   std::cout << "\n======= Closing ROS menu =======\n";
-  std::cout << "34.Shutdown the menu\n";
+  std::cout << "35.Shutdown the menu\n";
 
   std::cout << "=====================\n";
 }
@@ -1195,6 +1197,10 @@ void ManipulatorMenu::processChoice(int choice)
   case 0:
     ROS_INFO("You selected Option 0");
     userTcpIK_no_planner_Goal();
+    break;
+  case 34:
+    ROS_INFO("You selected Option 0");
+    userJoint_no_planner_Goal();
     break;
   case 1:
     ROS_INFO("You selected Option 1");
@@ -1394,7 +1400,7 @@ void ManipulatorMenu::processChoice(int choice)
     std::cin >> gripper_pos;
     moveRealGripper(gripper_pos);
     break;
-  case 34:
+  case 35:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;
