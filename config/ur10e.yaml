@@ -15,3 +15,5 @@ vel_factor: 0.5   # Starting from a lower factor is suggested, in simulation 0.5
 acc_factor: 0.5   # Starting from a lower factor is suggested, in simulation 0.5 works fine
 
 ros_freq: 10      # ROS loop frequency
+
+inst_kine:  false # True if the motors instantaneously reach the goal after an invKine computation, false otherwise

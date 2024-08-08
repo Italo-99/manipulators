@@ -42,6 +42,7 @@
 
 // IMPORT LIBRARIES
 #include "dynamic_planner/dynamic_planner.h"
+#include "std_msgs/Float64.h"
 #include <tf2_ros/transform_listener.h>
 
 class ManipulatorPlanner
@@ -95,6 +96,12 @@ class ManipulatorPlanner
       // Callback function for goals as carthesian move
       void cartesianMoveCallback(const geometry_msgs::PoseArray::ConstPtr& p_seq);
 
+      // Motors controller when no planner
+      void motors_controller(const sensor_msgs::JointState js);
+
+      // Instantaneous kine param setter
+      void instantKineSetterCallback(const std_msgs::Bool::ConstPtr& msg);
+
       // // Callback function for goals in the 3D cartesian space for the robot TCP
       // void tcpGoalSeqCallback(const std::vector<geometry_msgs::Pose>& p_seq);
 
@@ -114,21 +121,30 @@ class ManipulatorPlanner
     // ros::Subscriber tcp_goalSeq_sub_;    // Subscriber to the sequence of TCP goal
     // ros::Subscriber joint_goalSeq_sub_;  // Subscriber to the sequence of joint goal
 
+    ros::Publisher j0_pub_;                 // Publisher to j0 motor controller
+    ros::Publisher j1_pub_;                 // Publisher to j1 motor controller
+    ros::Publisher j2_pub_;                 // Publisher to j2 motor controller
+    ros::Publisher j3_pub_;                 // Publisher to j3 motor controller
+    ros::Publisher j4_pub_;                 // Publisher to j4 motor controller
+    ros::Publisher j5_pub_;                 // Publisher to j5 motor controller
+
+    ros::Subscriber instKine_setter_sub_;   // Subscriber to the instantaneous Kinematics setter
+
     // Environment objects handler
     ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
 
     // Planner args
     std::string manipulator_name_;          // Manipulator name
-    double vel_factor_, acc_factor_;        // Scale factor for joint velocities and accelerations
-    bool sim_, dynamic_behaviour_;          // Simulation or debug, dynamic behaviour enabler
-    double ros_freq_;                       // ROS node loop frequency
+    double      vel_factor_, acc_factor_;   // Scale factor for joint velocities and accelerations
+    bool        sim_, dynamic_behaviour_;   // Simulation or debug, dynamic behaviour enabler
+    double      ros_freq_;                  // ROS node loop frequency
+    bool        inst_kine_;                 // True if invKine leads to instantaneous move up to the goal
 
     // Manipulator attributes
     std::vector<std::string> joint_names_;  // Joints' names
     std::string ee_name_;                   // End-effector's name
     std::string base_name_;                 // Robot base's name
     DynamicPlanner* planner_;               // Dynamic planner object 
-    bool tcp_pub_;                          // True if this instance has to publish ee_pos, else false 
 };
 
 #endif /* MANIPULATOR_PLANNER_H */

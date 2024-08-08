@@ -74,13 +74,27 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   check_param();
   dynamic_behaviour_ = false;   // No replanning
 
+  // ---------------------  MOTOR CONTROLLERS FOR INVKINE  ---------------------------
+  instKine_setter_sub_ = nh_.subscribe(manipulator_name_+"/instKine_setter", 1, &ManipulatorPlanner::instantKineSetterCallback, this);
+
+  j0_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[0]+"/motor_control", 1);
+  j1_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[1]+"/motor_control", 1);
+  j2_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[2]+"/motor_control", 1);
+  j3_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[3]+"/motor_control", 1);
+  j4_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[4]+"/motor_control", 1);
+  j5_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[5]+"/motor_control", 1);
+
   // Call to the dynamic planner constructor
   planner_ = new DynamicPlanner(manipulator_name_, joint_names_, vel_factor_, acc_factor_, dynamic_behaviour_);  
 
   // Set the sim mode for the dynamic planner
   planner_->setSimMode(sim_);
 
-  // --------------------- ENVIRONMENT SETUP ---------------------
+  // ---------------------  MOTORS KINEMATICS SETUP  ---------------------------
+
+
+
+  // --------------------- EXAMPLE ENVIRONMENT SETUP --------------------- //
 
   // // How to add a table to the scene
   // std::vector<double> dim_obj = {4.,4.,0.079};
@@ -182,6 +196,15 @@ void ManipulatorPlanner::check_param()
 
     // If the parameter has not been set by the user, it is set here
     ros_freq_ = 10;
+  }
+
+  // Check for instantaneous move parameter
+  if (!nh_.getParam(node_name_+"/inst_kine", inst_kine_))
+  {
+    ROS_WARN("Instantaneous kinematics param not defined, assuming true.");
+
+    // If the parameter has not been set by the user, it is set here
+    inst_kine_ = true;
   }
 
   // Get simulation status from the user (simulation or debug)
@@ -373,7 +396,8 @@ void ManipulatorPlanner::jointsGoal_NoPlanner_Callback(const sensor_msgs::JointS
   js_new.position = js->position;
 
   // Send the goal to the dynamic planner V1
-  planner_->moveRobot(js_new);
+  if (inst_kine_) {planner_->moveRobot(js_new);}
+  else            {motors_controller(js_new);}
 }
 
 // Callback function to handle a tcp 3D goal with the inverse kinematics
@@ -397,8 +421,9 @@ void ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback(const geometry_msgs::Pose:
   js.name = joint_names_;
   for (unsigned int k = 0; k < 6; k++) {js.position.push_back(joint_values[k]);}
 
-  // Send the joint goal to the fake move group controller
-  planner_->moveRobot(js);
+  // Send the joint goal to the fake move group controller  
+  if (inst_kine_) {planner_->moveRobot(js);}
+  else            {motors_controller(js);}
 }
 
 
@@ -420,6 +445,29 @@ void ManipulatorPlanner::cartesianMoveCallback(const geometry_msgs::PoseArray::C
   if (fraction < 0.01) {fraction = planner_->cartesianPlan(waypoints,0.10);}
   if (fraction < 0.01) {ROS_WARN("Cartesian trajectory unfeasible");}
 }
+
+void ManipulatorPlanner::motors_controller(const sensor_msgs::JointState js)
+{
+  std_msgs::Float64 msg;
+  msg.data = js.position[0];
+  j0_pub_.publish(msg);
+  msg.data = js.position[1];
+  j1_pub_.publish(msg);
+  msg.data = js.position[2];
+  j2_pub_.publish(msg);
+  msg.data = js.position[3];
+  j3_pub_.publish(msg);
+  msg.data = js.position[4];
+  j4_pub_.publish(msg);
+  msg.data = js.position[5];
+  j5_pub_.publish(msg);
+}
+
+void ManipulatorPlanner::instantKineSetterCallback(const std_msgs::Bool::ConstPtr& msg)
+{
+  inst_kine_ = msg->data;
+}
+
 
 // TODO: the following two functions give an allocator error on the compiler
 // because ROS doesn't accept vector as msgs

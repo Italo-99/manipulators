@@ -47,8 +47,8 @@ ManipulatorMenu::ManipulatorMenu(std::string node_name,std::string ee_joint_name
   if (!nh_.getParam(node_name_+"/ee_joint_name", ee_joint_name_))
   {
     ROS_WARN("EE joint name param not defined! Assuming EE passed as object arg.");
+    // ee_joint_name  = "robotiq85_gripper/finger_joint"; EXAMPLE
     ee_joint_name_  = ee_joint_name;
-    // ee_joint_name_  = "robotiq85_gripper/finger_joint";
   }
   if (!nh_.getParam(node_name_+"/ros_freq", ros_freq_))
   {
@@ -72,7 +72,7 @@ ManipulatorMenu::ManipulatorMenu(std::string node_name,std::string ee_joint_name
   display_goal_pub_             = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
   eepose_pub_                   = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1, true);
   collisionObjectPublisher_     = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
-  moveGripperPublisher_         = nh_.advertise<std_msgs::Float64>(ee_joint_name_+"/gripper_control", 1);
+  moveGripperPublisher_         = nh_.advertise<std_msgs::Float64>(ee_joint_name_+"/motor_control", 1);
   jointStateSubscriber_         = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
 
   // --------------------- Global class variables init ---------------------
@@ -411,7 +411,8 @@ geometry_msgs::Pose ManipulatorMenu::publishCartesianMove(const uint   axis1,
 sensor_msgs::JointState ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 {
   // Read from subscribers the current joints state
-  spinner();
+  ros::spinOnce();
+  getEEpose();
   // Fill current joints pose as target
   std::vector<double> joint_target = {0.,0.,0.,0.,0.,0.};
   for (unsigned int k = 0; k < 6; k++) 
@@ -903,7 +904,8 @@ void ManipulatorMenu::userCartesianMove()
 
 void ManipulatorMenu::jointStateVisualizer() 
 {
-  spinner();
+  ros::spinOnce();
+  getEEpose();
   for (unsigned int k = 0; k < 6; k++)
   {
     std::cout << "Joint " << k << " : " << current_joint_pose_.position[k]*180/M_PI << std::endl;
