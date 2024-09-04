@@ -76,6 +76,7 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
 
   // ---------------------  MOTOR CONTROLLERS FOR INVKINE  ---------------------------
   instKine_setter_sub_ = nh_.subscribe(manipulator_name_+"/instKine_setter", 1, &ManipulatorPlanner::instantKineSetterCallback, this);
+  instKine_setter_pub_ = nh_.advertise<std_msgs::Bool>(manipulator_name_+"/instKine_setter", 1);
 
   j0_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[0]+"/motor_control", 1);
   j1_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[1]+"/motor_control", 1);
@@ -132,6 +133,14 @@ void ManipulatorPlanner::spinner()
 // ---------------------  PRIVATE FUNCTIONS --------------------- //
 
 // --------------------- UTILS FUNCTIONS -------------------- //
+
+// External command to enable instantaneous kinematics
+void ManipulatorPlanner::set_instKine(bool set)
+{
+  std_msgs::Bool msg;
+  msg.data = set;
+  instKine_setter_pub_.publish(msg);
+}
 
 // Check manipulators parameters passed to the node
 void ManipulatorPlanner::check_param()

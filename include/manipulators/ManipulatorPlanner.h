@@ -101,6 +101,7 @@ class ManipulatorPlanner
 
       // Instantaneous kine param setter
       void instantKineSetterCallback(const std_msgs::Bool::ConstPtr& msg);
+      void set_instKine(bool set);
 
       // // Callback function for goals in the 3D cartesian space for the robot TCP
       // void tcpGoalSeqCallback(const std::vector<geometry_msgs::Pose>& p_seq);
@@ -129,6 +130,7 @@ class ManipulatorPlanner
     ros::Publisher j5_pub_;                 // Publisher to j5 motor controller
 
     ros::Subscriber instKine_setter_sub_;   // Subscriber to the instantaneous Kinematics setter
+    ros::Publisher  instKine_setter_pub_;   // Publisher  to the instantaneous Kinematics setter
 
     // Environment objects handler
     ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object

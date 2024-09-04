@@ -60,7 +60,6 @@
 #include "gripper/RobotiQGripperControl.h"
 #include "std_srvs/SetBool.h"
 
-
 class ManipulatorMenu
 {
  public:
