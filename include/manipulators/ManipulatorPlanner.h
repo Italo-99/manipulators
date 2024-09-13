@@ -43,6 +43,7 @@
 // IMPORT LIBRARIES
 #include "dynamic_planner/dynamic_planner.h"
 #include "std_msgs/Float64.h"
+#include "std_msgs/UInt8.h"
 #include <tf2_ros/transform_listener.h>
 
 class ManipulatorPlanner

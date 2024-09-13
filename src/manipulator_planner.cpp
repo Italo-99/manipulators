@@ -405,8 +405,8 @@ void ManipulatorPlanner::jointsGoal_NoPlanner_Callback(const sensor_msgs::JointS
   js_new.position = js->position;
 
   // Send the goal to the dynamic planner V1
-  if (inst_kine_) {planner_->moveRobot(js_new);}
-  else            {motors_controller(js_new);}
+       if ( inst_kine_){planner_->moveRobot(js_new);}
+  else if (!inst_kine_){motors_controller(js_new);}
 }
 
 // Callback function to handle a tcp 3D goal with the inverse kinematics
@@ -430,11 +430,10 @@ void ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback(const geometry_msgs::Pose:
   js.name = joint_names_;
   for (unsigned int k = 0; k < 6; k++) {js.position.push_back(joint_values[k]);}
 
-  // Send the joint goal to the fake move group controller  
-  if (inst_kine_) {planner_->moveRobot(js);}
-  else            {motors_controller(js);}
+  // Send the joint goal to the fake move group controller
+       if ( inst_kine_) {planner_->moveRobot(js);}
+  else if (!inst_kine_) {motors_controller(js);}
 }
-
 
 // Callback function for goals in the 3D cartesian space for the robot TCP
 // Joint positions are computed through InvKine of inputs
