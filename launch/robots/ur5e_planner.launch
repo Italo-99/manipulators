@@ -9,7 +9,7 @@
   <arg name="ur5e_pkg"      default="true" />
   <!-- Simulation -->
   <arg name="rviz"          default="true" />
-  <arg name="def_config"    default="true" />
+  <arg name="def_config"    default="false" />
   <arg name="debug"         default="false" />
   <arg name="sim"           default="true" />
   <!-- Whether publish joint state from moveit -->
