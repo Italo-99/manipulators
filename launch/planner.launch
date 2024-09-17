@@ -144,12 +144,13 @@
   
   <!-- Planner setup -->
   <arg name="planning_plugin" value="ompl_interface/OMPLPlanner" />
+  <arg name="sample_duration" default="0.1" />
   <!-- Adapters: uniform sample filter and optimal parametrization -->
   <arg name="planning_adapters" value="industrial_trajectory_filters/UniformSampleFilter default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints" />
   <node name="manipulator_planner" pkg="manipulators" type="manipulator_planner" output="screen">
     <param name="planning_plugin" value="$(arg planning_plugin)" />
     <param name="request_adapters" value="$(arg planning_adapters)" />
-    <param name="sample_duration" value="0.01"/>
+    <param name="sample_duration" value="$(arg sample_duration)"/>
     <param name="sim" value="$(arg sim)"/>
     <!-- This file contains the parameters configuration for each available 6-dof planner for the robot-->
     <rosparam command="load" file="$(arg moveit_pkg)/config/ompl_planning.yaml"/>
