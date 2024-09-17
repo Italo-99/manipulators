@@ -1,61 +1,67 @@
 <launch>
-  <!-- Decide if you want to see or not on rviz -->
-  <arg name="rviz" default="true" />
+   
+  <!-- Planner -->
+  <arg name="robot_name"    default="ur5e" />
+  <arg name="robotpkg_name" default="ur5e" />
+  <arg name="custom_pkg"    default="false"/>
+  <arg name="default_desc"  default="true" />
+  <arg name="ur10e_pkg"     default="false"/>
+  <arg name="ur5e_pkg"      default="true" />
+  <!-- Simulation -->
+  <arg name="rviz"          default="true" />
+  <arg name="def_config"    default="true" />
+  <arg name="debug"         default="false" />
+  <arg name="sim"           default="true" />
+  <!-- Whether publish joint state from moveit -->
+  <arg name="pub_js_state"  default="true"/>
+  <arg name="rate"          default="10"/>
+  <!-- Starting camera position -->
+  <arg name="cam_parent"    default="tool0"/>
+  <arg name="cam_x_offset"  default="+0.00"/>
+  <arg name="cam_y_offset"  default="+0.05"/>
+  <arg name="cam_z_offset"  default="+0.05"/>
+  <arg name="cam_rx"        default="+0.0"/>
+  <arg name="cam_ry"        default="-1.570796327"/>
+  <arg name="cam_rz"        default="-1.57079632"/>
+  <!-- Starting end effector position -->
+  <arg name="ee_parent"     default="tool0"/>
+  <arg name="ee_z_offset"   default="+0.0"/>
+  <arg name="ee_rz"         default="+0.0"/>
+  <arg name="tcp_offset"    default="+0.05"/>
+  <!-- If true, launch the trajectory converter node -->
+  <arg name="control"       default ="false" />
+  <!-- Models -->
+  <arg name="xacro_file"    default=""/>
+  <arg name="srdf_file"     default=""/>
 
-  <!-- By default, we are not in debug mode -->
-  <arg name="debug" default="false" />
-
-  <arg name="sim" default="true" />
-
-  <!-- If true you launch the trajectory converter node.
-  This node sends a true value on the topic /trajectory_executed when the trajectory is completed, also in simulation.-->
-  <arg name="control" default ="false" />
-  
-  <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
-  <include file="$(find ur5e_moveit_config)/launch/planning_context.launch">
-    <arg name="load_robot_description" value="true"/>
+  <!-- Launch ur10 planner -->
+  <include file="$(find manipulators)/launch/planner.launch">
+    <arg name="robot_name"    value="$(arg robot_name)" />
+    <arg name="robotpkg_name" value="$(arg robotpkg_name)" />
+    <arg name="default_desc"  value="$(arg default_desc)" />
+    <arg name="ur10e_pkg"     value="$(arg ur10e_pkg)" />
+    <arg name="ur5e_pkg"      value="$(arg ur5e_pkg)" />
+    <arg name="custom_pkg"    value="$(arg custom_pkg)" />
+    <arg name="rviz"          value="$(arg rviz)" />
+    <arg name="def_config"    value="$(arg def_config)" />
+    <arg name="debug"         value="$(arg debug)" />
+    <arg name="pub_js_state"  value="$(arg pub_js_state)" />
+    <arg name="sim"           value="$(arg sim)" />
+    <arg name="rate"          value="$(arg rate)" />
+    <arg name="control"       value="$(arg control)" />
+    <arg name="cam_x_offset"  value="$(arg cam_x_offset)"/>
+    <arg name="cam_y_offset"  value="$(arg cam_y_offset)"/>
+    <arg name="cam_z_offset"  value="$(arg cam_z_offset)"/>
+    <arg name="cam_rx"        value="$(arg cam_rx)"/>
+    <arg name="cam_ry"        value="$(arg cam_ry)"/>
+    <arg name="cam_rz"        value="$(arg cam_rz)"/>
+    <arg name="cam_parent"    value="$(arg cam_parent)"/>
+    <arg name="ee_z_offset"   value="$(arg ee_z_offset)"/>
+    <arg name="ee_rz"         value="$(arg ee_rz)"/>
+    <arg name="ee_parent"     value="$(arg ee_parent)"/>
+    <arg name="tcp_offset"    value="$(arg tcp_offset)"/>
+    <arg name="xacro_file"    value="$(arg xacro_file)"/>
+    <arg name="srdf_file"     value="$(arg srdf_file)"/>
   </include>
 
-  <!-- If needed, broadcast static tf for robot root -->
-  
-
-  <!-- We do not have a robot connected, so publish fake joint states -->
-  <node if="$(arg sim)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
-    <param name="/use_gui" value="false"/> 
-    <rosparam param="/source_list">[/move_group/fake_controller_joint_states]</rosparam>
-  </node>
-  
-  <!-- Given the published joint states, publish tf for the robot links -->
-  <node if="$(arg sim)" name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen" />
-
-  <!-- Run the main MoveIt executable without trajectory execution (we do not have controllers configured by default) -->
-  <include file="$(find ur5e_moveit_config)/launch/move_group.launch">
-    <arg name="allow_trajectory_execution" value="true"/>  
-    <arg name="fake_execution" value="true"/>
-    <arg name="info" value="true"/>
-    <arg name="debug" value="$(arg debug)"/>
-  </include>
-
-  <!-- Run Rviz and load the default config to see the state of the move_group node -->
-  <group if="$(arg rviz)">
-  <include file="$(find ur5e_moveit_config)/launch/moveit_rviz.launch">
-    <arg name="rviz_config" value="$(find ur5e_moveit_config)/launch/moveit.rviz"/>
-    <arg name="debug" value="$(arg debug)"/>
-  </include>
-  </group>
-  
-  <arg name="planning_plugin" value="ompl_interface/OMPLPlanner" />
-  <arg name="planning_adapters" value="industrial_trajectory_filters/UniformSampleFilter default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints" />
-
-  <node name="manipulator_planner" pkg="manipulator_planner" type="manipulator_planner" output="screen">
-    <param name="planning_plugin" value="$(arg planning_plugin)" />
-    <param name="request_adapters" value="$(arg planning_adapters)" />
-    <param name="sample_duration" value="0.01"/>
-    <param name="sim" value="$(arg sim)"/>
-    <rosparam command="load" file="$(find ur5e_moveit_config)/config/ompl_planning.yaml"/>
-    <rosparam command="load" file="$(find manipulator_planner)/config/ur5e.yaml" />
-  </node>  
-  <!-- For real UR5 -->
-  <!-- <node if="$(arg control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" />  -->
-  
 </launch>

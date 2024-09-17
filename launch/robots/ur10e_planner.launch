@@ -13,6 +13,7 @@
   <arg name="sim"           default="true" />
   <!-- Whether publish joint state from moveit -->
   <arg name="pub_js_state"  default="true"/>
+  <arg name="rate"          default="10"/>
   <!-- Starting camera position -->
   <arg name="cam_parent"    default="tool0"/>
   <arg name="cam_x_offset"  default="+0.00"/>
@@ -44,6 +45,7 @@
     <arg name="debug"         value="$(arg debug)" />
     <arg name="pub_js_state"  value="$(arg pub_js_state)" />
     <arg name="sim"           value="$(arg sim)" />
+    <arg name="rate"          value="$(arg rate)" />
     <arg name="control"       value="$(arg control)" />
     <arg name="cam_x_offset"  value="$(arg cam_x_offset)"/>
     <arg name="cam_y_offset"  value="$(arg cam_y_offset)"/>
