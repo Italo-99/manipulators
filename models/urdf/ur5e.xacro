@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur5e_robot">
+  <!--
+    This is a convenience top-level xacro which loads the macro for the UR10e
+    which defines the default values for the various "parameters files"
+    parameters for a UR5e.
+
+    This file is only useful when loading a stand-alone, completely isolated
+    robot with only default values for all parameters such as the kinematics,
+    visual and physical parameters and joint limits.
+
+    This file is not intended to be integrated into a larger scene or other
+    composite xacro.
+
+    Instead, xacro:include 'inc/ur5e_macro.xacro' and override the defaults
+    for the arguments to that macro.
+
+    Refer to 'inc/ur_macro.xacro' for more information.
+  -->
+
+  <!-- Args for starting ee tool position -->
+    <!-- Args for starting camera position -->
+  <xacro:arg name="cam_parent"    default="tool0"/>
+  <xacro:arg name="cam_x_offset"  default="+0.0"/>
+  <xacro:arg name="cam_y_offset"  default="+0.05"/>
+  <xacro:arg name="cam_z_offset"  default="+0.05"/>
+  <xacro:arg name="cam_rx"        default="+0.0"/>
+  <xacro:arg name="cam_ry"        default="-1.570796327"/>
+  <xacro:arg name="cam_rz"        default="-1.570796327"/>
+
+  <!-- Args for starting gripper position -->
+  <xacro:arg name="ee_parent"     default="tool0"/>
+  <xacro:arg name="ee_z_offset"   default="+0.0"/>
+  <xacro:arg name="ee_rz"         default="+0.0"/>
+  <xacro:arg name="tcp_offset"    default="+0.05"/>
+  
+  <!-- Include ur5e model -->
+  <xacro:include filename="$(find ur_description)/urdf/inc/ur5e_macro.xacro"/>
+  <xacro:ur5e_robot prefix="" />
+
+  <!-- Fixed tcp gripper -->
+  <link name="tcp_gripper"/>
+  <joint name="tcp_gripper_joint" type="fixed">
+    <origin xyz="0 0 $(arg tcp_offset)" rpy="0 0 0"/>
+    <parent link="$(arg ee_parent)"/>
+    <child  link="tcp_gripper"/>
+  </joint>
+
+</robot>

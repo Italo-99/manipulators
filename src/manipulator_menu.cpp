@@ -116,7 +116,7 @@ void ManipulatorMenu::spinner()
         r.sleep();
     }
 
-    // // Shutdown ROS if Ctrl+C or Ctrl+D are pressed
+    // Shutdown ROS if Ctrl+C or Ctrl+D are pressed
     ros::shutdown();
 
 }
@@ -623,7 +623,7 @@ void ManipulatorMenu::addObj(const std::string&   name,
                                 obj.primitives[0].dimensions[0] = obj_dims[0];}
       break;
 
-    default:   // CYLINDER OR CONE
+    default:  // CYLINDER OR CONE
       if (size_obj_dims != 2)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
       else                     {// Set height and radius of the cylinder/cone
                                 obj.primitives[0].dimensions[0] = obj_dims[0];
