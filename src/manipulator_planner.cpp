@@ -86,7 +86,8 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   j5_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[5]+"/motor_control", 1);
 
   // Call to the dynamic planner constructor
-  planner_ = new DynamicPlanner(manipulator_name_, joint_names_, vel_factor_, acc_factor_, dynamic_behaviour_);  
+  planner_ = new DynamicPlanner(manipulator_name_, joint_names_, vel_factor_, acc_factor_,
+                                dynamic_behaviour_, sample_time_, max_velocity_);  
 
   // Set the sim mode for the dynamic planner
   planner_->setSimMode(sim_);
@@ -214,6 +215,18 @@ void ManipulatorPlanner::check_param()
 
     // If the parameter has not been set by the user, it is set here
     inst_kine_ = true;
+  }
+
+  // Check sampling time parameters for cartesian planner
+  if (!nh_.getParam(node_name_+"/sample_time", sample_time_))
+  {
+    ROS_WARN("Sample time param not defined! Assuming default value as 0.002.");
+    sample_time_ = 0.002;
+  }
+  if (!nh_.getParam(node_name_+"/max_velocity", max_velocity_))
+  {
+    ROS_WARN("Sample time param not defined! Assuming default value as 0.5.");
+    max_velocity_ = 0.5;
   }
 
   // Get simulation status from the user (simulation or debug)
@@ -448,12 +461,11 @@ void ManipulatorPlanner::cartesianMoveCallback(const geometry_msgs::PoseArray::C
   }
 
   // Send to joint goal dynamic planner V4
-  double fraction = planner_->cartesianPlan(waypoints,0.02);
-  if (fraction < 0.01) {fraction = planner_->cartesianPlan(waypoints,0.05);}
-  if (fraction < 0.01) {fraction = planner_->cartesianPlan(waypoints,0.10);}
+  double fraction = planner_->cartesianPlan(waypoints);
   if (fraction < 0.01) {ROS_WARN("Cartesian trajectory unfeasible");}
 }
 
+// Set the the motors' position and speed through the controllers
 void ManipulatorPlanner::motors_controller(const sensor_msgs::JointState js)
 {
   std_msgs::Float64 msg;
@@ -471,6 +483,7 @@ void ManipulatorPlanner::motors_controller(const sensor_msgs::JointState js)
   j5_pub_.publish(msg);
 }
 
+// Set the instantaneous inverse Kinematics
 void ManipulatorPlanner::instantKineSetterCallback(const std_msgs::Bool::ConstPtr& msg)
 {
   inst_kine_ = msg->data;

@@ -142,6 +142,8 @@ class ManipulatorPlanner
     bool        sim_, dynamic_behaviour_;   // Simulation or debug, dynamic behaviour enabler
     double      ros_freq_;                  // ROS node loop frequency
     bool        inst_kine_;                 // True if invKine leads to instantaneous move up to the goal
+    double      sample_time_;               // Sampling time of the cartesian planner
+    double      max_velocity_;              // Maximum ee velocity
 
     // Manipulator attributes
     std::vector<std::string> joint_names_;  // Joints' names

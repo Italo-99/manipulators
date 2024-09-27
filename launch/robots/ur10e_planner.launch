@@ -13,9 +13,9 @@
   <arg name="sim"           default="true" />
   <!-- Whether publish joint state from moveit -->
   <arg name="pub_js_state"  default="true"/>
-  <arg name="rate"          default="10"/>
+  <arg name="rate"          default="500"/>
   <!-- Choose the sampling duration of the planner -->
-  <arg name="sample_duration" default="0.1"/>
+  <arg name="sample_duration" default="0.002"/>
   <!-- Starting camera position -->
   <arg name="cam_parent"    default="tool0"/>
   <arg name="cam_x_offset"  default="+0.00"/>

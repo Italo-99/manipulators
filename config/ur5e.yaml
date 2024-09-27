@@ -10,6 +10,10 @@ ee_name: tool0
 
 base_name: base_link
 
-vel_factor: 0.3
+vel_factor: 0.5
 
-acc_factor: 1
+acc_factor: 0.5
+
+sample_time: 0.002 # Time distance between two consecutive points of the trajectory computed
+
+max_velocity: 1    # Maximum velocity of the end-effector in [m/s] (up to 1.0) 

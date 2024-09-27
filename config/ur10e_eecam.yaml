@@ -16,4 +16,8 @@ acc_factor: 0.5   # Starting from a lower factor is suggested, in simulation 0.5
 
 ros_freq: 10.0    # ROS loop frequency
 
-inst_kine:  true # True if the motors instantaneously reach the goal after an invKine computation, false otherwise
+inst_kine: false  # True if the motors instantaneously reach the goal after an invKine computation, false otherwise
+
+sample_time: 0.002  # Time distance between two consecutive points of the trajectory computed
+
+max_velocity: 1   # Maximum velocity of the end-effector in [m/s] (up to 1.0) 
