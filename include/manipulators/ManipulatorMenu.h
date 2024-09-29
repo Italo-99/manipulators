@@ -60,6 +60,12 @@
 #include "gripper/RobotiQGripperControl.h"
 #include "std_srvs/SetBool.h"
 
+// #include <manipulator_planner/InvKine.h>
+// #include <manipulator_planner/PseudoInverse.h>
+// #include <manipulator_planner/FKine.h>
+#include <std_srvs/Trigger.h>
+#include <std_msgs/Float64MultiArray.h>
+
 class ManipulatorMenu
 {
  public:

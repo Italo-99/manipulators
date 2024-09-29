@@ -18,6 +18,10 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
   FILES
   CoppeliaMenu.srv
+  InvKine.srv
+  Jacobian.srv
+  FKine.srv
+  PseudoInverse.srv
 )
 
 generate_messages(

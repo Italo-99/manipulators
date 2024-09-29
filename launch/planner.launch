@@ -4,7 +4,6 @@
        former can includes grippers and camera)-->
     <arg name="robot_name"    default="" />
     <arg name="robotpkg_name" default="$(arg robot_name)" />
-    <!-- <arg name="moveit_pkg"    default="$(find ur10e_moveit_config)"/> -->
 
     <!-- List of all available manipulators -->
       <arg name="ur20_pkg"    default="false"/>
@@ -49,7 +48,7 @@
   <arg name="rviz"          default="true" />
   <!-- Decide if you want to launch the robot default rviz config; 
        set to false to load custom rviz config of the manipulators pkg-->
-  <arg name="def_config"    default="true" />
+  <arg name="def_config"     default="true" />
   <arg name="sensor_manager" default="true"/>
   <!-- By default, we are not in debug mode and we want to sim -->
   <arg name="debug"         default="false" />

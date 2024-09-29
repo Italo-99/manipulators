@@ -3,7 +3,7 @@
   <!-- Planner -->
   <arg name="robot_name"    default="ur10e_eecam" />
   <arg name="robotpkg_name" default="ur10e" />
-  <arg name="default_desc"  default="false" />
+  <arg name="default_desc"  default="false" />  <!-- Set to false to enable custom xacro description -->
   <arg name="ur10e_pkg"     default="true" />
   <!-- Simulation -->
   <arg name="rviz"          default="true" />

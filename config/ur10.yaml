@@ -8,9 +8,13 @@ ee_name: tool0
 
 base_name: base_link
 
-vel_factor: 0.5
+vel_factor: 0.5     # Starting from a lower factor is suggested, in simulation 0.5 works fine
 
-acc_factor: 0.5
+acc_factor: 0.5     # Starting from a lower factor is suggested, in simulation 0.5 works fine
+
+ros_freq: 500       # ROS loop frequency (update rate of callbacks)
+
+inst_kine:  false   # True if the motors instantaneously reach the goal after an invKine computation, false otherwise
 
 sample_time: 0.002 # Time distance between two consecutive points of the trajectory computed
 

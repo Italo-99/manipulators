@@ -85,16 +85,20 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   j4_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[4]+"/motor_control", 1);
   j5_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[5]+"/motor_control", 1);
 
+  // ---------------------- KINEMATICS SERVICES ---------------------------------------- //
+  inv_kine_service_       = nh_.advertiseService(manipulator_name_ + "/invKine",       ManipulatorPlanner::invKineCallback);
+  pseudo_inverse_service_ = nh_.advertiseService(manipulator_name_ + "/pseudoInverse", ManipulatorPlanner::pseudoInverseCallback);
+  get_fkine_service_      = nh_.advertiseService(manipulator_name_ + "/FKine",         ManipulatorPlanner::getCurrentFKineCallback);
+  get_jacobian_service_   = nh_.advertiseService(manipulator_name_ + "/Jacobian",      ManipulatorPlanner::getJacobianCallback);
+
+  // ---------------------- DYNAMIC PLANNER OBJECT ------------------------------------- //
+
   // Call to the dynamic planner constructor
   planner_ = new DynamicPlanner(manipulator_name_, joint_names_, vel_factor_, acc_factor_,
                                 dynamic_behaviour_, sample_time_, max_velocity_);  
 
   // Set the sim mode for the dynamic planner
   planner_->setSimMode(sim_);
-
-  // ---------------------  MOTORS KINEMATICS SETUP  ---------------------------
-
-
 
   // --------------------- EXAMPLE ENVIRONMENT SETUP --------------------- //
 
@@ -126,14 +130,88 @@ void ManipulatorPlanner::spinner()
     // Call the spinner for object related fuctions
     planner_->spinner();
 
+    // Test funtion for InvKine computations
+    // ros::Time start = ros::Time::now();
+    // planner_->invKine(get_manip_FKine());
+    // planner_->pseudoInverse(planner_->getJacobian());
+    // ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
+
     // Wait for next loop time
     r.sleep();
   }
 }
 
-// ---------------------  PRIVATE FUNCTIONS --------------------- //
+// ---------------------- SERVER FUNCTIONS ---------------------- //
 
-// --------------------- UTILS FUNCTIONS -------------------- //
+// Function to handle inverse kinematics service
+bool ManipulatorPlanner::invKineCallback(manipulator_planner::InvKine::Request  &req,
+                                         manipulator_planner::InvKine::Response &res)
+{
+  std::vector<double> joint_values = planner_->invKine(req.target_pose);
+  // Convert vector to MultiArray for response
+  std_msgs::Float64MultiArray output;
+  output.layout.dim.push_back(std_msgs::MultiArrayDimension());
+  output.layout.dim[0].size = joint_values.size();
+  output.data.assign(joint_values.data(), joint_values.data() + joint_values.size());
+  res.joint_values = output;
+  return true;
+
+  // std::vector<double> joint_values = planner_->invKine(req.target_pose);
+  // res.joint_values = joint_values;
+  // return true;
+}
+
+// Function to handle pseudoinverse service
+bool ManipulatorPlanner::pseudoInverseCallback(manipulator_planner::PseudoInverse::Request  &req,
+                                               manipulator_planner::PseudoInverse::Response &res)
+{
+  // Convert from MultiArray to Eigen matrix
+  Eigen::Map<Eigen::MatrixXd> M(req.input.data.data(), req.input.layout.dim[0].size, req.input.layout.dim[1].size);
+
+  Eigen::MatrixXd pseudo_inv = planner_->pseudoInverse(M);
+
+  // Convert Eigen matrix to MultiArray for response
+  std_msgs::Float64MultiArray output;
+  output.layout.dim.push_back(std_msgs::MultiArrayDimension());
+  output.layout.dim.push_back(std_msgs::MultiArrayDimension());
+  output.layout.dim[0].size = pseudo_inv.rows();
+  output.layout.dim[1].size = pseudo_inv.cols();
+  output.data.assign(pseudo_inv.data(), pseudo_inv.data() + pseudo_inv.size());
+  res.pseudo_inverse = output;
+  return true;
+}
+
+// Service for forward kinematics (no input needed from client)
+bool ManipulatorPlanner::getCurrentFKineCallback(std_srvs::Trigger::Request  &req,
+                                                 std_srvs::Trigger::Response &res)
+{
+    geometry_msgs::PoseStamped pose = planner_->get_currentFKine("end_effector_link");
+    res.success = true;
+    // res.message = "Forward Kinematics Pose computed successfully";
+    return true;
+}
+
+// Service for Jacobian (no input needed from client)
+bool ManipulatorPlanner::getJacobianCallback(std_srvs::Trigger::Request  &req,
+                                             std_srvs::Trigger::Response &res)
+{
+    Eigen::MatrixXd jacobian = planner_->getJacobian();
+    
+    std_msgs::Float64MultiArray output;
+    output.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    output.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    output.layout.dim[0].size = jacobian.rows();
+    output.layout.dim[1].size = jacobian.cols();
+    output.data.assign(jacobian.data(), jacobian.data() + jacobian.size());
+    
+    res.success = true;
+    // res.message = "Jacobian computed successfully";
+    return true;
+}
+
+// ---------------------- PRIVATE FUNCTIONS --------------------- //
+
+// ----------------------- UTILS FUNCTIONS ---------------------- //
 
 // External command to enable instantaneous kinematics
 void ManipulatorPlanner::set_instKine(bool set)
@@ -202,10 +280,10 @@ void ManipulatorPlanner::check_param()
   // Check for ROS node loop frequency parameter
   if (!nh_.getParam(node_name_+"/ros_freq", ros_freq_))
   {
-    ROS_WARN("ROS node loop frequency not defined, assuming 10 Hz.");
+    ROS_WARN("ROS node loop frequency not defined, assuming 500 Hz.");
 
     // If the parameter has not been set by the user, it is set here
-    ros_freq_ = 10;
+    ros_freq_ = 500;
   }
 
   // Check for instantaneous move parameter
@@ -313,14 +391,14 @@ void ManipulatorPlanner::addCollObjCallback(const moveit_msgs::CollisionObject& 
   createObj(obj.id,obj.primitives[0].type,dim_array,pos_array,rot_array,operation);
 }
 
-// --------------------- JACOBIAN-FKINE FUNCTIONS -------------------- //
+// --------------------- JACOBIAN-FKINE-INVKINE FUNCTIONS -------------------- //
 
 // THE FOLLOWING FUNCTION CANNOT BE USED SINCE DYNAMIC PLANNER METHODS CALLED DOENS'T WORK!! TODO
 // Get the tcp pose through FKINE of a given joint pose
 const geometry_msgs::PoseStamped ManipulatorPlanner::get_manip_FKine()
 {
   // Get current tcp pose through FKINE
-  return planner_->get_currentFKine();
+  return planner_->get_currentFKine(ee_name_);
 }
 
 // Get manipulator Jacobian
@@ -329,7 +407,6 @@ const Eigen::MatrixXd ManipulatorPlanner::get_manip_Jacobian()
   // Get robot jacobian
   return planner_->getJacobian();
 }
-
 
 // --------------------- MOVE CALLBACK FUNCTIONS --------------------- //
 
@@ -386,7 +463,7 @@ void ManipulatorPlanner::tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& 
   goal.pose            = *p;
 
   // Make the inverse kinematics
-  std::vector<double> joint_values = planner_->invKine(goal,ee_name_);
+  std::vector<double> joint_values = planner_->invKine(goal);
 
   if (joint_values.size() < joint_names_.size())
   {
@@ -431,7 +508,7 @@ void ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback(const geometry_msgs::Pose:
   goal.pose            = *p;
 
   // Make the inverse kinematics
-  std::vector<double> joint_values = planner_->invKine(goal,ee_name_);
+  std::vector<double> joint_values = planner_->invKine(goal);
 
   if (joint_values.size() < joint_names_.size())
   {
@@ -488,7 +565,6 @@ void ManipulatorPlanner::instantKineSetterCallback(const std_msgs::Bool::ConstPt
 {
   inst_kine_ = msg->data;
 }
-
 
 // TODO: the following two functions give an allocator error on the compiler
 // because ROS doesn't accept vector as msgs

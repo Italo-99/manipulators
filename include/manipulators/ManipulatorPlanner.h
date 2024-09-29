@@ -42,8 +42,16 @@
 
 // IMPORT LIBRARIES
 #include "dynamic_planner/dynamic_planner.h"
-#include "std_msgs/Float64.h"
-#include "std_msgs/UInt8.h"
+// #include "manipulator_planner/InvKine.h"
+// #include "manipulator_planner/pseudoInverse.h"
+// #include "manipulator_planner/FKine.h"
+// #include "manipulator_planner/Jacobian.h"
+#include <eigen_conversions/eigen_msg.h>
+#include <geometry_msgs/Pose.h>
+#include <std_msgs/Float64.h>
+#include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/UInt8.h>
+#include <std_srvs/Trigger.h>
 #include <tf2_ros/transform_listener.h>
 
 class ManipulatorPlanner
@@ -81,6 +89,24 @@ class ManipulatorPlanner
 
       // Get manipulator Jacobian
       const Eigen::MatrixXd get_manip_Jacobian(void);
+
+    // Public service servers
+      ros::ServiceServer inv_kine_service_;
+      ros::ServiceServer pseudo_inverse_service_;
+      ros::ServiceServer get_fkine_service_;
+      ros::ServiceServer get_jacobian_service_;
+
+      bool ManipulatorPlanner::invKineCallback(manipulator_planner::InvKine::Request  &req,
+                                               manipulator_planner::InvKine::Response &res);
+
+      bool ManipulatorPlanner::pseudoInverseCallback(manipulator_planner::PseudoInverse::Request  &req,
+                                                     manipulator_planner::PseudoInverse::Response &res);
+
+      bool ManipulatorPlanner::getCurrentFKineCallback(std_srvs::Trigger::Request  &req,
+                                                       std_srvs::Trigger::Response &res);
+
+      bool ManipulatorPlanner::getJacobianCallback(std_srvs::Trigger::Request  &req,
+                                                   std_srvs::Trigger::Response &res);
 
     // --------------------- MOVE FUNCTIONS ---------------------
 

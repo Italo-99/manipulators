@@ -1,11 +1,12 @@
 <launch>
    
   <!-- Planner -->
-  <arg name="robot_name"    default="ur10e" />
-  <arg name="robotpkg_name" default="ur10e" />
-  <arg name="custom_pkg"    default="false" />  <!-- Delete       to enable custom xacro description -->
-  <arg name="default_desc"  default="true"  />  <!-- Set to false to enable custom xacro description -->
-  <arg name="ur10e_pkg"     default="true"  />
+  <arg name="robot_name"    default="ur5" />
+  <arg name="robotpkg_name" default="ur5" />
+  <arg name="custom_pkg"    default="false"/>
+  <arg name="default_desc"  default="false" />
+  <arg name="ur10e_pkg"     default="false"/>
+  <arg name="ur5_pkg"       default="true" />
   <!-- Simulation -->
   <arg name="rviz"          default="true" />
   <arg name="def_config"    default="false" />
@@ -31,7 +32,7 @@
   <arg name="tcp_offset"    default="+0.05"/>
   <!-- If true, launch the trajectory converter node -->
   <arg name="control"       default ="false" />
-  <!-- Models -->
+  <!-- Custom models -->
   <arg name="xacro_file"    default=""/>
   <arg name="srdf_file"     default=""/>
 
@@ -41,6 +42,7 @@
     <arg name="robotpkg_name" value="$(arg robotpkg_name)" />
     <arg name="default_desc"  value="$(arg default_desc)" />
     <arg name="ur10e_pkg"     value="$(arg ur10e_pkg)" />
+    <arg name="ur5e_pkg"      value="$(arg ur5e_pkg)" />
     <arg name="custom_pkg"    value="$(arg custom_pkg)" />
     <arg name="rviz"          value="$(arg rviz)" />
     <arg name="def_config"    value="$(arg def_config)" />

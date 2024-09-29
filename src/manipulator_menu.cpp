@@ -40,7 +40,8 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(std::string node_name,std::string ee_joint_name, double ros_freq)
+ManipulatorMenu::ManipulatorMenu(std::string node_name,std::string ee_joint_name,
+                                  double ros_freq)
 {
   node_name_ = node_name;
   // Check for parameters
@@ -58,8 +59,8 @@ ManipulatorMenu::ManipulatorMenu(std::string node_name,std::string ee_joint_name
   }
 
   // Listen static tf from tool0 and tcp_gripper
-  geometry_msgs::PoseStamped ee_offset_pose = getTf("tool0","tcp_gripper");
-  ee_offset_ = ee_offset_pose.pose.position.z;
+  // geometry_msgs::PoseStamped ee_offset_pose = getTf("tool0","tcp_gripper");
+  // ee_offset_ = ee_offset_pose.pose.position.z;
 
   // --------------------- PUBS & SUBS DELCARATIONS ---------------------
 
@@ -80,6 +81,9 @@ ManipulatorMenu::ManipulatorMenu(std::string node_name,std::string ee_joint_name
   counterJg_ = false;       // choice of test joint goal
   counterCg_ = false;       // choice of test tcp3D goal
 
+  // --------------------- Kinematics client init ---------------------
+  
+
   // --------------------- CoppeliaSim client init ---------------------
   client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
 
@@ -96,6 +100,83 @@ ManipulatorMenu::ManipulatorMenu(std::string node_name,std::string ee_joint_name
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
+
+#include <ros/ros.h>
+#include <manipulator_planner/InvKine.h>
+#include <manipulator_planner/PseudoInverse.h>
+#include <manipulator_planner/GetCurrentFKine.h>
+#include <std_srvs/Trigger.h>
+#include <std_msgs/Float64MultiArray.h>
+#include <geometry_msgs/PoseStamped.h>
+
+void invKineClient() {
+    ros::ServiceClient client = nh.serviceClient<manipulator_planner::InvKine>("/manipulator/invKine");
+    manipulator_planner::InvKine srv;
+    
+    // Set target pose (manually or from input)
+    geometry_msgs::PoseStamped pose;
+    srv.request.target_pose = pose;
+
+    if (client.call(srv)) {
+        ROS_INFO("Inverse kinematics joint values received:");
+        for (auto &joint_value : srv.response.joint_values) {
+            ROS_INFO_STREAM(joint_value);
+        }
+    } else {
+        ROS_ERROR("Failed to call service invKine");
+    }
+}
+
+void pseudoInverseClient() {
+    ros::ServiceClient client = nh.serviceClient<manipulator_planner::PseudoInverse>("/manipulator/pseudoInverse");
+    manipulator_planner::PseudoInverse srv;
+    
+    // Create and set the input matrix
+    Eigen::MatrixXd matrix = Eigen::MatrixXd::Random(3, 3);
+    std_msgs::Float64MultiArray input_matrix;
+    for (int i = 0; i < matrix.rows(); ++i) {
+        for (int j = 0; j < matrix.cols(); ++j) {
+            input_matrix.data.push_back(matrix(i, j));
+        }
+    }
+
+    srv.request.input = input_matrix;
+
+    if (client.call(srv)) {
+        ROS_INFO("Pseudoinverse matrix received:");
+        for (auto &val : srv.response.pseudo_inverse.data) {
+            ROS_INFO_STREAM(val);
+        }
+    } else {
+        ROS_ERROR("Failed to call service pseudoInverse");
+    }
+}
+
+void getCurrentFKineClient(ros::NodeHandle &nh) {
+    ros::ServiceClient client = nh.serviceClient<manipulator_planner::GetCurrentFKine>("/manipulator/get_currentFKine");
+    manipulator_planner::GetCurrentFKine srv;
+    
+    // Set end-effector link name
+    srv.request.ee_link_name = "end_effector_link";
+
+    if (client.call(srv)) {
+        ROS_INFO("Forward Kinematics Pose received:");
+        ROS_INFO_STREAM(srv.response.pose);
+    } else {
+        ROS_ERROR("Failed to call service getCurrentFKine");
+    }
+}
+
+void getJacobianClient(ros::NodeHandle &nh) {
+    ros::ServiceClient client = nh.serviceClient<std_srvs::Trigger>("/manipulator/getJacobian");
+    std_srvs::Trigger srv;
+
+    if (client.call(srv)) {
+        ROS_INFO("Jacobian matrix received successfully:");
+    } else {
+        ROS_ERROR("Failed to call service getJacobian");
+    }
+}
 
 // --------------------- ROS HANDLER ---------------------
 
@@ -264,26 +345,29 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const std::vector<double> 
 // Publish a TcpIK goal by passing a geometry_msgs::Pose
 geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::Pose tcpPoseMsg) 
 {
-  // The pose to pass as goal to invKine planner must be referred to tool0
-  geometry_msgs::Pose tool0_PoseMsg;
-  tool0_PoseMsg.orientation = tcpPoseMsg.orientation;
-  Eigen::Quaterniond  q(tcpPoseMsg.orientation.w,
-                        tcpPoseMsg.orientation.x,
-                        tcpPoseMsg.orientation.y,
-                        tcpPoseMsg.orientation.z);
-  Eigen::Affine3d transform = Eigen::Translation3d(
-                              tcpPoseMsg.position.x,
-                              tcpPoseMsg.position.y,
-                              tcpPoseMsg.position.z)*q;
-  Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
-  Eigen::Vector3d tool0_pos = transform * vec_offset;
+  // // The pose to pass as goal to invKine planner must be referred to tool0
+  // geometry_msgs::Pose tool0_PoseMsg;
+  // tool0_PoseMsg.orientation = tcpPoseMsg.orientation;
+  // Eigen::Quaterniond  q(tcpPoseMsg.orientation.w,
+  //                       tcpPoseMsg.orientation.x,
+  //                       tcpPoseMsg.orientation.y,
+  //                       tcpPoseMsg.orientation.z);
+  // Eigen::Affine3d transform = Eigen::Translation3d(
+  //                             tcpPoseMsg.position.x,
+  //                             tcpPoseMsg.position.y,
+  //                             tcpPoseMsg.position.z)*q;
+  // Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
+  // Eigen::Vector3d tool0_pos = transform * vec_offset;
 
-  tool0_PoseMsg.position.x = tool0_pos.x();
-  tool0_PoseMsg.position.y = tool0_pos.y();
-  tool0_PoseMsg.position.z = tool0_pos.z();
+  // tool0_PoseMsg.position.x = tool0_pos.x();
+  // tool0_PoseMsg.position.y = tool0_pos.y();
+  // tool0_PoseMsg.position.z = tool0_pos.z();
+
+  // // Plan trajectory through inverse kinematics
+  // tcpPoseIKPublisher_.publish(tool0_PoseMsg);
 
   // Plan trajectory through inverse kinematics
-  tcpPoseIKPublisher_.publish(tool0_PoseMsg);
+  tcpPoseIKPublisher_.publish(tcpPoseMsg);
 
   // Display the goal on RViz
   geometry_msgs::PoseStamped robot_goal_msg;
@@ -312,26 +396,29 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIK_noplanner_Goal(const std::vect
 // Publish a TcpIK goal, with fake moveit controller, by passing a geometry_msgs::Pose
 geometry_msgs::Pose ManipulatorMenu::publishTcpIK_noplanner_Goal(const geometry_msgs::Pose tcpPoseMsg) 
 {
-  // The pose to pass as goal to invKine planner must be referred to tool0
-  geometry_msgs::Pose tool0_PoseMsg;
-  tool0_PoseMsg.orientation = tcpPoseMsg.orientation;
-  Eigen::Quaterniond  q(tcpPoseMsg.orientation.w,
-                        tcpPoseMsg.orientation.x,
-                        tcpPoseMsg.orientation.y,
-                        tcpPoseMsg.orientation.z);
-  Eigen::Affine3d transform = Eigen::Translation3d(
-                              tcpPoseMsg.position.x,
-                              tcpPoseMsg.position.y,
-                              tcpPoseMsg.position.z)*q;
-  Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
-  Eigen::Vector3d tool0_pos = transform * vec_offset;
+  // // The pose to pass as goal to invKine planner must be referred to tool0
+  // geometry_msgs::Pose tool0_PoseMsg;
+  // tool0_PoseMsg.orientation = tcpPoseMsg.orientation;
+  // Eigen::Quaterniond  q(tcpPoseMsg.orientation.w,
+  //                       tcpPoseMsg.orientation.x,
+  //                       tcpPoseMsg.orientation.y,
+  //                       tcpPoseMsg.orientation.z);
+  // Eigen::Affine3d transform = Eigen::Translation3d(
+  //                             tcpPoseMsg.position.x,
+  //                             tcpPoseMsg.position.y,
+  //                             tcpPoseMsg.position.z)*q;
+  // Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
+  // Eigen::Vector3d tool0_pos = transform * vec_offset;
 
-  tool0_PoseMsg.position.x = tool0_pos.x();
-  tool0_PoseMsg.position.y = tool0_pos.y();
-  tool0_PoseMsg.position.z = tool0_pos.z();
+  // tool0_PoseMsg.position.x = tool0_pos.x();
+  // tool0_PoseMsg.position.y = tool0_pos.y();
+  // tool0_PoseMsg.position.z = tool0_pos.z();
+
+  // // Plan trajectory through inverse kinematics
+  // tcpPoseIK_noplannerPub_.publish(tool0_PoseMsg);
 
   // Plan trajectory through inverse kinematics
-  tcpPoseIK_noplannerPub_.publish(tool0_PoseMsg);
+  tcpPoseIK_noplannerPub_.publish(tcpPoseMsg);
 
   // Display the goal on RViz
   geometry_msgs::PoseStamped robot_goal_msg;
@@ -470,7 +557,7 @@ geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_fram
 geometry_msgs::PoseStamped ManipulatorMenu::getEEpose()
 {
   // Compute the tf between base_link and end-effector
-  current_tcp_pose_ = getTf("base_link","tcp_gripper");
+  // current_tcp_pose_ = getTf("base_link","tcp_gripper");
   eepose_pub_.publish(current_tcp_pose_);
   return current_tcp_pose_;
 }

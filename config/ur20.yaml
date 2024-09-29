@@ -4,7 +4,7 @@ manipulator_name: manipulator
 
 joint_names: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint]
 
-ee_name: tcp_gripper
+ee_name: tool0
 
 base_name: base_link
 
@@ -18,4 +18,4 @@ inst_kine:  false # True if the motors instantaneously reach the goal after an i
 
 sample_time: 0.002 # Time distance between two consecutive points of the trajectory computed
 
-max_velocity: 1  # Maximum velocity of the end-effector in [m/s] (up to 1.0) 
+max_velocity: 1    # Maximum velocity of the end-effector in [m/s] (up to 1.0) 

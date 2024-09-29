@@ -4,7 +4,7 @@ manipulator_name: manipulator
 
 joint_names: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint]
 
-ee_name: tcp_gripper
+ee_name: tool0
 
 base_name: base_link
 
@@ -12,7 +12,7 @@ vel_factor: 0.5   # Starting from a lower factor is suggested, in simulation 0.5
 
 acc_factor: 0.5   # Starting from a lower factor is suggested, in simulation 0.5 works fine
 
-ros_freq: 500     # ROS loop frequency (update rate of callbacks)
+ros_freq: 10      # ROS loop frequency
 
 inst_kine:  false # True if the motors instantaneously reach the goal after an invKine computation, false otherwise
 
