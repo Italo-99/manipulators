@@ -144,8 +144,8 @@ void ManipulatorPlanner::spinner()
 // ---------------------- SERVER FUNCTIONS ---------------------- //
 
 // Function to handle inverse kinematics service
-bool ManipulatorPlanner::invKineCallback(manipulator_planner::InvKine::Request  &req,
-                                         manipulator_planner::InvKine::Response &res)
+bool ManipulatorPlanner::invKineCallback(InvKine::Request  &req,
+                                         InvKine::Response &res)
 {
   std::vector<double> joint_values = planner_->invKine(req.target_pose);
   // Convert vector to MultiArray for response
@@ -162,8 +162,8 @@ bool ManipulatorPlanner::invKineCallback(manipulator_planner::InvKine::Request  
 }
 
 // Function to handle pseudoinverse service
-bool ManipulatorPlanner::pseudoInverseCallback(manipulator_planner::PseudoInverse::Request  &req,
-                                               manipulator_planner::PseudoInverse::Response &res)
+bool ManipulatorPlanner::pseudoInverseCallback(PseudoInverse::Request  &req,
+                                               PseudoInverse::Response &res)
 {
   // Convert from MultiArray to Eigen matrix
   Eigen::Map<Eigen::MatrixXd> M(req.input.data.data(), req.input.layout.dim[0].size, req.input.layout.dim[1].size);
@@ -182,8 +182,8 @@ bool ManipulatorPlanner::pseudoInverseCallback(manipulator_planner::PseudoInvers
 }
 
 // Service for forward kinematics (no input needed from client)
-bool ManipulatorPlanner::getCurrentFKineCallback(std_srvs::Trigger::Request  &req,
-                                                 std_srvs::Trigger::Response &res)
+bool ManipulatorPlanner::getCurrentFKineCallback(FKine::Request  &req,
+                                                 FKine::Response &res)
 {
     geometry_msgs::PoseStamped pose = planner_->get_currentFKine("end_effector_link");
     res.success = true;
@@ -192,8 +192,8 @@ bool ManipulatorPlanner::getCurrentFKineCallback(std_srvs::Trigger::Request  &re
 }
 
 // Service for Jacobian (no input needed from client)
-bool ManipulatorPlanner::getJacobianCallback(std_srvs::Trigger::Request  &req,
-                                             std_srvs::Trigger::Response &res)
+bool ManipulatorPlanner::getJacobianCallback(Jacobian::Request  &req,
+                                             Jacobian::Response &res)
 {
     Eigen::MatrixXd jacobian = planner_->getJacobian();
     

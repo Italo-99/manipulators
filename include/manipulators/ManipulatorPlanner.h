@@ -96,17 +96,17 @@ class ManipulatorPlanner
       ros::ServiceServer get_fkine_service_;
       ros::ServiceServer get_jacobian_service_;
 
-      bool ManipulatorPlanner::invKineCallback(manipulator_planner::InvKine::Request  &req,
-                                               manipulator_planner::InvKine::Response &res);
+      bool ManipulatorPlanner::invKineCallback(InvKine::Request  &req,
+                                               InvKine::Response &res);
 
-      bool ManipulatorPlanner::pseudoInverseCallback(manipulator_planner::PseudoInverse::Request  &req,
-                                                     manipulator_planner::PseudoInverse::Response &res);
+      bool ManipulatorPlanner::pseudoInverseCallback(PseudoInverse::Request  &req,
+                                                     PseudoInverse::Response &res);
 
-      bool ManipulatorPlanner::getCurrentFKineCallback(std_srvs::Trigger::Request  &req,
-                                                       std_srvs::Trigger::Response &res);
+      bool ManipulatorPlanner::getCurrentFKineCallback(FKine::Request  &req,
+                                                       FKine::Response &res);
 
-      bool ManipulatorPlanner::getJacobianCallback(std_srvs::Trigger::Request  &req,
-                                                   std_srvs::Trigger::Response &res);
+      bool ManipulatorPlanner::getJacobianCallback(Jacobian::Request  &req,
+                                                   Jacobian::Response &res);
 
     // --------------------- MOVE FUNCTIONS ---------------------
 
