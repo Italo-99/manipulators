@@ -47,8 +47,12 @@
 #include <std_msgs/Float64.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/UInt8.h>
-#include <std_srvs/Trigger.h>
 #include <tf2_ros/transform_listener.h>
+
+#include <manipulators/InvKine.h>
+#include <manipulators/PseudoInverse.h>
+#include <manipulators/FKine.h>
+#include <manipulators/Jacobian.h>
 
 class ManipulatorPlanner
 {
@@ -93,17 +97,16 @@ class ManipulatorPlanner
       ros::ServiceServer get_fkine_service_;
       ros::ServiceServer get_jacobian_service_;
 
-      bool ManipulatorPlanner::invKineCallback(InvKine::Request  &req,
-                                               InvKine::Response &res);
+      bool ManipulatorPlanner::invKineCallback(manipulators::InvKine::Request  &req,
+                                               manipulators::InvKine::Response &res);
 
-      bool ManipulatorPlanner::pseudoInverseCallback(PseudoInverse::Request  &req,
-                                                     PseudoInverse::Response &res);
+      bool ManipulatorPlanner::pseudoInverseCallback(manipulators::PseudoInverse::Request  &req,
+                                                     manipulators::PseudoInverse::Response &res);
 
-      bool ManipulatorPlanner::getCurrentFKineCallback(FKine::Request  &req,
-                                                       FKine::Response &res);
+      bool ManipulatorPlanner::getCurrentFKineCallback(manipulators::FKine::Request  &req,
+                                                       manipulators::FKine::Response &res);
 
-      bool ManipulatorPlanner::getJacobianCallback(Jacobian::Request  &req,
-                                                   Jacobian::Response &res);
+      bool ManipulatorPlanner::getJacobianCallback(manipulators::Jacobian::Response &jacobian);
 
     // --------------------- MOVE FUNCTIONS ---------------------
 

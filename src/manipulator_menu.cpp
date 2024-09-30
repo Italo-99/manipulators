@@ -113,9 +113,9 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::PoseStam
     {
         ROS_INFO("Inverse kinematics joint values received:");
         // for (auto &joint_value : srv.response.joint_values) {ROS_INFO_STREAM(joint_value);}
-        for (unsigned int k = 0; k < srv.response.joint_values.dim[0].size; k++)
+        for (unsigned int k = 0; k < invKine_srv_.response.joint_values.dim[0].size; k++)
         {
-          joint_values.push_back(srv.response.joint_values.data[k]);
+          joint_values.push_back(invKine_srv_.response.joint_values.data[k]);
         }
     }
     else {ROS_ERROR("Failed to call service invKine");}
@@ -123,25 +123,36 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::PoseStam
     return joint_values;
 }
 
-std_msgs::Float64MultiArray ManipulatorMenu::pseudoInverseClient()
+std_msgs::Float64MultiArray ManipulatorMenu::pseudoInverseClient() // TODO: test
 {        
   if (pseudoInvClient_.call(pseudoInv_srv_))
   {
-      ROS_INFO("Pseudoinverse matrix received:");
-      for (auto &val : srv.response.pseudo_inverse.data)
+    ROS_INFO("Pseudoinverse matrix received:");
+      
+    Eigen::MatrixXd matrix(6, 6);
+
+    // Assign data from Float64MultiArray to Eigen::MatrixXd
+    for (int i = 0; i < 6; ++i)
+    {
+      for (int j = 0; j < 6; ++j)
       {
-        //  ROS_INFO_STREAM(val);
+          matrix(i, j) = pseudoInv_srv_.response.pseudo_inverse.data[i * 6 + j];
       }
+    }
+
+    return matrix;
   } 
   else {ROS_ERROR("Failed to call service pseudoInverse");}
 }
 
-geometry_msgs::Pose ManipulatorMenu::getCurrentFKineClient()
+geometry_msgs::Pose ManipulatorMenu::getCurrentFKineClient() // TODO: test
 {
   if (fKineClient_.call(fKine_srv_))
   {
-      ROS_INFO("Forward Kinematics Pose received:");
-      ROS_INFO_STREAM(srv.response.pose);
+    ROS_INFO("Forward Kinematics Pose received:");
+    ROS_INFO_STREAM(srv.response.pose);
+    geometry_msgs::Pose pose = srv.response.pose;
+    return pose;
   }
   else {ROS_ERROR("Failed to call service getCurrentFKine");}
 }
@@ -151,6 +162,19 @@ std_msgs::Float64MultiArray ManipulatorMenu::getJacobianClient()
     if (jacobianClient_.call(jacobian_srv_))
     {
        ROS_INFO("Jacobian matrix received successfully:");
+       
+       Eigen::MatrixXd matrix(6, 6);
+
+      // Assign data from Float64MultiArray to Eigen::MatrixXd
+      for (int i = 0; i < 6; ++i)
+      {
+        for (int j = 0; j < 6; ++j)
+        {
+            matrix(i, j) = pseudoInv_srv_.response.pseudo_inverse.data[i * 6 + j];
+        }
+      }
+
+      return matrix;
     }
     else {ROS_ERROR("Failed to call service getJacobian");}
 }

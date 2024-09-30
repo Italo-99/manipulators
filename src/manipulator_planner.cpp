@@ -144,8 +144,8 @@ void ManipulatorPlanner::spinner()
 // ---------------------- SERVER FUNCTIONS ---------------------- //
 
 // Function to handle inverse kinematics service
-bool ManipulatorPlanner::invKineCallback(InvKine::Request  &req,
-                                         InvKine::Response &res)  // TODO: test
+bool ManipulatorPlanner::invKineCallback(manipulators::InvKine::Request  &req,
+                                         manipulators::InvKine::Response &res)              // TODO: test
 {
   std::vector<double> joint_values = planner_->invKine(req.target_pose);
   // Convert vector to MultiArray for response
@@ -154,6 +154,7 @@ bool ManipulatorPlanner::invKineCallback(InvKine::Request  &req,
   output.layout.dim[0].size = joint_values.size();
   output.data.assign(joint_values.data(), joint_values.data() + joint_values.size());
   res.joint_values = output;
+  // res.message = "Inverse Kinematics computed successfully";
   return true;
 
   // std::vector<double> joint_values = planner_->invKine(req.target_pose);
@@ -162,12 +163,9 @@ bool ManipulatorPlanner::invKineCallback(InvKine::Request  &req,
 }
 
 // Function to handle pseudoinverse service
-bool ManipulatorPlanner::pseudoInverseCallback(PseudoInverse::Request  &req,
-                                               PseudoInverse::Response &res)
+bool ManipulatorPlanner::pseudoInverseCallback(manipulators::PseudoInverse::Request  &req,
+                                               manipulators::PseudoInverse::Response &res)  // TODO: test
 {
-  // Convert from MultiArray to Eigen matrix
-  // Eigen::Map<Eigen::MatrixXd> M(req.input.data.data(), req.input.layout.dim[0].size, req.input.layout.dim[1].size);
-
   Eigen::MatrixXd pseudo_inv = get_manip_InvJacobian();
 
   // Convert Eigen matrix to MultiArray for response
@@ -178,22 +176,23 @@ bool ManipulatorPlanner::pseudoInverseCallback(PseudoInverse::Request  &req,
   output.layout.dim[1].size = pseudo_inv.cols();
   output.data.assign(pseudo_inv.data(), pseudo_inv.data() + pseudo_inv.size());
   res.pseudo_inverse = output;
+  // res.message = "Inverse Jacobian computed successfully";
   return true;
 }
 
 // Service for forward kinematics (no input needed from client)
-bool ManipulatorPlanner::getCurrentFKineCallback(FKine::Request  &req,
-                                                 FKine::Response &res)
+bool ManipulatorPlanner::getCurrentFKineCallback(manipulators::FKine::Request  &req,
+                                                 manipulators::FKine::Response &res)          // TODO: test
 {
-    geometry_msgs::PoseStamped pose = planner_->get_currentFKine();
-    res.success = true;
+    geometry_msgs::Pose pose = planner_->get_currentFKine();
+    res.tcp_pose = pose;
     // res.message = "Forward Kinematics Pose computed successfully";
     return true;
 }
 
 // Service for Jacobian (no input needed from client)
-bool ManipulatorPlanner::getJacobianCallback(Jacobian::Request  &req,
-                                             Jacobian::Response &res)
+bool ManipulatorPlanner::getJacobianCallback(manipulators::Jacobian::Request  &req,
+                                             manipulators::Jacobian::Response &res)           // TODO: test
 {
     Eigen::MatrixXd jacobian = planner_->getJacobian();
     
@@ -203,8 +202,7 @@ bool ManipulatorPlanner::getJacobianCallback(Jacobian::Request  &req,
     output.layout.dim[0].size = jacobian.rows();
     output.layout.dim[1].size = jacobian.cols();
     output.data.assign(jacobian.data(), jacobian.data() + jacobian.size());
-    
-    res.success = true;
+    res.jacobian = output;
     // res.message = "Jacobian computed successfully";
     return true;
 }
@@ -409,7 +407,7 @@ const Eigen::MatrixXd ManipulatorPlanner::get_manip_Jacobian()
 // Get manipulator inverse Jacobian
 const Eigen::MatrixXd ManipulatorPlanner::get_manip_InvJacobian()
 {
-  return planner->pseudoInverse(planner_->getJacobian());
+  return planner_->pseudoInverse(planner_->getJacobian());
 }
 
 // --------------------- MOVE CALLBACK FUNCTIONS --------------------- //
