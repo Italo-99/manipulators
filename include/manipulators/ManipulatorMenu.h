@@ -41,36 +41,32 @@
 #define MANIPULATOR_MENU_H
 
 // IMPORT LIBRARIES
-#include <iostream>
-#include <cmath>
-#include "ros/ros.h"
-#include "std_msgs/Float64.h"
-#include "sensor_msgs/JointState.h"
-#include "geometry_msgs/Pose.h"
-#include "geometry_msgs/PoseArray.h"
-#include "geometry_msgs/PoseStamped.h"
-#include "moveit_msgs/CollisionObject.h"
-#include <tf2/LinearMath/Quaternion.h>
-#include <moveit_msgs/DisplayRobotState.h>
-#include <moveit/robot_state/conversions.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include "manipulators/CoppeliaMenu.h"
-#include "gripper/RobotiQGripperControl.h"
-#include "std_srvs/SetBool.h"
-
-// #include <manipulator_planner/InvKine.h>
-// #include <manipulator_planner/PseudoInverse.h>
-// #include <manipulator_planner/FKine.h>
-#include <std_srvs/Trigger.h>
-#include <std_msgs/Float64MultiArray.h>
+  #include <iostream>
+  #include <cmath>
+  #include <ros/ros.h>
+  #include <std_msgs/Float64.h>
+  #include <std_msgs/Float64MultiArray.h>
+  #include <sensor_msgs/JointState.h>
+  #include <geometry_msgs/Pose.h>
+  #include <geometry_msgs/PoseArray.h>
+  #include <geometry_msgs/PoseStamped.h>
+  #include <moveit_msgs/CollisionObject.h>
+  #include <tf2/LinearMath/Quaternion.h>
+  #include <moveit_msgs/DisplayRobotState.h>
+  #include <moveit/robot_state/conversions.h>
+  #include <geometry_msgs/TransformStamped.h>
+  #include <tf2_ros/transform_listener.h>
+  #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+  #include <manipulators/CoppeliaMenu.h>
+  #include <gripper/RobotiQGripperControl.h>
+  #include <std_srvs/SetBool.h>
 
 class ManipulatorMenu
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-    ManipulatorMenu(std::string node_name,std::string ee_joint_name, double ros_freq); // Constructor
+    ManipulatorMenu(std::string node_name,std::string ee_joint_name,
+                    double ros_freq, std::string manipulator_name);   // Constructor
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
@@ -214,7 +210,20 @@ class ManipulatorMenu
       sensor_msgs::JointState current_joint_pose_;
 
       std::string node_name_;
+      std::string ee_joint_name_;
       double      ros_freq_;
+      std::string manipulator_name_;
+
+      // --------------------- Kinematics client init ---------------------
+      ros::ServiceClient invKineClient_;
+      ros::ServiceClient pseudoInvClient_;
+      ros::ServiceClient fKineClient_;
+      ros::ServiceClient jacobianClient_;
+
+      manipulators::InvKine       invKine_srv_;
+      manipulators::PseudoInverse pseudoInv_srv_;
+      manipulators::FKine         fKine_srv_;
+      manipulators::Jacobian      jacobian_srv_;
 
     // ---------------------  COPPELIA HANDLING ---------------------
       ros::ServiceClient client_;
@@ -224,12 +233,7 @@ class ManipulatorMenu
       ros::ServiceClient gripper_client_;
       ros::ServiceClient grab_client_;
       ros::ServiceClient real_gripper_client_;
-      double      ee_offset_;
-      std::string ee_joint_name_;
-    
-    // ---------------------  USEFUL TOOLS ---------------------
-      bool counterJg_;
-      bool counterCg_;
+
 };
 
 #endif /* MANIPULATOR_MENU_H */

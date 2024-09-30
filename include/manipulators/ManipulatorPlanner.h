@@ -41,11 +41,7 @@
 #define MANIPULATOR_PLANNER_H
 
 // IMPORT LIBRARIES
-#include "dynamic_planner/dynamic_planner.h"
-// #include "manipulator_planner/InvKine.h"
-// #include "manipulator_planner/pseudoInverse.h"
-// #include "manipulator_planner/FKine.h"
-// #include "manipulator_planner/Jacobian.h"
+#include <dynamic_planner/dynamic_planner.h>
 #include <eigen_conversions/eigen_msg.h>
 #include <geometry_msgs/Pose.h>
 #include <std_msgs/Float64.h>
@@ -89,6 +85,7 @@ class ManipulatorPlanner
 
       // Get manipulator Jacobian
       const Eigen::MatrixXd get_manip_Jacobian(void);
+      const Eigen::MatrixXd get_manip_InvJacobian(void);
 
     // Public service servers
       ros::ServiceServer inv_kine_service_;

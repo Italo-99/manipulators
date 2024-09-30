@@ -145,7 +145,7 @@ void ManipulatorPlanner::spinner()
 
 // Function to handle inverse kinematics service
 bool ManipulatorPlanner::invKineCallback(InvKine::Request  &req,
-                                         InvKine::Response &res)
+                                         InvKine::Response &res)  // TODO: test
 {
   std::vector<double> joint_values = planner_->invKine(req.target_pose);
   // Convert vector to MultiArray for response
@@ -166,9 +166,9 @@ bool ManipulatorPlanner::pseudoInverseCallback(PseudoInverse::Request  &req,
                                                PseudoInverse::Response &res)
 {
   // Convert from MultiArray to Eigen matrix
-  Eigen::Map<Eigen::MatrixXd> M(req.input.data.data(), req.input.layout.dim[0].size, req.input.layout.dim[1].size);
+  // Eigen::Map<Eigen::MatrixXd> M(req.input.data.data(), req.input.layout.dim[0].size, req.input.layout.dim[1].size);
 
-  Eigen::MatrixXd pseudo_inv = planner_->pseudoInverse(M);
+  Eigen::MatrixXd pseudo_inv = get_manip_InvJacobian();
 
   // Convert Eigen matrix to MultiArray for response
   std_msgs::Float64MultiArray output;
@@ -185,7 +185,7 @@ bool ManipulatorPlanner::pseudoInverseCallback(PseudoInverse::Request  &req,
 bool ManipulatorPlanner::getCurrentFKineCallback(FKine::Request  &req,
                                                  FKine::Response &res)
 {
-    geometry_msgs::PoseStamped pose = planner_->get_currentFKine("end_effector_link");
+    geometry_msgs::PoseStamped pose = planner_->get_currentFKine();
     res.success = true;
     // res.message = "Forward Kinematics Pose computed successfully";
     return true;
@@ -393,19 +393,23 @@ void ManipulatorPlanner::addCollObjCallback(const moveit_msgs::CollisionObject& 
 
 // --------------------- JACOBIAN-FKINE-INVKINE FUNCTIONS -------------------- //
 
-// THE FOLLOWING FUNCTION CANNOT BE USED SINCE DYNAMIC PLANNER METHODS CALLED DOENS'T WORK!! TODO
-// Get the tcp pose through FKINE of a given joint pose
+// Get the tcp pose through FKine of a given joint pose
 const geometry_msgs::PoseStamped ManipulatorPlanner::get_manip_FKine()
 {
-  // Get current tcp pose through FKINE
+  // Get current tcp pose through FKine
   return planner_->get_currentFKine(ee_name_);
 }
 
 // Get manipulator Jacobian
 const Eigen::MatrixXd ManipulatorPlanner::get_manip_Jacobian()
 {
-  // Get robot jacobian
   return planner_->getJacobian();
+}
+
+// Get manipulator inverse Jacobian
+const Eigen::MatrixXd ManipulatorPlanner::get_manip_InvJacobian()
+{
+  return planner->pseudoInverse(planner_->getJacobian());
 }
 
 // --------------------- MOVE CALLBACK FUNCTIONS --------------------- //

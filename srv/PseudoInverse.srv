@@ -1,3 +1,2 @@
-std_msgs/Float64MultiArray input
 ---
 std_msgs/Float64MultiArray pseudo_inverse

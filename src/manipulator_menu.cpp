@@ -40,11 +40,11 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(std::string node_name,std::string ee_joint_name,
-                                  double ros_freq)
+ManipulatorMenu::ManipulatorMenu(std::string node_name, std::string ee_joint_name,
+                                 double      ros_freq,  std::string manipulator_name="manipulator")
 {
-  node_name_ = node_name;
   // Check for parameters
+  node_name_        = node_name;
   if (!nh_.getParam(node_name_+"/ee_joint_name", ee_joint_name_))
   {
     ROS_WARN("EE joint name param not defined! Assuming EE passed as object arg.");
@@ -57,37 +57,37 @@ ManipulatorMenu::ManipulatorMenu(std::string node_name,std::string ee_joint_name
     ros_freq_ = ros_freq;
     if (ros_freq_==0) {ros_freq_ = 10;}
   }
+  if (!nh_.getParam(node_name_+"/manipulator_name", manipulator_name_))
+  {
+    ROS_WARN("Manipulator name param not defined! Assuming default value.");
+    manipulator_name_ = manipulator_name;
+  }
 
-  // Listen static tf from tool0 and tcp_gripper
-  // geometry_msgs::PoseStamped ee_offset_pose = getTf("tool0","tcp_gripper");
-  // ee_offset_ = ee_offset_pose.pose.position.z;
+  ROS_INFO("Manipulator name: %s", manipulator_name_);  // TODO: delete after test
 
   // --------------------- PUBS & SUBS DELCARATIONS ---------------------
-
   jointGoalPublisher_           = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
   jointGoalPublisherNoPlanner_  = nh_.advertise<sensor_msgs::JointState>("/noplan_joint_pose", 1);
   tcpPosePublisher_             = nh_.advertise<geometry_msgs::Pose>("/desired_tcp_pose", 1);
   tcpPoseIKPublisher_           = nh_.advertise<geometry_msgs::Pose>("/desired_tcpIK_pose", 1);
   tcpPoseIK_noplannerPub_       = nh_.advertise<geometry_msgs::Pose>("/noplan_tcpIK_pose", 1);
-  carthesianMovePublisher_      = nh_.advertise<geometry_msgs::PoseArray>("/desired_cartesian_move", 1, true);
-  display_goal_pub_             = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1, true);
-  eepose_pub_                   = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1, true);
+  carthesianMovePublisher_      = nh_.advertise<geometry_msgs::PoseArray>("/desired_cartesian_move", 1);
+  display_goal_pub_             = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1);
+  eepose_pub_                   = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1);
   collisionObjectPublisher_     = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
   moveGripperPublisher_         = nh_.advertise<std_msgs::Float64>(ee_joint_name_+"/motor_control", 1);
   jointStateSubscriber_         = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
 
-  // --------------------- Global class variables init ---------------------
-
-  counterJg_ = false;       // choice of test joint goal
-  counterCg_ = false;       // choice of test tcp3D goal
-
   // --------------------- Kinematics client init ---------------------
-  
+  invKineClient_                = nh.serviceClient<manipulators::InvKine>(manipulator_name_+"invKine");
+  pseudoInvClient_              = nh.serviceClient<manipulators::PseudoInverse>(manipulator_name_+"/pseudoInverse");
+  fKineClient_                  = nh.serviceClient<manipulators::FKine>(manipulator_name_+"/FKine");
+  jacobianClient_               = nh.serviceClient<manipulators::Jacobian>(manipulator_name_+"Jacobian");
 
   // --------------------- CoppeliaSim client init ---------------------
-  client_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
+  client_                       = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
 
-  // --------------------- Gripper client init ---------------------
+  // --------------------- Gripper client init --------------------- TODO: change service simulation and add real/sim gripper param
   if (ee_joint_name_ != "")
   {
     // grab_client_    = nh_.serviceClient<std_srvs::SetBool>(ee_joint_name_+"/grabbing_gripper");
@@ -101,81 +101,58 @@ ManipulatorMenu::ManipulatorMenu(std::string node_name,std::string ee_joint_name
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
 
-#include <ros/ros.h>
-#include <manipulator_planner/InvKine.h>
-#include <manipulator_planner/PseudoInverse.h>
-#include <manipulator_planner/GetCurrentFKine.h>
-#include <std_srvs/Trigger.h>
-#include <std_msgs/Float64MultiArray.h>
-#include <geometry_msgs/PoseStamped.h>
+std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::PoseStamped pose) // TODO: test
+{
+    const std::vector<double> joint_values;
 
-void invKineClient() {
-    ros::ServiceClient client = nh.serviceClient<manipulator_planner::InvKine>("/manipulator/invKine");
-    manipulator_planner::InvKine srv;
-    
-    // Set target pose (manually or from input)
-    geometry_msgs::PoseStamped pose;
+    // Set target pose
     srv.request.target_pose = pose;
 
-    if (client.call(srv)) {
+    // Call the srv
+    if (invKineClient_.call(invKine_srv_))
+    {
         ROS_INFO("Inverse kinematics joint values received:");
-        for (auto &joint_value : srv.response.joint_values) {
-            ROS_INFO_STREAM(joint_value);
-        }
-    } else {
-        ROS_ERROR("Failed to call service invKine");
-    }
-}
-
-void pseudoInverseClient() {
-    ros::ServiceClient client = nh.serviceClient<manipulator_planner::PseudoInverse>("/manipulator/pseudoInverse");
-    manipulator_planner::PseudoInverse srv;
-    
-    // Create and set the input matrix
-    Eigen::MatrixXd matrix = Eigen::MatrixXd::Random(3, 3);
-    std_msgs::Float64MultiArray input_matrix;
-    for (int i = 0; i < matrix.rows(); ++i) {
-        for (int j = 0; j < matrix.cols(); ++j) {
-            input_matrix.data.push_back(matrix(i, j));
+        // for (auto &joint_value : srv.response.joint_values) {ROS_INFO_STREAM(joint_value);}
+        for (unsigned int k = 0; k < srv.response.joint_values.dim[0].size; k++)
+        {
+          joint_values.push_back(srv.response.joint_values.data[k]);
         }
     }
+    else {ROS_ERROR("Failed to call service invKine");}
 
-    srv.request.input = input_matrix;
-
-    if (client.call(srv)) {
-        ROS_INFO("Pseudoinverse matrix received:");
-        for (auto &val : srv.response.pseudo_inverse.data) {
-            ROS_INFO_STREAM(val);
-        }
-    } else {
-        ROS_ERROR("Failed to call service pseudoInverse");
-    }
+    return joint_values;
 }
 
-void getCurrentFKineClient(ros::NodeHandle &nh) {
-    ros::ServiceClient client = nh.serviceClient<manipulator_planner::GetCurrentFKine>("/manipulator/get_currentFKine");
-    manipulator_planner::GetCurrentFKine srv;
-    
-    // Set end-effector link name
-    srv.request.ee_link_name = "end_effector_link";
-
-    if (client.call(srv)) {
-        ROS_INFO("Forward Kinematics Pose received:");
-        ROS_INFO_STREAM(srv.response.pose);
-    } else {
-        ROS_ERROR("Failed to call service getCurrentFKine");
-    }
+std_msgs::Float64MultiArray ManipulatorMenu::pseudoInverseClient()
+{        
+  if (pseudoInvClient_.call(pseudoInv_srv_))
+  {
+      ROS_INFO("Pseudoinverse matrix received:");
+      for (auto &val : srv.response.pseudo_inverse.data)
+      {
+        //  ROS_INFO_STREAM(val);
+      }
+  } 
+  else {ROS_ERROR("Failed to call service pseudoInverse");}
 }
 
-void getJacobianClient(ros::NodeHandle &nh) {
-    ros::ServiceClient client = nh.serviceClient<std_srvs::Trigger>("/manipulator/getJacobian");
-    std_srvs::Trigger srv;
+geometry_msgs::Pose ManipulatorMenu::getCurrentFKineClient()
+{
+  if (fKineClient_.call(fKine_srv_))
+  {
+      ROS_INFO("Forward Kinematics Pose received:");
+      ROS_INFO_STREAM(srv.response.pose);
+  }
+  else {ROS_ERROR("Failed to call service getCurrentFKine");}
+}
 
-    if (client.call(srv)) {
-        ROS_INFO("Jacobian matrix received successfully:");
-    } else {
-        ROS_ERROR("Failed to call service getJacobian");
+std_msgs::Float64MultiArray ManipulatorMenu::getJacobianClient()
+{
+    if (jacobianClient_.call(jacobian_srv_))
+    {
+       ROS_INFO("Jacobian matrix received successfully:");
     }
+    else {ROS_ERROR("Failed to call service getJacobian");}
 }
 
 // --------------------- ROS HANDLER ---------------------
@@ -442,9 +419,9 @@ geometry_msgs::Pose ManipulatorMenu::publishCartesianMove(const uint   axis1,
                                                           const uint   steps) 
 {
   // Initialize starting and waypoints variables
-  geometry_msgs::PoseStamped current_pose = getTf("base_link","tool0");
-  geometry_msgs::PoseArray   waypoints;
-  geometry_msgs::Pose        final_pose;
+  geometry_msgs::Pose       current_pose = getCurrentFKine();
+  geometry_msgs::PoseArray  waypoints;
+  geometry_msgs::Pose       final_pose;
   waypoints.header.frame_id = "base_link"; 
   double step_axisX = 0.;
   double step_axisY = 0.;
@@ -453,12 +430,12 @@ geometry_msgs::Pose ManipulatorMenu::publishCartesianMove(const uint   axis1,
   if  (axis1 == axis2) {ROS_WARN("Error in axis input!"); return final_pose;}
   else 
   {
-    if      (axis1 == 0) {step_axisX = pos1 - current_pose.pose.position.x;}
-    else if (axis1 == 1) {step_axisY = pos1 - current_pose.pose.position.y;}
-    else if (axis1 == 2) {step_axisZ = pos1 - current_pose.pose.position.z;}
-    if      (axis2 == 0) {step_axisX = pos2 - current_pose.pose.position.x;}
-    else if (axis2 == 1) {step_axisY = pos2 - current_pose.pose.position.y;}
-    else if (axis2 == 2) {step_axisZ = pos2 - current_pose.pose.position.z;}
+    if      (axis1 == 0) {step_axisX = pos1 - current_pose.position.x;}
+    else if (axis1 == 1) {step_axisY = pos1 - current_pose.position.y;}
+    else if (axis1 == 2) {step_axisZ = pos1 - current_pose.position.z;}
+    if      (axis2 == 0) {step_axisX = pos2 - current_pose.position.x;}
+    else if (axis2 == 1) {step_axisY = pos2 - current_pose.position.y;}
+    else if (axis2 == 2) {step_axisZ = pos2 - current_pose.position.z;}
   }
   // Compute common step
   step_axisX = step_axisX/static_cast<double>(steps);
@@ -469,11 +446,11 @@ geometry_msgs::Pose ManipulatorMenu::publishCartesianMove(const uint   axis1,
   {
     geometry_msgs::Pose wp;
     // Same orientation for every waypoint
-    wp.orientation  = current_pose.pose.orientation;
+    wp.orientation  = current_pose.orientation;
     // Fill the position
-    wp.position.x   = current_pose.pose.position.x + (k+1)*step_axisX; 
-    wp.position.y   = current_pose.pose.position.y + (k+1)*step_axisY; 
-    wp.position.z   = current_pose.pose.position.z + (k+1)*step_axisZ; 
+    wp.position.x   = current_pose.position.x + (k+1)*step_axisX; 
+    wp.position.y   = current_pose.position.y + (k+1)*step_axisY; 
+    wp.position.z   = current_pose.position.z + (k+1)*step_axisZ; 
     // Last position should be accurate
     if (k == steps-1)
     {
@@ -533,7 +510,7 @@ geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_fram
   tf2_ros::TransformListener tf_listener(tf_buffer);
 
   // Wait for the transformation to be available
-  try {tf_buffer.canTransform(source_frame, target_frame, ros::Time(0), ros::Duration(0.5));} 
+  try {tf_buffer.canTransform(source_frame, target_frame, ros::Time(0), ros::Duration(0.2));} 
   catch (tf2::TransformException& ex) {ROS_WARN("%s", ex.what());}
 
   // Get the transformation
@@ -556,8 +533,8 @@ geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_fram
 // Get current EE pose
 geometry_msgs::PoseStamped ManipulatorMenu::getEEpose()
 {
-  // Compute the tf between base_link and end-effector
-  // current_tcp_pose_ = getTf("base_link","tcp_gripper");
+  // Compute the FKine between base_link and end-effector
+  geometry_msgs::Pose current_tcp_pose_ = getCurrentFKineClient();
   eepose_pub_.publish(current_tcp_pose_);
   return current_tcp_pose_;
 }
@@ -565,23 +542,15 @@ geometry_msgs::PoseStamped ManipulatorMenu::getEEpose()
 // Get EE pose as vector with RPY euler angles
 std::vector<double> ManipulatorMenu::getEEpos_rpy()
 {
-  // Read current EE pose by TF
+  // Read current EE pose by FKine
   getEEpose();
 
-  // Declaration of pose vector
-  std::vector<double> tcp_pose_rpy = {0.,0.,0.,0.,0.,0.};
-
-  // Fill the position
-  tcp_pose_rpy[0] = current_tcp_pose_.pose.position.x;
-  tcp_pose_rpy[1] = current_tcp_pose_.pose.position.y;
-  tcp_pose_rpy[2] = current_tcp_pose_.pose.position.z;
-
-  // Fill the rotation
+  // Fill the rotation vector
   std::vector<double> tcp_rpy = euler_from_quaternion(current_tcp_pose_.pose.orientation);
-  tcp_pose_rpy[3] = tcp_rpy[0];
-  tcp_pose_rpy[4] = tcp_rpy[1];
-  tcp_pose_rpy[5] = tcp_rpy[2];
 
+  // Declaration of the pose vector
+  std::vector<double> tcp_pose_rpy = {current_tcp_pose_.pose.position.x,current_tcp_pose_.pose.position.y.,current_tcp_pose_.pose.position.z,
+                                                             tcp_rpy[0],                        tcp_rpy[1],                      tcp_rpy[2]};
   return tcp_pose_rpy;
 }
 
@@ -812,19 +781,6 @@ void ManipulatorMenu::wait_for_response()
   
 // --------------------- JOINT GOALS HANDLER ---------------------
 
-void ManipulatorMenu::testJointGoal()
-{
-  // Declare the empty vector of joints goals
-  std::vector<double> joints = {0.,0.,0.,0.,0.,0.};
-
-  // Alternate a different joint goal when launching this function
-  counterJg_ = !counterJg_;
-  if (counterJg_) {joints = {0.0,-90,+90,0.0,+90,0.0};}
-  else            {joints = {0.0,-90,+90,0.0,-90,0.0};}   
-  
-  publishJointGoal(joints);
-}
-
 void ManipulatorMenu::userJointGoal()
 {
   // Declare the empty vector of joints goals
@@ -854,19 +810,6 @@ void ManipulatorMenu::oneJointMove_user()
 }
 
 // --------------------- TCP GOALS HANDLER ---------------------
-
-void ManipulatorMenu::testTcpGoal()
-{
-  // Declare the empty vector of joints goals
-  std::vector<double> position = {0.,0.,0.,0.,0.,0.};
-
-  // Alternate a different joint goal when launching this function
-  counterCg_ = !counterCg_;
-  if (counterCg_) {position = {0.60,0.20,0.35,0.0,0.0,90.0};}
-  else            {position = {0.60,-0.20,0.35,0.0,0.0,90.0};}   
-  
-  publishTcpGoal(position);
-}
 
 void ManipulatorMenu::userTcpGoal()
 {
@@ -1276,7 +1219,7 @@ int ManipulatorMenu::getUserChoice()
   return choice;
 }
 
-void ManipulatorMenu::processChoice(int choice)
+void ManipulatorMenu::processChoice(int choice)   // TODO: update numbers
 {
   double step;                // Linear move length along axis
   std::vector<double> rot;    // End effector rotation
@@ -1291,15 +1234,6 @@ void ManipulatorMenu::processChoice(int choice)
     ROS_INFO("You selected Option 0");
     userJoint_no_planner_Goal();
     break;
-  case 1:
-    ROS_INFO("You selected Option 1");
-    testJointGoal();
-    break;
-  case 2:
-    ROS_INFO("You selected Option 2");
-    testTcpGoal();
-    break;
-
   case 3:
     ROS_INFO("You selected Option 3");
     userJointGoal();
