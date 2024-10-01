@@ -86,10 +86,10 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   j5_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[5]+"/motor_control", 1);
 
   // ---------------------- KINEMATICS SERVICES ---------------------------------------- //
-  inv_kine_service_       = nh_.advertiseService(manipulator_name_ + "/invKine",       ManipulatorPlanner::invKineCallback);
-  pseudo_inverse_service_ = nh_.advertiseService(manipulator_name_ + "/pseudoInverse", ManipulatorPlanner::pseudoInverseCallback);
-  get_fkine_service_      = nh_.advertiseService(manipulator_name_ + "/FKine",         ManipulatorPlanner::getCurrentFKineCallback);
-  get_jacobian_service_   = nh_.advertiseService(manipulator_name_ + "/Jacobian",      ManipulatorPlanner::getJacobianCallback);
+  inv_kine_service_       = nh_.advertiseService(manipulator_name_ + "/invKine",       &ManipulatorPlanner::invKineCallback,        this);
+  pseudo_inverse_service_ = nh_.advertiseService(manipulator_name_ + "/pseudoInverse", &ManipulatorPlanner::pseudoInverseCallback,  this);
+  get_fkine_service_      = nh_.advertiseService(manipulator_name_ + "/FKine",         &ManipulatorPlanner::getCurrentFKineCallback,this);
+  get_jacobian_service_   = nh_.advertiseService(manipulator_name_ + "/Jacobian",      &ManipulatorPlanner::getJacobianCallback,    this);
 
   // ---------------------- DYNAMIC PLANNER OBJECT ------------------------------------- //
 
@@ -184,7 +184,7 @@ bool ManipulatorPlanner::pseudoInverseCallback(manipulators::PseudoInverse::Requ
 bool ManipulatorPlanner::getCurrentFKineCallback(manipulators::FKine::Request  &req,
                                                  manipulators::FKine::Response &res)          // TODO: test
 {
-    geometry_msgs::Pose pose = planner_->get_currentFKine();
+    geometry_msgs::Pose pose = get_manip_FKine();
     res.tcp_pose = pose;
     // res.message = "Forward Kinematics Pose computed successfully";
     return true;
@@ -392,7 +392,7 @@ void ManipulatorPlanner::addCollObjCallback(const moveit_msgs::CollisionObject& 
 // --------------------- JACOBIAN-FKINE-INVKINE FUNCTIONS -------------------- //
 
 // Get the tcp pose through FKine of a given joint pose
-const geometry_msgs::PoseStamped ManipulatorPlanner::get_manip_FKine()
+const geometry_msgs::Pose ManipulatorPlanner::get_manip_FKine()
 {
   // Get current tcp pose through FKine
   return planner_->get_currentFKine(ee_name_);
@@ -459,13 +459,8 @@ void ManipulatorPlanner::jointsGoalCallback(const sensor_msgs::JointState::Const
 // Callback function to handle a tcp 3D goal with the inverse kinematics
 void ManipulatorPlanner::tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& p)
 {
-  // Fill the pose stamped goal
-  geometry_msgs::PoseStamped goal;
-  goal.header.frame_id = base_name_;
-  goal.pose            = *p;
-
   // Make the inverse kinematics
-  std::vector<double> joint_values = planner_->invKine(goal);
+  std::vector<double> joint_values = planner_->invKine(*p);
 
   if (joint_values.size() < joint_names_.size())
   {
@@ -504,13 +499,8 @@ void ManipulatorPlanner::jointsGoal_NoPlanner_Callback(const sensor_msgs::JointS
 // Callback function to handle a tcp 3D goal with the inverse kinematics
 void ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback(const geometry_msgs::Pose::ConstPtr& p)
 {
-  // Fill the pose stamped goal
-  geometry_msgs::PoseStamped goal;
-  goal.header.frame_id = base_name_;
-  goal.pose            = *p;
-
   // Make the inverse kinematics
-  std::vector<double> joint_values = planner_->invKine(goal);
+  std::vector<double> joint_values = planner_->invKine(*p);
 
   if (joint_values.size() < joint_names_.size())
   {

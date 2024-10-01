@@ -41,7 +41,7 @@
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
 ManipulatorMenu::ManipulatorMenu(std::string node_name, std::string ee_joint_name,
-                                 double      ros_freq,  std::string manipulator_name="manipulator")
+                                 double      ros_freq,  std::string manipulator_name)
 {
   // Check for parameters
   node_name_        = node_name;
@@ -63,7 +63,7 @@ ManipulatorMenu::ManipulatorMenu(std::string node_name, std::string ee_joint_nam
     manipulator_name_ = manipulator_name;
   }
 
-  ROS_INFO("Manipulator name: %s", manipulator_name_);  // TODO: delete after test
+  std::cout << "Manipulator name: " << manipulator_name_ << std::endl;  // TODO: delete after test
 
   // --------------------- PUBS & SUBS DELCARATIONS ---------------------
   jointGoalPublisher_           = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
@@ -79,10 +79,10 @@ ManipulatorMenu::ManipulatorMenu(std::string node_name, std::string ee_joint_nam
   jointStateSubscriber_         = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
 
   // --------------------- Kinematics client init ---------------------
-  invKineClient_                = nh.serviceClient<manipulators::InvKine>(manipulator_name_+"invKine");
-  pseudoInvClient_              = nh.serviceClient<manipulators::PseudoInverse>(manipulator_name_+"/pseudoInverse");
-  fKineClient_                  = nh.serviceClient<manipulators::FKine>(manipulator_name_+"/FKine");
-  jacobianClient_               = nh.serviceClient<manipulators::Jacobian>(manipulator_name_+"Jacobian");
+  invKineClient_                = nh_.serviceClient<manipulators::InvKine>(manipulator_name_+"invKine");
+  pseudoInvClient_              = nh_.serviceClient<manipulators::PseudoInverse>(manipulator_name_+"/pseudoInverse");
+  fKineClient_                  = nh_.serviceClient<manipulators::FKine>(manipulator_name_+"/FKine");
+  jacobianClient_               = nh_.serviceClient<manipulators::Jacobian>(manipulator_name_+"/Jacobian");
 
   // --------------------- CoppeliaSim client init ---------------------
   client_                       = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
@@ -101,19 +101,19 @@ ManipulatorMenu::ManipulatorMenu(std::string node_name, std::string ee_joint_nam
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
 
-std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::PoseStamped pose) // TODO: test
+std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::Pose pose) // TODO: test
 {
-    const std::vector<double> joint_values;
+    std::vector<double> joint_values;
 
     // Set target pose
-    srv.request.target_pose = pose;
+    invKine_srv_.request.target_pose = pose;
 
     // Call the srv
     if (invKineClient_.call(invKine_srv_))
     {
         ROS_INFO("Inverse kinematics joint values received:");
         // for (auto &joint_value : srv.response.joint_values) {ROS_INFO_STREAM(joint_value);}
-        for (unsigned int k = 0; k < invKine_srv_.response.joint_values.dim[0].size; k++)
+        for (unsigned int k = 0; k < invKine_srv_.response.joint_values.layout.dim[0].size; k++)
         {
           joint_values.push_back(invKine_srv_.response.joint_values.data[k]);
         }
@@ -123,13 +123,13 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::PoseStam
     return joint_values;
 }
 
-std_msgs::Float64MultiArray ManipulatorMenu::pseudoInverseClient() // TODO: test
-{        
+Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient() // TODO: test
+{                
+  Eigen::MatrixXd matrix(6, 6);
+
   if (pseudoInvClient_.call(pseudoInv_srv_))
   {
     ROS_INFO("Pseudoinverse matrix received:");
-      
-    Eigen::MatrixXd matrix(6, 6);
 
     // Assign data from Float64MultiArray to Eigen::MatrixXd
     for (int i = 0; i < 6; ++i)
@@ -139,44 +139,46 @@ std_msgs::Float64MultiArray ManipulatorMenu::pseudoInverseClient() // TODO: test
           matrix(i, j) = pseudoInv_srv_.response.pseudo_inverse.data[i * 6 + j];
       }
     }
-
-    return matrix;
   } 
   else {ROS_ERROR("Failed to call service pseudoInverse");}
+
+  return matrix;
 }
 
 geometry_msgs::Pose ManipulatorMenu::getCurrentFKineClient() // TODO: test
 {
+  geometry_msgs::Pose pose;
   if (fKineClient_.call(fKine_srv_))
   {
     ROS_INFO("Forward Kinematics Pose received:");
-    ROS_INFO_STREAM(srv.response.pose);
-    geometry_msgs::Pose pose = srv.response.pose;
-    return pose;
+    ROS_INFO_STREAM(fKine_srv_.response.tcp_pose);
+    pose = fKine_srv_.response.tcp_pose;
   }
   else {ROS_ERROR("Failed to call service getCurrentFKine");}
+  return pose;
 }
 
-std_msgs::Float64MultiArray ManipulatorMenu::getJacobianClient()
-{
-    if (jacobianClient_.call(jacobian_srv_))
+Eigen::MatrixXd ManipulatorMenu::getJacobianClient() // TODO: test
+{       
+  Eigen::MatrixXd matrix(6, 6);
+      
+  if (jacobianClient_.call(jacobian_srv_))
+  {
+      ROS_INFO("Jacobian matrix received successfully:");
+
+
+    // Assign data from Float64MultiArray to Eigen::MatrixXd
+    for (int i = 0; i < 6; ++i)
     {
-       ROS_INFO("Jacobian matrix received successfully:");
-       
-       Eigen::MatrixXd matrix(6, 6);
-
-      // Assign data from Float64MultiArray to Eigen::MatrixXd
-      for (int i = 0; i < 6; ++i)
+      for (int j = 0; j < 6; ++j)
       {
-        for (int j = 0; j < 6; ++j)
-        {
-            matrix(i, j) = pseudoInv_srv_.response.pseudo_inverse.data[i * 6 + j];
-        }
+          matrix(i, j) = jacobian_srv_.response.jacobian.data[i * 6 + j];
       }
-
-      return matrix;
     }
-    else {ROS_ERROR("Failed to call service getJacobian");}
+  }
+  else {ROS_ERROR("Failed to call service getJacobian");}
+    
+  return matrix;
 }
 
 // --------------------- ROS HANDLER ---------------------
@@ -443,7 +445,7 @@ geometry_msgs::Pose ManipulatorMenu::publishCartesianMove(const uint   axis1,
                                                           const uint   steps) 
 {
   // Initialize starting and waypoints variables
-  geometry_msgs::Pose       current_pose = getCurrentFKine();
+  geometry_msgs::Pose       current_pose = getCurrentFKineClient();
   geometry_msgs::PoseArray  waypoints;
   geometry_msgs::Pose       final_pose;
   waypoints.header.frame_id = "base_link"; 
@@ -555,7 +557,7 @@ geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_fram
 }
 
 // Get current EE pose
-geometry_msgs::PoseStamped ManipulatorMenu::getEEpose()
+geometry_msgs::Pose ManipulatorMenu::getEEpose()
 {
   // Compute the FKine between base_link and end-effector
   geometry_msgs::Pose current_tcp_pose_ = getCurrentFKineClient();
@@ -573,8 +575,7 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
   std::vector<double> tcp_rpy = euler_from_quaternion(current_tcp_pose_.pose.orientation);
 
   // Declaration of the pose vector
-  std::vector<double> tcp_pose_rpy = {current_tcp_pose_.pose.position.x,current_tcp_pose_.pose.position.y.,current_tcp_pose_.pose.position.z,
-                                                             tcp_rpy[0],                        tcp_rpy[1],                      tcp_rpy[2]};
+  std::vector<double> tcp_pose_rpy = {current_tcp_pose_.pose.position.x,current_tcp_pose_.pose.position.y,current_tcp_pose_.pose.position.z,tcp_rpy[0],tcp_rpy[1],tcp_rpy[2]};
   return tcp_pose_rpy;
 }
 
@@ -1187,8 +1188,6 @@ void ManipulatorMenu::printMenu()
   std::cout << "\n======= Joint/tcp moving test options =======\n";
   std::cout << "0. Give a TCP goal through InvKine, with fake controller\n";
   std::cout << "34.Give a joint goal, with fake controller\n";
-  std::cout << "1. Test a joint goal\n";
-  std::cout << "2. Test a TCP goal\n";
   std::cout << "3. Give a joint goal\n";
   std::cout << "4. Give a TCP goal\n";
   std::cout << "5. Give a TCP goal through InvKine\n";

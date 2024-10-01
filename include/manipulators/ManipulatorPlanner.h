@@ -85,7 +85,7 @@ class ManipulatorPlanner
       void addCollObjCallback(const moveit_msgs::CollisionObject& obj);
 
       // Get manipulator ee pose thourgh FKINE of current joints pose
-      const geometry_msgs::PoseStamped get_manip_FKine(void);
+      const geometry_msgs::Pose get_manip_FKine(void);
 
       // Get manipulator Jacobian
       const Eigen::MatrixXd get_manip_Jacobian(void);
@@ -97,16 +97,17 @@ class ManipulatorPlanner
       ros::ServiceServer get_fkine_service_;
       ros::ServiceServer get_jacobian_service_;
 
-      bool ManipulatorPlanner::invKineCallback(manipulators::InvKine::Request  &req,
-                                               manipulators::InvKine::Response &res);
+      bool invKineCallback(manipulators::InvKine::Request  &req,
+                           manipulators::InvKine::Response &res);
 
-      bool ManipulatorPlanner::pseudoInverseCallback(manipulators::PseudoInverse::Request  &req,
-                                                     manipulators::PseudoInverse::Response &res);
+      bool pseudoInverseCallback(manipulators::PseudoInverse::Request  &req,
+                                 manipulators::PseudoInverse::Response &res);
 
-      bool ManipulatorPlanner::getCurrentFKineCallback(manipulators::FKine::Request  &req,
-                                                       manipulators::FKine::Response &res);
+      bool getCurrentFKineCallback(manipulators::FKine::Request  &req,
+                                   manipulators::FKine::Response &res);
 
-      bool ManipulatorPlanner::getJacobianCallback(manipulators::Jacobian::Response &jacobian);
+      bool getJacobianCallback(manipulators::Jacobian::Request  &req,
+                               manipulators::Jacobian::Response &res);
 
     // --------------------- MOVE FUNCTIONS ---------------------
 

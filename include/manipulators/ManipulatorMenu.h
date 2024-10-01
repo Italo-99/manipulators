@@ -61,12 +61,17 @@
   #include <gripper/RobotiQGripperControl.h>
   #include <std_srvs/SetBool.h>
 
+  #include <manipulators/InvKine.h>
+  #include <manipulators/PseudoInverse.h>
+  #include <manipulators/FKine.h>
+  #include <manipulators/Jacobian.h>
+
 class ManipulatorMenu
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
     ManipulatorMenu(std::string node_name,std::string ee_joint_name,
-                    double ros_freq, std::string manipulator_name);   // Constructor
+                    double ros_freq=500, std::string manipulator_name="manipulator");   // Constructor
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
@@ -100,7 +105,7 @@ class ManipulatorMenu
       sensor_msgs::JointState goHome(const bool);               // to setup home position
 
     // Get the position and orientation of the end effector (they contain a ros spin once)
-      geometry_msgs::PoseStamped getEEpose();
+      geometry_msgs::Pose getEEpose();
       std::vector<double> getEEpos_rpy();
 
     // Get the transform between two frames
@@ -176,6 +181,11 @@ class ManipulatorMenu
       void callGripperSrv(const bool);     // to call open/close gripper srv
       void callGrabbingSrv(const bool);    // to call grab/detach gripper srv
       void callRealGripperSrv(const float);// to call real gripper open close
+
+      geometry_msgs::Pose getCurrentFKineClient(void);
+      Eigen::MatrixXd     pseudoInverseClient(void);
+      std::vector<double> invKineClient(const geometry_msgs::Pose pose);
+      Eigen::MatrixXd     getJacobianClient(void);
 
     // --------------------- UTILS FUNCTIONS ---------------------
 
