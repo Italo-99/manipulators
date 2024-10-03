@@ -74,6 +74,10 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   check_param();
   dynamic_behaviour_ = false;   // No replanning
 
+  // Jacobian speed based control
+  enaJacControl_sub_   = nh_.subscribe(manipulator_name_+"/enable_jacobian_speed_control",  1, &ManipulatorPlanner::jacobianControlSetterCallback, this);
+  velJacSetpoint_sub_  = nh_.subscribe(manipulator_name_+"/cmd_vel",                        1, &ManipulatorPlanner::updateVelJacSetpoint,          this);
+
   // ---------------------  MOTOR CONTROLLERS FOR INVKINE  ---------------------------
   instKine_setter_sub_ = nh_.subscribe(manipulator_name_+"/instKine_setter", 1, &ManipulatorPlanner::instantKineSetterCallback, this);
   instKine_setter_pub_ = nh_.advertise<std_msgs::Bool>(manipulator_name_+"/instKine_setter", 1);
@@ -136,9 +140,90 @@ void ManipulatorPlanner::spinner()
     // planner_->pseudoInverse(planner_->getJacobian());
     // ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
 
+    ros::Time start = ros::Time::now();
+    
+    // Check if jacobian-based control has been enables
+    if (jac_control_)
+    {
+      jacobianControl();
+    }
+    ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
+
     // Wait for next loop time
     r.sleep();
   }
+}
+
+// -------------------- JACOBIAN SPEED CONTROL -------------------//
+
+// Set the jacobian speed based control
+void ManipulatorPlanner::jacobianControlSetterCallback(const std_msgs::Bool::ConstPtr& msg)
+{
+  jac_control_ = msg->data;
+  arm_vel_cmd_[0] = 0.;
+  arm_vel_cmd_[1] = 0.;
+  arm_vel_cmd_[2] = 0.;
+  arm_vel_cmd_[3] = 0.;
+  arm_vel_cmd_[4] = 0.;
+  arm_vel_cmd_[5] = 0.;
+}
+
+// Execute the jacobian based control
+void ManipulatorPlanner::jacobianControl()
+{
+  // Compute the speed
+  Eigen::Matrix<double,6,1> dq = get_manip_InvJacobian()*arm_vel_cmd_;
+
+  // Convert joints state into Eigen::MatrixXd
+  Eigen::Matrix<double,6,1> q;
+  q[0] = planner_->joints_values_group_[0];
+  q[1] = planner_->joints_values_group_[1];
+  q[2] = planner_->joints_values_group_[2];
+  q[3] = planner_->joints_values_group_[3];
+  q[4] = planner_->joints_values_group_[4];
+  q[5] = planner_->joints_values_group_[5];
+
+  // Update joint position setpoint
+  Eigen::Matrix<double,6,1> qd = q + dq / ros_freq_;
+
+  // Build the msg for the joints setpoint
+  sensor_msgs::JointState js;
+  js.name     = joint_names_;
+  js.position.resize(qd.size());
+  js.velocity.resize(dq.size());
+
+  // Insert positions setpoint
+  js.position[0] = qd[0];
+  js.position[1] = qd[1];
+  js.position[2] = qd[2];
+  js.position[3] = qd[3];
+  js.position[4] = qd[4];
+  js.position[5] = qd[5];
+
+  // Insert velocity  setpoint
+  js.velocity[0] = dq[0];
+  js.velocity[1] = dq[1];
+  js.velocity[2] = dq[2];
+  js.velocity[3] = dq[3];
+  js.velocity[4] = dq[4];
+  js.velocity[5] = dq[5];
+
+  // Send the goal to the dynamic planner V1
+  planner_->moveRobot(js);
+}
+
+// Update the velocity setpoint of the arm for the jacobian speed based control
+void ManipulatorPlanner::updateVelJacSetpoint(const geometry_msgs::Twist::ConstPtr& msg)
+{    
+    // Map the linear velocity components from the Twist message
+    arm_vel_cmd_[0] = msg->linear.x; // X component of linear velocity
+    arm_vel_cmd_[1] = msg->linear.y; // Y component of linear velocity
+    arm_vel_cmd_[2] = msg->linear.z; // Z component of linear velocity
+    
+    // Map the angular velocity components from the Twist message
+    arm_vel_cmd_[3] = msg->angular.x; // X component of angular velocity
+    arm_vel_cmd_[4] = msg->angular.y; // Y component of angular velocity
+    arm_vel_cmd_[5] = msg->angular.z; // Z component of angular velocity
 }
 
 // ---------------------- SERVER FUNCTIONS ---------------------- //

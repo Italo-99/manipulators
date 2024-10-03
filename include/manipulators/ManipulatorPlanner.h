@@ -127,6 +127,15 @@ class ManipulatorPlanner
       // Motors controller when no planner
       void motors_controller(const sensor_msgs::JointState js);
 
+      // Set the jacobian speed based control
+      void jacobianControlSetterCallback(const std_msgs::Bool::ConstPtr& msg);
+
+      // Execute the jacobian based control
+      void jacobianControl();
+      
+      // Update the velocity setpoint of the arm for the jacobian speed based control
+      void updateVelJacSetpoint(const geometry_msgs::Twist::ConstPtr& msg);
+
       // Instantaneous kine param setter
       void instantKineSetterCallback(const std_msgs::Bool::ConstPtr& msg);
       void set_instKine(bool set);
@@ -160,6 +169,9 @@ class ManipulatorPlanner
     ros::Subscriber instKine_setter_sub_;   // Subscriber to the instantaneous Kinematics setter
     ros::Publisher  instKine_setter_pub_;   // Publisher  to the instantaneous Kinematics setter
 
+    ros::Subscriber enaJacControl_sub_;     // Subscriber to the jacobian control setter
+    ros::Subscriber velJacSetpoint_sub_;    // Subscriber to the velocity command for the jacobian control
+
     // Environment objects handler
     ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
 
@@ -171,6 +183,10 @@ class ManipulatorPlanner
     bool        inst_kine_;                 // True if invKine leads to instantaneous move up to the goal
     double      sample_time_;               // Sampling time of the cartesian planner
     double      max_velocity_;              // Maximum ee velocity
+    bool        jac_control_ = false;       // True if the speed control through inverse Jacobian has been enabled
+
+    // Vel commands variables
+    Eigen::Matrix<double,6,1> arm_vel_cmd_;           // Command of speed to the end_effector
 
     // Manipulator attributes
     std::vector<std::string> joint_names_;  // Joints' names
