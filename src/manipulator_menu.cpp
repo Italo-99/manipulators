@@ -145,7 +145,7 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
 
   if (pseudoInvClient_.call(pseudoInv_srv_))
   {
-    ROS_INFO("Pseudoinverse matrix received:");
+    // ROS_INFO("Pseudoinverse matrix received:");
 
     // Assign data from Float64MultiArray to Eigen::MatrixXd
     for (int i = 0; i < 6; ++i)
@@ -207,7 +207,8 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 void ManipulatorMenu::spinner()
 {
     // Setup a rate for ROS loop execution
-    ros::Rate r(params_.ros_freq);
+    // ros::Rate r(params_.ros_freq);
+    ros::Rate r(500);
     
     // ROS loop
     while (ros::ok())
@@ -215,6 +216,13 @@ void ManipulatorMenu::spinner()
         // ROS spinner        
         ros::spinOnce();
         getEEpose();
+
+        // Test funtion for InvKine computations time measurement: about 10-20 ms, not acceptable
+        ros::Time start = ros::Time::now();
+        invKineClient(getCurrentFKineClient());
+        getCurrentFKineClient();
+        pseudoInverseClient();
+        ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
 
         // Wait for next loop time
         r.sleep();
