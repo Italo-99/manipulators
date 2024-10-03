@@ -207,8 +207,7 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 void ManipulatorMenu::spinner()
 {
     // Setup a rate for ROS loop execution
-    // ros::Rate r(params_.ros_freq);
-    ros::Rate r(500);
+    ros::Rate r(params_.ros_freq);
     
     // ROS loop
     while (ros::ok())
@@ -218,11 +217,11 @@ void ManipulatorMenu::spinner()
         getEEpose();
 
         // Test funtion for InvKine computations time measurement: about 10-20 ms, not acceptable
-        ros::Time start = ros::Time::now();
-        invKineClient(getCurrentFKineClient());
-        getCurrentFKineClient();
-        pseudoInverseClient();
-        ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
+        // ros::Time start = ros::Time::now();
+        // invKineClient(getCurrentFKineClient());
+        // getCurrentFKineClient();
+        // pseudoInverseClient();
+        // ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
 
         // Wait for next loop time
         r.sleep();
@@ -897,6 +896,8 @@ void ManipulatorMenu::userTcpGoal()
   std::cin >> position[4];
   std::cout << "Rz: ";
   std::cin >> position[5];
+
+  publishTcpGoal(position);
 } 
 
 void ManipulatorMenu::userTcpIKGoal()
@@ -1313,7 +1314,6 @@ void ManipulatorMenu::processChoice(int choice)
     ROS_INFO("You selected Option 4");
     userTcpGoal();
     break;
-
   case 5:
     ROS_INFO("You selected Option 5");
     userTcpIKGoal();

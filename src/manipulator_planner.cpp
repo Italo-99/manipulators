@@ -140,13 +140,9 @@ void ManipulatorPlanner::spinner()
     // planner_->pseudoInverse(planner_->getJacobian());
     // ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
 
+    // Jacobian speed control
     ros::Time start = ros::Time::now();
-    
-    // Check if jacobian-based control has been enables
-    if (jac_control_)
-    {
-      jacobianControl();
-    }
+    if (jac_control_){jacobianControl();}
     ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
 
     // Wait for next loop time
@@ -154,7 +150,7 @@ void ManipulatorPlanner::spinner()
   }
 }
 
-// -------------------- JACOBIAN SPEED CONTROL -------------------//
+// -------------------- JACOBIAN SPEED CONTROL ----------------- //
 
 // Set the jacobian speed based control
 void ManipulatorPlanner::jacobianControlSetterCallback(const std_msgs::Bool::ConstPtr& msg)
