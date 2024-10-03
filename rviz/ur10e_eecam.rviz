@@ -4,11 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /PlanningScene1
         - /PlanningScene1/Scene Robot1
-        - /PlanningScene1/Scene Robot1/Links1
-        - /PlanningScene1/Scene Robot1/Links1/tcp_gripper1
-        - /PlanningScene1/Scene Robot1/Links1/tool01
       Splitter Ratio: 0.46462714672088623
     Tree Height: 396
   - Class: rviz/Help

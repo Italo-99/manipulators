@@ -44,13 +44,20 @@
 // MAIN FUNCTION IMPLEMENTATION
 int main(int argc, char **argv)
 {
-  std::string node_name = "manipulator_menu_node_user";
+  // Pass arguments to the manipulator menu using a struct
+  ManipulatorMenuParams params;
+  params.node_name        = "manipulator_menu_node_user";
+  params.ros_freq         = 10.;
+  params.manipulator_name = "manipulator";
 
-  ros::init(argc, argv, node_name);
+  // Declare the ROS node
+  ros::init(argc, argv, params.node_name);
 
-  ManipulatorMenu Menu(node_name,"",10,"manipulator");
+  // Declare the manipulator menu object
+  ManipulatorMenu menu(params);
 
-  Menu.spinnerMenu();
+  // Display and execute menu functions
+  menu.spinnerMenu();
 
   return 0;
 }

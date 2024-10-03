@@ -40,30 +40,46 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(std::string node_name, std::string ee_joint_name,
-                                 double      ros_freq,  std::string manipulator_name)
+ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
 {
   // Check for parameters
-  node_name_        = node_name;
-  if (!nh_.getParam(node_name_+"/ee_joint_name", ee_joint_name_))
+  params_ = params;
+  if (!nh_.getParam(params_.node_name+"/ee_joint_name", params_.ee_joint_name))
   {
-    ROS_WARN("EE joint name param not defined! Assuming EE passed as object arg.");
+    ROS_WARN("EE joint name param not defined! Assuming EE passed as object arg or as default.");
     // ee_joint_name  = "robotiq85_gripper/finger_joint"; EXAMPLE
-    ee_joint_name_  = ee_joint_name;
+    params_.ee_joint_name  = params.ee_joint_name;
   }
-  if (!nh_.getParam(node_name_+"/ros_freq", ros_freq_))
+  if (!nh_.getParam(params_.node_name+"/ros_freq", params_.ros_freq))
   {
-    ROS_WARN("ROS loop frequency param not defined! Assuming value passed as object arg, or 10 Hz as default.");
-    ros_freq_ = ros_freq;
-    if (ros_freq_==0) {ros_freq_ = 10;}
+    ROS_WARN("ROS loop frequency param not defined! Assuming default value as argument of the constructor.");
+    params_.ros_freq = params.ros_freq;
   }
-  if (!nh_.getParam(node_name_+"/manipulator_name", manipulator_name_))
+  if (params_.ros_freq < 0.1) 
+  {
+    ROS_WARN("ROS loop frequency param too low or not passed! Assuming minimum value of 10 Hz.");
+    params_.ros_freq = 10.;
+  }
+  if (!nh_.getParam(params_.node_name+"/manipulator_name", params.manipulator_name))
   {
     ROS_WARN("Manipulator name param not defined! Assuming default value.");
-    manipulator_name_ = manipulator_name;
+    params_.manipulator_name = params.manipulator_name;
   }
-
-  std::cout << "Manipulator name: " << manipulator_name_ << std::endl;  // TODO: delete after test
+  if (!nh_.getParam(params_.node_name+"/enable_coppelia", params.enable_coppelia))
+  {
+    ROS_WARN("Coppelia enable param not defined! Assuming default value as false.");
+    params_.enable_coppelia = params.enable_coppelia;
+  }
+  if (!nh_.getParam(params_.node_name+"/enable_sim_gripper", params.enable_sim_gripper))
+  {
+    ROS_WARN("Gripper enable param not defined! Assuming default value as false.");
+    params_.enable_sim_gripper = params.enable_sim_gripper;
+  }
+  if (!nh_.getParam(params_.node_name+"/enable_real_gripper", params.enable_real_gripper))
+  {
+    ROS_WARN("Real gripper enable param not defined! Assuming default value as false.");
+    params_.enable_real_gripper = params.enable_real_gripper;
+  }
 
   // --------------------- PUBS & SUBS DELCARATIONS ---------------------
   jointGoalPublisher_           = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
@@ -75,33 +91,33 @@ ManipulatorMenu::ManipulatorMenu(std::string node_name, std::string ee_joint_nam
   display_goal_pub_             = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1);
   eepose_pub_                   = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1);
   collisionObjectPublisher_     = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
-  moveGripperPublisher_         = nh_.advertise<std_msgs::Float64>(ee_joint_name_+"/motor_control", 1);
+  moveGripperPublisher_         = nh_.advertise<std_msgs::Float64>(params_.ee_joint_name+"/motor_control", 1);
   jointStateSubscriber_         = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
 
   // --------------------- Kinematics client init ---------------------
-  invKineClient_                = nh_.serviceClient<manipulators::InvKine>(manipulator_name_+"invKine");
-  pseudoInvClient_              = nh_.serviceClient<manipulators::PseudoInverse>(manipulator_name_+"/pseudoInverse");
-  fKineClient_                  = nh_.serviceClient<manipulators::FKine>(manipulator_name_+"/FKine");
-  jacobianClient_               = nh_.serviceClient<manipulators::Jacobian>(manipulator_name_+"/Jacobian");
+  invKineClient_                = nh_.serviceClient<manipulators::InvKine>(params_.manipulator_name+"/invKine");
+  pseudoInvClient_              = nh_.serviceClient<manipulators::PseudoInverse>(params_.manipulator_name+"/pseudoInverse");
+  fKineClient_                  = nh_.serviceClient<manipulators::FKine>(params_.manipulator_name+"/FKine");
+  jacobianClient_               = nh_.serviceClient<manipulators::Jacobian>(params_.manipulator_name+"/Jacobian");
 
   // --------------------- CoppeliaSim client init ---------------------
-  client_                       = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");
+  if (params_.enable_coppelia)
+  {coppeliaClient_ = nh_.serviceClient<manipulators::CoppeliaMenu>("coppelia_menu");}
 
-  // --------------------- Gripper client init --------------------- TODO: change service simulation and add real/sim gripper param
-  if (ee_joint_name_ != "")
+  // --------------------- Gripper client init ---------------------
+  if (params_.ee_joint_name != "" && params.enable_sim_gripper == true)
   {
-    // grab_client_    = nh_.serviceClient<std_srvs::SetBool>(ee_joint_name_+"/grabbing_gripper");
-    gripper_client_ = nh_.serviceClient<std_srvs::SetBool>(ee_joint_name_+"/move_gripper");
+    grab_client_    = nh_.serviceClient<std_srvs::SetBool>(params_.ee_joint_name+"/grabbing_gripper");
+    gripper_client_ = nh_.serviceClient<std_srvs::SetBool>(params_.ee_joint_name+"/move_gripper");
 
-    // Real gripper client init
-    real_gripper_client_ = nh_.serviceClient<gripper::RobotiQGripperControl>("/ur_rtde/robotiq_gripper/command");
+    if (params_.enable_real_gripper)
+    {real_gripper_client_ = nh_.serviceClient<gripper::RobotiQGripperControl>("/ur_rtde/robotiq_gripper/command");}
   }
-
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
 
-std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::Pose pose) // TODO: test
+std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::Pose pose)
 {
     std::vector<double> joint_values;
 
@@ -111,7 +127,7 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::Pose pos
     // Call the srv
     if (invKineClient_.call(invKine_srv_))
     {
-        ROS_INFO("Inverse kinematics joint values received:");
+        // ROS_INFO("Inverse kinematics joint values received:");
         // for (auto &joint_value : srv.response.joint_values) {ROS_INFO_STREAM(joint_value);}
         for (unsigned int k = 0; k < invKine_srv_.response.joint_values.layout.dim[0].size; k++)
         {
@@ -123,8 +139,8 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::Pose pos
     return joint_values;
 }
 
-Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient() // TODO: test
-{                
+Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
+{
   Eigen::MatrixXd matrix(6, 6);
 
   if (pseudoInvClient_.call(pseudoInv_srv_))
@@ -145,28 +161,32 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient() // TODO: test
   return matrix;
 }
 
-geometry_msgs::Pose ManipulatorMenu::getCurrentFKineClient() // TODO: test
+geometry_msgs::Pose ManipulatorMenu::getCurrentFKineClient() // TODO: buffer ovverrun bug
 {
   geometry_msgs::Pose pose;
   if (fKineClient_.call(fKine_srv_))
   {
-    ROS_INFO("Forward Kinematics Pose received:");
-    ROS_INFO_STREAM(fKine_srv_.response.tcp_pose);
-    pose = fKine_srv_.response.tcp_pose;
+    // ROS_INFO("Forward Kinematics Pose received:");
+    // ROS_INFO_STREAM(fKine_srv_.response.tcp_pose);
+    pose.position.x     = fKine_srv_.response.tcp_pose.position.x;
+    pose.position.y     = fKine_srv_.response.tcp_pose.position.y;
+    pose.position.z     = fKine_srv_.response.tcp_pose.position.z;
+    pose.orientation.x  = fKine_srv_.response.tcp_pose.orientation.x;
+    pose.orientation.y  = fKine_srv_.response.tcp_pose.orientation.y;
+    pose.orientation.z  = fKine_srv_.response.tcp_pose.orientation.z;
+    pose.orientation.w  = fKine_srv_.response.tcp_pose.orientation.w;
   }
   else {ROS_ERROR("Failed to call service getCurrentFKine");}
   return pose;
 }
 
-Eigen::MatrixXd ManipulatorMenu::getJacobianClient() // TODO: test
-{       
+Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
+{
   Eigen::MatrixXd matrix(6, 6);
       
   if (jacobianClient_.call(jacobian_srv_))
   {
-      ROS_INFO("Jacobian matrix received successfully:");
-
-
+    // ROS_INFO("Jacobian matrix received successfully:");
     // Assign data from Float64MultiArray to Eigen::MatrixXd
     for (int i = 0; i < 6; ++i)
     {
@@ -187,7 +207,7 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient() // TODO: test
 void ManipulatorMenu::spinner()
 {
     // Setup a rate for ROS loop execution
-    ros::Rate r(ros_freq_);
+    ros::Rate r(params_.ros_freq);
     
     // ROS loop
     while (ros::ok())
@@ -245,13 +265,6 @@ void ManipulatorMenu::stopCoppeliaSim()
 void ManipulatorMenu::saveCoppeliaScene()
 {
   coppelia_srv_.request.command = 2;
-  wait_for_response();
-}
-
-// Change Coppelia cable pose
-void ManipulatorMenu::changeCoppeliaCablePose()
-{
-  coppelia_srv_.request.command = 3;
   wait_for_response();
 }
 
@@ -502,7 +515,6 @@ sensor_msgs::JointState ManipulatorMenu::oneJointMove(const int num, const doubl
 {
   // Read from subscribers the current joints state
   ros::spinOnce();
-  getEEpose();
   // Fill current joints pose as target
   std::vector<double> joint_target = {0.,0.,0.,0.,0.,0.};
   for (unsigned int k = 0; k < 6; k++) 
@@ -560,9 +572,10 @@ geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_fram
 geometry_msgs::Pose ManipulatorMenu::getEEpose()
 {
   // Compute the FKine between base_link and end-effector
-  geometry_msgs::Pose current_tcp_pose_ = getCurrentFKineClient();
+  current_tcp_pose_.header.frame_id = "base_link";
+  current_tcp_pose_.pose = getCurrentFKineClient();
   eepose_pub_.publish(current_tcp_pose_);
-  return current_tcp_pose_;
+  return current_tcp_pose_.pose;
 }
 
 // Get EE pose as vector with RPY euler angles
@@ -582,33 +595,48 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
 // -------------------- SIMPLE MOVES ALONG CARTHESIAN AXES -----------------------//
 
 // Set a carthesian move along x axis in metres
-geometry_msgs::Pose ManipulatorMenu::move_along_x(const double x_step)
+geometry_msgs::Pose ManipulatorMenu::move_along_x(const double x_step, bool cartesian)
 {
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update position along X
   goal_pose[0] = goal_pose[0] + x_step;
-  return publishTcpIKGoal(goal_pose);
+  if (cartesian)
+  {
+    uint8_t n_steps = std::max(int(x_step/0.1),1);
+    return publishCartesianMove(0,1,goal_pose[0],goal_pose[1],n_steps);
+  }
+  else {return publishTcpIKGoal(goal_pose);}
 }
 
 // Set a carthesian move along x axis in metres
-geometry_msgs::Pose ManipulatorMenu::move_along_y(const double y_step)
+geometry_msgs::Pose ManipulatorMenu::move_along_y(const double y_step, bool cartesian)
 {
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update position along Y
   goal_pose[1] = goal_pose[1] + y_step;
-  return publishTcpIKGoal(goal_pose);
+  if (cartesian)
+  {
+    uint8_t n_steps = std::max(int(y_step/0.1),1);
+    return publishCartesianMove(0,1,goal_pose[0],goal_pose[1],n_steps);
+  }
+  else {return publishTcpIKGoal(goal_pose);}
 }
 
 // Set a carthesian move along x axis in metres
-geometry_msgs::Pose ManipulatorMenu::move_along_z(const double z_step)
+geometry_msgs::Pose ManipulatorMenu::move_along_z(const double z_step, bool cartesian)
 {
   // Get current EE pose
   std::vector<double> goal_pose = getEEpos_rpy();
   goal_pose[2] = goal_pose[2] + z_step;
   // Update position along Z
-  return publishTcpIKGoal(goal_pose);
+  if (cartesian)
+  {
+    uint8_t n_steps = std::max(int(z_step/0.1),1);
+    return publishCartesianMove(0,2,goal_pose[0],goal_pose[2],n_steps);
+  }
+  else {return publishTcpIKGoal(goal_pose);}
 }
 
 // -------------------- SIMPLE ROTATIONS AROUND CARTHESIAN AXES -----------------------//
@@ -794,7 +822,7 @@ void ManipulatorMenu::moveRealGripper(const float command)
 // Send the request and show the response
 void ManipulatorMenu::wait_for_response()
 {
-  if (client_.call(coppelia_srv_))
+  if (coppeliaClient_.call(coppelia_srv_))
   {
     ROS_INFO("Simulation status: %d", coppelia_srv_.response.result);
   }
@@ -960,7 +988,6 @@ void ManipulatorMenu::userCartesianMove()
 void ManipulatorMenu::jointStateVisualizer() 
 {
   ros::spinOnce();
-  getEEpose();
   for (unsigned int k = 0; k < 6; k++)
   {
     std::cout << "Joint " << k << " : " << current_joint_pose_.position[k]*180/M_PI << std::endl;
@@ -1186,13 +1213,13 @@ void ManipulatorMenu::printMenu()
 {
   std::cout << "\n======= MANIPULATOR MENU =======\n";
   std::cout << "\n======= Joint/tcp moving test options =======\n";
-  std::cout << "0. Give a TCP goal through InvKine, with fake controller\n";
-  std::cout << "34.Give a joint goal, with fake controller\n";
-  std::cout << "3. Give a joint goal\n";
-  std::cout << "4. Give a TCP goal\n";
-  std::cout << "5. Give a TCP goal through InvKine\n";
+  std::cout << "1. Give a TCP goal through InvKine, with fake controller\n";
+  std::cout << "2. Give a joint goal, with fake controller\n";
+  std::cout << "3. Give a joint goal to MoveIt\n";
+  std::cout << "4. Give a TCP goal to MoveIt\n";
+  std::cout << "5. Give a TCP goal through InvKine to MoveIt\n";
   std::cout << "6. Move a defined joint\n";
-  std::cout << "\n======= Carthesian moving test options =======\n";
+  std::cout << "\n======= Carthesian moves test options =======\n";
   std::cout << "7. Move the robot along x\n";
   std::cout << "8. Move the robot along y\n";
   std::cout << "9. Move the robot along z\n";
@@ -1211,25 +1238,37 @@ void ManipulatorMenu::printMenu()
   std::cout << "\n======= Home positions setting =======\n";
   std::cout << "19.Go to home position (gripper down)\n";
   std::cout << "20.Go to home position (gripper at the front)\n";
-  std::cout << "\n======= CoppeliaSim handling =======\n";
-  std::cout << "21. To start twin Coppelia simulation\n";
-  std::cout << "22. To stop  twin Coppelia simulation\n";
-  std::cout << "23. To save  twin CoppeliaSim scene\n";
-  std::cout << "24. To change cable pose in the CoppeliaSim scene\n";
   std::cout << "\n======= Cartesian move =======\n";
-  std::cout << "25.Make a cartesian move\n";
-  std::cout << "\n======= Fake gripper control =======\n";
-  std::cout << "26.Open the gripper\n";
-  std::cout << "27.Close the gripper\n";
-  std::cout << "28.Set the position of the gripper\n";
-  std::cout << "29.Grab an object at the gripper\n";
-  std::cout << "30.Detach an object from the gripper\n";
-  std::cout << "\n======= Real gripper control =======\n";
-  std::cout << "31.Open  real gripper\n";
-  std::cout << "32.Close real gripper\n";
-  std::cout << "33.Move  real gripper to a given position \n";
+  std::cout << "21.Make a cartesian move\n";
+  if (params_.enable_coppelia)
+  {
+    std::cout << "\n======= CoppeliaSim handling =======\n";
+    std::cout << "22. To start twin Coppelia simulation\n";
+    std::cout << "23. To stop  twin Coppelia simulation\n";
+    std::cout << "24. To save  twin CoppeliaSim scene\n";
+  }
+  if (params_.enable_sim_gripper)
+  {
+    std::cout << "\n======= Fake gripper control =======\n";
+    std::cout << "26.Open the gripper\n";
+    std::cout << "27.Close the gripper\n";
+    std::cout << "28.Set the position of the gripper\n";
+    std::cout << "29.Grab an object at the gripper\n";
+    std::cout << "30.Detach an object from the gripper\n";
+  }
+  if (params_.enable_real_gripper)
+  {
+    std::cout << "\n======= Real gripper control =======\n";
+    std::cout << "31.Open  real gripper\n";
+    std::cout << "32.Close real gripper\n";
+    std::cout << "33.Move  real gripper to a given position \n";
+  }
+  std::cout << "\n======= Kinematics srvs =======\n";
+  std::cout << "34. Get joint values through inverse kinematics of a given pose\n";
+  std::cout << "35. Get current Jacobian\n";
+  std::cout << "36. Get current Inverse Jacobian\n";
   std::cout << "\n======= Closing ROS menu =======\n";
-  std::cout << "35.Shutdown the menu\n";
+  std::cout << "37.Shutdown the menu\n";
 
   std::cout << "=====================\n";
 }
@@ -1242,18 +1281,18 @@ int ManipulatorMenu::getUserChoice()
   return choice;
 }
 
-void ManipulatorMenu::processChoice(int choice)   // TODO: update numbers
+void ManipulatorMenu::processChoice(int choice)
 {
   double step;                // Linear move length along axis
   std::vector<double> rot;    // End effector rotation
   std::vector<double> ee_pos; // End effector position
   switch (choice)
   {
-  case 0:
+  case 1:
     ROS_INFO("You selected Option 0");
     userTcpIK_no_planner_Goal();
     break;
-  case 34:
+  case 2:
     ROS_INFO("You selected Option 0");
     userJoint_no_planner_Goal();
     break;
@@ -1359,17 +1398,17 @@ void ManipulatorMenu::processChoice(int choice)   // TODO: update numbers
     break;
 
   case 18:
-    ROS_INFO("You selected Option 18");
-    ee_pos = getEEpos_rpy();
-    std::cout << " EE - X position: " << ee_pos[0] << std::endl;
-    std::cout << " EE - Y position: " << ee_pos[1] << std::endl;
-    std::cout << " EE - Z position: " << ee_pos[2] << std::endl;
-    std::cout << " EE - X rotation: " << ee_pos[3] << std::endl;
-    std::cout << " EE - Y rotation: " << ee_pos[4] << std::endl;
-    std::cout << " EE - Z rotation: " << ee_pos[5] << std::endl;
-    break;
-
-  
+    {
+      ROS_INFO("You selected Option 18");
+      std::vector<double> ee_pose = getEEpos_rpy();
+      std::cout << " EE - X position: " << ee_pose[0] << std::endl;
+      std::cout << " EE - Y position: " << ee_pose[1] << std::endl;
+      std::cout << " EE - Z position: " << ee_pose[2] << std::endl;
+      std::cout << " EE - X rotation: " << ee_pose[3] << std::endl;
+      std::cout << " EE - Y rotation: " << ee_pose[4] << std::endl;
+      std::cout << " EE - Z rotation: " << ee_pose[5] << std::endl;
+    }
+    break;  
   case 19:
     ROS_INFO("You selected Option 19");
     ROS_INFO("Go to home position, gripper down ...");
@@ -1379,30 +1418,25 @@ void ManipulatorMenu::processChoice(int choice)   // TODO: update numbers
     ROS_INFO("You selected Option 20");
     ROS_INFO("Go to home position, gripper at the front ...");
     goHome(1);
-    break;
+    break;  
   case 21:
     ROS_INFO("You selected Option 21");
-    ROS_INFO("Start Coppelia simulation");
-    startCoppeliaSim();
+    userCartesianMove();
     break;
   case 22:
     ROS_INFO("You selected Option 22");
-    ROS_INFO("Stop Coppelia simulation");
-    stopCoppeliaSim();
+    ROS_INFO("Start Coppelia simulation");
+    startCoppeliaSim();
     break;
   case 23:
     ROS_INFO("You selected Option 23");
-    ROS_INFO("Save current Coppelia scene");
-    saveCoppeliaScene();
+    ROS_INFO("Stop Coppelia simulation");
+    stopCoppeliaSim();
     break;
   case 24:
     ROS_INFO("You selected Option 24");
-    ROS_INFO("Change cable position in the CoppeliaSim scene");
-    changeCoppeliaCablePose();
-    break;
-  case 25:
-    ROS_INFO("You selected Option 25");
-    userCartesianMove();
+    ROS_INFO("Save current Coppelia scene");
+    saveCoppeliaScene();
     break;
   case 26:
     ROS_INFO("You selected Option 26");
@@ -1446,7 +1480,49 @@ void ManipulatorMenu::processChoice(int choice)   // TODO: update numbers
     std::cin >> gripper_pos;
     moveRealGripper(gripper_pos);
     break;
+  case 34:
+    {
+      ROS_INFO("You selected Option 34");
+      ROS_INFO("Set the pose you want to compute inverse kinematics.");
+      geometry_msgs::Pose pose;
+      float rx,ry,rz;
+      std::cout << "X position: ";
+      std::cin >> pose.position.x;
+      std::cout << "Y position: ";
+      std::cin >> pose.position.y;
+      std::cout << "Z position: ";
+      std::cin >> pose.position.z;
+      std::cout << "X rotation (in degrees): ";
+      std::cin >> rx;
+      std::cout << "Y rotation (in degrees): ";
+      std::cin >> ry;
+      std::cout << "Z rotation (in degrees): ";
+      std::cin >> rz;
+      pose.orientation = quaternion_from_euler(rx,ry,rz);
+      std::vector<double> joints = invKineClient(pose);
+      for (unsigned int k = 0; k < joints.size(); k++)
+      {
+        ROS_INFO("Joint %d: %f", k, joints[k]);
+      }
+    }
+    break;
   case 35:
+    {
+      ROS_INFO("You selected Option 35");
+      Eigen::MatrixXd jac = getJacobianClient();
+      ROS_INFO("Jacobian computed:\n");
+      std::cout << jac << std::endl;
+    }
+    break;
+  case 36:
+    {
+      ROS_INFO("You selected Option 36");
+      Eigen::MatrixXd inv_jac = pseudoInverseClient();
+      ROS_INFO("Inverse Jacobian computed:\n");
+      std::cout << inv_jac << std::endl;
+    }
+    break;
+  case 37:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;

@@ -43,22 +43,27 @@
 // IMPORT LIBRARIES
   #include <iostream>
   #include <cmath>
-  #include <ros/ros.h>
-  #include <std_msgs/Float64.h>
-  #include <std_msgs/Float64MultiArray.h>
-  #include <sensor_msgs/JointState.h>
+
   #include <geometry_msgs/Pose.h>
   #include <geometry_msgs/PoseArray.h>
   #include <geometry_msgs/PoseStamped.h>
+  #include <geometry_msgs/TransformStamped.h>
+
   #include <moveit_msgs/CollisionObject.h>
-  #include <tf2/LinearMath/Quaternion.h>
   #include <moveit_msgs/DisplayRobotState.h>
   #include <moveit/robot_state/conversions.h>
-  #include <geometry_msgs/TransformStamped.h>
-  #include <tf2_ros/transform_listener.h>
+
+  #include <ros/ros.h>
+  #include <sensor_msgs/JointState.h>
+  #include <std_msgs/Float64.h>
+  #include <std_msgs/Float64MultiArray.h>
+
+  #include <tf2/LinearMath/Quaternion.h>
   #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-  #include <manipulators/CoppeliaMenu.h>
+  #include <tf2_ros/transform_listener.h>
+
   #include <gripper/RobotiQGripperControl.h>
+  #include <manipulators/CoppeliaMenu.h>
   #include <std_srvs/SetBool.h>
 
   #include <manipulators/InvKine.h>
@@ -66,12 +71,23 @@
   #include <manipulators/FKine.h>
   #include <manipulators/Jacobian.h>
 
+// Declaration of the struct of the params, 
+struct ManipulatorMenuParams
+{
+  std::string node_name         = "manipulator_menu_node";
+  std::string ee_joint_name     = "";
+  double ros_freq               = 500;
+  std::string manipulator_name  = "manipulator";
+  bool enable_coppelia          = false;
+  bool enable_sim_gripper       = false;
+  bool enable_real_gripper      = false;
+};
+
 class ManipulatorMenu
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-    ManipulatorMenu(std::string node_name,std::string ee_joint_name,
-                    double ros_freq=500, std::string manipulator_name="manipulator");   // Constructor
+    ManipulatorMenu(ManipulatorMenuParams& params);
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
@@ -83,7 +99,6 @@ class ManipulatorMenu
       void startCoppeliaSim(void);        // Start simulation on CoppeliaSim
       void stopCoppeliaSim(void);         // Stop  simulation on CoppeliaSim
       void saveCoppeliaScene(void);       // Save  scene      on CoppeliaSim
-      void changeCoppeliaCablePose(void); // Changle randomly cable pose on CoppeliaSim
 
     // Joint and TCP moves
       sensor_msgs::JointState publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
@@ -112,9 +127,9 @@ class ManipulatorMenu
       geometry_msgs::PoseStamped getTf(const std::string& source_frame, const std::string& target_frame);
 
     // Move along axes
-      geometry_msgs::Pose move_along_x(const double x_step);
-      geometry_msgs::Pose move_along_y(const double y_step);
-      geometry_msgs::Pose move_along_z(const double z_step);
+      geometry_msgs::Pose move_along_x(const double x_step,bool cartesian = false);
+      geometry_msgs::Pose move_along_y(const double y_step,bool cartesian = false);
+      geometry_msgs::Pose move_along_z(const double z_step,bool cartesian = false);
 
     // Tcp orientation handling
       geometry_msgs::Pose make_tcp_rot(const std::vector<double> rot_vec);
@@ -216,13 +231,20 @@ class ManipulatorMenu
       ros::Publisher  moveGripperPublisher_;
       ros::Subscriber jointStateSubscriber_;
 
+    // --------------------- ROBOT STATE ---------------------------
       geometry_msgs::PoseStamped current_tcp_pose_;
       sensor_msgs::JointState current_joint_pose_;
 
-      std::string node_name_;
-      std::string ee_joint_name_;
-      double      ros_freq_;
-      std::string manipulator_name_;
+    // ----------------- CLASS ATTRIBUTES & PARAMS-----------------------
+      // std::string node_name_;
+      // std::string ee_joint_name_;
+      // double      ros_freq_;
+      // std::string manipulator_name_;
+
+      // bool enable_coppelia_;
+      // bool enable_sim_gripper_;
+      // bool enable_real_gripper_;
+      ManipulatorMenuParams params_;
 
       // --------------------- Kinematics client init ---------------------
       ros::ServiceClient invKineClient_;
@@ -236,7 +258,7 @@ class ManipulatorMenu
       manipulators::Jacobian      jacobian_srv_;
 
     // ---------------------  COPPELIA HANDLING ---------------------
-      ros::ServiceClient client_;
+      ros::ServiceClient         coppeliaClient_;
       manipulators::CoppeliaMenu coppelia_srv_;
 
     // ---------------------  GRIPPER HANDLING ---------------------
