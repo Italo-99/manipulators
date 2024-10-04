@@ -41,12 +41,15 @@
 #define MANIPULATOR_PLANNER_H
 
 // IMPORT LIBRARIES
+#include <signal.h>
+
 #include <dynamic_planner/dynamic_planner.h>
 #include <eigen_conversions/eigen_msg.h>
 #include <geometry_msgs/Pose.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/UInt8.h>
+#include <std_srvs/SetBool.h>
 #include <tf2_ros/transform_listener.h>
 
 #include <manipulators/InvKine.h>
@@ -69,6 +72,9 @@ class ManipulatorPlanner
 
   // ---------------------  PRIVATE FUNCTIONS ---------------------
     // --------------------- UTILS FUNCTIONS ---------------------
+
+      // Shutdown handler
+      static void shutdown_handler(int sig);
 
       // Check parameters passed to the manipulator
       void check_param();
@@ -148,51 +154,61 @@ class ManipulatorPlanner
 
   // ---------------------  PRIVATE VARIABLES ---------------------
 
-    std::string node_name_;                 // Node name
-    ros::NodeHandle nh_;                    // Node object
-    ros::Subscriber tcp_goal_sub_;          // Subscriber to TCP goal
-    ros::Subscriber joint_goal_sub_;        // Subscriber to joint goal
-    ros::Subscriber tcp_goalIK_sub_;        // Subscriber to TCP goal with InvKine
-    ros::Subscriber tcp_goalIK_noplan_sub_; // Subscriber to TCP goal with InvKine fake controller
-    ros::Subscriber joint_goal_noplan_sub_; // Subscriber to joint goal fake controller
-    ros::Subscriber carthesian_move_sub_;   // Subscriber to carthesian move
-    // ros::Subscriber tcp_goalSeq_sub_;    // Subscriber to the sequence of TCP goal
-    // ros::Subscriber joint_goalSeq_sub_;  // Subscriber to the sequence of joint goal
+    // Ros handling
+      std::string node_name_;                 // Node name
+      ros::NodeHandle nh_;                    // Node object
 
-    ros::Publisher j0_pub_;                 // Publisher to j0 motor controller
-    ros::Publisher j1_pub_;                 // Publisher to j1 motor controller
-    ros::Publisher j2_pub_;                 // Publisher to j2 motor controller
-    ros::Publisher j3_pub_;                 // Publisher to j3 motor controller
-    ros::Publisher j4_pub_;                 // Publisher to j4 motor controller
-    ros::Publisher j5_pub_;                 // Publisher to j5 motor controller
+    // Manipulator attributes
+      std::vector<std::string> joint_names_;  // Joints' names
+      std::string ee_name_;                   // End-effector's name
+      std::string base_name_;                 // Robot base's name
+      DynamicPlanner* planner_;               // Dynamic planner object 
 
-    ros::Subscriber instKine_setter_sub_;   // Subscriber to the instantaneous Kinematics setter
-    ros::Publisher  instKine_setter_pub_;   // Publisher  to the instantaneous Kinematics setter
+    // Move goal
+      ros::Subscriber tcp_goal_sub_;          // Subscriber to TCP goal
+      ros::Subscriber joint_goal_sub_;        // Subscriber to joint goal
+      ros::Subscriber tcp_goalIK_sub_;        // Subscriber to TCP goal with InvKine
+      ros::Subscriber tcp_goalIK_noplan_sub_; // Subscriber to TCP goal with InvKine fake controller
+      ros::Subscriber joint_goal_noplan_sub_; // Subscriber to joint goal fake controller
+      ros::Subscriber carthesian_move_sub_;   // Subscriber to carthesian move
+      // ros::Subscriber tcp_goalSeq_sub_;    // Subscriber to the sequence of TCP goal
+      // ros::Subscriber joint_goalSeq_sub_;  // Subscriber to the sequence of joint goal
 
-    ros::Subscriber enaJacControl_sub_;     // Subscriber to the jacobian control setter
-    ros::Subscriber velJacSetpoint_sub_;    // Subscriber to the velocity command for the jacobian control
+    // Motors controllers
+      ros::Publisher j0_pub_;                 // Publisher to j0 motor controller
+      ros::Publisher j1_pub_;                 // Publisher to j1 motor controller
+      ros::Publisher j2_pub_;                 // Publisher to j2 motor controller
+      ros::Publisher j3_pub_;                 // Publisher to j3 motor controller
+      ros::Publisher j4_pub_;                 // Publisher to j4 motor controller
+      ros::Publisher j5_pub_;                 // Publisher to j5 motor controller
+
+    // Instantaneous kinematics setter
+      ros::ServiceServer instKine_setter_srv_;// Service server to the instantaneous Kinematics setter
+      ros::ServiceClient instKine_setter_cli_;// Service client to the instantaneous Kinematics setter
+
+    // Jacobian vel control mode
+      ros::ServiceServer enaJacControl_srv_;  // Service server to the jacobian control setter
+      ros::ServiceClient enaJacControl_cli_;  // Service client to the jacobian control setter
+      ros::Subscriber   velJacSetpoint_sub_;  // Subscriber to the velocity command for the jacobian control
 
     // Environment objects handler
-    ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
+      ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
 
     // Planner args
-    std::string manipulator_name_;          // Manipulator name
-    double      vel_factor_, acc_factor_;   // Scale factor for joint velocities and accelerations
-    bool        sim_, dynamic_behaviour_;   // Simulation or debug, dynamic behaviour enabler
-    double      ros_freq_;                  // ROS node loop frequency
-    bool        inst_kine_;                 // True if invKine leads to instantaneous move up to the goal
-    double      sample_time_;               // Sampling time of the cartesian planner
-    double      max_velocity_;              // Maximum ee velocity
+      std::string manipulator_name_;          // Manipulator name
+      double      vel_factor_, acc_factor_;   // Scale factor for joint velocities and accelerations
+      bool        sim_, dynamic_behaviour_;   // Simulation or debug, dynamic behaviour enabler
+      double      ros_freq_;                  // ROS node loop frequency
+      bool        inst_kine_;                 // True if invKine leads to instantaneous move up to the goal
+      double      sample_time_;               // Sampling time of the cartesian planner
+      double      max_velocity_;              // Maximum ee velocity
+
+    // Jacobian control variables
     bool        jac_control_ = false;       // True if the speed control through inverse Jacobian has been enabled
+    static double mean;                     // Average value for the duration of the jacobian control computation
 
     // Vel commands variables
     Eigen::Matrix<double,6,1> arm_vel_cmd_;           // Command of speed to the end_effector
-
-    // Manipulator attributes
-    std::vector<std::string> joint_names_;  // Joints' names
-    std::string ee_name_;                   // End-effector's name
-    std::string base_name_;                 // Robot base's name
-    DynamicPlanner* planner_;               // Dynamic planner object 
 };
 
 #endif /* MANIPULATOR_PLANNER_H */

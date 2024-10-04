@@ -44,7 +44,9 @@
 #include "manipulators/ManipulatorPlanner.h"
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
+double ManipulatorPlanner::mean = 0.0;  // Mean static variable for the control time computation
 
+// Constructor for the ManipulatorPlanner class
 ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
 {
   // ---------------------  TCP AND JOINT GOALS SUBSCRIBERS ---------------------
@@ -70,17 +72,13 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
 
   // ---------------------  PRIVATE VARIABLES SETUP  ---------------------------
 
-  node_name_ = node_name;
-  check_param();
+  node_name_ = node_name;       // Set node name variable to ensure correct params check
+  check_param();                // Update robot parameters
   dynamic_behaviour_ = false;   // No replanning
 
-  // Jacobian speed based control
-  enaJacControl_sub_   = nh_.subscribe(manipulator_name_+"/enable_jacobian_speed_control",  1, &ManipulatorPlanner::jacobianControlSetterCallback, this);
-  velJacSetpoint_sub_  = nh_.subscribe(manipulator_name_+"/cmd_vel",                        1, &ManipulatorPlanner::updateVelJacSetpoint,          this);
-
   // ---------------------  MOTOR CONTROLLERS FOR INVKINE  ---------------------------
-  instKine_setter_sub_ = nh_.subscribe(manipulator_name_+"/instKine_setter", 1, &ManipulatorPlanner::instantKineSetterCallback, this);
-  instKine_setter_pub_ = nh_.advertise<std_msgs::Bool>(manipulator_name_+"/instKine_setter", 1);
+  instKine_setter_srv_ = nh_.advertiseService(manipulator_name_+"/instKine_setter", &ManipulatorPlanner::instantKineSetterCallback, this);
+  instKine_setter_cli_ = nh_.serviceClient<std_msgs::Bool>(manipulator_name_+"/instKine_setter");
 
   j0_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[0]+"/motor_control", 1);
   j1_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[1]+"/motor_control", 1);
@@ -89,20 +87,21 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   j4_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[4]+"/motor_control", 1);
   j5_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[5]+"/motor_control", 1);
 
-  // ---------------------- KINEMATICS SERVICES ---------------------------------------- //
+  // ---------------------- KINEMATICS UTILS SERVICES ---------------------------------- //
   inv_kine_service_       = nh_.advertiseService(manipulator_name_ + "/invKine",       &ManipulatorPlanner::invKineCallback,        this);
   pseudo_inverse_service_ = nh_.advertiseService(manipulator_name_ + "/pseudoInverse", &ManipulatorPlanner::pseudoInverseCallback,  this);
   get_fkine_service_      = nh_.advertiseService(manipulator_name_ + "/FKine",         &ManipulatorPlanner::getCurrentFKineCallback,this);
   get_jacobian_service_   = nh_.advertiseService(manipulator_name_ + "/Jacobian",      &ManipulatorPlanner::getJacobianCallback,    this);
 
+  // ------------------ JACOBIAN SPEED BASED CONTROL ----------------------------------- //
+  enaJacControl_srv_  = nh_.advertiseService(manipulator_name_+"/enable_jac_vel", &ManipulatorPlanner::jacobianControlSetterCallback, this);
+  velJacSetpoint_sub_ = nh_.subscribe(       manipulator_name_+"/cmd_vel",     1, &ManipulatorPlanner::updateVelJacSetpoint,          this);
+
   // ---------------------- DYNAMIC PLANNER OBJECT ------------------------------------- //
 
   // Call to the dynamic planner constructor
-  planner_ = new DynamicPlanner(manipulator_name_, joint_names_, vel_factor_, acc_factor_,
-                                dynamic_behaviour_, sample_time_, max_velocity_);  
-
-  // Set the sim mode for the dynamic planner
-  planner_->setSimMode(sim_);
+  planner_ = new DynamicPlanner(manipulator_name_,  joint_names_, vel_factor_, acc_factor_,
+                                dynamic_behaviour_, sample_time_, max_velocity_);
 
   // --------------------- EXAMPLE ENVIRONMENT SETUP --------------------- //
 
@@ -113,7 +112,7 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   // createObj("table", 1, dim_obj, pos_obj,rot_obj,0);
 
   // // How to delete from the scene
-  // createObj("table", 1, dim_obj, pos_obj,rot_obj,1);  
+  // createObj("table", 1, dim_obj, pos_obj,rot_obj,1);
 }
 
 // Destructor of the object manipulator planner's class
@@ -121,9 +120,26 @@ ManipulatorPlanner::~ManipulatorPlanner() {delete planner_;}
 
 // ---------------------  PUBLIC FUNCTIONS --------------------- //
 
+// Shutdown handler
+void ManipulatorPlanner::shutdown_handler(int sig)
+{
+  // Show the result of the jacobian control mean duration
+  ROS_INFO("Mean duration of the vel jacobian control computations: %f", mean);
+  ros::Duration(1.0).sleep();
+
+  // Shutdown ROS
+  ros::shutdown();
+}
+
 // Manipulator planner spin function
 void ManipulatorPlanner::spinner()
 {
+  // Number of samples for mean computation
+  unsigned long long int k = 0;           
+  
+  // Override the default ros sigint handler.
+  // This must be set after the first NodeHandle is created.
+  signal(SIGINT, shutdown_handler);
 
   // Setup a rate for ROS loop execution
   ros::Rate r(ros_freq_);
@@ -140,10 +156,21 @@ void ManipulatorPlanner::spinner()
     // planner_->pseudoInverse(planner_->getJacobian());
     // ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
 
-    // Jacobian speed control
-    ros::Time start = ros::Time::now();
-    if (jac_control_){jacobianControl();}
-    ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
+    // Jacobian speed control, with loop time measurement
+    if (jac_control_)
+    {
+      // Start loop time measurement
+      ros::Time start = ros::Time::now();
+
+      // Update the robot vel cmd
+      jacobianControl();
+
+      // Update mean computation
+      // ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
+      double sample_k = ros::Time::now().toSec()-start.toSec();
+      k++;
+      mean = 1/(static_cast<double>(k))*(sample_k+mean*static_cast<double>(k-1));
+    }
 
     // Wait for next loop time
     r.sleep();
@@ -153,9 +180,12 @@ void ManipulatorPlanner::spinner()
 // -------------------- JACOBIAN SPEED CONTROL ----------------- //
 
 // Set the jacobian speed based control
-void ManipulatorPlanner::jacobianControlSetterCallback(const std_msgs::Bool::ConstPtr& msg)
+void ManipulatorPlanner::jacobianControlSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res)
 {
-  jac_control_ = msg->data;
+  jac_control_ = req.data;
+  res.success  = true;
+  ROS_INFO("Jacobian control mode set as %d", jac_control_ ? 1:0);
+  // Stop the robot to prevent bad behaviours during mode switch
   arm_vel_cmd_[0] = 0.;
   arm_vel_cmd_[1] = 0.;
   arm_vel_cmd_[2] = 0.;
@@ -204,7 +234,7 @@ void ManipulatorPlanner::jacobianControl()
   js.velocity[4] = dq[4];
   js.velocity[5] = dq[5];
 
-  // Send the goal to the dynamic planner V1
+  // Send the goal to the move it fake controller as trajectory point
   planner_->moveRobot(js);
 }
 
@@ -295,9 +325,9 @@ bool ManipulatorPlanner::getJacobianCallback(manipulators::Jacobian::Request  &r
 // External command to enable instantaneous kinematics
 void ManipulatorPlanner::set_instKine(bool set)
 {
-  std_msgs::Bool msg;
-  msg.data = set;
-  instKine_setter_pub_.publish(msg);
+  std_srvs::Bool srv;
+  srv.req = set;
+  instKine_setter_cli_.call(srv);
 }
 
 // Check manipulators parameters passed to the node
@@ -634,9 +664,18 @@ void ManipulatorPlanner::motors_controller(const sensor_msgs::JointState js)
 }
 
 // Set the instantaneous inverse Kinematics
-void ManipulatorPlanner::instantKineSetterCallback(const std_msgs::Bool::ConstPtr& msg)
+void ManipulatorPlanner::instantKineSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res)
 {
-  inst_kine_ = msg->data;
+  inst_kine_ = req.data;
+  res.success = true;
+  ROS_INFO("Instantaneous kinematic mode set as %d", inst_kine_ ? 1:0);
+  // Stop the robot to prevent bad behaviours during mode switch
+  arm_vel_cmd_[0] = 0.;
+  arm_vel_cmd_[1] = 0.;
+  arm_vel_cmd_[2] = 0.;
+  arm_vel_cmd_[3] = 0.;
+  arm_vel_cmd_[4] = 0.;
+  arm_vel_cmd_[5] = 0.;
 }
 
 // TODO: the following two functions give an allocator error on the compiler
