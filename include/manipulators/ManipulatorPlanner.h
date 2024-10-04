@@ -97,7 +97,7 @@ class ManipulatorPlanner
       const Eigen::MatrixXd get_manip_Jacobian(void);
       const Eigen::MatrixXd get_manip_InvJacobian(void);
 
-    // Public service servers
+      // Service servers
       ros::ServiceServer inv_kine_service_;
       ros::ServiceServer pseudo_inverse_service_;
       ros::ServiceServer get_fkine_service_;
@@ -134,7 +134,7 @@ class ManipulatorPlanner
       void motors_controller(const sensor_msgs::JointState js);
 
       // Set the jacobian speed based control
-      void jacobianControlSetterCallback(const std_msgs::Bool::ConstPtr& msg);
+      bool jacobianControlSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
 
       // Execute the jacobian based control
       void jacobianControl();
@@ -143,7 +143,7 @@ class ManipulatorPlanner
       void updateVelJacSetpoint(const geometry_msgs::Twist::ConstPtr& msg);
 
       // Instantaneous kine param setter
-      void instantKineSetterCallback(const std_msgs::Bool::ConstPtr& msg);
+      bool instantKineSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
       void set_instKine(bool set);
 
       // // Callback function for goals in the 3D cartesian space for the robot TCP
@@ -197,7 +197,7 @@ class ManipulatorPlanner
     // Planner args
       std::string manipulator_name_;          // Manipulator name
       double      vel_factor_, acc_factor_;   // Scale factor for joint velocities and accelerations
-      bool        sim_, dynamic_behaviour_;   // Simulation or debug, dynamic behaviour enabler
+      bool        dynamic_behaviour_;         // Simulation or debug, dynamic behaviour enabler
       double      ros_freq_;                  // ROS node loop frequency
       bool        inst_kine_;                 // True if invKine leads to instantaneous move up to the goal
       double      sample_time_;               // Sampling time of the cartesian planner

@@ -78,7 +78,7 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
 
   // ---------------------  MOTOR CONTROLLERS FOR INVKINE  ---------------------------
   instKine_setter_srv_ = nh_.advertiseService(manipulator_name_+"/instKine_setter", &ManipulatorPlanner::instantKineSetterCallback, this);
-  instKine_setter_cli_ = nh_.serviceClient<std_msgs::Bool>(manipulator_name_+"/instKine_setter");
+  instKine_setter_cli_ = nh_.serviceClient<std_srvs::SetBool>(manipulator_name_+"/instKine_setter");
 
   j0_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[0]+"/motor_control", 1);
   j1_pub_ = nh_.advertise<std_msgs::Float64>(manipulator_name_+"/"+joint_names_[1]+"/motor_control", 1);
@@ -180,11 +180,11 @@ void ManipulatorPlanner::spinner()
 // -------------------- JACOBIAN SPEED CONTROL ----------------- //
 
 // Set the jacobian speed based control
-void ManipulatorPlanner::jacobianControlSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res)
+bool ManipulatorPlanner::jacobianControlSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res)
 {
+  // Set robot jacobian control
   jac_control_ = req.data;
-  res.success  = true;
-  ROS_INFO("Jacobian control mode set as %d", jac_control_ ? 1:0);
+  ROS_INFO("Jacobian control mode set as %s", jac_control_ ? "True":"False");
   // Stop the robot to prevent bad behaviours during mode switch
   arm_vel_cmd_[0] = 0.;
   arm_vel_cmd_[1] = 0.;
@@ -192,6 +192,10 @@ void ManipulatorPlanner::jacobianControlSetterCallback(std_srvs::SetBool::Reques
   arm_vel_cmd_[3] = 0.;
   arm_vel_cmd_[4] = 0.;
   arm_vel_cmd_[5] = 0.;
+  // Return success
+  res.success = true;
+  res.message = jac_control_ ? "Jacobian control mode enabled":"Jacobian control mode disabled";
+  return true;
 }
 
 // Execute the jacobian based control
@@ -325,8 +329,8 @@ bool ManipulatorPlanner::getJacobianCallback(manipulators::Jacobian::Request  &r
 // External command to enable instantaneous kinematics
 void ManipulatorPlanner::set_instKine(bool set)
 {
-  std_srvs::Bool srv;
-  srv.req = set;
+  std_srvs::SetBool srv;
+  srv.request.data = true;
   instKine_setter_cli_.call(srv);
 }
 
@@ -415,9 +419,6 @@ void ManipulatorPlanner::check_param()
     ROS_WARN("Sample time param not defined! Assuming default value as 0.5.");
     max_velocity_ = 0.5;
   }
-
-  // Get simulation status from the user (simulation or debug)
-  nh_.getParam(node_name_+"/sim", sim_);
 }
 
 // Creation of a collision object
@@ -664,11 +665,11 @@ void ManipulatorPlanner::motors_controller(const sensor_msgs::JointState js)
 }
 
 // Set the instantaneous inverse Kinematics
-void ManipulatorPlanner::instantKineSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res)
+bool ManipulatorPlanner::instantKineSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res)
 {
+  // Set instantaneous kine param
   inst_kine_ = req.data;
-  res.success = true;
-  ROS_INFO("Instantaneous kinematic mode set as %d", inst_kine_ ? 1:0);
+  ROS_INFO("Instantaneous kinematic mode set as %s", inst_kine_ ? "True":"False");
   // Stop the robot to prevent bad behaviours during mode switch
   arm_vel_cmd_[0] = 0.;
   arm_vel_cmd_[1] = 0.;
@@ -676,6 +677,10 @@ void ManipulatorPlanner::instantKineSetterCallback(std_srvs::SetBool::Request &r
   arm_vel_cmd_[3] = 0.;
   arm_vel_cmd_[4] = 0.;
   arm_vel_cmd_[5] = 0.;
+  // Return success
+  res.success = true;
+  res.message = inst_kine_ ? "Instantaneous kinematics control mode enabled":"Instantaneous kinematics control mode disabled";
+  return true;
 }
 
 // TODO: the following two functions give an allocator error on the compiler

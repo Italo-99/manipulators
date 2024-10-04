@@ -43,33 +43,35 @@
 
   <!-- Decide if you want to launch the robot default description config; 
        set to false to load custom description config of the manipulators pkg-->
-  <arg name="default_desc"  default="true" />
+  <arg name="default_desc"  default="true"  />
   <!-- Decide if you want to launch rviz -->
-  <arg name="rviz"          default="true" />
+  <arg name="rviz"          default="true"  />
   <!-- Decide if you want to launch the robot default rviz config; 
        set to false to load custom rviz config of the manipulators pkg-->
   <arg name="def_config"     default="true" />
-  <arg name="sensor_manager" default="true"/>
+  <arg name="sensor_manager" default="true" />
   <!-- By default, we are not in debug mode and we want to sim -->
   <arg name="debug"         default="false" />
-  <arg name="sim"           default="true" />
-  <arg name="rate"          default="10" />
+  <arg name="sim"           default="true"  />
+  <arg name="rate"          default="10"    />
   <!-- Args for starting camera position -->
-  <arg name="cam_x_offset"  default="+0.0"/>
-  <arg name="cam_y_offset"  default="+0.05"/>
-  <arg name="cam_z_offset"  default="+0.05"/>
-  <arg name="cam_rx"        default="+0.0"/>
-  <arg name="cam_ry"        default="+0.0"/>
-  <arg name="cam_rz"        default="+0.0"/>
-  <arg name="cam_parent"    default="tool0"/>
+  <arg name="camera"        default="false" />
+  <arg name="cam_x_offset"  default="+0.0"  />
+  <arg name="cam_y_offset"  default="+0.0"  />
+  <arg name="cam_z_offset"  default="+0.0"  />
+  <arg name="cam_rx"        default="+0.0"  />
+  <arg name="cam_ry"        default="+0.0"  />
+  <arg name="cam_rz"        default="+0.0"  />
+  <arg name="cam_parent"    default="tool0" />
   <!-- Args for starting end effector position -->
-  <arg name="ee_z_offset"   default="+0.0"/>
-  <arg name="ee_rz"         default="+0.0"/>
-  <arg name="ee_parent"     default="tool0"/>
-  <arg name="tcp_offset"    default="+0.160"/>
-  <arg name="pub_js_state"  default="false"/>
+  <arg name="ee"            default="false"/>
+  <arg name="ee_z_offset"   default="+0.0"  />
+  <arg name="ee_rz"         default="+0.0"  />
+  <arg name="ee_parent"     default="tool0" />
+  <arg name="tcp_offset"    default="+0.0"  />
+  <arg name="pub_js_state"  default="false" />
   <!-- If true, launch the trajectory converter node -->
-  <arg name="control"       default ="false" />
+  <arg name="real_control"  default ="false"/>
 
   <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
   <include file="$(find manipulators)/launch/planning_context.launch">
@@ -87,6 +89,7 @@
     <arg name="default_desc"  value="$(arg default_desc)"/>
     <arg name="xacro_file"    value="$(arg xacro_file)"/>
     <arg name="srdf_file"     value="$(arg srdf_file)"/>
+    <arg name="camera"        value="$(arg camera)"  />
     <arg name="cam_x_offset"  value="$(arg cam_x_offset)"/>
     <arg name="cam_y_offset"  value="$(arg cam_y_offset)"/>
     <arg name="cam_z_offset"  value="$(arg cam_z_offset)"/>
@@ -94,6 +97,7 @@
     <arg name="cam_ry"        value="$(arg cam_ry)"/>
     <arg name="cam_rz"        value="$(arg cam_rz)"/>
     <arg name="cam_parent"    value="$(arg cam_parent)"/>
+    <arg name="ee"              value="$(arg ee)"  />
     <arg name="ee_parent"     value="$(arg ee_parent)"/>
     <arg name="ee_z_offset"   value="$(arg ee_z_offset)"/>
     <arg name="ee_rz"         value="$(arg ee_rz)"/>
@@ -150,7 +154,6 @@
     <param name="planning_plugin" value="$(arg planning_plugin)" />
     <param name="request_adapters" value="$(arg planning_adapters)" />
     <param name="sample_duration" value="$(arg sample_duration)"/>
-    <param name="sim" value="$(arg sim)"/>
     <!-- This file contains the parameters configuration for each available 6-dof planner for the robot-->
     <rosparam command="load" file="$(arg moveit_pkg)/config/ompl_planning.yaml"/>
     <!-- This file contains the names of the manipulator, the joints, the base and the end-effector -->
@@ -159,6 +162,6 @@
   </node>
 
   <!-- For real robot -->
-  <node if="$(arg control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" /> 
+  <node if="$(arg real_control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" /> 
   
 </launch>

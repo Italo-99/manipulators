@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur3_robot">
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur10_robot">
   <!--
-    This is a convenience top-level xacro which loads the macro for the UR3
+    This is a convenience top-level xacro which loads the macro for the UR10
     which defines the default values for the various "parameters files"
-    parameters for a UR3.
+    parameters for a UR10.
 
     This file is only useful when loading a stand-alone, completely isolated
     robot with only default values for all parameters such as the kinematics,
@@ -12,7 +12,7 @@
     This file is not intended to be integrated into a larger scene or other
     composite xacro.
 
-    Instead, xacro:include 'inc/ur3_macro.xacro' and override the defaults
+    Instead, xacro:include 'inc/ur10_macro.xacro' and override the defaults
     for the arguments to that macro.
 
     Refer to 'inc/ur_macro.xacro' for more information.
@@ -36,9 +36,9 @@
   <xacro:arg name="ee_rz"         default="+0.00"/>
   <xacro:arg name="tcp_offset"    default="+0.00"/>
   
-  <!-- Include ur3 model -->
-  <xacro:include filename="$(find ur_description)/urdf/inc/ur3_macro.xacro"/>
-  <xacro:ur3_robot prefix="" />
+  <!-- Include ur10 model -->
+  <xacro:include filename="$(find ur_description)/urdf/inc/ur10_macro.xacro"/>
+  <xacro:ur10_robot prefix="" />
 
   <!-- Fixed tcp gripper -->
   <link name="tcp_gripper"/>

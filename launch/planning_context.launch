@@ -49,16 +49,18 @@
     <arg name="robot_description" default="robot_description"/>
 
   <!-- Args for starting camera position -->
+    <arg name="camera"        default="false"  />
     <arg name="cam_x_offset"  default="+0.0"/>
-    <arg name="cam_y_offset"  default="+0.05"/>
-    <arg name="cam_z_offset"  default="+0.05"/>
+    <arg name="cam_y_offset"  default="+0.00"/>
+    <arg name="cam_z_offset"  default="+0.00"/>
     <arg name="cam_rx"        default="+0.0"/>
     <arg name="cam_ry"        default="+0.0"/>
     <arg name="cam_rz"        default="+0.0"/>
     <arg name="cam_parent"    default="tool0"/>
-    <arg name="tcp_offset"    default="+0.160"/>
+    <arg name="tcp_offset"    default="0.0"/>
 
   <!-- Args for starting end effector position -->
+    <arg name="ee"            default="false"/>
     <arg name="ee_z_offset"   default="+0.0"/>
     <arg name="ee_rz"         default="+0.0"/>
     <arg name="ee_parent"     default="tool0"/>
@@ -74,6 +76,7 @@
             name="$(arg robot_description)"
             command="xacro 
                     '$(find manipulators)/models/urdf/$(arg robot_name).xacro'
+                          camera:=$(arg camera)
                     cam_x_offset:=$(arg cam_x_offset)
                     cam_y_offset:=$(arg cam_y_offset)
                     cam_z_offset:=$(arg cam_z_offset)
@@ -81,9 +84,10 @@
                           cam_ry:=$(arg cam_ry)
                           cam_rz:=$(arg cam_rz)
                       cam_parent:=$(arg cam_parent)
-                    ee_z_offset:=$(arg ee_z_offset)
-                          ee_rz:=$(arg ee_rz)
-                      ee_parent:=$(arg ee_parent)
+                              ee:=$(arg ee)
+                     ee_z_offset:=$(arg ee_z_offset)
+                           ee_rz:=$(arg ee_rz)
+                       ee_parent:=$(arg ee_parent)
                       tcp_offset:=$(arg tcp_offset)">
     </param>
   </group>

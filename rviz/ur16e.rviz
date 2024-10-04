@@ -4,11 +4,8 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /TF1/Frames1/tcp_gripper1
         - /PlanningScene1
         - /PlanningScene1/Scene Robot1
-        - /PlanningScene1/Scene Robot1/Links1
-        - /PlanningScene1/Scene Robot1/Links1/tcp_gripper1
       Splitter Ratio: 0.46462714672088623
     Tree Height: 865
   - Class: rviz/Help
@@ -225,7 +222,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 1.1806583404541016
+      Distance: 1.5652406215667725
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -233,9 +230,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.4700740575790405
-        Y: 0.3602662682533264
-        Z: -3.797246677095245e-07
+        X: 0.14198890328407288
+        Y: 0.12333351373672485
+        Z: -4.989339572603058e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false

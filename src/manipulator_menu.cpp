@@ -1259,26 +1259,30 @@ void ManipulatorMenu::printMenu()
   if (params_.enable_sim_gripper)
   {
     std::cout << "\n======= Fake gripper control =======\n";
-    std::cout << "26.Open the gripper\n";
-    std::cout << "27.Close the gripper\n";
-    std::cout << "28.Set the position of the gripper\n";
-    std::cout << "29.Grab an object at the gripper\n";
-    std::cout << "30.Detach an object from the gripper\n";
+    std::cout << "25.Open the gripper\n";
+    std::cout << "26.Close the gripper\n";
+    std::cout << "27.Set the position of the gripper\n";
+    std::cout << "28.Grab an object at the gripper\n";
+    std::cout << "29.Detach an object from the gripper\n";
   }
   if (params_.enable_real_gripper)
   {
     std::cout << "\n======= Real gripper control =======\n";
-    std::cout << "31.Open  real gripper\n";
-    std::cout << "32.Close real gripper\n";
-    std::cout << "33.Move  real gripper to a given position \n";
+    std::cout << "30.Open  real gripper\n";
+    std::cout << "31.Close real gripper\n";
+    std::cout << "32.Move  real gripper to a given position \n";
   }
   std::cout << "\n======= Kinematics srvs =======\n";
-  std::cout << "34. Get joint values through inverse kinematics of a given pose\n";
-  std::cout << "35. Get current Jacobian\n";
-  std::cout << "36. Get current Inverse Jacobian\n";
+  std::cout << "33. Get joint values through inverse kinematics of a given pose\n";
+  std::cout << "34. Get current Jacobian\n";
+  std::cout << "35. Get current Inverse Jacobian\n";
+  std::cout << "\n======= Kinematics mode setter =======\n";
+  std::cout << "36. Enable  the instantaneous kinematics mode for motors\n";
+  std::cout << "37. Disable the instantaneous kinematics mode for motors\n";
+  std::cout << "38. Enable  the jacobian speed control mode for robot joints\n";
+  std::cout << "39. Disable the jacobian speed control mode for robot joints\n";
   std::cout << "\n======= Closing ROS menu =======\n";
-  std::cout << "37.Shutdown the menu\n";
-
+  std::cout << "40.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -1298,18 +1302,17 @@ void ManipulatorMenu::processChoice(int choice)
   switch (choice)
   {
   case 1:
-    ROS_INFO("You selected Option 0");
+    ROS_INFO("You selected Option 1");
     userTcpIK_no_planner_Goal();
     break;
   case 2:
-    ROS_INFO("You selected Option 0");
+    ROS_INFO("You selected Option 2");
     userJoint_no_planner_Goal();
     break;
   case 3:
     ROS_INFO("You selected Option 3");
     userJointGoal();
     break;
-
   case 4:
     ROS_INFO("You selected Option 4");
     userTcpGoal();
@@ -1318,7 +1321,6 @@ void ManipulatorMenu::processChoice(int choice)
     ROS_INFO("You selected Option 5");
     userTcpIKGoal();
     break;
-
   case 6:
     ROS_INFO("You selected Option 6");
     oneJointMove_user();
@@ -1446,51 +1448,51 @@ void ManipulatorMenu::processChoice(int choice)
     ROS_INFO("Save current Coppelia scene");
     saveCoppeliaScene();
     break;
-  case 26:
-    ROS_INFO("You selected Option 26");
+  case 25:
+    ROS_INFO("You selected Option 25");
     ROS_INFO("Opening the gripper ...");
     openGripper();
     break;
-  case 27:
-    ROS_INFO("You selected Option 27");
+  case 26:
+    ROS_INFO("You selected Option 26");
     ROS_INFO("Closing the gripper ...");
     closeGripper();
     break;
-  case 28:
-    ROS_INFO("You selected Option 28");
+  case 27:
+    ROS_INFO("You selected Option 27");
     ROS_INFO("Gripper moving setting");
     userGripperMove();
     break;  
-  case 29:
-    ROS_INFO("You selected Option 29");
+  case 28:
+    ROS_INFO("You selected Option 28");
     ROS_INFO("Grab an object to the gripper");
     grabObjGripper();
     break;
-  case 30:
-    ROS_INFO("You selected Option 30");
+  case 29:
+    ROS_INFO("You selected Option 29");
     ROS_INFO("Detach an object from the gripper");
     detachObjGripper();
     break;
-  case 31:
-    ROS_INFO("You selected Option 31");
+  case 30:
+    ROS_INFO("You selected Option 30");
     ROS_INFO("Opening real gripper");
     openRealGripper();
     break;
-  case 32:
-    ROS_INFO("You selected Option 32");
+  case 31:
+    ROS_INFO("You selected Option 31");
     ROS_INFO("Closing real gripper");
     closeRealGripper();
     break;
-  case 33:
-    ROS_INFO("You selected Option 33");
+  case 32:
+    ROS_INFO("You selected Option 32");
     ROS_INFO("Set a real gripper position");
     float gripper_pos;
     std::cin >> gripper_pos;
     moveRealGripper(gripper_pos);
     break;
-  case 34:
+  case 33:
     {
-      ROS_INFO("You selected Option 34");
+      ROS_INFO("You selected Option 33");
       ROS_INFO("Set the pose you want to compute inverse kinematics.");
       geometry_msgs::Pose pose;
       float rx,ry,rz;
@@ -1514,23 +1516,63 @@ void ManipulatorMenu::processChoice(int choice)
       }
     }
     break;
-  case 35:
+  case 34:
     {
-      ROS_INFO("You selected Option 35");
+      ROS_INFO("You selected Option 34");
       Eigen::MatrixXd jac = getJacobianClient();
       ROS_INFO("Jacobian computed:\n");
       std::cout << jac << std::endl;
     }
     break;
-  case 36:
+  case 35:
     {
-      ROS_INFO("You selected Option 36");
+      ROS_INFO("You selected Option 35");
       Eigen::MatrixXd inv_jac = pseudoInverseClient();
       ROS_INFO("Inverse Jacobian computed:\n");
       std::cout << inv_jac << std::endl;
     }
     break;
+  case 36:
+    {
+      ROS_INFO("You selected Option 36");
+      ros::ServiceClient client = nh_.serviceClient<std_srvs::SetBool>(params_.manipulator_name+"/instKine_setter");
+      std_srvs::SetBool srv;
+      srv.request.data = true;
+      client.call(srv);
+      std::cout << srv.response.message << std::endl;
+    }
+    break;
   case 37:
+    {
+      ROS_INFO("You selected Option 37");
+      ros::ServiceClient client = nh_.serviceClient<std_srvs::SetBool>(params_.manipulator_name+"/instKine_setter");
+      std_srvs::SetBool srv;
+      srv.request.data = false;
+      client.call(srv);
+      std::cout << srv.response.message << std::endl;
+    }
+    break;
+  case 38:
+    {
+      ROS_INFO("You selected Option 38");
+      ros::ServiceClient client = nh_.serviceClient<std_srvs::SetBool>(params_.manipulator_name+"/enable_jac_vel");
+      std_srvs::SetBool srv;
+      srv.request.data = true;
+      client.call(srv);
+      std::cout << srv.response.message << std::endl;
+    }
+    break;
+  case 39:
+    {
+      ROS_INFO("You selected Option 39");
+      ros::ServiceClient client = nh_.serviceClient<std_srvs::SetBool>(params_.manipulator_name+"/enable_jac_vel");
+      std_srvs::SetBool srv;
+      srv.request.data = false;
+      client.call(srv);
+      std::cout << srv.response.message << std::endl;
+    }
+    break;
+  case 40:
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;
