@@ -52,7 +52,7 @@ Visualization Manager:
       Shaft Length: 0.20000000298023224
       Shaft Radius: 0.029999999329447746
       Shape: Arrow
-      Topic: /display_robot_goal
+      Topic: /manipulator/display_robot_goal
       Unreliable: false
       Value: true
     - Class: rviz/TF
@@ -68,33 +68,9 @@ Visualization Manager:
           Value: false
         base_link_inertia:
           Value: false
-        camera_base_link:
-          Value: false
-        camera_bottom_screw_frame:
-          Value: false
-        camera_link:
-          Value: false
         flange:
           Value: false
         forearm_link:
-          Value: false
-        left_inner_finger:
-          Value: false
-        left_inner_knuckle:
-          Value: false
-        left_outer_finger:
-          Value: false
-        left_outer_knuckle:
-          Value: false
-        right_inner_finger:
-          Value: false
-        right_inner_knuckle:
-          Value: false
-        right_outer_finger:
-          Value: false
-        right_outer_knuckle:
-          Value: false
-        robotiq_85_base_link:
           Value: false
         shoulder_link:
           Value: false
@@ -129,25 +105,8 @@ Visualization Manager:
                       wrist_3_link:
                         flange:
                           tool0:
-                            camera_base_link:
-                              camera_bottom_screw_frame:
-                                camera_link:
-                                  {}
-                            robotiq_85_base_link:
-                              left_inner_knuckle:
-                                left_inner_finger:
-                                  {}
-                              left_outer_knuckle:
-                                left_outer_finger:
-                                  {}
-                              right_inner_knuckle:
-                                right_inner_finger:
-                                  {}
-                              right_outer_knuckle:
-                                right_outer_finger:
-                                  {}
-                              tcp_gripper:
-                                {}
+                            tcp_gripper:
+                              {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -163,7 +122,7 @@ Visualization Manager:
       Shaft Length: 0.30000001192092896
       Shaft Radius: 0.009999999776482582
       Shape: Arrow
-      Topic: /display_ee_pose
+      Topic: /manipulator/display_ee_pose
       Unreliable: false
       Value: true
     - Class: moveit_rviz_plugin/PlanningScene
@@ -200,70 +159,11 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          camera_base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_bottom_screw_frame:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          camera_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
           flange:
             Alpha: 1
             Show Axes: false
             Show Trail: false
           forearm_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          left_inner_finger:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          left_inner_knuckle:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          left_outer_finger:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          left_outer_knuckle:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_inner_finger:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_inner_knuckle:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_outer_finger:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_outer_knuckle:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          robotiq_85_base_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -329,89 +229,6 @@ Visualization Manager:
       Transport Hint: raw
       Unreliable: false
       Value: true
-    - Alpha: 1
-      Arrow Length: 0.009999999776482582
-      Axes Length: 0.30000001192092896
-      Axes Radius: 0.009999999776482582
-      Class: rviz/PoseArray
-      Color: 255; 25; 0
-      Enabled: true
-      Head Length: 0.07000000029802322
-      Head Radius: 0.029999999329447746
-      Name: PoseArray
-      Queue Size: 10
-      Shaft Length: 0.23000000417232513
-      Shaft Radius: 0.009999999776482582
-      Shape: Arrow (Flat)
-      Topic: /detection3D_poses
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.10000000149011612
-      Class: rviz/Pose
-      Color: 52; 101; 164
-      Enabled: true
-      Head Length: 0.019999999552965164
-      Head Radius: 0.014000000432133675
-      Name: Pose
-      Queue Size: 10
-      Shaft Length: 0.009999999776482582
-      Shaft Radius: 0.004999999888241291
-      Shape: Arrow
-      Topic: /example_grab_pose
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Arrow Length: 0.30000001192092896
-      Axes Length: 0.30000001192092896
-      Axes Radius: 0.009999999776482582
-      Class: rviz/PoseArray
-      Color: 239; 41; 41
-      Enabled: true
-      Head Length: 0.07000000029802322
-      Head Radius: 0.029999999329447746
-      Name: PoseArray
-      Queue Size: 10
-      Shaft Length: 0.23000000417232513
-      Shaft Radius: 0.009999999776482582
-      Shape: Arrow (Flat)
-      Topic: /pins_positions
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Arrow Length: 0.029999999329447746
-      Axes Length: 0.30000001192092896
-      Axes Radius: 0.009999999776482582
-      Class: rviz/PoseArray
-      Color: 0; 0; 0
-      Enabled: true
-      Head Length: 0.07000000029802322
-      Head Radius: 0.029999999329447746
-      Name: PoseArray
-      Queue Size: 10
-      Shaft Length: 0.23000000417232513
-      Shaft Radius: 0.009999999776482582
-      Shape: Arrow (Flat)
-      Topic: /pins_traj_points
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.10000000149011612
-      Class: rviz/Pose
-      Color: 245; 121; 0
-      Enabled: true
-      Head Length: 0.006000000052154064
-      Head Radius: 0.00800000037997961
-      Name: Pose
-      Queue Size: 10
-      Shaft Length: 0.10000000149011612
-      Shaft Radius: 0.004999999888241291
-      Shape: Arrow
-      Topic: /grabbing_goal
-      Unreliable: false
-      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -458,9 +275,9 @@ Window Geometry:
   Hide Right Dock: false
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000001000000000000020d000003b9fc020000000bfb000000100044006900730070006c006100790073010000003d000001c9000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a0056006900650077007300000003b0000000b0000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006700000001750000017d0000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000016a000001880000000000000000fb0000000a0049006d006100670065010000020c000000f40000001600fffffffb0000000a0049006d0061006700650100000306000000f00000001600ffffff0000056d000003b900000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000001000000000000020d000003b9fc020000000bfb000000100044006900730070006c006100790073010000003d000001c9000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a0056006900650077007300000003b0000000b0000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006700000001750000017d0000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000016a000001880000000000000000fb0000000a0049006d006100670065010000020c0000016a0000001600fffffffb0000000a0049006d006100670065010000037c0000007a0000001600ffffff0000056d000003b900000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
   Width: 1920
-  X: 0
+  X: 1366
   Y: 0

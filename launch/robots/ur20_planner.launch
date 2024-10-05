@@ -1,11 +1,12 @@
 <launch>
    
   <!-- Planner -->
-  <arg name="robot_name"    default="ur20" />
-  <arg name="robotpkg_name" default="ur20" />
-  <arg name="custom_pkg"    default="false"/>
-  <arg name="default_desc"  default="false" />
-  <arg name="ur20_pkg"      default="true" />
+  <arg name="robot_name"          default="ur20" />
+  <arg name="robotpkg_name"       default="ur20" />
+  <arg name="custom_pkg"          default="false"/>
+  <arg name="default_desc"        default="false" />
+  <arg name="ur20_pkg"            default="true" />
+  <arg name="planning_group_file" default="$(find manipulators)/config/$(arg robot_name).yaml" />
   <!-- Simulation -->
   <arg name="rviz"          default="true" />
   <arg name="def_config"    default="false" />
@@ -38,33 +39,34 @@
 
   <!-- Launch ur10 planner -->
   <include file="$(find manipulators)/launch/planner.launch">
-    <arg name="robot_name"      value="$(arg robot_name)" />
-    <arg name="robotpkg_name"   value="$(arg robotpkg_name)" />
-    <arg name="default_desc"    value="$(arg default_desc)" />
-    <arg name="ur20_pkg"        value="$(arg ur20_pkg)" />
-    <arg name="custom_pkg"      value="$(arg custom_pkg)" />
-    <arg name="rviz"            value="$(arg rviz)" />
-    <arg name="def_config"      value="$(arg def_config)" />
-    <arg name="debug"           value="$(arg debug)" />
-    <arg name="pub_js_state"    value="$(arg pub_js_state)" />
-    <arg name="rate"            value="$(arg rate)" />
-    <arg name="sample_duration" value="$(arg sample_duration)" />
-    <arg name="real_control"    value="$(arg real_control)" />
-    <arg name="camera"          value="$(arg camera)"  />
-    <arg name="cam_x_offset"    value="$(arg cam_x_offset)"/>
-    <arg name="cam_y_offset"    value="$(arg cam_y_offset)"/>
-    <arg name="cam_z_offset"    value="$(arg cam_z_offset)"/>
-    <arg name="cam_rx"          value="$(arg cam_rx)"/>
-    <arg name="cam_ry"          value="$(arg cam_ry)"/>
-    <arg name="cam_rz"          value="$(arg cam_rz)"/>
-    <arg name="cam_parent"      value="$(arg cam_parent)"/>
-    <arg name="ee"              value="$(arg ee)"  />
-    <arg name="ee_z_offset"     value="$(arg ee_z_offset)"/>
-    <arg name="ee_rz"           value="$(arg ee_rz)"/>
-    <arg name="ee_parent"       value="$(arg ee_parent)"/>
-    <arg name="tcp_offset"      value="$(arg tcp_offset)"/>
-    <arg name="xacro_file"      value="$(arg xacro_file)"/>
-    <arg name="srdf_file"       value="$(arg srdf_file)"/>
+    <arg name="robot_name"          value="$(arg robot_name)" />
+    <arg name="robotpkg_name"       value="$(arg robotpkg_name)" />
+    <arg name="planning_group_file" value="$(arg planning_group_file)" />
+    <arg name="default_desc"        value="$(arg default_desc)" />
+    <arg name="ur10e_pkg"           value="$(arg ur10e_pkg)" />
+    <arg name="custom_pkg"          value="$(arg custom_pkg)" />
+    <arg name="rviz"                value="$(arg rviz)" />
+    <arg name="def_config"          value="$(arg def_config)" />
+    <arg name="debug"               value="$(arg debug)" />
+    <arg name="pub_js_state"        value="$(arg pub_js_state)" />
+    <arg name="rate"                value="$(arg rate)" />
+    <arg name="sample_duration"     value="$(arg sample_duration)" />
+    <arg name="real_control"        value="$(arg real_control)" />
+    <arg name="camera"              value="$(arg camera)"  />
+    <arg name="cam_x_offset"        value="$(arg cam_x_offset)"/>
+    <arg name="cam_y_offset"        value="$(arg cam_y_offset)"/>
+    <arg name="cam_z_offset"        value="$(arg cam_z_offset)"/>
+    <arg name="cam_rx"              value="$(arg cam_rx)"/>
+    <arg name="cam_ry"              value="$(arg cam_ry)"/>
+    <arg name="cam_rz"              value="$(arg cam_rz)"/>
+    <arg name="cam_parent"          value="$(arg cam_parent)"/>
+    <arg name="ee"                  value="$(arg ee)"  />
+    <arg name="ee_z_offset"         value="$(arg ee_z_offset)"/>
+    <arg name="ee_rz"               value="$(arg ee_rz)"/>
+    <arg name="ee_parent"           value="$(arg ee_parent)"/>
+    <arg name="tcp_offset"          value="$(arg tcp_offset)"/>
+    <arg name="xacro_file"          value="$(arg xacro_file)"/>
+    <arg name="srdf_file"           value="$(arg srdf_file)"/>
   </include>
 
 </launch>

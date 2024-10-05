@@ -70,6 +70,7 @@
   #include <manipulators/PseudoInverse.h>
   #include <manipulators/FKine.h>
   #include <manipulators/Jacobian.h>
+  #include <manipulators/ChangePlannerParams.h>
 
 // Declaration of the struct of the params, 
 struct ManipulatorMenuParams
@@ -81,6 +82,7 @@ struct ManipulatorMenuParams
   bool enable_coppelia          = false;
   bool enable_sim_gripper       = false;
   bool enable_real_gripper      = false;
+  std::string gripper_topic     = "/ur_rtde/robotiq_gripper/command";
 };
 
 class ManipulatorMenu
@@ -88,6 +90,7 @@ class ManipulatorMenu
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
     ManipulatorMenu(ManipulatorMenuParams& params);
+    sensor_msgs::JointState current_joint_pose_;
 
   // ---------------------  PUBLIC FUNCTIONS ---------------------
 
@@ -103,15 +106,15 @@ class ManipulatorMenu
     // Joint and TCP moves
       sensor_msgs::JointState publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
       sensor_msgs::JointState publishJointGoal(const sensor_msgs::JointState jointStateMsg);
-      geometry_msgs::Pose publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
-      geometry_msgs::Pose publishTcpGoal(const geometry_msgs::Pose tcpPoseMsg);
-      geometry_msgs::Pose publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planner
-      geometry_msgs::Pose publishTcpIKGoal(const geometry_msgs::Pose tcpPoseMsg);
-      geometry_msgs::Pose publishTcpIK_noplanner_Goal(const std::vector<double> position);// publish a tcpIK goal to the manipulator fake controller
-      geometry_msgs::Pose publishTcpIK_noplanner_Goal(const geometry_msgs::Pose tcpPoseMsg);
+      geometry_msgs::Pose     publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
+      geometry_msgs::Pose     publishTcpGoal(const geometry_msgs::Pose tcpPoseMsg);
+      geometry_msgs::Pose     publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planner
+      geometry_msgs::Pose     publishTcpIKGoal(const geometry_msgs::Pose tcpPoseMsg);
+      geometry_msgs::Pose     publishTcpIK_noplanner_Goal(const std::vector<double> position);// publish a tcpIK goal to the manipulator fake controller
+      geometry_msgs::Pose     publishTcpIK_noplanner_Goal(const geometry_msgs::Pose tcpPoseMsg);
       sensor_msgs::JointState publishJointGoal_NoPlanner(const std::vector<double> joints); // publish a joint goal to the manipulator fake controller
       sensor_msgs::JointState publishJointGoal_NoPlanner(sensor_msgs::JointState jointStateMsg);
-      geometry_msgs::Pose publishCartesianMove(const uint   axis1,  // publish a carthesian move command
+      geometry_msgs::Pose     publishCartesianMove(const uint   axis1,  // publish a carthesian move command
                                               const uint   axis2,
                                               const double pos1,
                                               const double pos2,
@@ -163,8 +166,17 @@ class ManipulatorMenu
 
     // Degrees and radians conversions
       std::vector<double> deg_from_rad(const std::vector<double>);
-      std::vector<double> rad_from_deg(const std::vector<double>); 
- 
+      std::vector<double> rad_from_deg(const std::vector<double>);
+    // Kinematics params getters
+      geometry_msgs::Pose getCurrentFKineClient(void);
+      Eigen::MatrixXd     pseudoInverseClient(void);
+      std::vector<double> invKineClient(const geometry_msgs::Pose pose);
+      Eigen::MatrixXd     getJacobianClient(void);
+    // Kinematics params setters
+      void setJacobianSpeedControl(bool);
+      void setInstantKineMode(bool);
+      void setNewPlannerParams(float,float);
+       
  private:
 
   // --------------------- PRIVATE FUNCTIONS ---------------------
@@ -196,23 +208,16 @@ class ManipulatorMenu
       void callGripperSrv(const bool);     // to call open/close gripper srv
       void callGrabbingSrv(const bool);    // to call grab/detach gripper srv
       void callRealGripperSrv(const float);// to call real gripper open close
-
-      geometry_msgs::Pose getCurrentFKineClient(void);
-      Eigen::MatrixXd     pseudoInverseClient(void);
-      std::vector<double> invKineClient(const geometry_msgs::Pose pose);
-      Eigen::MatrixXd     getJacobianClient(void);
-
+    
     // --------------------- UTILS FUNCTIONS ---------------------
-
-      // Function to add a collision object by the user
-      void addCollObj(void);
-      // Function to delete a given collision object from the user menu
-      void deleteCollObj(void);
+      // Enviornment updates functions
+        void addCollObj(void);    // Add a collision object by the user
+        void deleteCollObj(void); // Delete a given collision object from the user menu
 
       //Menu handling
-      void  printMenu();
-      int   getUserChoice();
-      void  processChoice(int choice);
+        void  printMenu();
+        int   getUserChoice();
+        void  processChoice(int choice);
 
   // --------------------- PRIVATE VARIABLES ---------------------
 
@@ -233,7 +238,6 @@ class ManipulatorMenu
 
     // --------------------- ROBOT STATE ---------------------------
       geometry_msgs::PoseStamped current_tcp_pose_;
-      sensor_msgs::JointState current_joint_pose_;
 
     // ----------------- CLASS ATTRIBUTES & PARAMS-----------------------
       // std::string node_name_;

@@ -41,21 +41,23 @@
 #define MANIPULATOR_PLANNER_H
 
 // IMPORT LIBRARIES
-#include <signal.h>
-
-#include <dynamic_planner/dynamic_planner.h>
-#include <eigen_conversions/eigen_msg.h>
-#include <geometry_msgs/Pose.h>
-#include <std_msgs/Float64.h>
-#include <std_msgs/Float64MultiArray.h>
-#include <std_msgs/UInt8.h>
-#include <std_srvs/SetBool.h>
-#include <tf2_ros/transform_listener.h>
-
-#include <manipulators/InvKine.h>
-#include <manipulators/PseudoInverse.h>
-#include <manipulators/FKine.h>
-#include <manipulators/Jacobian.h>
+// C++
+  #include <signal.h>
+// Ros
+  #include <dynamic_planner/dynamic_planner.h>
+  #include <eigen_conversions/eigen_msg.h>
+  #include <geometry_msgs/Pose.h>
+  #include <std_msgs/Float64.h>
+  #include <std_msgs/Float64MultiArray.h>
+  #include <std_msgs/UInt8.h>
+  #include <std_srvs/SetBool.h>
+  #include <tf2_ros/transform_listener.h>
+// Custom srvs
+  #include <manipulators/InvKine.h>
+  #include <manipulators/PseudoInverse.h>
+  #include <manipulators/FKine.h>
+  #include <manipulators/Jacobian.h>
+  #include <manipulators/ChangePlannerParams.h>
 
 class ManipulatorPlanner
 {
@@ -72,6 +74,11 @@ class ManipulatorPlanner
 
   // ---------------------  PRIVATE FUNCTIONS ---------------------
     // --------------------- UTILS FUNCTIONS ---------------------
+
+      // Change dynamic planner params
+      bool chPlParamCallback(manipulators::ChangePlannerParams::Request  &req,
+                             manipulators::ChangePlannerParams::Response &res);
+      void change_vel_acc_param(float,float);
 
       // Shutdown handler
       static void shutdown_handler(int sig);
@@ -159,10 +166,11 @@ class ManipulatorPlanner
       ros::NodeHandle nh_;                    // Node object
 
     // Manipulator attributes
-      std::vector<std::string> joint_names_;  // Joints' names
-      std::string ee_name_;                   // End-effector's name
-      std::string base_name_;                 // Robot base's name
-      DynamicPlanner* planner_;               // Dynamic planner object 
+      std::vector<std::string> joint_names_;          // Joints' names
+      std::string ee_name_;                           // End-effector's name
+      std::string base_name_;                         // Robot base's name
+      DynamicPlanner* planner_;                       // Dynamic planner object
+      ros::ServiceServer change_planner_params_srv_;  // Service server to change planner params
 
     // Move goal
       ros::Subscriber tcp_goal_sub_;          // Subscriber to TCP goal
@@ -204,11 +212,11 @@ class ManipulatorPlanner
       double      max_velocity_;              // Maximum ee velocity
 
     // Jacobian control variables
-    bool        jac_control_ = false;       // True if the speed control through inverse Jacobian has been enabled
-    static double mean;                     // Average value for the duration of the jacobian control computation
+      bool jac_control_ = false;       // True if the speed control through inverse Jacobian has been enabled
+      static double mean;              // Average value for the duration of the jacobian control computation
 
     // Vel commands variables
-    Eigen::Matrix<double,6,1> arm_vel_cmd_;           // Command of speed to the end_effector
+      Eigen::Matrix<double,6,1> arm_vel_cmd_;   // Command of speed to the end_effector
 };
 
 #endif /* MANIPULATOR_PLANNER_H */

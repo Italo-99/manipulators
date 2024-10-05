@@ -2,8 +2,9 @@
 
   <!-- Get robot name and its package (they may differ as the 
        former can includes grippers and camera)-->
-    <arg name="robot_name"    default="" />
-    <arg name="robotpkg_name" default="$(arg robot_name)" />
+    <arg name="robot_name"          default="" />
+    <arg name="robotpkg_name"       default="$(arg robot_name)" />
+    <arg name="planning_group_file" default="$(find manipulators)/config/$(arg robot_name).yaml"/>
 
     <!-- List of all available manipulators -->
       <arg name="ur20_pkg"    default="false"/>
@@ -97,7 +98,7 @@
     <arg name="cam_ry"        value="$(arg cam_ry)"/>
     <arg name="cam_rz"        value="$(arg cam_rz)"/>
     <arg name="cam_parent"    value="$(arg cam_parent)"/>
-    <arg name="ee"              value="$(arg ee)"  />
+    <arg name="ee"            value="$(arg ee)"  />
     <arg name="ee_parent"     value="$(arg ee_parent)"/>
     <arg name="ee_z_offset"   value="$(arg ee_z_offset)"/>
     <arg name="ee_rz"         value="$(arg ee_rz)"/>
@@ -156,8 +157,8 @@
     <param name="sample_duration" value="$(arg sample_duration)"/>
     <!-- This file contains the parameters configuration for each available 6-dof planner for the robot-->
     <rosparam command="load" file="$(arg moveit_pkg)/config/ompl_planning.yaml"/>
-    <!-- This file contains the names of the manipulator, the joints, the base and the end-effector -->
-    <rosparam unless="$(arg custom_pkg)" command="load" file="$(find manipulators)/config/$(arg robot_name).yaml" />
+    <!-- This file contains the definition of the planning group params -->
+    <rosparam unless="$(arg custom_pkg)" command="load" file="$(arg planning_group_file)" />
     <rosparam     if="$(arg custom_pkg)" command="load" file="$(arg moveit_pkg)/config/$(arg robot_name).yaml" />
   </node>
 

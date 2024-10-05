@@ -25,6 +25,7 @@ add_service_files(
   Jacobian.srv
   FKine.srv
   PseudoInverse.srv
+  ChangePlannerParams.srv
 )
 
 generate_messages(

@@ -46,9 +46,14 @@ int main(int argc, char **argv)
 {
   // Pass arguments to the manipulator menu using a struct
   ManipulatorMenuParams params;
-  params.node_name        = "manipulator_menu_node_user";
-  params.ros_freq         = 10.;
-  params.manipulator_name = "manipulator";
+  params.node_name              = "manipulator_menu_node_user";
+  std::string ee_joint_name     = "";
+  params.ros_freq               = 10.;
+  params.manipulator_name       = "manipulator";
+  bool enable_coppelia          = false;
+  bool enable_sim_gripper       = false;
+  bool enable_real_gripper      = false;
+  std::string gripper_topic     = "/ur_rtde/robotiq_gripper/command";
 
   // Declare the ROS node
   ros::init(argc, argv, params.node_name);

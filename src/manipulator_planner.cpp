@@ -49,32 +49,32 @@ double ManipulatorPlanner::mean = 0.0;  // Mean static variable for the control 
 // Constructor for the ManipulatorPlanner class
 ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
 {
-  // ---------------------  TCP AND JOINT GOALS SUBSCRIBERS ---------------------
-
-  // Planning callbacks
-  tcp_goal_sub_           = nh_.subscribe("/desired_tcp_pose",   1, &ManipulatorPlanner::tcpGoalCallback,               this);
-  joint_goal_sub_         = nh_.subscribe("/desired_joint_pose", 1, &ManipulatorPlanner::jointsGoalCallback,            this);
-  tcp_goalIK_sub_         = nh_.subscribe("/desired_tcpIK_pose", 1, &ManipulatorPlanner::tcpGoalIKCallback,             this);
-
-  // No planning callbacks
-  joint_goal_noplan_sub_  = nh_.subscribe("/noplan_joint_pose",  1, &ManipulatorPlanner::jointsGoal_NoPlanner_Callback, this);
-  tcp_goalIK_noplan_sub_  = nh_.subscribe("/noplan_tcpIK_pose",  1, &ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback,  this);
-
-  // tcp_goalSeq_sub_   = nh_.subscribe("/desired_tcpSeq_poses",   1, &ManipulatorPlanner::tcpGoalSeqCallback,    this);
-  // tcpIK_goalSeq_sub_ = nh_.subscribe("/desired_tcpIKSeq_poses", 1, &ManipulatorPlanner::tcpIKGoalSeqCallback,  this);
-  // joint_goalSeq_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
-
-  carthesian_move_sub_ = nh_.subscribe("/desired_cartesian_move", 1, &ManipulatorPlanner::cartesianMoveCallback, this);
-
-  // ---------------------  ADD COLLISION OBJECT SUBSCRIBER  ---------------------
-
-  add_coll_obj_sub_ = nh_.subscribe("/add_collision_object", 1, &ManipulatorPlanner::addCollObjCallback, this);
-
   // ---------------------  PRIVATE VARIABLES SETUP  ---------------------------
 
   node_name_ = node_name;       // Set node name variable to ensure correct params check
   check_param();                // Update robot parameters
   dynamic_behaviour_ = false;   // No replanning
+
+  // ---------------------  TCP AND JOINT GOALS SUBSCRIBERS ---------------------
+
+  // Planning callbacks
+  tcp_goal_sub_           = nh_.subscribe(manipulator_name_+"/desired_tcp_pose",   1, &ManipulatorPlanner::tcpGoalCallback,               this);
+  joint_goal_sub_         = nh_.subscribe(manipulator_name_+"/desired_joint_pose", 1, &ManipulatorPlanner::jointsGoalCallback,            this);
+  tcp_goalIK_sub_         = nh_.subscribe(manipulator_name_+"/desired_tcpIK_pose", 1, &ManipulatorPlanner::tcpGoalIKCallback,             this);
+
+  // No planning callbacks
+  joint_goal_noplan_sub_  = nh_.subscribe(manipulator_name_+"/noplan_joint_pose",  1, &ManipulatorPlanner::jointsGoal_NoPlanner_Callback, this);
+  tcp_goalIK_noplan_sub_  = nh_.subscribe(manipulator_name_+"/noplan_tcpIK_pose",  1, &ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback,  this);
+
+  // tcp_goalSeq_sub_   = nh_.subscribe("/desired_tcpSeq_poses",   1, &ManipulatorPlanner::tcpGoalSeqCallback,    this);
+  // tcpIK_goalSeq_sub_ = nh_.subscribe("/desired_tcpIKSeq_poses", 1, &ManipulatorPlanner::tcpIKGoalSeqCallback,  this);
+  // joint_goalSeq_sub_ = nh_.subscribe("/desired_jointSeq_poses", 1, &ManipulatorPlanner::jointsGoalSeqCallback, this);
+
+  carthesian_move_sub_ = nh_.subscribe(manipulator_name_+"/desired_cartesian_move", 1, &ManipulatorPlanner::cartesianMoveCallback, this);
+
+  // ---------------------  ADD COLLISION OBJECT SUBSCRIBER  ---------------------
+
+  add_coll_obj_sub_ = nh_.subscribe(manipulator_name_+"/add_collision_object", 1, &ManipulatorPlanner::addCollObjCallback, this);
 
   // ---------------------  MOTOR CONTROLLERS FOR INVKINE  ---------------------------
   instKine_setter_srv_ = nh_.advertiseService(manipulator_name_+"/instKine_setter", &ManipulatorPlanner::instantKineSetterCallback, this);
@@ -103,6 +103,8 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   planner_ = new DynamicPlanner(manipulator_name_,  joint_names_, vel_factor_, acc_factor_,
                                 dynamic_behaviour_, sample_time_, max_velocity_);
 
+  change_planner_params_srv_ = nh_.advertiseService(manipulator_name_+"/change_planner_params",&ManipulatorPlanner::chPlParamCallback,this);
+
   // --------------------- EXAMPLE ENVIRONMENT SETUP --------------------- //
 
   // // How to add a table to the scene
@@ -117,6 +119,26 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
 
 // Destructor of the object manipulator planner's class
 ManipulatorPlanner::~ManipulatorPlanner() {delete planner_;}
+
+// ---------------- CHANGE PLANNER PARAMS FUNCTIONS ---------------//
+bool ManipulatorPlanner::chPlParamCallback(manipulators::ChangePlannerParams::Request  &req,
+                                           manipulators::ChangePlannerParams::Response &res)
+{
+  // Set new dynamic planner params
+  change_vel_acc_param(req.new_vel_factor,req.new_acc_factor);
+  // Return success
+  res.success = true;
+  res.message = "Dynamic planner params updated";
+  return true;
+}
+
+// Destruct a constructor of planner to build another instance of it
+void ManipulatorPlanner::change_vel_acc_param(float new_vel, float new_acc)
+{
+  delete planner_;
+  planner_ = new DynamicPlanner(manipulator_name_,  joint_names_, new_vel, new_acc,
+                                dynamic_behaviour_, sample_time_, max_velocity_);
+}
 
 // ---------------------  PUBLIC FUNCTIONS --------------------- //
 

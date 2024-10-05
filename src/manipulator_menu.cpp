@@ -80,17 +80,22 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
     ROS_WARN("Real gripper enable param not defined! Assuming default value as false.");
     params_.enable_real_gripper = params.enable_real_gripper;
   }
+  if (!nh_.getParam(params_.node_name+"/gripper_topic", params.gripper_topic))
+  {
+    ROS_WARN("Real gripper command topic param not defined! Assuming default value as robotiq gripper.");
+    params_.gripper_topic = params.gripper_topic;
+  }
 
   // --------------------- PUBS & SUBS DELCARATIONS ---------------------
-  jointGoalPublisher_           = nh_.advertise<sensor_msgs::JointState>("/desired_joint_pose", 1);
-  jointGoalPublisherNoPlanner_  = nh_.advertise<sensor_msgs::JointState>("/noplan_joint_pose", 1);
-  tcpPosePublisher_             = nh_.advertise<geometry_msgs::Pose>("/desired_tcp_pose", 1);
-  tcpPoseIKPublisher_           = nh_.advertise<geometry_msgs::Pose>("/desired_tcpIK_pose", 1);
-  tcpPoseIK_noplannerPub_       = nh_.advertise<geometry_msgs::Pose>("/noplan_tcpIK_pose", 1);
-  carthesianMovePublisher_      = nh_.advertise<geometry_msgs::PoseArray>("/desired_cartesian_move", 1);
-  display_goal_pub_             = nh_.advertise<geometry_msgs::PoseStamped>("/display_robot_goal", 1);
-  eepose_pub_                   = nh_.advertise<geometry_msgs::PoseStamped>("/display_ee_pose", 1);
-  collisionObjectPublisher_     = nh_.advertise<moveit_msgs::CollisionObject>("/add_collision_object", 1);
+  jointGoalPublisher_           = nh_.advertise<sensor_msgs::JointState>(params_.manipulator_name+"/desired_joint_pose", 1);
+  jointGoalPublisherNoPlanner_  = nh_.advertise<sensor_msgs::JointState>(params_.manipulator_name+"/noplan_joint_pose", 1);
+  tcpPosePublisher_             = nh_.advertise<geometry_msgs::Pose>(params_.manipulator_name+"/desired_tcp_pose", 1);
+  tcpPoseIKPublisher_           = nh_.advertise<geometry_msgs::Pose>(params_.manipulator_name+"/desired_tcpIK_pose", 1);
+  tcpPoseIK_noplannerPub_       = nh_.advertise<geometry_msgs::Pose>(params_.manipulator_name+"/noplan_tcpIK_pose", 1);
+  carthesianMovePublisher_      = nh_.advertise<geometry_msgs::PoseArray>(params_.manipulator_name+"/desired_cartesian_move", 1);
+  display_goal_pub_             = nh_.advertise<geometry_msgs::PoseStamped>(params_.manipulator_name+"/display_robot_goal", 1);
+  eepose_pub_                   = nh_.advertise<geometry_msgs::PoseStamped>(params_.manipulator_name+"/display_ee_pose", 1);
+  collisionObjectPublisher_     = nh_.advertise<moveit_msgs::CollisionObject>(params_.manipulator_name+"/add_collision_object", 1);
   moveGripperPublisher_         = nh_.advertise<std_msgs::Float64>(params_.ee_joint_name+"/motor_control", 1);
   jointStateSubscriber_         = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
 
@@ -111,7 +116,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
     gripper_client_ = nh_.serviceClient<std_srvs::SetBool>(params_.ee_joint_name+"/move_gripper");
 
     if (params_.enable_real_gripper)
-    {real_gripper_client_ = nh_.serviceClient<gripper::RobotiQGripperControl>("/ur_rtde/robotiq_gripper/command");}
+    {real_gripper_client_ = nh_.serviceClient<gripper::RobotiQGripperControl>(params_.gripper_topic);}
   }
 }
 
@@ -822,6 +827,39 @@ void ManipulatorMenu::moveRealGripper(const float command)
   callRealGripperSrv(command);
 }
 
+// ------------------- KINEMATICS PARAMS SETTERS ---------------------- //
+
+// Set Jacobian-based speed control
+void ManipulatorMenu::setJacobianSpeedControl(bool set)
+{
+  ros::ServiceClient client = nh_.serviceClient<std_srvs::SetBool>(params_.manipulator_name+"/enable_jac_vel");
+  std_srvs::SetBool srv;
+  srv.request.data = set;
+  client.call(srv);
+  std::cout << srv.response.message << std::endl;
+}
+
+// Set Instantaneous kinematics mode
+void ManipulatorMenu::setInstantKineMode(bool set)
+{
+  ros::ServiceClient client = nh_.serviceClient<std_srvs::SetBool>(params_.manipulator_name+"/instKine_setter");
+  std_srvs::SetBool srv;
+  srv.request.data = set;
+  client.call(srv);
+  std::cout << srv.response.message << std::endl;
+}
+
+// Set new dynamic planners vel/acc params
+void ManipulatorMenu::setNewPlannerParams(float new_vel,float new_acc)
+{
+  ros::ServiceClient client = nh_.serviceClient<manipulators::ChangePlannerParams>(params_.manipulator_name+"/change_planner_params");
+  manipulators::ChangePlannerParams srv;
+  srv.request.new_vel_factor = new_vel;
+  srv.request.new_acc_factor = new_acc;
+  client.call(srv);
+  std::cout << srv.response.message << std::endl;
+}
+
 // --------------------- PRIVATE FUNCTIONS ---------------------
 
 // --------------------- COPPELIA HANDLER ---------------------
@@ -1063,6 +1101,7 @@ void ManipulatorMenu::deleteCollObj()
 }
 
 // --------------------- COLLISION OBJECTS PRIVATE MENU HANDLER ---------------------
+
 // Gripper Moving command from the user
 void ManipulatorMenu::userGripperMove()
 {
@@ -1276,13 +1315,14 @@ void ManipulatorMenu::printMenu()
   std::cout << "33. Get joint values through inverse kinematics of a given pose\n";
   std::cout << "34. Get current Jacobian\n";
   std::cout << "35. Get current Inverse Jacobian\n";
+  std::cout << "36. Change velocity and acceleration as planner's parameters\n";
   std::cout << "\n======= Kinematics mode setter =======\n";
-  std::cout << "36. Enable  the instantaneous kinematics mode for motors\n";
-  std::cout << "37. Disable the instantaneous kinematics mode for motors\n";
-  std::cout << "38. Enable  the jacobian speed control mode for robot joints\n";
-  std::cout << "39. Disable the jacobian speed control mode for robot joints\n";
+  std::cout << "37. Enable  the instantaneous kinematics mode for motors\n";
+  std::cout << "38. Disable the instantaneous kinematics mode for motors\n";
+  std::cout << "39. Enable  the jacobian speed control mode for robot joints\n";
+  std::cout << "40. Disable the jacobian speed control mode for robot joints\n";
   std::cout << "\n======= Closing ROS menu =======\n";
-  std::cout << "40.Shutdown the menu\n";
+  std::cout << "41.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -1535,44 +1575,40 @@ void ManipulatorMenu::processChoice(int choice)
   case 36:
     {
       ROS_INFO("You selected Option 36");
-      ros::ServiceClient client = nh_.serviceClient<std_srvs::SetBool>(params_.manipulator_name+"/instKine_setter");
-      std_srvs::SetBool srv;
-      srv.request.data = true;
-      client.call(srv);
-      std::cout << srv.response.message << std::endl;
+      float vel,acc;
+      std::cout << "Insert new vel factor: ";
+      std::cin  >> vel;
+      std::cout << "Insert new acc factor: ";
+      std::cin  >> acc;
+      setNewPlannerParams(vel,acc);
     }
     break;
   case 37:
     {
       ROS_INFO("You selected Option 37");
-      ros::ServiceClient client = nh_.serviceClient<std_srvs::SetBool>(params_.manipulator_name+"/instKine_setter");
-      std_srvs::SetBool srv;
-      srv.request.data = false;
-      client.call(srv);
-      std::cout << srv.response.message << std::endl;
+      setInstantKineMode(true);
     }
     break;
   case 38:
     {
       ROS_INFO("You selected Option 38");
-      ros::ServiceClient client = nh_.serviceClient<std_srvs::SetBool>(params_.manipulator_name+"/enable_jac_vel");
-      std_srvs::SetBool srv;
-      srv.request.data = true;
-      client.call(srv);
-      std::cout << srv.response.message << std::endl;
+      setInstantKineMode(false);
     }
     break;
   case 39:
     {
       ROS_INFO("You selected Option 39");
-      ros::ServiceClient client = nh_.serviceClient<std_srvs::SetBool>(params_.manipulator_name+"/enable_jac_vel");
-      std_srvs::SetBool srv;
-      srv.request.data = false;
-      client.call(srv);
-      std::cout << srv.response.message << std::endl;
+      setJacobianSpeedControl(true);
     }
     break;
   case 40:
+    {
+      ROS_INFO("You selected Option 40");
+      setJacobianSpeedControl(false);
+    }
+    break;
+  case 41:
+    ROS_INFO("You selected Option 41");
     ROS_INFO("Exiting...\n");
     ros::shutdown();
     break;
