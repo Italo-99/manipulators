@@ -1,158 +1,210 @@
-#include "ur10_trajectory_converter/UR10TrajectoryConverter.h"
+/*
+ * Software License Agreement (Apache Licence 2.0)
+ *
+ *  Copyright (c) [2024], [Italo Almirante]
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *   1. Redistributions of source code must retain the above copyright
+ *      notice, this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in
+ *      the documentation and/or other materials provided with the
+ *      distribution.
+ *   3. The name of the author may not be used to endorse or promote
+ *      products derived from this software without specific prior
+ *      written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ *
+ *  Author: [Italo Almirante] 
+ *  Created on: [2024-10-05]
+ */
 
-UR10TrajectoryConverter::UR10TrajectoryConverter()
+// Import libraries
+#include "manipulators/DriverTrajectoryConverter.h"
+
+double DriverTrajectoryConverter::mean_ = 0.0;
+
+// Constructor
+DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name)
+    : joint_map_initialized_(false), cmd_map_initialized_(false)
 {
-  trajectory_sub_ =
-    nh_.subscribe("/trajectory", 2, &UR10TrajectoryConverter::trajectoryCallback, this);
-  joint_sub_ =
-    nh_.subscribe("/joint_states", 2, &UR10TrajectoryConverter::jointCallback, this);
-  trajectory_action_publisher_ =
-    nh_.advertise<control_msgs::FollowJointTrajectoryActionGoal>(
-      "/scaled_pos_joint_traj_controller/follow_joint_trajectory/goal", 1);
+    nh_.param<std::string>(node_name+"/velocity_topic", vel_topic_, "/ur_rtde/controllers/joint_velocity_controller/command");
+    nh_.param<double>(node_name+"/kp", kp_, 4.0);
+    nh_.param<double>(node_name+"/spinner_rate", spinner_rate_, 500.0);
+    nh_.param<double>(node_name+"/min_motor_speed", min_motor_speed_, 0.001);
 
-  client_ = new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(
-    "/scaled_pos_joint_traj_controller/follow_joint_trajectory", true);
-
-
-  trajectory_execution_publisher_ =
-    nh_.advertise<std_msgs::Bool>("/trajectory_execution", 1);
-
-  velocity_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(
-    "/ur_rtde/controllers/joint_velocity_controller/command", 1);
-  toll_ = 5e-4;
-  if (!nh_.getParam("/ur10_trajectory_converter/control_type", control_type_))
-  {
-    control_type_ = "velocity";
-  }
-
-  vel_traj_received_ = false;
-  dq_cmd_.data.resize(6);
-}
-
-void UR10TrajectoryConverter::jointCallback(const sensor_msgs::JointState::ConstPtr& j)
-{
-  checkEnd(traj_, *j);
-}
-
-void UR10TrajectoryConverter::trajectoryCallback(
-  const trajectory_msgs::JointTrajectory::ConstPtr& t)
-{
-  std::cout << "Trajectory received" << std::endl;
-  for (const std::string& name : t->joint_names)
-    joints_map_[name] = 0;
-  traj_ = *t;
-  if (control_type_ == "position")
-  {
-    std::string decision;
-    if (!nh_.getParam("/ur10_trajectory_converter/decision", decision))
+    // Load joint names group (from launch file)
+    if (!nh_.getParam(node_name+"/joints_names_group", joints_names_group_))
     {
-      decision = "no_client";
+        ROS_ERROR("Failed to get 'joints_names_group' parameter. Shutting down...");
+        ros::shutdown();
     }
 
-    if (decision == "no_client")
+    // Setup the joint name to index map
+    for (size_t i = 0; i < joints_names_group_.size(); ++i)
     {
-      control_msgs::FollowJointTrajectoryActionGoal trajectory_action;
-      trajectory_action.goal.trajectory = traj_;
-      trajectory_action_publisher_.publish(trajectory_action);
+        joint_name_to_index_[joints_names_group_[i]] = i;
+        std::cout << "Found joint ready for the driver: " << joints_names_group_[i] << std::endl;
     }
-    else
+
+    // Setup subscriber and publisher
+    joint_state_sub_ = nh_.subscribe("/joint_states", 1, &DriverTrajectoryConverter::jointStateCallback, this);
+    joint_cmd_sub_   = nh_.subscribe("/move_group/fake_controller_joint_states", 1, &DriverTrajectoryConverter::jointCmdCallback, this);
+    velocity_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(vel_topic_, 1);
+
+    // Initialize Eigen matrices to zero
+    joints_values_.setZero();
+    dq_cmd_.setZero();
+    qd_cmd_.setZero();
+    real_vel_.setZero();
+    vel_msg_.data.resize(6);
+
+    // Only compute if both joint state and command maps are initialized
+    ros::Rate wait_rate(10);
+    while(!isReady())
     {
-      control_msgs::FollowJointTrajectoryGoal trajectory_goal;
-      trajectory_goal.trajectory = traj_;
-      client_->waitForServer();
-      client_->sendGoal(trajectory_goal);
+        ros::spinOnce();
+        wait_rate.sleep();
     }
-  }
-  else
-  {
-    vel_traj_received_ = true;
-    iteration_         = 0;
-  }
+
+    ROS_INFO("Driver Trajectory Converter initialized successfully.");
 }
 
-void UR10TrajectoryConverter::checkEnd(trajectory_msgs::JointTrajectory& t,
-                                       sensor_msgs::JointState j)
+// Shutdown handler
+void DriverTrajectoryConverter::shutdown_handler(int sig)
 {
-  if (t.points.size() > 0)
-  {
-    joints_values_.resize(traj_.joint_names.size());
-    static std::unordered_map<std::string, double>::iterator it;
-    uint joint_counter = 0;
-    for (uint i = 0; i < t.joint_names.size(); i++)
-    {
+    // Show the result of the jacobian control mean duration
+    ROS_INFO("Mean duration of real driver control computations: %f seconds", mean_);
+    ros::Duration(1.0).sleep();
 
-      it = joints_map_.find(j.name[i]);
-      if (it != joints_map_.end())
-      {
-        it->second = j.position[i];
-        joint_counter++;
-        if (joint_counter == t.joint_names.size())
+    // Shutdown ROS
+    ros::shutdown();
+}
+
+// Check if both joint state and command maps are initialized
+bool DriverTrajectoryConverter::isReady()
+{
+    return joint_map_initialized_ && cmd_map_initialized_;
+}
+
+// Callback to receive actual joint states
+void DriverTrajectoryConverter::jointStateCallback(const sensor_msgs::JointState::ConstPtr& joints_state)
+{
+    uint counter_group = 0;
+
+    // Loop through the received joint states
+    for (uint i = 0; i < joints_state->name.size(); i++)
+    {
+        const std::string& joint_name = joints_state->name[i];
+        auto it = joint_name_to_index_.find(joint_name);
+        // std::cout << "Iterator 1: " << it->first << std::endl;  // Joint name
+        // std::cout << "Iterator 2: " << it->second << std::endl; // Joint position in the map
+        if (it != joint_name_to_index_.end())
         {
-          for (uint k = 0; k < t.joint_names.size(); k++)
-            joints_values_[k] = joints_map_[t.joint_names[k]];
+            size_t index = it->second;
+            joints_values_[index] = joints_state->position[i];
+            counter_group++;
         }
-        continue;
-      }
     }
 
-    double max = 0;
-    double tmp_max;
-
-    if (iteration_ >= int(t.points.size()) - 1)
+    // If all joints have been updated, mark as initialized
+    if (counter_group >= joints_names_group_.size())
     {
-      for (int i = 0; i < joints_values_.size(); i++)
-      {
-        // tmp_max = abs(joints_values_[i] - t.points.back().positions[i]);
-        // if (tmp_max > max)
-        // {
-        //   max = tmp_max;
-        // }
-        max = std::max(max, abs(joints_values_[i] - t.points.back().positions[i]));
-      }
-
-      if (max < toll_)
-      {
-        vel_traj_received_ = false;
-        std_msgs::Bool ex;
-        ex.data = true;
-        trajectory_execution_publisher_.publish(ex);
-        traj_.points.clear();
-      }
+        joint_map_initialized_ = true;
     }
-  }
 }
 
-void UR10TrajectoryConverter::computeVel()
+// Callback to receive the fake controller joint states (commands)
+void DriverTrajectoryConverter::jointCmdCallback(const sensor_msgs::JointState::ConstPtr& cmd_state)
 {
-  if (vel_traj_received_ && joints_values_.size() > 0)
-  {
-    iteration_ = std::min(iteration_, int(traj_.points.size()) - 1);
+    uint counter_group = 0;
 
-    for (uint i = 0; i < 6; i++)
-      dq_cmd_.data[i] = traj_.points[iteration_].velocities[i] +
-                        4.0 * (traj_.points[iteration_].positions[i] - joints_values_[i]);
-    iteration_++;
-  }
-  else
-  {
-    dq_cmd_.data = std::vector<double>(6, 0.0);
-  }
-  velocity_publisher_.publish(dq_cmd_);
+    // Loop through the received joint commands
+    for (uint i = 0; i < cmd_state->name.size(); i++)
+    {        
+        const std::string& joint_name = cmd_state->name[i];
+        auto it = joint_name_to_index_.find(joint_name);
+        // std::cout << "Iterator 1: " << it->first << std::endl;  // Joint name
+        // std::cout << "Iterator 2: " << it->second << std::endl; // Joint position in the map
+        if (it != joint_name_to_index_.end())
+        {
+            size_t index = it->second;
+            qd_cmd_[index] = cmd_state->position[i];
+            if (cmd_state->velocity.size() > index)
+                {dq_cmd_[index] = cmd_state->velocity[i];}
+            counter_group++;
+        }
+    }
+
+    // If all joints have been updated, mark as initialized
+    if (counter_group >= joints_names_group_.size())
+    {
+        cmd_map_initialized_ = true;
+    }
 }
 
-void UR10TrajectoryConverter::spinner(const double rate)
-{  
-  ros::Rate r(rate);
+// Compute the velocity command using the proportional control
+void DriverTrajectoryConverter::computeVel()
+{
+    // Compute the velocity output: real_vel_ = dq_cmd_ + kp_ * (qd_cmd_ - joints_values_)
+    real_vel_ = dq_cmd_ + kp_ * (qd_cmd_ - joints_values_);
 
-  while (ros::ok())
-  {
-    ros::spinOnce();
-    if (control_type_ == "velocity")
-      computeVel();
-    r.sleep();
-  }
+    // Apply minimum velocity threshold and prepare velocity message
+    for (size_t i = 0; i < 6; ++i)
+    {
+        // Apply minimum velocity threshold
+        if (std::abs(real_vel_[i]) < min_motor_speed_)
+        {
+            real_vel_[i] = 0.0;
+        }
 
-  // Publish null vel data when shutdown
-  dq_cmd_.data = std::vector<double>(6, 0.0);
-  velocity_publisher_.publish(dq_cmd_);
+        // Set the velocity message
+        vel_msg_.data[i] = real_vel_[i];
+    }
+
+    // Publish velocity command to the robot
+    velocity_publisher_.publish(vel_msg_);
+}
+
+// Spinner to continuously call callbacks and compute velocity
+void DriverTrajectoryConverter::spinner()
+{
+    // Number of samples for mean computation
+    unsigned long long int k = 0;
+    signal(SIGINT, shutdown_handler);
+    ros::Rate rate(spinner_rate_);
+
+    while (ros::ok())
+    {
+        ros::spinOnce();                    // Process callbacks
+        ros::Time start = ros::Time::now(); // Start loop time measurement
+        computeVel();                       // Compute velocity after every callback cycle
+
+        // Update mean computation
+        double sample_k = (ros::Time::now() - start).toSec();
+        k++;
+        mean_ = (1.0 / static_cast<double>(k)) * (sample_k + mean_ * static_cast<double>(k - 1));
+
+        // Sleep according to the defined spinner rate
+        rate.sleep();
+    }
+
+    // Publish zero velocities when shutting down
+    std_msgs::Float64MultiArray zero_vel;
+    zero_vel.data.resize(6, 0.0);
+    velocity_publisher_.publish(zero_vel);
+    ros::Duration(1.0).sleep();
 }

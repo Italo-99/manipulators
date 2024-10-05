@@ -33,6 +33,7 @@
   <arg name="tcp_offset"    default="+0.0"/>
   <!-- If true, launch the trajectory converter node -->
   <arg name="real_control"  default ="false" />
+  <arg name="drivers_config_file" default="$(find manipulators)/config/drivers/$(arg robot_name).yaml"/>
   <!-- Custom models -->
   <arg name="xacro_file"    default=""/>
   <arg name="srdf_file"     default=""/>
@@ -43,7 +44,7 @@
     <arg name="robotpkg_name"       value="$(arg robotpkg_name)" />
     <arg name="planning_group_file" value="$(arg planning_group_file)" />
     <arg name="default_desc"        value="$(arg default_desc)" />
-    <arg name="ur10e_pkg"           value="$(arg ur10e_pkg)" />
+    <arg name="ur5_pkg"             value="$(arg ur5_pkg)" />
     <arg name="custom_pkg"          value="$(arg custom_pkg)" />
     <arg name="rviz"                value="$(arg rviz)" />
     <arg name="def_config"          value="$(arg def_config)" />
@@ -52,6 +53,7 @@
     <arg name="rate"                value="$(arg rate)" />
     <arg name="sample_duration"     value="$(arg sample_duration)" />
     <arg name="real_control"        value="$(arg real_control)" />
+    <arg name="drivers_config_file" value="$(arg drivers_config_file)" />
     <arg name="camera"              value="$(arg camera)"  />
     <arg name="cam_x_offset"        value="$(arg cam_x_offset)"/>
     <arg name="cam_y_offset"        value="$(arg cam_y_offset)"/>

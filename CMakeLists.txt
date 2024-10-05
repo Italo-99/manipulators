@@ -66,3 +66,13 @@ add_dependencies(manipulator_menu_node_user ${catkin_EXPORTED_TARGETS})
 add_executable(manipulator_menu_node_Nouser src/manipulator_menu_node_Nouser.cpp)
 target_link_libraries(manipulator_menu_node_Nouser manipulator_menu ${catkin_LIBRARIES})
 add_dependencies(manipulator_menu_node_Nouser ${catkin_EXPORTED_TARGETS})
+
+# Add driver_trajectory_converter library
+add_library(driver_trajectory_converter src/driver_trajectory_converter.cpp)
+target_link_libraries(driver_trajectory_converter ${catkin_LIBRARIES})
+add_dependencies(driver_trajectory_converter ${catkin_EXPORTED_TARGETS})
+
+# Add driver_trajectory_converter_node
+add_executable(driver_trajectory_converter_node src/driver_trajectory_converter_node.cpp)
+target_link_libraries(driver_trajectory_converter_node driver_trajectory_converter ${catkin_LIBRARIES})
+add_dependencies(driver_trajectory_converter_node ${catkin_EXPORTED_TARGETS})

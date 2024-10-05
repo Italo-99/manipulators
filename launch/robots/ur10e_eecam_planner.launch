@@ -33,6 +33,7 @@
   <arg name="tcp_offset"    default="+0.160"/>
   <!-- If true, launch the trajectory converter node -->
   <arg name="real_control"  default ="false" />
+  <arg name="drivers_config_file" default="$(find manipulators)/config/drivers/$(arg robot_name).yaml"/>
   <!-- Custom models -->
   <arg name="xacro_file"    default=""/>
   <arg name="srdf_file"     default=""/>
@@ -52,6 +53,7 @@
     <arg name="rate"                value="$(arg rate)" />
     <arg name="sample_duration"     value="$(arg sample_duration)" />
     <arg name="real_control"        value="$(arg real_control)" />
+    <arg name="drivers_config_file" value="$(arg drivers_config_file)" />
     <arg name="camera"              value="$(arg camera)"  />
     <arg name="cam_x_offset"        value="$(arg cam_x_offset)"/>
     <arg name="cam_y_offset"        value="$(arg cam_y_offset)"/>

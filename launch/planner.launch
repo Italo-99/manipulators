@@ -72,7 +72,8 @@
   <arg name="tcp_offset"    default="+0.0"  />
   <arg name="pub_js_state"  default="false" />
   <!-- If true, launch the trajectory converter node -->
-  <arg name="real_control"  default ="false"/>
+  <arg name="real_control"        default ="false"/>
+  <arg name="drivers_config_file" default="$(find manipulators)/config/drivers/$(arg robot_name).yaml"/>
 
   <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
   <include file="$(find manipulators)/launch/planning_context.launch">
@@ -163,6 +164,9 @@
   </node>
 
   <!-- For real robot -->
-  <node if="$(arg real_control)" name="ur10_trajectory_converter" pkg="ur10_trajectory_converter" type="ur10_trajectory_converter" /> 
-  
+  <group if="$(arg real_control)">
+  <include file="$(find manipulators)/launch/real_control_driver.launch">
+    <arg name="drivers_config_file"  value="$(arg drivers_config_file)"/>
+  </include>
+  </group>
 </launch>
