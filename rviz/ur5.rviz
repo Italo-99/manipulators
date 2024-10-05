@@ -5,6 +5,8 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /PlanningScene1/Scene Robot1
+        - /PlanningScene1/Scene Robot1/Links1
+        - /PlanningScene1/Scene Robot1/Links1/tcp_gripper1
       Splitter Ratio: 0.46462714672088623
     Tree Height: 892
   - Class: rviz/Help
@@ -186,7 +188,7 @@ Visualization Manager:
       Shaft Length: 0.30000001192092896
       Shaft Radius: 0.009999999776482582
       Shape: Arrow
-      Topic: /display_ee_pose
+      Topic: /manipulator/display_ee_pose
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -202,7 +204,7 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Shaft Radius: 0.019999999552965164
       Shape: Arrow
-      Topic: /display_robot_goal
+      Topic: /manipulator/display_robot_goal
       Unreliable: false
       Value: true
   Enabled: true
@@ -221,7 +223,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 1.1806583404541016
+      Distance: 1.3223373889923096
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -229,9 +231,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.4700740575790405
-        Y: 0.3602662682533264
-        Z: -3.797246677095245e-07
+        X: 0.24594789743423462
+        Y: 0.15445446968078613
+        Z: -5.585386020356964e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false

@@ -142,9 +142,8 @@ void DriverTrajectoryConverter::jointCmdCallback(const sensor_msgs::JointState::
         if (it != joint_name_to_index_.end())
         {
             size_t index = it->second;
-            qd_cmd_[index] = cmd_state->position[i];
-            if (cmd_state->velocity.size() > index)
-                {dq_cmd_[index] = cmd_state->velocity[i];}
+            if (cmd_state->position.size() > index) {qd_cmd_[index] = cmd_state->position[i];}
+            if (cmd_state->velocity.size() > index) {dq_cmd_[index] = cmd_state->velocity[i];}
             counter_group++;
         }
     }
