@@ -41,18 +41,18 @@
 #define MANIPULATOR_PLANNER_H
 
 // IMPORT LIBRARIES
-// C++
-  #include <signal.h>
-// Ros
-  #include <dynamic_planner/dynamic_planner.h>
-  #include <eigen_conversions/eigen_msg.h>
-  #include <geometry_msgs/Pose.h>
-  #include <std_msgs/Float64.h>
-  #include <std_msgs/Float64MultiArray.h>
-  #include <std_msgs/UInt8.h>
-  #include <std_srvs/SetBool.h>
-  #include <tf2_ros/transform_listener.h>
-// Custom srvs
+  // C++
+    #include <signal.h>
+  // Ros
+    #include <dynamic_planner/dynamic_planner.h>
+    #include <eigen_conversions/eigen_msg.h>
+    #include <geometry_msgs/Pose.h>
+    #include <std_msgs/Float64.h>
+    #include <std_msgs/Float64MultiArray.h>
+    #include <std_msgs/UInt8.h>
+    #include <std_srvs/SetBool.h>
+    #include <tf2_ros/transform_listener.h>
+  // Custom srvs
   #include <manipulators/InvKine.h>
   #include <manipulators/PseudoInverse.h>
   #include <manipulators/FKine.h>

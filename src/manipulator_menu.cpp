@@ -52,7 +52,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
   }
   if (!nh_.getParam(params_.node_name+"/ros_freq", params_.ros_freq))
   {
-    ROS_WARN("ROS loop frequency param not defined! Assuming default value as argument of the constructor.");
+    ROS_WARN("ROS loop frequency param not defined! Assuming default value passed as object arg or as default.");
     params_.ros_freq = params.ros_freq;
   }
   if (params_.ros_freq < 0.1) 
@@ -62,27 +62,27 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
   }
   if (!nh_.getParam(params_.node_name+"/manipulator_name", params.manipulator_name))
   {
-    ROS_WARN("Manipulator name param not defined! Assuming default value.");
+    ROS_WARN("Manipulator name param not defined! Assuming default value passed as object arg or as default.");
     params_.manipulator_name = params.manipulator_name;
   }
   if (!nh_.getParam(params_.node_name+"/enable_coppelia", params.enable_coppelia))
   {
-    ROS_WARN("Coppelia enable param not defined! Assuming default value as false.");
+    ROS_WARN("Coppelia enable param not defined! Assuming default value passed as object arg or as default.");
     params_.enable_coppelia = params.enable_coppelia;
   }
   if (!nh_.getParam(params_.node_name+"/enable_sim_gripper", params.enable_sim_gripper))
   {
-    ROS_WARN("Gripper enable param not defined! Assuming default value as false.");
+    ROS_WARN("Gripper enable param not defined! Assuming default value passed as object arg or as default.");
     params_.enable_sim_gripper = params.enable_sim_gripper;
   }
   if (!nh_.getParam(params_.node_name+"/enable_real_gripper", params.enable_real_gripper))
   {
-    ROS_WARN("Real gripper enable param not defined! Assuming default value as false.");
+    ROS_WARN("Real gripper enable param not defined! Assuming default value passed as object arg or as default.");
     params_.enable_real_gripper = params.enable_real_gripper;
   }
   if (!nh_.getParam(params_.node_name+"/gripper_topic", params.gripper_topic))
   {
-    ROS_WARN("Real gripper command topic param not defined! Assuming default value as robotiq gripper.");
+    ROS_WARN("Real gripper command topic param not defined! Assuming default value passed as object arg or as default.");
     params_.gripper_topic = params.gripper_topic;
   }
 
