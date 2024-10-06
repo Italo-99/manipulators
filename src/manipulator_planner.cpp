@@ -93,11 +93,15 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   get_fkine_service_      = nh_.advertiseService(manipulator_name_ + "/FKine",         &ManipulatorPlanner::getCurrentFKineCallback,this);
   get_jacobian_service_   = nh_.advertiseService(manipulator_name_ + "/Jacobian",      &ManipulatorPlanner::getJacobianCallback,    this);
 
-  // ------------------ JACOBIAN SPEED BASED CONTROL ----------------------------------- //
+  // ---------------------- JACOBIAN SPEED BASED CONTROL -------------------------------- //
   enaJacControl_srv_  = nh_.advertiseService(manipulator_name_+"/enable_jac_vel", &ManipulatorPlanner::jacobianControlSetterCallback, this);
   velJacSetpoint_sub_ = nh_.subscribe(       manipulator_name_+"/cmd_vel",     1, &ManipulatorPlanner::updateVelJacSetpoint,          this);
 
-  // ---------------------- DYNAMIC PLANNER OBJECT ------------------------------------- //
+  // ------------------ JOINTS REAL TIME SPEED BASED CONTROL ---------------------------- //
+  enaJsRtControl_srv_ = nh_.advertiseService(manipulator_name_+"/enable_js_rt_vel", &ManipulatorPlanner::jointsRealTimeSetterCallback, this);
+  velJsRtSetpoint_sub_= nh_.subscribe(       manipulator_name_+"/js_cmd_vel",    1, &ManipulatorPlanner::updateJointsRealTimeSetpoint, this);
+
+  // ----------------------- DYNAMIC PLANNER OBJECT ------------------------------------- //
 
   // Call to the dynamic planner constructor
   planner_ = new DynamicPlanner(manipulator_name_,  joint_names_, vel_factor_, acc_factor_,
@@ -169,28 +173,37 @@ void ManipulatorPlanner::spinner()
   // ROS loop
   while (ros::ok())
   {
-    // Call the spinner for object related fuctions
-    planner_->spinner();
-
     // Test funtion for InvKine computations
     // ros::Time start = ros::Time::now();
     // planner_->invKine(get_manip_FKine());
     // planner_->pseudoInverse(planner_->getJacobian());
     // ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
 
-    // Jacobian speed control, with loop time measurement
+    // Start loop time measurement
+    ros::Time start = ros::Time::now();
+
+    // Call the spinner for object related fuctions
+    planner_->spinner();
+
+    // Jacobian speed control
     if (jac_control_)
     {
-      // Start loop time measurement
-      ros::Time start = ros::Time::now();
-
-      // Update the robot vel cmd
+      // Update vel cmd
       jacobianControl();
 
       // Update mean computation
       // ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
-      double sample_k = ros::Time::now().toSec()-start.toSec();
-      k++;
+      double sample_k = ros::Time::now().toSec()-start.toSec(); k++;
+      mean = 1/(static_cast<double>(k))*(sample_k+mean*static_cast<double>(k-1));    
+    }
+    else if (js_rt_control_)
+    {
+      // Update joints vel command
+      jointsRealTimeControl();
+
+      // Update mean computation
+      // ROS_INFO("Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
+      double sample_k = ros::Time::now().toSec()-start.toSec(); k++;
       mean = 1/(static_cast<double>(k))*(sample_k+mean*static_cast<double>(k-1));
     }
 
@@ -214,6 +227,8 @@ bool ManipulatorPlanner::jacobianControlSetterCallback(std_srvs::SetBool::Reques
   arm_vel_cmd_[3] = 0.;
   arm_vel_cmd_[4] = 0.;
   arm_vel_cmd_[5] = 0.;
+  // Publish the msg to the robot
+  jacobianControl();
   // Return success
   res.success = true;
   res.message = jac_control_ ? "Jacobian control mode enabled":"Jacobian control mode disabled";
@@ -276,6 +291,88 @@ void ManipulatorPlanner::updateVelJacSetpoint(const geometry_msgs::Twist::ConstP
     arm_vel_cmd_[3] = msg->angular.x; // X component of angular velocity
     arm_vel_cmd_[4] = msg->angular.y; // Y component of angular velocity
     arm_vel_cmd_[5] = msg->angular.z; // Z component of angular velocity
+}
+
+// -------------------- JOINTS REAL TIME SPEED CONTROL ----------------- //
+
+// Set the jacobian speed based control
+bool ManipulatorPlanner::jointsRealTimeSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res)
+{
+  // Set robot real time joints speed control
+  js_rt_control_ = req.data;
+  ROS_INFO("Joints real time control mode set as %s", js_rt_control_ ? "True":"False");
+  // Stop the robot to prevent bad behaviours during mode switch
+  js_vel_cmd_[0] = 0.;
+  js_vel_cmd_[1] = 0.;
+  js_vel_cmd_[2] = 0.;
+  js_vel_cmd_[3] = 0.;
+  js_vel_cmd_[4] = 0.;
+  js_vel_cmd_[5] = 0.;
+  // Publish the msg to the robot
+  arm_vel_cmd_[0] = 0.;
+  arm_vel_cmd_[1] = 0.;
+  arm_vel_cmd_[2] = 0.;
+  arm_vel_cmd_[3] = 0.;
+  arm_vel_cmd_[4] = 0.;
+  arm_vel_cmd_[5] = 0.;
+  jacobianControl();
+  // Return success
+  res.success = true;
+  res.message = js_rt_control_ ? "Joints real time control mode enabled":"Joints real time control mode disabled";
+  return true;
+}
+
+// Execute the jacobian based control
+void ManipulatorPlanner::jointsRealTimeControl()
+{
+  // Convert joints state into Eigen::MatrixXd
+  Eigen::Matrix<double,6,1> q;
+  q[0] = planner_->joints_values_group_[0];
+  q[1] = planner_->joints_values_group_[1];
+  q[2] = planner_->joints_values_group_[2];
+  q[3] = planner_->joints_values_group_[3];
+  q[4] = planner_->joints_values_group_[4];
+  q[5] = planner_->joints_values_group_[5];
+
+  // Update joint position setpoint
+  Eigen::Matrix<double,6,1> qd = q + js_vel_cmd_ / ros_freq_;
+
+  // Build the msg for the joints setpoint
+  sensor_msgs::JointState js;
+  js.name     = joint_names_;
+  js.position.resize(qd.size());
+  js.velocity.resize(js_vel_cmd_.size());
+
+  // Insert positions setpoint
+  js.position[0] = qd[0];
+  js.position[1] = qd[1];
+  js.position[2] = qd[2];
+  js.position[3] = qd[3];
+  js.position[4] = qd[4];
+  js.position[5] = qd[5];
+
+  // Insert velocity  setpoint
+  js.velocity[0] = js_vel_cmd_[0];
+  js.velocity[1] = js_vel_cmd_[1];
+  js.velocity[2] = js_vel_cmd_[2];
+  js.velocity[3] = js_vel_cmd_[3];
+  js.velocity[4] = js_vel_cmd_[4];
+  js.velocity[5] = js_vel_cmd_[5];
+
+  // Send the goal to the move it fake controller as trajectory point
+  planner_->moveRobot(js);
+}
+
+// Update the velocity setpoint of the arm for the jacobian speed based control
+void ManipulatorPlanner::updateJointsRealTimeSetpoint(const sensor_msgs::JointState::ConstPtr& msg)
+{    
+    // Map the joints velocity components from the JointState message
+    js_vel_cmd_[0] = msg->velocity[0];
+    js_vel_cmd_[1] = msg->velocity[1];
+    js_vel_cmd_[2] = msg->velocity[2];    
+    js_vel_cmd_[3] = msg->velocity[3];
+    js_vel_cmd_[4] = msg->velocity[4];
+    js_vel_cmd_[5] = msg->velocity[5];
 }
 
 // ---------------------- SERVER FUNCTIONS ---------------------- //

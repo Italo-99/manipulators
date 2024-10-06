@@ -104,12 +104,7 @@ class ManipulatorPlanner
       const Eigen::MatrixXd get_manip_Jacobian(void);
       const Eigen::MatrixXd get_manip_InvJacobian(void);
 
-      // Service servers
-      ros::ServiceServer inv_kine_service_;
-      ros::ServiceServer pseudo_inverse_service_;
-      ros::ServiceServer get_fkine_service_;
-      ros::ServiceServer get_jacobian_service_;
-
+      // Service servers callbacks
       bool invKineCallback(manipulators::InvKine::Request  &req,
                            manipulators::InvKine::Response &res);
 
@@ -149,6 +144,15 @@ class ManipulatorPlanner
       // Update the velocity setpoint of the arm for the jacobian speed based control
       void updateVelJacSetpoint(const geometry_msgs::Twist::ConstPtr& msg);
 
+      // Set the real time joints speed based control
+      bool jointsRealTimeSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
+
+      // Execute the real time joints speed based control
+      void jointsRealTimeControl();
+      
+      // Update speed setpoint of the arm for the real time joints speed based control
+      void updateJointsRealTimeSetpoint(const sensor_msgs::JointState::ConstPtr& msg);
+
       // Instantaneous kine param setter
       bool instantKineSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
       void set_instKine(bool set);
@@ -164,6 +168,12 @@ class ManipulatorPlanner
     // Ros handling
       std::string node_name_;                 // Node name
       ros::NodeHandle nh_;                    // Node object
+
+    // ROS srvs servers
+      ros::ServiceServer inv_kine_service_;
+      ros::ServiceServer pseudo_inverse_service_;
+      ros::ServiceServer get_fkine_service_;
+      ros::ServiceServer get_jacobian_service_;
 
     // Manipulator attributes
       std::vector<std::string> joint_names_;          // Joints' names
@@ -196,8 +206,11 @@ class ManipulatorPlanner
 
     // Jacobian vel control mode
       ros::ServiceServer enaJacControl_srv_;  // Service server to the jacobian control setter
-      ros::ServiceClient enaJacControl_cli_;  // Service client to the jacobian control setter
       ros::Subscriber   velJacSetpoint_sub_;  // Subscriber to the velocity command for the jacobian control
+
+    // Real time joints vel control mode
+      ros::ServiceServer enaJsRtControl_srv_; // Service server to the real time speed joints control setter
+      ros::Subscriber   velJsRtSetpoint_sub_; // Subscriber to the velocity command for the real time joints control
 
     // Environment objects handler
       ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
@@ -211,12 +224,12 @@ class ManipulatorPlanner
       double      sample_time_;               // Sampling time of the cartesian planner
       double      max_velocity_;              // Maximum ee velocity
 
-    // Jacobian control variables
-      bool jac_control_ = false;       // True if the speed control through inverse Jacobian has been enabled
-      static double mean;              // Average value for the duration of the jacobian control computation
-
-    // Vel commands variables
-      Eigen::Matrix<double,6,1> arm_vel_cmd_;   // Command of speed to the end_effector
+    // Jacobian and joints real time control variables
+      bool   jac_control_ = false;            // True if the speed control through inverse Jacobian has been enabled
+      bool js_rt_control_ = false;            // True if the speed control through direct real time joints cmd has been enabled
+      static double mean;                     // Average value for the duration of the jacobian control computation
+      Eigen::Matrix<double,6,1> arm_vel_cmd_; // Command of speed to the end_effector
+      Eigen::Matrix<double,6,1>  js_vel_cmd_; // Command of speed to the joints
 };
 
 #endif /* MANIPULATOR_PLANNER_H */
