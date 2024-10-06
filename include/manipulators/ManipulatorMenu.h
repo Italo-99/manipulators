@@ -176,7 +176,8 @@ class ManipulatorMenu
       void setJacobianSpeedControl(bool);
       void setInstantKineMode(bool);
       void setNewPlannerParams(float,float);
-       
+      void setJsRealTimeControl(bool);
+
  private:
 
   // --------------------- PRIVATE FUNCTIONS ---------------------
@@ -214,7 +215,7 @@ class ManipulatorMenu
         void addCollObj(void);    // Add a collision object by the user
         void deleteCollObj(void); // Delete a given collision object from the user menu
 
-      //Menu handling
+      // Menu handling
         void  printMenu();
         int   getUserChoice();
         void  processChoice(int choice);

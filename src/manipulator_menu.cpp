@@ -860,6 +860,16 @@ void ManipulatorMenu::setNewPlannerParams(float new_vel,float new_acc)
   std::cout << srv.response.message << std::endl;
 }
 
+// Set Joints real time speed control
+void ManipulatorMenu::setJsRealTimeControl(bool set)
+{
+  ros::ServiceClient client = nh_.serviceClient<std_srvs::SetBool>(params_.manipulator_name+"/enable_js_rt_vel");
+  std_srvs::SetBool srv;
+  srv.request.data = set;
+  client.call(srv);
+  std::cout << srv.response.message << std::endl;
+}
+
 // --------------------- PRIVATE FUNCTIONS ---------------------
 
 // --------------------- COPPELIA HANDLER ---------------------
@@ -1321,8 +1331,10 @@ void ManipulatorMenu::printMenu()
   std::cout << "38. Disable the instantaneous kinematics mode for motors\n";
   std::cout << "39. Enable  the jacobian speed control mode for robot joints\n";
   std::cout << "40. Disable the jacobian speed control mode for robot joints\n";
+  std::cout << "41. Enable  the joints real time speed control mode\n";
+  std::cout << "42. Disable the joints real time speed control mode\n";
   std::cout << "\n======= Closing ROS menu =======\n";
-  std::cout << "41.Shutdown the menu\n";
+  std::cout << "43.Shutdown the menu\n";
   std::cout << "=====================\n";
 }
 
@@ -1608,6 +1620,18 @@ void ManipulatorMenu::processChoice(int choice)
     }
     break;
   case 41:
+    {
+      ROS_INFO("You selected Option 41");
+      setJsRealTimeControl(true);
+    }
+    break;
+  case 42:
+    {
+      ROS_INFO("You selected Option 42");
+      setJsRealTimeControl(false);
+    }
+    break;
+  case 43:
     ROS_INFO("You selected Option 41");
     ROS_INFO("Exiting...\n");
     ros::shutdown();
