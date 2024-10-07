@@ -86,6 +86,8 @@ class ManipulatorPlanner
       // Check parameters passed to the manipulator
       void check_param();
 
+      // Sign function
+      double sign(double);
       // Create a collision object from a selected primitive
       void createObj(const std::string& name,
                      const int            obj_type, 
@@ -222,7 +224,10 @@ class ManipulatorPlanner
       double      ros_freq_;                  // ROS node loop frequency
       bool        inst_kine_;                 // True if invKine leads to instantaneous move up to the goal
       double      sample_time_;               // Sampling time of the cartesian planner
-      double      max_velocity_;              // Maximum ee velocity
+      double      max_speed_ee_;              // Maximum ee velocity
+      double      max_accel_ee_;              // Maximum ee velocity
+      double      max_spd_jnts_;              // Maximum ee velocity
+      double      max_acc_jnts_;              // Maximum ee velocity
 
     // Jacobian and joints real time control variables
       bool   jac_control_ = false;            // True if the speed control through inverse Jacobian has been enabled
@@ -230,6 +235,9 @@ class ManipulatorPlanner
       static double mean;                     // Average value for the duration of the jacobian control computation
       Eigen::Matrix<double,6,1> arm_vel_cmd_; // Command of speed to the end_effector
       Eigen::Matrix<double,6,1>  js_vel_cmd_; // Command of speed to the joints
+      Eigen::Matrix<double,3,1> arm_msg_new_; // New command of speed to the ee
+      Eigen::Matrix<double,6,1> js_msg_new_;  // New command of joints speed
+
 };
 
 #endif /* MANIPULATOR_PLANNER_H */

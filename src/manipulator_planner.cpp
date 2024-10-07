@@ -105,7 +105,7 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
 
   // Call to the dynamic planner constructor
   planner_ = new DynamicPlanner(manipulator_name_,  joint_names_, vel_factor_, acc_factor_,
-                                dynamic_behaviour_, sample_time_, max_velocity_);
+                                dynamic_behaviour_, sample_time_, max_speed_ee_);
 
   change_planner_params_srv_ = nh_.advertiseService(manipulator_name_+"/change_planner_params",&ManipulatorPlanner::chPlParamCallback,this);
 
@@ -141,7 +141,7 @@ void ManipulatorPlanner::change_vel_acc_param(float new_vel, float new_acc)
 {
   delete planner_;
   planner_ = new DynamicPlanner(manipulator_name_,  joint_names_, new_vel, new_acc,
-                                dynamic_behaviour_, sample_time_, max_velocity_);
+                                dynamic_behaviour_, sample_time_, max_speed_ee_);
 }
 
 // ---------------------  PUBLIC FUNCTIONS --------------------- //
@@ -238,6 +238,20 @@ bool ManipulatorPlanner::jacobianControlSetterCallback(std_srvs::SetBool::Reques
 // Execute the jacobian based control
 void ManipulatorPlanner::jacobianControl()
 {
+  // // Compute the norm of the linear vels components
+  // double norm_vel = arm_vel_cmd_.head<3>().norm();
+
+  // // Compute the norm of the linear vels components of the new msg
+  // double norm_msg = arm_msg_new_.head<3>().norm();
+
+  // // Check if the acceleration is below the maximum
+  // if (abs(norm_msg-norm_vel)*ros_freq_ > max_accel_ee_)
+  // {
+  //   arm_vel_cmd_[0] = arm_vel_cmd_[0] + max_accel_ee_/ros_freq_*arm_msg_new_[0]/norm_msg;
+  //   arm_vel_cmd_[1] = arm_vel_cmd_[1] + max_accel_ee_/ros_freq_*arm_msg_new_[1]/norm_msg;
+  //   arm_vel_cmd_[2] = arm_vel_cmd_[2] + max_accel_ee_/ros_freq_*arm_msg_new_[2]/norm_msg;
+  // }
+
   // Compute the speed
   Eigen::Matrix<double,6,1> dq = get_manip_InvJacobian()*arm_vel_cmd_;
 
@@ -281,16 +295,25 @@ void ManipulatorPlanner::jacobianControl()
 
 // Update the velocity setpoint of the arm for the jacobian speed based control
 void ManipulatorPlanner::updateVelJacSetpoint(const geometry_msgs::Twist::ConstPtr& msg)
-{    
-    // Map the linear velocity components from the Twist message
-    arm_vel_cmd_[0] = msg->linear.x; // X component of linear velocity
-    arm_vel_cmd_[1] = msg->linear.y; // Y component of linear velocity
-    arm_vel_cmd_[2] = msg->linear.z; // Z component of linear velocity
-    
-    // Map the angular velocity components from the Twist message
-    arm_vel_cmd_[3] = msg->angular.x; // X component of angular velocity
-    arm_vel_cmd_[4] = msg->angular.y; // Y component of angular velocity
-    arm_vel_cmd_[5] = msg->angular.z; // Z component of angular velocity
+{
+  // Compute the norm of the linear vels components of the new msg
+  // arm_msg_new_[0] = msg->linear.x;
+  // arm_msg_new_[1] = msg->linear.y;
+  // arm_msg_new_[2] = msg->linear.z;
+  arm_vel_cmd_[0] = msg->linear.x;
+  arm_vel_cmd_[1] = msg->linear.y;
+  arm_vel_cmd_[2] = msg->linear.z;
+  
+  // Map the angular velocity components from the Twist message
+  arm_vel_cmd_[3] = msg->angular.x; // X component of angular velocity
+  arm_vel_cmd_[4] = msg->angular.y; // Y component of angular velocity
+  arm_vel_cmd_[5] = msg->angular.z; // Z component of angular velocity
+
+  // Check if the speed is below the maximum
+  // double norm_vel = arm_msg_new_.norm();
+  // if (norm_vel > max_speed_ee_) {arm_msg_new_ *= (max_speed_ee_/norm_vel);}
+  double norm_vel = arm_vel_cmd_.head<3>().norm();
+  if (norm_vel > max_speed_ee_) {arm_vel_cmd_ *= (max_speed_ee_/norm_vel);}
 }
 
 // -------------------- JOINTS REAL TIME SPEED CONTROL ----------------- //
@@ -325,6 +348,31 @@ bool ManipulatorPlanner::jointsRealTimeSetterCallback(std_srvs::SetBool::Request
 // Execute the jacobian based control
 void ManipulatorPlanner::jointsRealTimeControl()
 {
+  // Check if the accelerations are acceptable and map the joints speed from the JointState message
+  if (abs(js_msg_new_[0]-js_vel_cmd_[0])*ros_freq_ > max_acc_jnts_)
+        {js_vel_cmd_[0] = js_msg_new_[0] + max_acc_jnts_/ros_freq_;}
+  else  {js_vel_cmd_[0] = js_msg_new_[0];}
+
+  if (abs(js_msg_new_[1]-js_vel_cmd_[1])*ros_freq_ > max_acc_jnts_)
+        {js_vel_cmd_[1] = js_msg_new_[1] + max_acc_jnts_/ros_freq_;}
+  else  {js_vel_cmd_[1] = js_msg_new_[1];}
+
+  if (abs(js_msg_new_[2]-js_vel_cmd_[2])*ros_freq_ > max_acc_jnts_)
+        {js_vel_cmd_[2] = js_msg_new_[2] + max_acc_jnts_/ros_freq_;}
+  else  {js_vel_cmd_[2] = js_msg_new_[2];}
+
+  if (abs(js_msg_new_[3]-js_vel_cmd_[3])*ros_freq_ > max_acc_jnts_)
+        {js_vel_cmd_[3] = js_msg_new_[3] + max_acc_jnts_/ros_freq_;}
+  else  {js_vel_cmd_[3] = js_msg_new_[3];}
+
+  if (abs(js_msg_new_[4]-js_vel_cmd_[4])*ros_freq_ > max_acc_jnts_)
+        {js_vel_cmd_[4] = js_msg_new_[4] + max_acc_jnts_/ros_freq_;}
+  else  {js_vel_cmd_[4] = js_msg_new_[4];}
+
+  if (abs(js_msg_new_[5]-js_vel_cmd_[5])*ros_freq_ > max_acc_jnts_)
+        {js_vel_cmd_[5] = js_msg_new_[5] + max_acc_jnts_/ros_freq_;}
+  else  {js_vel_cmd_[5] = js_msg_new_[5];}
+
   // Convert joints state into Eigen::MatrixXd
   Eigen::Matrix<double,6,1> q;
   q[0] = planner_->joints_values_group_[0];
@@ -365,14 +413,29 @@ void ManipulatorPlanner::jointsRealTimeControl()
 
 // Update the velocity setpoint of the arm for the jacobian speed based control
 void ManipulatorPlanner::updateJointsRealTimeSetpoint(const sensor_msgs::JointState::ConstPtr& msg)
-{    
-    // Map the joints velocity components from the JointState message
-    js_vel_cmd_[0] = msg->velocity[0];
-    js_vel_cmd_[1] = msg->velocity[1];
-    js_vel_cmd_[2] = msg->velocity[2];    
-    js_vel_cmd_[3] = msg->velocity[3];
-    js_vel_cmd_[4] = msg->velocity[4];
-    js_vel_cmd_[5] = msg->velocity[5];
+{
+  js_msg_new_[0] = msg->velocity[0];
+  js_msg_new_[1] = msg->velocity[1];
+  js_msg_new_[2] = msg->velocity[2];
+  js_msg_new_[3] = msg->velocity[3];
+  js_msg_new_[4] = msg->velocity[4];
+  js_msg_new_[5] = msg->velocity[5];
+
+  // Check if the vel cmds exceed the maximum acceptable speed
+  if (abs(msg->velocity[0]) > max_spd_jnts_) {js_msg_new_[0] = sign(msg->velocity[0])*max_spd_jnts_;}
+  if (abs(msg->velocity[1]) > max_spd_jnts_) {js_msg_new_[1] = sign(msg->velocity[1])*max_spd_jnts_;}
+  if (abs(msg->velocity[2]) > max_spd_jnts_) {js_msg_new_[2] = sign(msg->velocity[2])*max_spd_jnts_;}
+  if (abs(msg->velocity[3]) > max_spd_jnts_) {js_msg_new_[3] = sign(msg->velocity[3])*max_spd_jnts_;}
+  if (abs(msg->velocity[4]) > max_spd_jnts_) {js_msg_new_[4] = sign(msg->velocity[4])*max_spd_jnts_;}
+  if (abs(msg->velocity[5]) > max_spd_jnts_) {js_msg_new_[5] = sign(msg->velocity[5])*max_spd_jnts_;}
+}
+
+// Sign function
+double ManipulatorPlanner::sign(double val)
+{
+    if      (val > 0) {return +1;}
+    else if (val < 0) {return -1;}
+    else              {return 0;}
 }
 
 // ---------------------- SERVER FUNCTIONS ---------------------- //
@@ -533,10 +596,27 @@ void ManipulatorPlanner::check_param()
     ROS_WARN("Sample time param not defined! Assuming default value as 0.002.");
     sample_time_ = 0.002;
   }
-  if (!nh_.getParam(node_name_+"/max_velocity", max_velocity_))
+
+  // Setup limit speed and acceleration of ee and joints
+  if (!nh_.getParam(node_name_+"/max_speed_ee", max_speed_ee_))
   {
-    ROS_WARN("Sample time param not defined! Assuming default value as 0.5.");
-    max_velocity_ = 0.5;
+    ROS_WARN("Max ee speed param not defined! Assuming default value as 0.5.");
+    max_speed_ee_ = 0.5;
+  }
+  if (!nh_.getParam(node_name_+"/max_accel_ee_", max_accel_ee_))
+  {
+    ROS_WARN("Max ee acceleration param not defined! Assuming default value as 0.5.");
+    max_accel_ee_ = 1.0;
+  }
+  if (!nh_.getParam(node_name_+"/max_spd_jnts", max_spd_jnts_))
+  {
+    ROS_WARN("Max ee speed param not defined! Assuming default value as 0.5.");
+    max_spd_jnts_ = 3.0;
+  }
+  if (!nh_.getParam(node_name_+"/max_acc_jnts", max_acc_jnts_))
+  {
+    ROS_WARN("Max ee acceleration param not defined! Assuming default value as 0.5.");
+    max_acc_jnts_ = 6.0;
   }
 }
 
