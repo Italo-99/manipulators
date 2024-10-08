@@ -8,9 +8,9 @@ ee_name:          tcp_gripper
 
 base_name:        base_link
 
-vel_factor:       0.2
+vel_factor:       0.2       # Speed        scaling factor for the planner
 
-acc_factor:       0.2
+acc_factor:       0.2       # Acceleration scaling factor for the planner
 
 ros_freq:         500       # ROS loop frequency (update rate of callbacks)
 
@@ -25,3 +25,5 @@ max_accel_ee:     2.0       # Maximum acceleration of the end-effector in [m/s2]
 max_spd_jnts:     3.14      # Maximum velocity     of the joints in [rad/s]  in real time speed control
 
 max_acc_jnts:     6.28      # Maximum acceleration of the joints in [rad/s2] in real time speed control
+
+# name:           ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']

@@ -238,19 +238,36 @@ bool ManipulatorPlanner::jacobianControlSetterCallback(std_srvs::SetBool::Reques
 // Execute the jacobian based control
 void ManipulatorPlanner::jacobianControl()
 {
-  // // Compute the norm of the linear vels components
-  // double norm_vel = arm_vel_cmd_.head<3>().norm();
+  // Compute the norm of the current linear vels components
+  double norm_vel = arm_vel_cmd_.head<3>().norm();
 
-  // // Compute the norm of the linear vels components of the new msg
-  // double norm_msg = arm_msg_new_.head<3>().norm();
+  // Compute the norm of the linear vels components of the new msg
+  double norm_msg = arm_msg_new_.norm();
 
-  // // Check if the acceleration is below the maximum
-  // if (abs(norm_msg-norm_vel)*ros_freq_ > max_accel_ee_)
-  // {
-  //   arm_vel_cmd_[0] = arm_vel_cmd_[0] + max_accel_ee_/ros_freq_*arm_msg_new_[0]/norm_msg;
-  //   arm_vel_cmd_[1] = arm_vel_cmd_[1] + max_accel_ee_/ros_freq_*arm_msg_new_[1]/norm_msg;
-  //   arm_vel_cmd_[2] = arm_vel_cmd_[2] + max_accel_ee_/ros_freq_*arm_msg_new_[2]/norm_msg;
-  // }
+  // Check if the acceleration is over the maximum, set a limitation
+  if (abs(norm_msg-norm_vel)*ros_freq_ > max_accel_ee_)
+  {
+    // Split the acceleration over the three axes
+    double acc_x,acc_y,acc_z = max_accel_ee_/3;
+    if (norm_msg < -0.001 || norm_msg > 0.001)
+    {
+      acc_x = max_accel_ee_*(abs(arm_msg_new_[0]))/norm_msg;
+      acc_y = max_accel_ee_*(abs(arm_msg_new_[1]))/norm_msg;
+      acc_z = max_accel_ee_*(abs(arm_msg_new_[2]))/norm_msg;
+    }
+    else if (norm_vel < -0.001 || norm_vel > 0.001)
+    {
+      acc_x = max_accel_ee_*(abs(arm_vel_cmd_[0]))/norm_vel;
+      acc_y = max_accel_ee_*(abs(arm_vel_cmd_[1]))/norm_vel;
+      acc_z = max_accel_ee_*(abs(arm_vel_cmd_[2]))/norm_vel;
+    }
+
+    // Update linear velocity components
+    arm_vel_cmd_[0] = arm_vel_cmd_[0] + sign(norm_msg-norm_vel)*acc_x/ros_freq_;
+    arm_vel_cmd_[1] = arm_vel_cmd_[1] + sign(norm_msg-norm_vel)*acc_y/ros_freq_;
+    arm_vel_cmd_[2] = arm_vel_cmd_[2] + sign(norm_msg-norm_vel)*acc_z/ros_freq_;
+  }
+  else {arm_vel_cmd_.head<3>() = arm_msg_new_;}
 
   // Compute the speed
   Eigen::Matrix<double,6,1> dq = get_manip_InvJacobian()*arm_vel_cmd_;
@@ -297,12 +314,12 @@ void ManipulatorPlanner::jacobianControl()
 void ManipulatorPlanner::updateVelJacSetpoint(const geometry_msgs::Twist::ConstPtr& msg)
 {
   // Compute the norm of the linear vels components of the new msg
-  // arm_msg_new_[0] = msg->linear.x;
-  // arm_msg_new_[1] = msg->linear.y;
-  // arm_msg_new_[2] = msg->linear.z;
-  arm_vel_cmd_[0] = msg->linear.x;
-  arm_vel_cmd_[1] = msg->linear.y;
-  arm_vel_cmd_[2] = msg->linear.z;
+  arm_msg_new_[0] = msg->linear.x;
+  arm_msg_new_[1] = msg->linear.y;
+  arm_msg_new_[2] = msg->linear.z;
+  // arm_vel_cmd_[0] = msg->linear.x;
+  // arm_vel_cmd_[1] = msg->linear.y;
+  // arm_vel_cmd_[2] = msg->linear.z;
   
   // Map the angular velocity components from the Twist message
   arm_vel_cmd_[3] = msg->angular.x; // X component of angular velocity
@@ -310,10 +327,10 @@ void ManipulatorPlanner::updateVelJacSetpoint(const geometry_msgs::Twist::ConstP
   arm_vel_cmd_[5] = msg->angular.z; // Z component of angular velocity
 
   // Check if the speed is below the maximum
-  // double norm_vel = arm_msg_new_.norm();
-  // if (norm_vel > max_speed_ee_) {arm_msg_new_ *= (max_speed_ee_/norm_vel);}
-  double norm_vel = arm_vel_cmd_.head<3>().norm();
-  if (norm_vel > max_speed_ee_) {arm_vel_cmd_ *= (max_speed_ee_/norm_vel);}
+  double norm_vel = arm_msg_new_.norm();
+  if (norm_vel > max_speed_ee_) {arm_msg_new_ *= (max_speed_ee_/norm_vel);}
+  // double norm_vel = arm_vel_cmd_.head<3>().norm();
+  // if (norm_vel > max_speed_ee_) {arm_vel_cmd_ *= (max_speed_ee_/norm_vel);}
 }
 
 // -------------------- JOINTS REAL TIME SPEED CONTROL ----------------- //
@@ -350,27 +367,27 @@ void ManipulatorPlanner::jointsRealTimeControl()
 {
   // Check if the accelerations are acceptable and map the joints speed from the JointState message
   if (abs(js_msg_new_[0]-js_vel_cmd_[0])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[0] = js_msg_new_[0] + max_acc_jnts_/ros_freq_;}
+        {js_vel_cmd_[0] = js_vel_cmd_[0] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
   else  {js_vel_cmd_[0] = js_msg_new_[0];}
 
   if (abs(js_msg_new_[1]-js_vel_cmd_[1])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[1] = js_msg_new_[1] + max_acc_jnts_/ros_freq_;}
+        {js_vel_cmd_[1] = js_vel_cmd_[1] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
   else  {js_vel_cmd_[1] = js_msg_new_[1];}
 
   if (abs(js_msg_new_[2]-js_vel_cmd_[2])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[2] = js_msg_new_[2] + max_acc_jnts_/ros_freq_;}
+        {js_vel_cmd_[2] = js_vel_cmd_[2] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
   else  {js_vel_cmd_[2] = js_msg_new_[2];}
 
   if (abs(js_msg_new_[3]-js_vel_cmd_[3])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[3] = js_msg_new_[3] + max_acc_jnts_/ros_freq_;}
+        {js_vel_cmd_[3] = js_vel_cmd_[3] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
   else  {js_vel_cmd_[3] = js_msg_new_[3];}
 
   if (abs(js_msg_new_[4]-js_vel_cmd_[4])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[4] = js_msg_new_[4] + max_acc_jnts_/ros_freq_;}
+        {js_vel_cmd_[4] = js_vel_cmd_[4] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
   else  {js_vel_cmd_[4] = js_msg_new_[4];}
 
   if (abs(js_msg_new_[5]-js_vel_cmd_[5])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[5] = js_msg_new_[5] + max_acc_jnts_/ros_freq_;}
+        {js_vel_cmd_[5] = js_msg_new_[5] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
   else  {js_vel_cmd_[5] = js_msg_new_[5];}
 
   // Convert joints state into Eigen::MatrixXd
@@ -433,9 +450,9 @@ void ManipulatorPlanner::updateJointsRealTimeSetpoint(const sensor_msgs::JointSt
 // Sign function
 double ManipulatorPlanner::sign(double val)
 {
-    if      (val > 0) {return +1;}
-    else if (val < 0) {return -1;}
-    else              {return 0;}
+    if      (val > 0) {return +1.;}
+    else if (val < 0) {return -1.;}
+    else              {return  0.;}
 }
 
 // ---------------------- SERVER FUNCTIONS ---------------------- //
