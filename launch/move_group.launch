@@ -4,6 +4,7 @@
     <arg name="robotpkg_name" default="" />
 
     <!-- List of all available manipulators -->
+      <arg name="ur30_pkg"    default="false"/>
       <arg name="ur20_pkg"    default="false"/>
       <arg name="ur16e_pkg"   default="false"/>
       <arg name="ur10e_pkg"   default="false"/>
@@ -16,6 +17,8 @@
     <!-- End of the list -->
 
     <!-- Get moveit config package of the corresponding robot -->
+      <arg name="moveit_pkg" value="$(find ur30_moveit_config)"
+               if="$(arg ur30_pkg)"/>
       <arg name="moveit_pkg" value="$(find ur20_moveit_config)"
                if="$(arg ur20_pkg)"/>
       <arg name="moveit_pkg" value="$(find ur16e_moveit_config)"

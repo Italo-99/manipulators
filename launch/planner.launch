@@ -7,6 +7,7 @@
     <arg name="planning_group_file" default="$(find manipulators)/config/$(arg robot_name).yaml"/>
 
     <!-- List of all available manipulators -->
+      <arg name="ur30_pkg"    default="false"/>
       <arg name="ur20_pkg"    default="false"/>
       <arg name="ur16e_pkg"   default="false"/>
       <arg name="ur10e_pkg"   default="false"/>
@@ -19,6 +20,8 @@
     <!-- End of the list -->
 
     <!-- Get moveit config package of the corresponding robot -->
+      <arg name="moveit_pkg" value="$(find ur30_moveit_config)"
+               if="$(arg ur30_pkg)"/>
       <arg name="moveit_pkg" value="$(find ur20_moveit_config)"
                if="$(arg ur20_pkg)"/>
       <arg name="moveit_pkg" value="$(find ur16e_moveit_config)"
@@ -80,6 +83,7 @@
     <arg name="custom_pkg"    value="$(arg custom_pkg)"/>
     <arg name="robot_name"    value="$(arg robot_name)"/>
     <arg name="robotpkg_name" value="$(arg robotpkg_name)"/>
+    <arg name="ur30_pkg"      value="$(arg ur30_pkg)"/>
     <arg name="ur20_pkg"      value="$(arg ur20_pkg)"/>
     <arg name="ur16e_pkg"     value="$(arg ur16e_pkg)"/>
     <arg name="ur10e_pkg"     value="$(arg ur10e_pkg)"/>
@@ -121,6 +125,7 @@
   <include file="$(find manipulators)/launch/move_group.launch">
     <arg name="custom_pkg"    value="$(arg custom_pkg)"/>
     <arg name="robotpkg_name" value="$(arg robotpkg_name)" />
+    <arg name="ur30_pkg"      value="$(arg ur30_pkg)"/>
     <arg name="ur20_pkg"      value="$(arg ur20_pkg)"/>
     <arg name="ur16e_pkg"     value="$(arg ur16e_pkg)"/>
     <arg name="ur10e_pkg"     value="$(arg ur10e_pkg)"/>

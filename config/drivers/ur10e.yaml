@@ -4,7 +4,7 @@ velocity_topic:     /ur_rtde/controllers/joint_velocity_controller/command
 
 joints_names_group: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint]
 
-kp:                 4.0
+kp:                 1.0
 
 spinner_rate:       500
 

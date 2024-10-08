@@ -18,4 +18,12 @@ inst_kine:        true          # True if the motors instantaneously reach the g
 
 sample_time:      0.002         # Time distance between two consecutive points of the cartesian trajectory computed
 
-max_velocity:     1             # Maximum velocity of the end-effector in [m/s] (up to 1.0) in cartesian planning
+max_speed_ee:     0.5       # Maximum velocity     of the end-effector in [m/s]  in cartesian planning/jacobian real time control
+
+max_accel_ee:     0.5       # Maximum acceleration of the end-effector in [m/s2] in cartesian planning/jacobian real time control
+
+max_spd_jnts:     3.14      # Maximum velocity     of the joints in [rad/s]  in real time speed control
+
+max_acc_jnts:     2.0       # Maximum acceleration of the joints in [rad/s2] in real time speed control
+
+# name:           ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
