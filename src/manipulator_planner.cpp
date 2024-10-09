@@ -630,10 +630,10 @@ void ManipulatorPlanner::check_param()
     ROS_WARN("Max ee speed param not defined! Assuming default value as 0.5.");
     max_speed_ee_ = 0.5;
   }
-  if (!nh_.getParam(node_name_+"/max_accel_ee_", max_accel_ee_))
+  if (!nh_.getParam(node_name_+"/max_accel_ee", max_accel_ee_))
   {
     ROS_WARN("Max ee acceleration param not defined! Assuming default value as 0.5.");
-    max_accel_ee_ = 1.0;
+    max_accel_ee_ = 0.5;
   }
   if (!nh_.getParam(node_name_+"/max_spd_jnts", max_spd_jnts_))
   {
