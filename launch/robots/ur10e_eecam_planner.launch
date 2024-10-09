@@ -6,6 +6,7 @@
   <arg name="custom_pkg"          default="false"/>
   <arg name="default_desc"        default="false" />
   <arg name="ur10e_pkg"           default="true" />
+  <arg name="custom_plan_file"    default="true" />
   <arg name="planning_group_file" default="$(find manipulators)/config/$(arg robot_name).yaml" />
   <!-- Simulation -->
   <arg name="rviz"          default="true" />

@@ -6,6 +6,7 @@
   <arg name="custom_pkg"          default="false"/>
   <arg name="default_desc"        default="false" />
   <arg name="ur20_pkg"            default="true" />
+  <arg name="custom_plan_file"    default="true" />
   <arg name="planning_group_file" default="$(find manipulators)/config/$(arg robot_name).yaml" />
   <!-- Simulation -->
   <arg name="rviz"          default="true" />
@@ -42,6 +43,7 @@
   <include file="$(find manipulators)/launch/planner.launch">
     <arg name="robot_name"          value="$(arg robot_name)" />
     <arg name="robotpkg_name"       value="$(arg robotpkg_name)" />
+    <arg name="custom_plan_file"    value="$(arg custom_plan_file)" />
     <arg name="planning_group_file" value="$(arg planning_group_file)" />
     <arg name="default_desc"        value="$(arg default_desc)" />
     <arg name="ur20_pkg"            value="$(arg ur20_pkg)" />
