@@ -48,17 +48,9 @@ Create your catkin workspace:
 Install ros packages:
 
     sudo apt install ros-noetic-chomp-motion-planner
-    sudo apt install ros-noetic-moveit
-    sudo apt install ros-noetic-moveit-collision-detection
-    sudo apt install ros-noetic-moveit-planning-scene
-    sudo apt install ros-noetic-moveit-planning-scene-interface
-    sudo apt install ros-noetic-moveit-planning-scene-monitor
-    sudo apt install ros-noetic-moveit-robot-model
-    sudo apt install ros-noetic-moveit-robot-state
-    sudo apt install ros-noetic-moveit-robot-trajectory
-    sudo apt install ros-noetic-moveit-transforms
-    sudo apt install ros-noetic-moveit-visual-tools
+    sudo apt install ros-noetic-moveit*
     sudo apt install ros-noetic-industrial-trajectory-filters
+    sudo apt install ros-noetic-trac-ik*
 
 You can also use coppelia interface to run dynamic simulations. Coppelia instructions and manuals available [[here]](https://manual.coppeliarobotics.com/index.html). Then, execute the following commands (it's not mandatory for compiling):
 
@@ -86,7 +78,7 @@ Now, you can download the Universal Robot pkg for ROS, and a out custom code imp
 
     cd src
     git clone -b noetic-devel https://github.com/ros-industrial/universal_robot.git
-    sudo apt install ros-noetic-ur-robot-drive
+    sudo apt install ros-noetic-ur-robot-driver
     git clone https://github.com/ARSControl/ur_rtde_controller.git
 
 Finally, you can download the libraries used by the repo:
@@ -286,6 +278,10 @@ Or alternatively, you can change them with:
 Your code should run faster, despite the longer compiler time needed. By default, O3 is set. You can maually comment it if you don't want to use this functionality, but it's strongly suggested.
 
 ## Disclaimer
+
+### Known Issues
+
+Although you have installed all the required pkgs, it may happen that you cannot compile the ws at this first time. Just source the ws and try the compile again.
 
 ### Future developments
 
