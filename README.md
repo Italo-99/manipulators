@@ -48,9 +48,12 @@ Create your catkin workspace:
 Install ros packages:
 
     sudo apt install ros-noetic-chomp-motion-planner
+    sudo apt install ros-noetic-geometric-shapes
     sudo apt install ros-noetic-moveit*
     sudo apt install ros-noetic-industrial-trajectory-filters
+    sudo apt install ros-noetic-rviz
     sudo apt install ros-noetic-trac-ik*
+    sudo apt install ros-noetic-ur-robot-driver
 
 You can also use coppelia interface to run dynamic simulations. Coppelia instructions and manuals available [[here]](https://manual.coppeliarobotics.com/index.html). Then, execute the following commands (it's not mandatory for compiling):
 
@@ -72,17 +75,18 @@ If you want to use cameras mounted on the robot, you have to install the followi
 
 If you want to use a gripper mounted on the robot, you can install the following pkg to handle the robotiq-85-gripper (it's not mandatory for compiling):
 
+    cd src
     git clone https://github.com/a-price/robotiq_arg85_description.git
 
 Now, you can download the Universal Robot pkg for ROS, and a out custom code implementation of its drivers and IO:
 
     cd src
     git clone -b noetic-devel https://github.com/ros-industrial/universal_robot.git
-    sudo apt install ros-noetic-ur-robot-driver
     git clone https://github.com/ARSControl/ur_rtde_controller.git
 
 Finally, you can download the libraries used by the repo:
 
+    cd src
     git clone -b almirante/devel git@github.com:apupa/dynamic_planner.git
     git clone git@github.com:Italo-99/gripper.git
     git clone git@github.com:Italo-99/manipulators.git
