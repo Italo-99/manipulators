@@ -54,6 +54,7 @@ Install ros packages:
     sudo apt install ros-noetic-rviz
     sudo apt install ros-noetic-trac-ik*
     sudo apt install ros-noetic-ur-robot-driver
+    sudo apt-get install libeigen3-dev
 
 You can also use coppelia interface to run dynamic simulations. Coppelia instructions and manuals available [[here]](https://manual.coppeliarobotics.com/index.html). Then, execute the following commands (it's not mandatory for compiling):
 
