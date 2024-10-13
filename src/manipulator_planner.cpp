@@ -55,6 +55,10 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   check_param();                // Update robot parameters
   dynamic_behaviour_ = false;   // No replanning
 
+  // ------------------------- TCP AND JOINTS PUBLISHERS
+  tcp_pose_pub_           = nh_.advertise<geometry_msgs::Pose>(manipulator_name_+"/tcp_pose",1);
+  tcp_twist_pub_          = nh_.advertise<geometry_msgs::Twist>(manipulator_name_+"/tcp_vel",1);
+
   // ---------------------  TCP AND JOINT GOALS SUBSCRIBERS ---------------------
 
   // Planning callbacks
@@ -188,6 +192,12 @@ void ManipulatorPlanner::spinner()
     // Jacobian speed control
     if (jac_control_)
     {
+      // Publish tcp pose
+      tcp_pose_pub_.publish(get_manip_FKine());
+
+      // Publish tcp speed
+      tcp_twist_pub_.publish(get_manip_TcpVel());
+
       // Update vel cmd
       jacobianControl();
 
@@ -198,6 +208,12 @@ void ManipulatorPlanner::spinner()
     }
     else if (js_rt_control_)
     {
+      // Publish tcp pose
+      tcp_pose_pub_.publish(get_manip_FKine());
+
+      // Publish tcp speed
+      tcp_twist_pub_.publish(get_manip_TcpVel());
+
       // Update joints vel command
       jointsRealTimeControl();
 
@@ -469,7 +485,7 @@ double ManipulatorPlanner::sign(double val)
 
 // Function to handle inverse kinematics service
 bool ManipulatorPlanner::invKineCallback(manipulators::InvKine::Request  &req,
-                                         manipulators::InvKine::Response &res)              // TODO: test
+                                         manipulators::InvKine::Response &res)
 {
   std::vector<double> joint_values = planner_->invKine(req.target_pose);
   // Convert vector to MultiArray for response
@@ -488,7 +504,7 @@ bool ManipulatorPlanner::invKineCallback(manipulators::InvKine::Request  &req,
 
 // Function to handle pseudoinverse service
 bool ManipulatorPlanner::pseudoInverseCallback(manipulators::PseudoInverse::Request  &req,
-                                               manipulators::PseudoInverse::Response &res)  // TODO: test
+                                               manipulators::PseudoInverse::Response &res)
 {
   Eigen::MatrixXd pseudo_inv = get_manip_InvJacobian();
 
@@ -506,7 +522,7 @@ bool ManipulatorPlanner::pseudoInverseCallback(manipulators::PseudoInverse::Requ
 
 // Service for forward kinematics (no input needed from client)
 bool ManipulatorPlanner::getCurrentFKineCallback(manipulators::FKine::Request  &req,
-                                                 manipulators::FKine::Response &res)          // TODO: test
+                                                 manipulators::FKine::Response &res)
 {
     geometry_msgs::Pose pose = get_manip_FKine();
     res.tcp_pose = pose;
@@ -516,7 +532,7 @@ bool ManipulatorPlanner::getCurrentFKineCallback(manipulators::FKine::Request  &
 
 // Service for Jacobian (no input needed from client)
 bool ManipulatorPlanner::getJacobianCallback(manipulators::Jacobian::Request  &req,
-                                             manipulators::Jacobian::Response &res)           // TODO: test
+                                             manipulators::Jacobian::Response &res)
 {
     Eigen::MatrixXd jacobian = planner_->getJacobian();
     
@@ -736,6 +752,35 @@ const geometry_msgs::Pose ManipulatorPlanner::get_manip_FKine()
   return planner_->get_currentFKine(ee_name_);
 }
 
+// Get the tcp twist by multiplying joints vels with the jacobian
+const geometry_msgs::Twist ManipulatorPlanner::get_manip_TcpVel()
+{
+    // Initialize dq with the appropriate size and assign values
+    Eigen::VectorXd dq(6);
+    dq << planner_->joints_speed_group_[0], planner_->joints_speed_group_[1],
+          planner_->joints_speed_group_[2], planner_->joints_speed_group_[3],
+          planner_->joints_speed_group_[4], planner_->joints_speed_group_[5];
+
+    // Compute the end-effector twist (linear and angular velocities) using the Jacobian
+    Eigen::VectorXd twist = get_manip_Jacobian() * dq;
+
+    // Create a Twist message to hold the result
+    geometry_msgs::Twist tcp_twist;
+
+    // Assign linear velocity components
+    tcp_twist.linear.x = twist(0);
+    tcp_twist.linear.y = twist(1);
+    tcp_twist.linear.z = twist(2);
+
+    // Assign angular velocity components
+    tcp_twist.angular.x = twist(3);
+    tcp_twist.angular.y = twist(4);
+    tcp_twist.angular.z = twist(5);
+
+    // Return the resulting TCP velocity
+    return tcp_twist;
+}
+
 // Get manipulator Jacobian
 const Eigen::MatrixXd ManipulatorPlanner::get_manip_Jacobian()
 {
@@ -746,6 +791,7 @@ const Eigen::MatrixXd ManipulatorPlanner::get_manip_Jacobian()
 const Eigen::MatrixXd ManipulatorPlanner::get_manip_InvJacobian()
 {
   return planner_->pseudoInverse(planner_->getJacobian());
+  // return planner_->getJacobian().completeOrthogonalDecomposition().pseudoInverse();
 }
 
 // --------------------- MOVE CALLBACK FUNCTIONS --------------------- //
@@ -873,7 +919,7 @@ void ManipulatorPlanner::cartesianMoveCallback(const geometry_msgs::PoseArray::C
 }
 
 // Set the the motors' position and speed through the controllers
-void ManipulatorPlanner::motors_controller(const sensor_msgs::JointState js)
+void ManipulatorPlanner::motors_controller(const sensor_msgs::JointState &js)
 {
   std_msgs::Float64 msg;
   msg.data = js.position[0];

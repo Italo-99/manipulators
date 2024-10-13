@@ -87,7 +87,7 @@ class ManipulatorPlanner
       void check_param();
 
       // Sign function
-      double sign(double);
+      double sign(double val);
       // Create a collision object from a selected primitive
       void createObj(const std::string& name,
                      const int            obj_type, 
@@ -101,6 +101,7 @@ class ManipulatorPlanner
 
       // Get manipulator ee pose thourgh FKINE of current joints pose
       const geometry_msgs::Pose get_manip_FKine(void);
+      const geometry_msgs::Twist get_manip_TcpVel(void);
 
       // Get manipulator Jacobian
       const Eigen::MatrixXd get_manip_Jacobian(void);
@@ -135,7 +136,7 @@ class ManipulatorPlanner
       void cartesianMoveCallback(const geometry_msgs::PoseArray::ConstPtr& p_seq);
 
       // Motors controller when no planner
-      void motors_controller(const sensor_msgs::JointState js);
+      void motors_controller(const sensor_msgs::JointState &js);
 
       // Set the jacobian speed based control
       bool jacobianControlSetterCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
@@ -170,6 +171,11 @@ class ManipulatorPlanner
     // Ros handling
       std::string node_name_;                 // Node name
       ros::NodeHandle nh_;                    // Node object
+
+    // Robot status
+
+      ros::Publisher tcp_pose_pub_;           // Publisher for the tcp pose
+      ros::Publisher tcp_twist_pub_;          // Publisher for the tcp twist
 
     // ROS srvs servers
       ros::ServiceServer inv_kine_service_;
