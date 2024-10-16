@@ -43,6 +43,7 @@
 // IMPORT LIBRARIES
   #include <iostream>
   #include <cmath>
+  #include <unordered_map> // https://en.cppreference.com/w/cpp/container/unordered_map
 
   #include <geometry_msgs/Pose.h>
   #include <geometry_msgs/PoseArray.h>
@@ -83,6 +84,9 @@ struct ManipulatorMenuParams
   bool enable_sim_gripper       = false;
   bool enable_real_gripper      = false;
   std::string gripper_topic     = "/ur_rtde/robotiq_gripper/command";
+  std::vector<std::string> joint_names = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
+                                          "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
+  std::string base_link_name    = "base_link";
 };
 
 class ManipulatorMenu
@@ -239,6 +243,8 @@ class ManipulatorMenu
 
     // --------------------- ROBOT STATE ---------------------------
       geometry_msgs::PoseStamped current_tcp_pose_;
+      std::unordered_map<std::string, double> joints_map_group_;
+      std::vector<double> joints_values_group_;
 
     // ----------------- CLASS ATTRIBUTES & PARAMS-----------------------
       // std::string node_name_;

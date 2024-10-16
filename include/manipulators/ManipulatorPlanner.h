@@ -239,10 +239,10 @@ class ManipulatorPlanner
       bool   jac_control_ = false;            // True if the speed control through inverse Jacobian has been enabled
       bool js_rt_control_ = false;            // True if the speed control through direct real time joints cmd has been enabled
       static double mean;                     // Average value for the duration of the jacobian control computation
-      Eigen::Matrix<double,6,1> arm_vel_cmd_; // Command of speed to the end_effector
-      Eigen::Matrix<double,6,1>  js_vel_cmd_; // Command of speed to the joints
-      Eigen::Matrix<double,3,1> arm_msg_new_; // New command of speed to the ee
-      Eigen::Matrix<double,6,1> js_msg_new_;  // New command of joints speed
+      Eigen::VectorXd arm_vel_cmd_; // Command of speed to the end_effector
+      Eigen::VectorXd  js_vel_cmd_; // Command of speed to the joints
+      Eigen::VectorXd arm_msg_new_; // New command of speed to the ee
+      Eigen::VectorXd js_msg_new_;  // New command of joints speed
 
 };
 

@@ -55,6 +55,17 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   check_param();                // Update robot parameters
   dynamic_behaviour_ = false;   // No replanning
 
+  // --------------------  VECTORS AND MATRICES INIT -----------------------------
+  const int NUM_JOINTS = joint_names_.size();
+  js_vel_cmd_.resize(NUM_JOINTS, 1);
+  js_vel_cmd_.setZero();
+  js_msg_new_.resize(NUM_JOINTS, 1);
+  js_msg_new_.setZero();
+  arm_vel_cmd_.resize(6, 1);
+  arm_vel_cmd_.setZero();
+  arm_msg_new_.resize(3, 1);
+  arm_msg_new_.setZero();
+
   // ------------------------- TCP AND JOINTS PUBLISHERS
   tcp_pose_pub_           = nh_.advertise<geometry_msgs::Pose>(manipulator_name_+"/tcp_pose",1);
   tcp_twist_pub_          = nh_.advertise<geometry_msgs::Twist>(manipulator_name_+"/tcp_vel",1);
@@ -237,12 +248,7 @@ bool ManipulatorPlanner::jacobianControlSetterCallback(std_srvs::SetBool::Reques
   jac_control_ = req.data;
   ROS_INFO("Jacobian control mode set as %s", jac_control_ ? "True":"False");
   // Stop the robot to prevent bad behaviours during mode switch
-  arm_vel_cmd_[0] = 0.;
-  arm_vel_cmd_[1] = 0.;
-  arm_vel_cmd_[2] = 0.;
-  arm_vel_cmd_[3] = 0.;
-  arm_vel_cmd_[4] = 0.;
-  arm_vel_cmd_[5] = 0.;
+  for (unsigned int k = 0; k<6; k++) {arm_vel_cmd_(k) = 0.;}
   // Publish the msg to the robot
   jacobianControl();
   // Return success
@@ -269,13 +275,13 @@ void ManipulatorPlanner::jacobianControl()
     double acc_z = max_accel_ee_/3;
     if      (norm_msg > 0.001)  // norm_msg < -0.001 || 
     {
-      acc_x = max_accel_ee_*(abs(arm_msg_new_[0]))/norm_msg;
-      acc_y = max_accel_ee_*(abs(arm_msg_new_[1]))/norm_msg;
-      acc_z = max_accel_ee_*(abs(arm_msg_new_[2]))/norm_msg;
+      acc_x = max_accel_ee_*abs(arm_msg_new_(0))/norm_msg;
+      acc_y = max_accel_ee_*abs(arm_msg_new_(1))/norm_msg;
+      acc_z = max_accel_ee_*abs(arm_msg_new_(2))/norm_msg;
       // Update linear velocity components
-      arm_vel_cmd_[0] = arm_vel_cmd_[0] + sign(arm_msg_new_[0]-arm_vel_cmd_[0])*acc_x/ros_freq_;
-      arm_vel_cmd_[1] = arm_vel_cmd_[1] + sign(arm_msg_new_[1]-arm_vel_cmd_[1])*acc_y/ros_freq_;
-      arm_vel_cmd_[2] = arm_vel_cmd_[2] + sign(arm_msg_new_[2]-arm_vel_cmd_[2])*acc_z/ros_freq_;
+      arm_vel_cmd_(0) = arm_vel_cmd_(0) + sign(arm_msg_new_(0)-arm_vel_cmd_(0))*acc_x/ros_freq_;
+      arm_vel_cmd_(1) = arm_vel_cmd_(1) + sign(arm_msg_new_(1)-arm_vel_cmd_(1))*acc_y/ros_freq_;
+      arm_vel_cmd_(2) = arm_vel_cmd_(2) + sign(arm_msg_new_(2)-arm_vel_cmd_(2))*acc_z/ros_freq_;
     }
     else if (norm_vel > 0.001)  // norm_vel < -0.001 || 
     {
@@ -295,20 +301,22 @@ void ManipulatorPlanner::jacobianControl()
   }
   else {arm_vel_cmd_.head<3>() = arm_msg_new_;}
 
-  // Compute the speed
-  Eigen::Matrix<double,6,1> dq = get_manip_InvJacobian()*arm_vel_cmd_;
+  const int NUM_JOINTS = joint_names_.size();
 
-  // Convert joints state into Eigen::MatrixXd
-  Eigen::Matrix<double,6,1> q;
-  q[0] = planner_->joints_values_group_[0];
-  q[1] = planner_->joints_values_group_[1];
-  q[2] = planner_->joints_values_group_[2];
-  q[3] = planner_->joints_values_group_[3];
-  q[4] = planner_->joints_values_group_[4];
-  q[5] = planner_->joints_values_group_[5];
+  // Compute the speed
+  Eigen::VectorXd dq(NUM_JOINTS);
+  dq = get_manip_InvJacobian()*arm_vel_cmd_;
+
+  // Convert joints state into Eigen::VectorXd
+  Eigen::VectorXd q(NUM_JOINTS);
+  for (unsigned int k = 0; k < NUM_JOINTS; k++)
+  {
+    q(k) = planner_->joints_values_group_[k];
+  }
 
   // Update joint position setpoint
-  Eigen::Matrix<double,6,1> qd = q + dq / ros_freq_;
+  Eigen::VectorXd qd(NUM_JOINTS);
+  qd = q + dq / ros_freq_;
 
   // Build the msg for the joints setpoint
   sensor_msgs::JointState js;
@@ -316,21 +324,12 @@ void ManipulatorPlanner::jacobianControl()
   js.position.resize(qd.size());
   js.velocity.resize(dq.size());
 
-  // Insert positions setpoint
-  js.position[0] = qd[0];
-  js.position[1] = qd[1];
-  js.position[2] = qd[2];
-  js.position[3] = qd[3];
-  js.position[4] = qd[4];
-  js.position[5] = qd[5];
-
-  // Insert velocity  setpoint
-  js.velocity[0] = dq[0];
-  js.velocity[1] = dq[1];
-  js.velocity[2] = dq[2];
-  js.velocity[3] = dq[3];
-  js.velocity[4] = dq[4];
-  js.velocity[5] = dq[5];
+  // Insert positions and velocity setpoints
+  for (unsigned int k = 0; k < NUM_JOINTS; k++)
+  {
+    js.position[k] = qd[k];
+    js.velocity[k] = dq[k];
+  }
 
   // Send the goal to the move it fake controller as trajectory point
   planner_->moveRobot(js);
@@ -368,19 +367,15 @@ bool ManipulatorPlanner::jointsRealTimeSetterCallback(std_srvs::SetBool::Request
   js_rt_control_ = req.data;
   ROS_INFO("Joints real time control mode set as %s", js_rt_control_ ? "True":"False");
   // Stop the robot to prevent bad behaviours during mode switch
-  js_vel_cmd_[0] = 0.;
-  js_vel_cmd_[1] = 0.;
-  js_vel_cmd_[2] = 0.;
-  js_vel_cmd_[3] = 0.;
-  js_vel_cmd_[4] = 0.;
-  js_vel_cmd_[5] = 0.;
+  for (unsigned int k = 0; k < joint_names_.size(); k++)
+  {
+    js_vel_cmd_[k]  = 0.;
+  }
+  for (unsigned int k = 0; k<6; k++)
+  {
+    arm_vel_cmd_[k] = 0.;
+  }
   // Publish the msg to the robot
-  arm_vel_cmd_[0] = 0.;
-  arm_vel_cmd_[1] = 0.;
-  arm_vel_cmd_[2] = 0.;
-  arm_vel_cmd_[3] = 0.;
-  arm_vel_cmd_[4] = 0.;
-  arm_vel_cmd_[5] = 0.;
   jacobianControl();
   // Return success
   res.success = true;
@@ -391,42 +386,26 @@ bool ManipulatorPlanner::jointsRealTimeSetterCallback(std_srvs::SetBool::Request
 // Execute the jacobian based control
 void ManipulatorPlanner::jointsRealTimeControl()
 {
+  const int NUM_JOINTS = joint_names_.size();
+
   // Check if the accelerations are acceptable and map the joints speed from the JointState message
-  if (abs(js_msg_new_[0]-js_vel_cmd_[0])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[0] = js_vel_cmd_[0] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
-  else  {js_vel_cmd_[0] = js_msg_new_[0];}
-
-  if (abs(js_msg_new_[1]-js_vel_cmd_[1])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[1] = js_vel_cmd_[1] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
-  else  {js_vel_cmd_[1] = js_msg_new_[1];}
-
-  if (abs(js_msg_new_[2]-js_vel_cmd_[2])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[2] = js_vel_cmd_[2] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
-  else  {js_vel_cmd_[2] = js_msg_new_[2];}
-
-  if (abs(js_msg_new_[3]-js_vel_cmd_[3])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[3] = js_vel_cmd_[3] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
-  else  {js_vel_cmd_[3] = js_msg_new_[3];}
-
-  if (abs(js_msg_new_[4]-js_vel_cmd_[4])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[4] = js_vel_cmd_[4] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
-  else  {js_vel_cmd_[4] = js_msg_new_[4];}
-
-  if (abs(js_msg_new_[5]-js_vel_cmd_[5])*ros_freq_ > max_acc_jnts_)
-        {js_vel_cmd_[5] = js_msg_new_[5] + sign(js_msg_new_[0]-js_vel_cmd_[0])*max_acc_jnts_/ros_freq_;}
-  else  {js_vel_cmd_[5] = js_msg_new_[5];}
+  for (unsigned int k = 0; k < NUM_JOINTS; k++)
+  {
+    if (abs(js_msg_new_[k]-js_vel_cmd_[k])*ros_freq_ > max_acc_jnts_)
+        {js_vel_cmd_[k] = js_vel_cmd_[k] + sign(js_msg_new_[k]-js_vel_cmd_[k])*max_acc_jnts_/ros_freq_;}
+    else  {js_vel_cmd_[k] = js_msg_new_[k];}
+  }
 
   // Convert joints state into Eigen::MatrixXd
-  Eigen::Matrix<double,6,1> q;
-  q[0] = planner_->joints_values_group_[0];
-  q[1] = planner_->joints_values_group_[1];
-  q[2] = planner_->joints_values_group_[2];
-  q[3] = planner_->joints_values_group_[3];
-  q[4] = planner_->joints_values_group_[4];
-  q[5] = planner_->joints_values_group_[5];
+  Eigen::VectorXd q(NUM_JOINTS);
+  for (unsigned int k = 0; k < NUM_JOINTS; k++)
+  {
+    q[k] = planner_->joints_values_group_[k];
+  }
 
   // Update joint position setpoint
-  Eigen::Matrix<double,6,1> qd = q + js_vel_cmd_ / ros_freq_;
+  Eigen::VectorXd qd(NUM_JOINTS);
+  qd = q + js_vel_cmd_ / ros_freq_;
 
   // Build the msg for the joints setpoint
   sensor_msgs::JointState js;
@@ -434,21 +413,12 @@ void ManipulatorPlanner::jointsRealTimeControl()
   js.position.resize(qd.size());
   js.velocity.resize(js_vel_cmd_.size());
 
-  // Insert positions setpoint
-  js.position[0] = qd[0];
-  js.position[1] = qd[1];
-  js.position[2] = qd[2];
-  js.position[3] = qd[3];
-  js.position[4] = qd[4];
-  js.position[5] = qd[5];
-
-  // Insert velocity  setpoint
-  js.velocity[0] = js_vel_cmd_[0];
-  js.velocity[1] = js_vel_cmd_[1];
-  js.velocity[2] = js_vel_cmd_[2];
-  js.velocity[3] = js_vel_cmd_[3];
-  js.velocity[4] = js_vel_cmd_[4];
-  js.velocity[5] = js_vel_cmd_[5];
+  // Insert positions and velocity setpoints
+  for (unsigned int k = 0; k < NUM_JOINTS; k++)
+  {
+    js.position[k] = qd[k];
+    js.velocity[k] = js_vel_cmd_[k];
+  }
 
   // Send the goal to the move it fake controller as trajectory point
   planner_->moveRobot(js);
@@ -457,20 +427,14 @@ void ManipulatorPlanner::jointsRealTimeControl()
 // Update the velocity setpoint of the arm for the jacobian speed based control
 void ManipulatorPlanner::updateJointsRealTimeSetpoint(const sensor_msgs::JointState::ConstPtr& msg)
 {
-  js_msg_new_[0] = msg->velocity[0];
-  js_msg_new_[1] = msg->velocity[1];
-  js_msg_new_[2] = msg->velocity[2];
-  js_msg_new_[3] = msg->velocity[3];
-  js_msg_new_[4] = msg->velocity[4];
-  js_msg_new_[5] = msg->velocity[5];
-
-  // Check if the vel cmds exceed the maximum acceptable speed
-  if (abs(msg->velocity[0]) > max_spd_jnts_) {js_msg_new_[0] = sign(msg->velocity[0])*max_spd_jnts_;}
-  if (abs(msg->velocity[1]) > max_spd_jnts_) {js_msg_new_[1] = sign(msg->velocity[1])*max_spd_jnts_;}
-  if (abs(msg->velocity[2]) > max_spd_jnts_) {js_msg_new_[2] = sign(msg->velocity[2])*max_spd_jnts_;}
-  if (abs(msg->velocity[3]) > max_spd_jnts_) {js_msg_new_[3] = sign(msg->velocity[3])*max_spd_jnts_;}
-  if (abs(msg->velocity[4]) > max_spd_jnts_) {js_msg_new_[4] = sign(msg->velocity[4])*max_spd_jnts_;}
-  if (abs(msg->velocity[5]) > max_spd_jnts_) {js_msg_new_[5] = sign(msg->velocity[5])*max_spd_jnts_;}
+  for (unsigned int k = 0; k < joint_names_.size(); k++)
+  {
+    // Update setpoint of the k-th joint
+    js_msg_new_[k] = msg->velocity[k];
+    // Check if the vel cmds exceed the maximum acceptable speed
+    if (abs(msg->velocity[k]) > max_spd_jnts_)
+    {js_msg_new_[k] = sign(msg->velocity[k])*max_spd_jnts_;}
+  }
 }
 
 // Sign function
@@ -755,30 +719,32 @@ const geometry_msgs::Pose ManipulatorPlanner::get_manip_FKine()
 // Get the tcp twist by multiplying joints vels with the jacobian
 const geometry_msgs::Twist ManipulatorPlanner::get_manip_TcpVel()
 {
-    // Initialize dq with the appropriate size and assign values
-    Eigen::VectorXd dq(6);
-    dq << planner_->joints_speed_group_[0], planner_->joints_speed_group_[1],
-          planner_->joints_speed_group_[2], planner_->joints_speed_group_[3],
-          planner_->joints_speed_group_[4], planner_->joints_speed_group_[5];
+  // Initialize dq with the appropriate size and assign values
+  const int NUM_JOINTS = joint_names_.size();
+  Eigen::VectorXd dq(NUM_JOINTS);
+  for (unsigned int k = 0; k < NUM_JOINTS; k++)
+  {
+    dq(k) = planner_->joints_speed_group_[k];
+  }
 
-    // Compute the end-effector twist (linear and angular velocities) using the Jacobian
-    Eigen::VectorXd twist = get_manip_Jacobian() * dq;
+  // Compute the end-effector twist (linear and angular velocities) using the Jacobian
+  Eigen::VectorXd twist = get_manip_Jacobian() * dq;
 
-    // Create a Twist message to hold the result
-    geometry_msgs::Twist tcp_twist;
+  // Create a Twist message to hold the result
+  geometry_msgs::Twist tcp_twist;
 
-    // Assign linear velocity components
-    tcp_twist.linear.x = twist(0);
-    tcp_twist.linear.y = twist(1);
-    tcp_twist.linear.z = twist(2);
+  // Assign linear velocity components
+  tcp_twist.linear.x = twist(0);
+  tcp_twist.linear.y = twist(1);
+  tcp_twist.linear.z = twist(2);
 
-    // Assign angular velocity components
-    tcp_twist.angular.x = twist(3);
-    tcp_twist.angular.y = twist(4);
-    tcp_twist.angular.z = twist(5);
+  // Assign angular velocity components
+  tcp_twist.angular.x = twist(3);
+  tcp_twist.angular.y = twist(4);
+  tcp_twist.angular.z = twist(5);
 
-    // Return the resulting TCP velocity
-    return tcp_twist;
+  // Return the resulting TCP velocity
+  return tcp_twist;
 }
 
 // Get manipulator Jacobian
@@ -790,8 +756,8 @@ const Eigen::MatrixXd ManipulatorPlanner::get_manip_Jacobian()
 // Get manipulator inverse Jacobian
 const Eigen::MatrixXd ManipulatorPlanner::get_manip_InvJacobian()
 {
-  return planner_->pseudoInverse(planner_->getJacobian());
-  // return planner_->getJacobian().completeOrthogonalDecomposition().pseudoInverse();
+  // return planner_->pseudoInverse(planner_->getJacobian());
+  return planner_->getJacobian().completeOrthogonalDecomposition().pseudoInverse();
 }
 
 // --------------------- MOVE CALLBACK FUNCTIONS --------------------- //
@@ -854,7 +820,7 @@ void ManipulatorPlanner::tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& 
 
   sensor_msgs::JointState js;
   js.name = joint_names_;
-  for (unsigned int k = 0; k < 6; k++) {js.position.push_back(joint_values[k]);}
+  for (unsigned int k = 0; k < joint_names_.size(); k++) {js.position.push_back(joint_values[k]);}
 
   // Send to joint goal dynamic planner V1
   planner_->plan(js.position);
@@ -894,7 +860,7 @@ void ManipulatorPlanner::tcpGoalIK_NoPlanner_Callback(const geometry_msgs::Pose:
 
   sensor_msgs::JointState js;
   js.name = joint_names_;
-  for (unsigned int k = 0; k < 6; k++) {js.position.push_back(joint_values[k]);}
+  for (unsigned int k = 0; k < joint_names_.size(); k++) {js.position.push_back(joint_values[k]);}
 
   // Send the joint goal to the fake move group controller
   if      ( inst_kine_) {planner_->moveRobot(js);}

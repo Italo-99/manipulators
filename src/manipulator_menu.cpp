@@ -85,6 +85,22 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
     ROS_WARN("Real gripper command topic param not defined! Assuming default value passed as object arg or as default.");
     params_.gripper_topic = params.gripper_topic;
   }
+  if (!nh_.getParam(params_.node_name+"/joint_names", params.joint_names))
+  {
+    ROS_WARN("Joint names param not defined! Assuming default value passed as object arg or as default.");
+    params_.joint_names = params.joint_names;
+  }
+  if (!nh_.getParam(params_.node_name+"/base_link_name", params.base_link_name))
+  {
+    ROS_WARN("Base link name param not defined! Assuming default value passed as object arg or as default.");
+    params_.base_link_name = params.base_link_name;
+  }
+
+  // Init arrays
+    // Initialize joints map for robot state update: per each joint name, set its value to 0
+  for (const std::string& name : params_.joint_names) {joints_map_group_[name] = 0.;}
+  joints_values_group_.resize(params_.joint_names.size());
+  current_joint_pose_.name      = params_.joint_names;
 
   // --------------------- PUBS & SUBS DELCARATIONS ---------------------
   jointGoalPublisher_           = nh_.advertise<sensor_msgs::JointState>(params_.manipulator_name+"/desired_joint_pose", 1);
@@ -146,18 +162,18 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::Pose pos
 
 Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
 {
-  Eigen::MatrixXd matrix(6, 6);
+  Eigen::MatrixXd matrix(params_.joint_names.size(), 6);
 
   if (pseudoInvClient_.call(pseudoInv_srv_))
   {
     // ROS_INFO("Pseudoinverse matrix received:");
 
     // Assign data from Float64MultiArray to Eigen::MatrixXd
-    for (int i = 0; i < 6; ++i)
+    for (int i = 0; i < params_.joint_names.size(); ++i)
     {
       for (int j = 0; j < 6; ++j)
       {
-          matrix(i, j) = pseudoInv_srv_.response.pseudo_inverse.data[i * 6 + j];
+          matrix(i, j) = pseudoInv_srv_.response.pseudo_inverse.data[i * params_.joint_names.size() + j];
       }
     }
   } 
@@ -166,7 +182,7 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
   return matrix;
 }
 
-geometry_msgs::Pose ManipulatorMenu::getCurrentFKineClient() // TODO: buffer ovverrun bug
+geometry_msgs::Pose ManipulatorMenu::getCurrentFKineClient()
 {
   geometry_msgs::Pose pose;
   if (fKineClient_.call(fKine_srv_))
@@ -187,7 +203,7 @@ geometry_msgs::Pose ManipulatorMenu::getCurrentFKineClient() // TODO: buffer ovv
 
 Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 {
-  Eigen::MatrixXd matrix(6, 6);
+  Eigen::MatrixXd matrix(6, params_.joint_names.size());
       
   if (jacobianClient_.call(jacobian_srv_))
   {
@@ -195,7 +211,7 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
     // Assign data from Float64MultiArray to Eigen::MatrixXd
     for (int i = 0; i < 6; ++i)
     {
-      for (int j = 0; j < 6; ++j)
+      for (int j = 0; j < params_.joint_names.size(); ++j)
       {
           matrix(i, j) = jacobian_srv_.response.jacobian.data[i * 6 + j];
       }
@@ -348,7 +364,7 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpGoal(const geometry_msgs::Pose tc
 
   // Display the goal on RViz
   geometry_msgs::PoseStamped robot_goal_msg;
-  robot_goal_msg.header.frame_id = "base_link";
+  robot_goal_msg.header.frame_id = params_.base_link_name;
   robot_goal_msg.header.stamp = ros::Time::now();
   robot_goal_msg.pose = tcpPoseMsg,
   
@@ -373,33 +389,12 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const std::vector<double> 
 // Publish a TcpIK goal by passing a geometry_msgs::Pose
 geometry_msgs::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::Pose tcpPoseMsg) 
 {
-  // // The pose to pass as goal to invKine planner must be referred to tool0
-  // geometry_msgs::Pose tool0_PoseMsg;
-  // tool0_PoseMsg.orientation = tcpPoseMsg.orientation;
-  // Eigen::Quaterniond  q(tcpPoseMsg.orientation.w,
-  //                       tcpPoseMsg.orientation.x,
-  //                       tcpPoseMsg.orientation.y,
-  //                       tcpPoseMsg.orientation.z);
-  // Eigen::Affine3d transform = Eigen::Translation3d(
-  //                             tcpPoseMsg.position.x,
-  //                             tcpPoseMsg.position.y,
-  //                             tcpPoseMsg.position.z)*q;
-  // Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
-  // Eigen::Vector3d tool0_pos = transform * vec_offset;
-
-  // tool0_PoseMsg.position.x = tool0_pos.x();
-  // tool0_PoseMsg.position.y = tool0_pos.y();
-  // tool0_PoseMsg.position.z = tool0_pos.z();
-
-  // // Plan trajectory through inverse kinematics
-  // tcpPoseIKPublisher_.publish(tool0_PoseMsg);
-
   // Plan trajectory through inverse kinematics
   tcpPoseIKPublisher_.publish(tcpPoseMsg);
 
   // Display the goal on RViz
   geometry_msgs::PoseStamped robot_goal_msg;
-  robot_goal_msg.header.frame_id = "base_link";
+  robot_goal_msg.header.frame_id = params_.base_link_name;
   robot_goal_msg.header.stamp = ros::Time::now();
   robot_goal_msg.pose = tcpPoseMsg;
   
@@ -424,33 +419,12 @@ geometry_msgs::Pose ManipulatorMenu::publishTcpIK_noplanner_Goal(const std::vect
 // Publish a TcpIK goal, with fake moveit controller, by passing a geometry_msgs::Pose
 geometry_msgs::Pose ManipulatorMenu::publishTcpIK_noplanner_Goal(const geometry_msgs::Pose tcpPoseMsg) 
 {
-  // // The pose to pass as goal to invKine planner must be referred to tool0
-  // geometry_msgs::Pose tool0_PoseMsg;
-  // tool0_PoseMsg.orientation = tcpPoseMsg.orientation;
-  // Eigen::Quaterniond  q(tcpPoseMsg.orientation.w,
-  //                       tcpPoseMsg.orientation.x,
-  //                       tcpPoseMsg.orientation.y,
-  //                       tcpPoseMsg.orientation.z);
-  // Eigen::Affine3d transform = Eigen::Translation3d(
-  //                             tcpPoseMsg.position.x,
-  //                             tcpPoseMsg.position.y,
-  //                             tcpPoseMsg.position.z)*q;
-  // Eigen::Vector3d vec_offset(0, 0, -ee_offset_);
-  // Eigen::Vector3d tool0_pos = transform * vec_offset;
-
-  // tool0_PoseMsg.position.x = tool0_pos.x();
-  // tool0_PoseMsg.position.y = tool0_pos.y();
-  // tool0_PoseMsg.position.z = tool0_pos.z();
-
-  // // Plan trajectory through inverse kinematics
-  // tcpPoseIK_noplannerPub_.publish(tool0_PoseMsg);
-
   // Plan trajectory through inverse kinematics
   tcpPoseIK_noplannerPub_.publish(tcpPoseMsg);
 
   // Display the goal on RViz
   geometry_msgs::PoseStamped robot_goal_msg;
-  robot_goal_msg.header.frame_id = "base_link";
+  robot_goal_msg.header.frame_id = params_.base_link_name;
   robot_goal_msg.header.stamp = ros::Time::now();
   robot_goal_msg.pose = tcpPoseMsg;
   
@@ -473,7 +447,7 @@ geometry_msgs::Pose ManipulatorMenu::publishCartesianMove(const uint   axis1,
   geometry_msgs::Pose       current_pose = getCurrentFKineClient();
   geometry_msgs::PoseArray  waypoints;
   geometry_msgs::Pose       final_pose;
-  waypoints.header.frame_id = "base_link"; 
+  waypoints.header.frame_id = params_.base_link_name;
   double step_axisX = 0.;
   double step_axisY = 0.;
   double step_axisZ = 0.;
@@ -528,10 +502,10 @@ sensor_msgs::JointState ManipulatorMenu::oneJointMove(const int num, const doubl
   // Read from subscribers the current joints state
   ros::spinOnce();
   // Fill current joints pose as target
-  std::vector<double> joint_target = {0.,0.,0.,0.,0.,0.};
-  for (unsigned int k = 0; k < 6; k++) 
+  std::vector<double> joint_target;
+  for (unsigned int k = 0; k < params_.joint_names.size(); k++) 
   {
-    joint_target[k] = current_joint_pose_.position[k]*180/M_PI;
+    joint_target.push_back(current_joint_pose_.position[k]*180/M_PI);
   }
   // Change the joint target position
   joint_target[num] = joint_target[num] + joint_rot;
@@ -546,7 +520,14 @@ sensor_msgs::JointState ManipulatorMenu::goHome(const bool ee_orient)
   {start_joint_pose = {0.,-90.,-90.,-90.,+90.,+60.};}
   else // gripper at the front
   {start_joint_pose = {0.,-90.,-90.,  0.,+90.,+60.};}
-  // Publishe home joint goal 
+  if (params_.joint_names.size() != 6) 
+  {
+    for (unsigned int k = 0; k < params_.joint_names.size() - 6; k++)
+    {
+      start_joint_pose.push_back(0.);
+    }
+  }
+  // Publish home joint goal 
   return publishJointGoal(start_joint_pose);
 }
 
@@ -584,7 +565,7 @@ geometry_msgs::PoseStamped ManipulatorMenu::getTf(const std::string& source_fram
 geometry_msgs::Pose ManipulatorMenu::getEEpose()
 {
   // Compute the FKine between base_link and end-effector
-  current_tcp_pose_.header.frame_id = "base_link";
+  current_tcp_pose_.header.frame_id = params_.base_link_name;
   current_tcp_pose_.pose = getCurrentFKineClient();
   eepose_pub_.publish(current_tcp_pose_);
   return current_tcp_pose_.pose;
@@ -720,7 +701,7 @@ void ManipulatorMenu::addObj(const std::string&   name,
   // Creation of the obj
   moveit_msgs::CollisionObject obj;
 
-  obj.header.frame_id = "base_link";
+  obj.header.frame_id = params_.base_link_name;
   obj.id              = name;
   obj.primitives.resize(1);
   obj.primitives[0].type = obj_type;
@@ -892,15 +873,17 @@ void ManipulatorMenu::wait_for_response()
 void ManipulatorMenu::userJointGoal()
 {
   // Declare the empty vector of joints goals
-  std::vector<double> joints = {0.,0.,0.,0.,0.,0.};
+  std::vector<double> joints;
   
   // Take user degree angle for each joint
   std::cout << "Enter the values of the joint goal in degrees: \n";
 
-  for (unsigned int k = 0; k < 6; k++)
+  for (unsigned int k = 0; k < params_.joint_names.size(); k++)
   {
+    double new_joint_value = 0.;
     std::cout << "Joint " << k+1 << " : ";
-    std::cin >> joints[k];
+    std::cin >> new_joint_value;
+    joints.push_back(new_joint_value);
   }
 
   publishJointGoal(joints);
@@ -910,7 +893,7 @@ void ManipulatorMenu::oneJointMove_user()
 {
   int num = 0;
   double joint_rot = 0.0;
-  std::cout << "Enter the joint to move in [0,5]: \n";
+  std::cout << "Enter the joint to move in [0, "<< params_.joint_names.size() - 1 << "]: \n";
   std::cin >> num;
   std::cout << "Enter the rotation of the joint in deg: \n";
   std::cin >> joint_rot;
@@ -1009,15 +992,17 @@ void ManipulatorMenu::userTcpIK_no_planner_Goal()
 void ManipulatorMenu::userJoint_no_planner_Goal()
 {
   // Declare the empty vector of joints goals
-  std::vector<double> joints = {0.,0.,0.,0.,0.,0.};
+  std::vector<double> joints;
   
   // Take user degree angle for each joint
   std::cout << "Enter the values of the joint goal in degrees: \n";
 
-  for (unsigned int k = 0; k < 6; k++)
+  for (unsigned int k = 0; k < params_.joint_names.size(); k++)
   {
+    double new_joint_value = 0.;
     std::cout << "Joint " << k+1 << " : ";
-    std::cin >> joints[k];
+    std::cin >> new_joint_value;
+    joints.push_back(new_joint_value);
   }
 
   publishJointGoal_NoPlanner(joints);
@@ -1045,16 +1030,50 @@ void ManipulatorMenu::userCartesianMove()
 void ManipulatorMenu::jointStateVisualizer() 
 {
   ros::spinOnce();
-  for (unsigned int k = 0; k < 6; k++)
+  for (unsigned int k = 0; k < params_.joint_names.size(); k++)
   {
     std::cout << "Joint " << k << " : " << current_joint_pose_.position[k]*180/M_PI << std::endl;
   }
 }
 
-void ManipulatorMenu::jointStateCallback(const sensor_msgs::JointState::ConstPtr& msg) 
+void ManipulatorMenu::jointStateCallback(const sensor_msgs::JointState::ConstPtr& joints_state) 
 {
-  // Update joint current pose
-  current_joint_pose_ = *msg;
+  
+  // Map to store couples joint name - joint values
+  static std::unordered_map<std::string, double>::iterator it;
+  uint counter_group  = 0;
+
+  for (uint i = 0; i < joints_state->name.size(); i++)
+  {
+    // Look for joints group names within joints current state
+    it = joints_map_group_.find(joints_state->name[i]);
+    // Exclude last link (gripper) from the search
+    if (it != joints_map_group_.end())
+    {
+      // At the second position of the iteration, insert current joint position and velocity
+      it->second = joints_state->position[i];
+  
+      // Increment the number of joints received from the joints state subscriber
+      counter_group++;
+
+      // If we have reached the last joint of the group
+      if (counter_group == params_.joint_names.size())
+      {
+        // Iterate over the joints
+        for (uint k = 0; k < params_.joint_names.size(); k++)
+        {
+          // Store the joints values from the joints map
+          joints_values_group_[k] = joints_map_group_[params_.joint_names[k]];
+        }
+
+        // Log gripper planning group
+        ROS_INFO_ONCE("%s joints values received by the menu interface.", params_.manipulator_name.c_str());
+      }
+    }
+  }
+
+  // Store the value into the global (public) class variable
+  current_joint_pose_.position  = joints_values_group_;
 }
 
 // --------------------- COLLISION OBJECTS PRIVATE MENU HANDLER ---------------------
