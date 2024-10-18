@@ -60,44 +60,43 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
     ROS_WARN("ROS loop frequency param too low or not passed! Assuming minimum value of 10 Hz.");
     params_.ros_freq = 10.;
   }
-  if (!nh_.getParam(params_.node_name+"/manipulator_name", params.manipulator_name))
+  if (!nh_.getParam(params_.node_name+"/manipulator_name", params_.manipulator_name))
   {
     ROS_WARN("Manipulator name param not defined! Assuming default value passed as object arg or as default.");
     params_.manipulator_name = params.manipulator_name;
   }
-  if (!nh_.getParam(params_.node_name+"/enable_coppelia", params.enable_coppelia))
+  if (!nh_.getParam(params_.node_name+"/enable_coppelia", params_.enable_coppelia))
   {
     ROS_WARN("Coppelia enable param not defined! Assuming default value passed as object arg or as default.");
     params_.enable_coppelia = params.enable_coppelia;
   }
-  if (!nh_.getParam(params_.node_name+"/enable_sim_gripper", params.enable_sim_gripper))
+  if (!nh_.getParam(params_.node_name+"/enable_sim_gripper", params_.enable_sim_gripper))
   {
     ROS_WARN("Gripper enable param not defined! Assuming default value passed as object arg or as default.");
     params_.enable_sim_gripper = params.enable_sim_gripper;
   }
-  if (!nh_.getParam(params_.node_name+"/enable_real_gripper", params.enable_real_gripper))
+  if (!nh_.getParam(params_.node_name+"/enable_real_gripper", params_.enable_real_gripper))
   {
     ROS_WARN("Real gripper enable param not defined! Assuming default value passed as object arg or as default.");
     params_.enable_real_gripper = params.enable_real_gripper;
   }
-  if (!nh_.getParam(params_.node_name+"/gripper_topic", params.gripper_topic))
+  if (!nh_.getParam(params_.node_name+"/gripper_topic", params_.gripper_topic))
   {
     ROS_WARN("Real gripper command topic param not defined! Assuming default value passed as object arg or as default.");
     params_.gripper_topic = params.gripper_topic;
   }
-  if (!nh_.getParam(params_.node_name+"/joint_names", params.joint_names))
+  if (!nh_.getParam(params_.node_name+"/joint_names", params_.joint_names))
   {
     ROS_WARN("Joint names param not defined! Assuming default value passed as object arg or as default.");
     params_.joint_names = params.joint_names;
   }
-  if (!nh_.getParam(params_.node_name+"/base_link_name", params.base_link_name))
+  if (!nh_.getParam(params_.node_name+"/base_link_name", params_.base_link_name))
   {
     ROS_WARN("Base link name param not defined! Assuming default value passed as object arg or as default.");
     params_.base_link_name = params.base_link_name;
   }
 
   // Init arrays
-    // Initialize joints map for robot state update: per each joint name, set its value to 0
   for (const std::string& name : params_.joint_names) {joints_map_group_[name] = 0.;}
   joints_values_group_.resize(params_.joint_names.size());
   current_joint_pose_.name      = params_.joint_names;
