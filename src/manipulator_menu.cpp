@@ -96,6 +96,16 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
     params_.base_link_name = params.base_link_name;
   }
 
+  // Display Manipulator setup
+  ROS_INFO("Manipulator menu initialized with the following setup:");
+  ROS_INFO("Manipulator name: %s", params_.manipulator_name.c_str());
+
+  for (int k = 0; k< params_.joint_names.size(); k++)
+  {
+    ROS_INFO("Joint %d name: %s", k, params_.joint_names[k].c_str());
+  }
+
+
   // Init arrays
   for (const std::string& name : params_.joint_names) {joints_map_group_[name] = 0.;}
   joints_values_group_.resize(params_.joint_names.size());

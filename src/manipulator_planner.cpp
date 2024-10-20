@@ -66,7 +66,10 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
   arm_msg_new_.resize(3, 1);
   arm_msg_new_.setZero();
 
-  // ------------------------- TCP AND JOINTS PUBLISHERS
+  // ------------------------- CHECK INVKINE PUBLISHERS  ----------------------
+  invKine_res_pub_        = nh_.advertise<std_msgs::Bool>(manipulator_name_+"/invKine_success_result",1);
+
+  // ------------------------- TCP AND JOINTS PUBLISHERS  ----------------------
   tcp_pose_pub_           = nh_.advertise<geometry_msgs::Pose>(manipulator_name_+"/tcp_pose",1);
   tcp_twist_pub_          = nh_.advertise<geometry_msgs::Twist>(manipulator_name_+"/tcp_vel",1);
 
@@ -811,13 +814,26 @@ void ManipulatorPlanner::tcpGoalIKCallback(const geometry_msgs::Pose::ConstPtr& 
 {
   // Make the inverse kinematics
   std::vector<double> joint_values = planner_->invKine(*p);
+    
+  // Publish topic to communicate the state of invKine computation
+  std_msgs::Bool msg;
 
   if (joint_values.size() < joint_names_.size())
   {
     ROS_WARN("InvKine failed: goal not sent to MoveIt!");
+
+    // Publish invalid state topic msg 
+    msg.data = false;
+    invKine_res_pub_.publish(msg);
+
     return;
   }
 
+  // Publish valid state topic msg
+  msg.data = true;
+  invKine_res_pub_.publish(msg);
+
+  // Create the Joint State goal msg
   sensor_msgs::JointState js;
   js.name = joint_names_;
   for (unsigned int k = 0; k < joint_names_.size(); k++) {js.position.push_back(joint_values[k]);}

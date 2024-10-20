@@ -172,6 +172,9 @@ class ManipulatorPlanner
       std::string node_name_;                 // Node name
       ros::NodeHandle nh_;                    // Node object
 
+    // CHeck invKine computation result
+      ros::Publisher  invKine_res_pub_;       // publisher to show invKine computation result
+
     // Robot status
 
       ros::Publisher tcp_pose_pub_;           // Publisher for the tcp pose
