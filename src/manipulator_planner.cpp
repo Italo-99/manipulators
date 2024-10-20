@@ -700,10 +700,12 @@ void ManipulatorPlanner::createObj( const std::string&  name,
   planner_->getPlanningSceneInterface().applyCollisionObjects(planner_->getCollisionObjects());
 }
 
-// Callback function for goals in the 3D cartesian space for the robot TCP
+// Callback function to add collision objects
 void ManipulatorPlanner::addCollObjCallback(const moveit_msgs::CollisionObject& obj)
 {
-  std::vector<double> dim_array = {obj.primitives[0].dimensions[0],      obj.primitives[0].dimensions[1],      obj.primitives[0].dimensions[2]  };
+  std::vector<double> dim_array;
+  for(unsigned int k = 0;k<obj.primitives[0].dimensions.size();k++)
+      {dim_array.push_back(obj.primitives[0].dimensions[k]);}
   double pos_array[]            = {obj.primitive_poses[0].position.x,    obj.primitive_poses[0].position.y,    obj.primitive_poses[0].position.z};
   double rot_array[]            = {obj.primitive_poses[0].orientation.x, obj.primitive_poses[0].orientation.y, obj.primitive_poses[0].orientation.z, obj.primitive_poses[0].orientation.w};
   uint operation                = obj.operation;
