@@ -608,7 +608,7 @@ geometry_msgs::Pose ManipulatorMenu::move_along_x(const double x_step, bool cart
     uint8_t n_steps = std::max(int(x_step/0.1),1);
     return publishCartesianMove(0,1,goal_pose[0],goal_pose[1],n_steps);
   }
-  else {return publishTcpIKGoal(goal_pose);}
+  else {return publishTcpGoal(goal_pose);}
 }
 
 // Set a carthesian move along x axis in metres
@@ -623,7 +623,7 @@ geometry_msgs::Pose ManipulatorMenu::move_along_y(const double y_step, bool cart
     uint8_t n_steps = std::max(int(y_step/0.1),1);
     return publishCartesianMove(0,1,goal_pose[0],goal_pose[1],n_steps);
   }
-  else {return publishTcpIKGoal(goal_pose);}
+  else {return publishTcpGoal(goal_pose);}
 }
 
 // Set a carthesian move along x axis in metres
@@ -638,7 +638,7 @@ geometry_msgs::Pose ManipulatorMenu::move_along_z(const double z_step, bool cart
     uint8_t n_steps = std::max(int(z_step/0.1),1);
     return publishCartesianMove(0,2,goal_pose[0],goal_pose[2],n_steps);
   }
-  else {return publishTcpIKGoal(goal_pose);}
+  else {return publishTcpGoal(goal_pose);}
 }
 
 // -------------------- SIMPLE ROTATIONS AROUND CARTHESIAN AXES -----------------------//
@@ -652,7 +652,7 @@ geometry_msgs::Pose ManipulatorMenu::make_tcp_rot(const std::vector<double> rot_
   goal_pose[3] = goal_pose[3] + rot_vec[0];
   goal_pose[4] = goal_pose[4] + rot_vec[1];
   goal_pose[5] = goal_pose[5] + rot_vec[2];
-  return publishTcpIKGoal(goal_pose);
+  return publishTcpGoal(goal_pose);
 }
 
 // Set an ABSOLUTE orientation ee position around the 3 carthesian axis (in degrees)
@@ -664,7 +664,7 @@ geometry_msgs::Pose ManipulatorMenu::change_tcp_orient(const std::vector<double>
   goal_pose[3] = rot_vec[0];
   goal_pose[4] = rot_vec[1];
   goal_pose[5] = rot_vec[2];
-  return publishTcpIKGoal(goal_pose);
+  return publishTcpGoal(goal_pose);
 }
 
 // Set a relative rotation around x axis (in degrees)
@@ -674,7 +674,7 @@ geometry_msgs::Pose ManipulatorMenu::rotate_around_x(const double x_rot_step)
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update tcp orient goal
   goal_pose[3] = goal_pose[3] + x_rot_step;
-  return publishTcpIKGoal(goal_pose);
+  return publishTcpGoal(goal_pose);
 }
 
 // Set a relative rotation around y axis (in degrees)
@@ -684,7 +684,7 @@ geometry_msgs::Pose ManipulatorMenu::rotate_around_y(const double y_rot_step)
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update tcp orient goal
   goal_pose[4] = goal_pose[4] + y_rot_step;
-  return publishTcpIKGoal(goal_pose);
+  return publishTcpGoal(goal_pose);
 }
 
 // Set a relative rotation around z axis (in degrees)
@@ -694,7 +694,7 @@ geometry_msgs::Pose ManipulatorMenu::rotate_around_z(const double z_rot_step)
   std::vector<double> goal_pose = getEEpos_rpy();
   // Update tcp orient goal
   goal_pose[5] = goal_pose[5] + z_rot_step;
-  return publishTcpIKGoal(goal_pose);
+  return publishTcpGoal(goal_pose);
 }
 
 // --------------------- COLLISION OBJECTS HANDLER ---------------------
