@@ -292,9 +292,9 @@ void ManipulatorPlanner::jacobianControl()
       acc_y = max_accel_ee_*(abs(arm_vel_cmd_[1]))/norm_vel;
       acc_z = max_accel_ee_*(abs(arm_vel_cmd_[2]))/norm_vel;
       // Update linear velocity components
-      arm_vel_cmd_[0] = arm_vel_cmd_[0] + sign(arm_msg_new_[0]-arm_vel_cmd_[0])*acc_x/ros_freq_;
-      arm_vel_cmd_[1] = arm_vel_cmd_[1] + sign(arm_msg_new_[1]-arm_vel_cmd_[1])*acc_y/ros_freq_;
-      arm_vel_cmd_[2] = arm_vel_cmd_[2] + sign(arm_msg_new_[2]-arm_vel_cmd_[2])*acc_z/ros_freq_;
+      arm_vel_cmd_(0) = arm_vel_cmd_(0) + sign(arm_msg_new_(0)-arm_vel_cmd_(0))*acc_x/ros_freq_;
+      arm_vel_cmd_(1) = arm_vel_cmd_(1) + sign(arm_msg_new_(1)-arm_vel_cmd_(1))*acc_y/ros_freq_;
+      arm_vel_cmd_(2) = arm_vel_cmd_(2) + sign(arm_msg_new_(2)-arm_vel_cmd_(2))*acc_z/ros_freq_;
     }
     else
     {
