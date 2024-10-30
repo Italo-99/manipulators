@@ -288,6 +288,13 @@ Your code should run faster, despite the longer compiler time needed. By default
 
 Although you have installed all the required pkgs, it may happen that you cannot compile the ws at this first time. Just source the ws and try the compile again.
 
+There is a mismatch between moveit base_link reference frame and standard frame of commercial UR robots. To prevent this, go into the file "universal_robot/ur_description/urdf/inc/ur_macro.xacro" and insert the following command:
+
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <!-- <origin xyz="0 0 0" rpy="0 0 ${pi}"/> -->
+
+in lines 82-83, 92-93, 233-234, and 317-318.
+
 ### Future developments
 
 A new version with ROS2 Humble interface is on development. Contact us for collabs.
