@@ -260,6 +260,11 @@ bool ManipulatorPlanner::jacobianControlSetterCallback(std_srvs::SetBool::Reques
   return true;
 }
 
+void setToZeroIfSmall(double &value)
+{
+    if (std::abs(value) < 1e-6) {value = 0.0;}
+}
+
 // Execute the jacobian based control
 void ManipulatorPlanner::jacobianControl()
 {
@@ -304,11 +309,16 @@ void ManipulatorPlanner::jacobianControl()
   }
   else {arm_vel_cmd_.head<3>() = arm_msg_new_;}
 
-  const int NUM_JOINTS = joint_names_.size();
+  // Set a lower limit to velocities to avoid noises
+  for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(arm_vel_cmd_[k]);}
 
   // Compute the speed
+  const int NUM_JOINTS = joint_names_.size();
   Eigen::VectorXd dq(NUM_JOINTS);
   dq = get_manip_InvJacobian()*arm_vel_cmd_;
+
+  // Set a lower limit to joint velocities to avoid noises
+  for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(dq[k]);}
 
   // Convert joints state into Eigen::VectorXd
   Eigen::VectorXd q(NUM_JOINTS);
@@ -405,6 +415,9 @@ void ManipulatorPlanner::jointsRealTimeControl()
   {
     q[k] = planner_->joints_values_group_[k];
   }
+    
+  // Set a lower limit to joint velocities to avoid noises
+  for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(js_vel_cmd_[k]);}
 
   // Update joint position setpoint
   Eigen::VectorXd qd(NUM_JOINTS);

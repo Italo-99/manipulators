@@ -1431,8 +1431,7 @@ void ManipulatorMenu::processChoice(int choice)
 
   case 10:
     ROS_INFO("You selected Option 10\n");
-    std::cout << "Insert the rotation around the axis you want to do.";
-    
+    std::cout << "Insert the rotation around the axis you want to do.\n";
     rot = {0.,0.,0.}; 
     std::cout << " X rotation: "; std::cin >> rot[0];
     std::cout << " Y rotation: "; std::cin >> rot[1];
