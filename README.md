@@ -1,5 +1,7 @@
 # Manipulators
 
+## Introduction
+
 [[Ars Control Lab page]](https://www.arscontrol.unimore.it/)
 [[Italo Almirante]](https://www.arscontrol.unimore.it/italo-almirante/)
 [[Andrea Pupa]](https://www.arscontrol.unimore.it/andrea-pupa/)
@@ -30,7 +32,7 @@ Other robots will be included in the future.
 
 ### Basic principles of the pkg
 
-Each manipulator can plan a move in the joint and in the operative space thanks to some kinematics calculation already included in the pkg libraries. The default planning chaing goes from 'base_link' to 'tcp_gripper', which offsets from the robot's flange.
+Each manipulator can plan a move in the joint and in the operative space thanks to some kinematics calculation already included in the pkg libraries. The default planning chain goes from 'base_link' to 'tcp_gripper', which offsets from the robot's flange of a value easy to set from the user.
 
 Autonomous and teleoperated routines are available to users.
 
@@ -158,7 +160,6 @@ For example, the following args are set as default, but you can change their val
 The arg which the planner is mostly sensitive to is "rate", which is the frequency of moveit state publishing, as well as the control rate of drivers and the sampling time of the trajectories and commands to the robot. By default, it is set to 500 Hz, which grants excellent control performances. If you need to change it, you can write the following command (for example):
 
     roslaunch manipulators ur10e_planner.launch rate:=100
- 
 
 ### Interface menu node
 
@@ -171,16 +172,66 @@ which prints all the available functions to handle robots moves and test the fun
 Within the file "src/manipulator_menu_node_user.cpp", you can modify the list of the params of the interface as below:
 
     ManipulatorMenuParams params;
-    params.node_name              = "manipulator_menu_node_user";
-    std::string ee_joint_name     = "";
-    params.ros_freq               = 10.;
-    params.manipulator_name       = "manipulator";
-    bool enable_coppelia          = false;
-    bool enable_sim_gripper       = false;
-    bool enable_real_gripper      = false;
-    std::string gripper_topic     = "";
+    params.node_name          = "manipulator_menu_node_user";
+    params.ee_joint_name      = "";
+    params.ros_freq           = 10.;
+    params.manipulator_name   = "manipulator";
+    params.enable_coppelia    = false;
+    params.enable_sim_gripper = false;
+    params.enable_real_gripper= false;
+    params.gripper_topic      = "/ur_rtde/robotiq_gripper/command";
+    params.joint_names        = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
+                                "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
+    params.base_link_name     = "base_link";
 
 By modifying the above values, you can set a node name, a joint name for the ee, the frequency of commands publishing, the name of the manipultor (it must correspond to the name of your robot group in the .srdf file), enable coppelia, real or sim gripper (by providing the real topic/srv name).
+
+### Main library functions
+
+Here below there is a list of the main functions you can use in your custom code to make the robot move:
+
+1)  Publish a joint goal (as vector of n dimensions or as JointState msg).
+
+        manipulator->publishJointGoal(const std::vector<double> joints);            // Angles in degrees
+        manipulator->publishJointGoal(const sensor_msgs::JointState jointStateMsg); // Angles in radians
+
+2) Publish a tcp goal (as vector of 6 dimensions or as Pose msg).
+
+        manipulator->publishTcpGoal(const std::vector<double> position);    // Using euler angles in degrees
+        manipulator->publishTcpGoal(const geometry_msgs::Pose tcpPoseMsg);  // Using quaternions
+
+3) Return tcp pose:
+
+    geometry_msgs::Pose pose = manipulator->getEEpose();
+    std::vector<double> pose = manipulator->getEEpos_rpy();
+
+4) Return joints state:
+
+    sensor_msgs::JointState joints_state = current_joint_pose_;
+
+5) Change dynamic planner vel/acc params:
+
+    manipulator->setNewPlannerParams(float new_vel_factor,float new_acc_factor);
+
+6) Set/Reset real time speed control of the joints (you can publish the command on the topic "/manipulator/js_cmd_vel" as type "sensor_msgs::JointState"):
+
+    setJsRealTimeControl(true/false);
+
+7) Set/Reset real time speed control of the end-effector (you can publish the command on the topic "/manipulator/cmd_vel" as type "geometry_msgs/Twist"):
+
+    setJacobianSpeedControl(true/false);
+
+8) Move a single joint of a defined rotation:
+
+    oneJointMove(int num_joint,double joint_rot);
+
+### Joy control
+
+You can find a custom implementation of the vel control of the joystick by running the following command:
+
+    roslaunch manipulators manipulator_joy.launch
+
+The config file which sets the parameters of this control is "config/joy/manipulator_joy.yaml".
 
 ## How to customize your robot control
 
@@ -228,9 +279,9 @@ Once your planner is launched, you can create your own instance of the class <Ma
 
     YourManipulator::YourManipulator(const ManipulatorMenuParams& params) 
     {
-    // Declaration of manipulator menu
-    params_ = params;
-    manipulator_menu_ = new ManipulatorMenu(params_);
+        // Declaration of manipulator menu
+        params_ = params;
+        manipulator_menu_ = new ManipulatorMenu(params_);
     }
 
 and pass the params through the node as below:
@@ -250,11 +301,14 @@ and pass the params through the node as below:
         params.node_name            = node_name;
         params.ros_freq             = 10;
         params.ee_joint_name        = "";
-        params.manipulator_name     = "your_manipulator_name";
+        params.manipulator_name     = "your_manipulator_group_name";
         params.enable_coppelia      = false;
         params.enable_sim_gripper   = false;
         params.enable_real_gripper  = false;
-        params.gripper_topic        = "";
+        params.gripper_topic        = "/ur_rtde/robotiq_gripper/command";
+        params.joint_names          = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
+                                       "wrist_1_joint",      "wrist_2_joint",       "wrist_3_joint"};
+        params.base_link_name       = "base_link";
 
         // Instantiate the YourManipulator object with params
         YourManipulator manipulator(params);
@@ -286,9 +340,9 @@ Your code should run faster, despite the longer compiler time needed. By default
 
 ### Known Issues
 
-Although you have installed all the required pkgs, it may happen that you cannot compile the ws at this first time. Just source the ws and try the compile again.
+Although you have installed all the required pkgs, it may happen that you cannot compile the ws at this first time. Just source the ws and try the compilation again.
 
-There is a mismatch between moveit base_link reference frame and standard frame of commercial UR robots. To prevent this, go into the file "universal_robot/ur_description/urdf/inc/ur_macro.xacro" and insert the following command:
+There is a mismatch between "MoveIt!" base_link reference frame and standard frame of commercial UR robots. To prevent this, go into the file "universal_robot/ur_description/urdf/inc/ur_macro.xacro" and insert the following command:
 
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <!-- <origin xyz="0 0 0" rpy="0 0 ${pi}"/> -->

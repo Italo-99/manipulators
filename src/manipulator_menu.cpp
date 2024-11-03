@@ -47,7 +47,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
   if (!nh_.getParam(params_.node_name+"/ee_joint_name", params_.ee_joint_name))
   {
     ROS_WARN("EE joint name param not defined! Assuming EE passed as object arg or as default.");
-    // ee_joint_name  = "robotiq85_gripper/finger_joint"; EXAMPLE
+    // params_.ee_joint_name  = "robotiq85_gripper/finger_joint"; EXAMPLE
     params_.ee_joint_name  = params.ee_joint_name;
   }
   if (!nh_.getParam(params_.node_name+"/ros_freq", params_.ros_freq))
@@ -352,7 +352,7 @@ sensor_msgs::JointState ManipulatorMenu::publishJointGoal_NoPlanner(const sensor
 }
 
 // Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
-geometry_msgs::Pose ManipulatorMenu::publishTcpGoal(const std::vector<double> position) 
+geometry_msgs::Pose ManipulatorMenu::publishTcpGoal(const std::vector<double> position)
 {
   geometry_msgs::Pose tcpPoseMsg;
 
@@ -526,9 +526,9 @@ sensor_msgs::JointState ManipulatorMenu::goHome(const bool ee_orient)
 {
   std::vector<double> start_joint_pose = {0.,0.,0.,0.,0.,0};
   if (!ee_orient) // gripper down
-  {start_joint_pose = {0.,-90.,-90.,-90.,+90.,+60.};}
+  {start_joint_pose = {0.,-90.,-90.,-90.,+90.,0.};}
   else // gripper at the front
-  {start_joint_pose = {0.,-90.,-90.,  0.,+90.,+60.};}
+  {start_joint_pose = {0.,-90.,-90.,  0.,+90.,0.};}
   if (params_.joint_names.size() != 6) 
   {
     for (unsigned int k = 0; k < params_.joint_names.size() - 6; k++)

@@ -76,3 +76,13 @@ add_dependencies(driver_trajectory_converter ${catkin_EXPORTED_TARGETS})
 add_executable(driver_trajectory_converter_node src/driver_trajectory_converter_node.cpp)
 target_link_libraries(driver_trajectory_converter_node driver_trajectory_converter ${catkin_LIBRARIES})
 add_dependencies(driver_trajectory_converter_node ${catkin_EXPORTED_TARGETS})
+
+# Add joystick_controller library
+add_library(joystick_controller src/joystick_controller.cpp)
+target_link_libraries(joystick_controller manipulator_menu ${catkin_LIBRARIES})
+add_dependencies(manipulator_menu ${catkin_EXPORTED_TARGETS})
+
+# Add joy_arm_controller node
+add_executable(joy_arm_controller src/joystick_controller.cpp)
+target_link_libraries(joy_arm_controller joystick_controller ${catkin_LIBRARIES})
+add_dependencies(joy_arm_controller ${catkin_EXPORTED_TARGETS})

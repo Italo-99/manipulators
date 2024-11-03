@@ -1,0 +1,18 @@
+<launch>
+    <!-- Argument for joystick device -->
+    <arg name="joy_dev" default="/dev/input/js1" />
+
+    <!-- Launch joy node with different name joy_rover -->
+    <node name="joy_node" pkg="joy" type="joy_node" output="screen">
+        <param name="dev" value="$(arg joy_dev)" />
+        <remap from="joy" to="/joy_arm"/>
+    </node>
+
+    <!-- Launch manipulator joy interface -->
+    <node name="joy_arm_controller" pkg="manipulators"
+          type="joy_arm_controller" output="screen">
+      <rosparam command="load" 
+                file="$(find manipulators)/config/joy/manipulator_joy.yaml" />
+    </node>
+
+</launch>
