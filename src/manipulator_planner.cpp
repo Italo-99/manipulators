@@ -262,7 +262,7 @@ bool ManipulatorPlanner::jacobianControlSetterCallback(std_srvs::SetBool::Reques
 
 void setToZeroIfSmall(double &value)
 {
-    if (std::abs(value) < 1e-6) {value = 0.0;}
+    if (std::abs(value) < 1e-20) {value = 0.0;}
 }
 
 // Execute the jacobian based control
