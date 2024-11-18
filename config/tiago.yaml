@@ -1,0 +1,29 @@
+## Configuration file used by the planner
+
+manipulator_name: tiago_arm
+
+joint_names:      [torso_lift_joint, arm_1_joint, arm_2_joint, arm_3_joint, arm_4_joint, arm_5_joint, arm_6_joint, arm_7_joint]
+
+ee_name:          tcp_gripper
+
+base_name:        base_footprint
+
+vel_factor:       0.8         # Starting from a lower factor is suggested, in simulation 0.5 works fine
+
+acc_factor:       0.8         # Starting from a lower factor is suggested, in simulation 0.5 works fine
+
+ros_freq:         500         # ROS loop frequency
+
+inst_kine:        true        # True if the motors instantaneously reach the goal after an invKine computation
+
+sample_time:      0.002       # Time distance between two consecutive points of the cartesian trajectory computed
+
+max_speed_ee:     0.5       # Maximum velocity     of the end-effector in [m/s]  in cartesian planning/jacobian real time control
+
+max_accel_ee:     0.5       # Maximum acceleration of the end-effector in [m/s2] in cartesian planning/jacobian real time control
+
+max_spd_jnts:     3.14      # Maximum velocity     of the joints in [rad/s]  in real time speed control
+
+max_acc_jnts:     2.0       # Maximum acceleration of the joints in [rad/s2] in real time speed control
+
+# name:           ['torso_lift_joint', 'arm_1_joint', 'arm_2_joint', 'arm_3_joint', 'arm_4_joint', 'arm_5_joint', 'arm_6_joint', 'arm_7_joint']

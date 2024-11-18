@@ -1,0 +1,70 @@
+<launch>
+   
+  <!-- Planner -->
+  <arg name="robot_name"          default="tiago" />
+  <arg name="robotpkg_name"       default="$(find tiago_moveit_config)" />
+  <arg name="custom_pkg"          default="true" />
+  <arg name="custom_plan_file"    default="true"  />
+  <arg name="planning_group_file" default="$(find irim24_challenge)/config/$(arg robot_name).yaml" />
+  <!-- Simulation -->
+  <arg name="rviz"                default="true"  />
+  <arg name="def_config"          default="false" />
+  <arg name="debug"               default="false" />
+  <arg name="sensor_manager"      default="false" />
+  <!-- Whether publish joint state from moveit -->
+  <arg name="pub_js_state"        default="true"/>
+  <arg name="rate"                default="500"/>
+  <!-- Choose the sampling duration of the planner -->
+  <arg name="sample_duration"     default="0.002"/>
+
+  <!-- Custom models -->
+  <arg name="default_desc"  default="false" />
+  <arg name="xacro_file"    default="$(find irim24_challenge)/models/urdf/$(arg robot_name).urdf.xacro"/>
+  <arg name="srdf_file"     default="$(find irim24_challenge)/models/srdf/$(arg robot_name).srdf.xacro"/>
+  
+  <!-- If true, launch the trajectory converter node -->
+  <arg name="real_control"        default ="false" />
+  <arg name="drivers_config_file" default ="$(find irim24_challenge)/config/drivers/$(arg robot_name).yaml"/>
+  
+  <!-- Launch ur10 planner -->
+  <include file="$(find manipulators)/launch/planner.launch">
+    <arg name="robot_name"          value="$(arg robot_name)" />
+    <arg name="robotpkg_name"       value="$(arg robotpkg_name)" />
+    <arg name="custom_plan_file"    value="$(arg custom_plan_file)" />
+    <arg name="planning_group_file" value="$(arg planning_group_file)" />
+    <arg name="default_desc"        value="$(arg default_desc)" />
+    <arg name="custom_pkg"          value="$(arg custom_pkg)" />
+    <arg name="rviz"                value="false" />
+    <arg name="def_config"          value="$(arg def_config)" />
+    <arg name="debug"               value="$(arg debug)" />
+    <arg name="sensor_manager"      value="$(arg sensor_manager)" />
+    <arg name="pub_js_state"        value="$(arg pub_js_state)" />
+    <arg name="rate"                value="$(arg rate)" />
+    <arg name="sample_duration"     value="$(arg sample_duration)" />
+    <arg name="real_control"        value="$(arg real_control)" />
+    <arg name="drivers_config_file" value="$(arg drivers_config_file)" />
+    <arg name="xacro_file"          value="$(arg xacro_file)"/>
+    <arg name="srdf_file"           value="$(arg srdf_file)"/>
+
+    <!--  <arg name="planning_group_file" value="$(arg planning_group_file)" /> 
+          <arg name="camera"              value="$(arg camera)"  />
+          <arg name="cam_x_offset"        value="$(arg cam_x_offset)"/>
+          <arg name="cam_y_offset"        value="$(arg cam_y_offset)"/>
+          <arg name="cam_z_offset"        value="$(arg cam_z_offset)"/>
+          <arg name="cam_rx"              value="$(arg cam_rx)"/>
+          <arg name="cam_ry"              value="$(arg cam_ry)"/>
+          <arg name="cam_rz"              value="$(arg cam_rz)"/>
+          <arg name="cam_parent"          value="$(arg cam_parent)"/>
+          <arg name="ee"                  value="$(arg ee)"  />
+          <arg name="ee_z_offset"         value="$(arg ee_z_offset)"/>
+          <arg name="ee_rz"               value="$(arg ee_rz)"/>
+          <arg name="ee_parent"           value="$(arg ee_parent)"/> 
+          <arg name="tcp_offset"          value="$(arg tcp_offset)"/>-->
+  </include>
+
+  <!-- Launch rviz -->
+  <node if="$(arg rviz)" name="rviz_tiago" pkg="rviz" type="rviz"
+    args="-d $(find irim24_challenge)/config/rviz/tiago.rviz">
+  </node>
+
+</launch>

@@ -1,8 +1,8 @@
 group_name: "manipulator"               # Manipulator group name
 
-lin_step  : 0.01                        # Vel step factor to map joy axes into translations
+lin_step  : 0.05                        # Vel step factor to map joy axes into translations
 
-rot_step  : 0.08                        # Vel step factor to map joy axes into rotations
+rot_step  : 0.5                         # Vel step factor to map joy axes into rotations
 
 controller: "Android"                   # Controller name, default "PS4" or "Logitech"
 

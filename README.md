@@ -26,6 +26,10 @@ Universal robots (UR):
     ur20
     ur30
 
+Pal Robotics:
+
+    Tiago
+
 Other robots will be included in the future.
 
 ## Getting started
@@ -190,7 +194,7 @@ By modifying the above values, you can set a node name, a joint name for the ee,
 
 Here below there is a list of the main functions you can use in your custom code to make the robot move:
 
-1)  Publish a joint goal (as vector of n dimensions or as JointState msg).
+1) Publish a joint goal (as vector of n dimensions or as JointState msg).
 
         manipulator->publishJointGoal(const std::vector<double> joints);            // Angles in degrees
         manipulator->publishJointGoal(const sensor_msgs::JointState jointStateMsg); // Angles in radians
