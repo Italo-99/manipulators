@@ -105,7 +105,6 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
     ROS_INFO("Joint %d name: %s", k, params_.joint_names[k].c_str());
   }
 
-
   // Init arrays
   for (const std::string& name : params_.joint_names) {joints_map_group_[name] = 0.;}
   joints_values_group_.resize(params_.joint_names.size());
@@ -121,6 +120,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
   display_goal_pub_             = nh_.advertise<geometry_msgs::PoseStamped>(params_.manipulator_name+"/display_robot_goal", 1);
   eepose_pub_                   = nh_.advertise<geometry_msgs::PoseStamped>(params_.manipulator_name+"/display_ee_pose", 1);
   collisionObjectPublisher_     = nh_.advertise<moveit_msgs::CollisionObject>(params_.manipulator_name+"/add_collision_object", 1);
+  collisionAttObjectPublisher_  = nh_.advertise<moveit_msgs::AttachedCollisionObject>(params_.manipulator_name+"/add_attached_object", 1);
   moveGripperPublisher_         = nh_.advertise<std_msgs::Float64>(params_.ee_joint_name+"/motor_control", 1);
   jointStateSubscriber_         = nh_.subscribe("/joint_states", 1, &ManipulatorMenu::jointStateCallback, this);
 
@@ -766,6 +766,76 @@ void ManipulatorMenu::publishCollisionObject(const moveit_msgs::CollisionObject 
   collisionObjectPublisher_.publish(collisionObjectMsg);
 }
 
+// Create a collision object from a selected primitive
+void ManipulatorMenu::addAttachedObj(const std::string&   name,
+                                     const int            obj_type, 
+                                     std::vector<double>  obj_dims, 
+                                     double               obj_pos[], 
+                                     double               rot_pos[],
+                                     uint                 operation)
+{
+  // Creation of the obj
+  moveit_msgs::CollisionObject obj;
+
+  obj.header.frame_id = params_.base_link_name;
+  obj.id              = name;
+  obj.primitives.resize(1);
+  obj.primitives[0].type = obj_type;
+  int size_obj_dims = obj_dims.size();
+  obj.primitives[0].dimensions.resize(size_obj_dims);
+
+  // Set primitive type
+  switch(obj_type)
+  {
+    case 1:   // BOX: Rectangular shape setting
+      if (size_obj_dims != 3)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set the three dimensions of the parallelepiped
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];
+                                obj.primitives[0].dimensions[2] = obj_dims[2];}
+      break;
+
+    case 2:   // SPHERE
+      if (size_obj_dims != 1)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set the sphere radius
+                                obj.primitives[0].dimensions[0] = obj_dims[0];}
+      break;
+
+    default:  // CYLINDER OR CONE
+      if (size_obj_dims != 2)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set height and radius of the cylinder/cone
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];}
+      break;
+  }
+
+  // Set obj operation: ADD=0, REMOVE=1, APPEND=2, MOVE=3
+  obj.operation = operation;
+
+  // Set obj position
+  obj.primitive_poses.resize(1);
+  obj.primitive_poses[0].position.x = obj_pos[0];
+  obj.primitive_poses[0].position.y = obj_pos[1];
+  obj.primitive_poses[0].position.z = obj_pos[2];
+
+  // Set obj orientation
+  obj.primitive_poses[0].orientation.x = rot_pos[0];
+  obj.primitive_poses[0].orientation.y = rot_pos[1];
+  obj.primitive_poses[0].orientation.z = rot_pos[2];
+  obj.primitive_poses[0].orientation.w = rot_pos[3];
+
+  // Set the attached object
+  moveit_msgs::AttachedCollisionObject attachedObj;
+  attachedObj.object = obj;
+  publishAttachedCollisionObject(attachedObj);
+}
+
+// Collision Attached object publisher
+void ManipulatorMenu::publishAttachedCollisionObject(const moveit_msgs::AttachedCollisionObject collisionAttachedObjectMsg) 
+{
+  collisionAttObjectPublisher_.publish(collisionAttachedObjectMsg);
+}
+
 // --------------------- GRIPPER CONTROL ---------------------
 
 // Open the gripper
@@ -1132,10 +1202,54 @@ void ManipulatorMenu::deleteCollObj()
     std::string obj_name_loc;
     std::cout << "Insert the name of the object you want to delete:" << std::endl;
     std::cin >> obj_name_loc;
+    std::cout << "Insert 1 if the object is attached to the robot, 0 otherwise:" << std::endl;
+    int attached; std::cin >> attached;
     std::vector<double>   obj_dim_loc        = {0.,0.,0.};
     double                obj_pos_loc[]      = {0.,0.,0.};
     double                rot_pos_quat_loc[] = {0.,0.,0.,1.};
-    addObj(obj_name_loc,1,obj_dim_loc,obj_pos_loc,rot_pos_quat_loc,1);
+    if (attached == 0) {addObj(obj_name_loc,1,obj_dim_loc,obj_pos_loc,rot_pos_quat_loc,1);}
+    else               {addAttachedObj(obj_name_loc,1,obj_dim_loc,obj_pos_loc,rot_pos_quat_loc,1);
+                        ros::Duration(0.5).sleep();
+                        addObj(obj_name_loc,1,obj_dim_loc,obj_pos_loc,rot_pos_quat_loc,1);}
+}
+
+// Function to add a collision object from the user menu
+void ManipulatorMenu::addUserAttachedObj()
+{
+  std::string name;
+  int obj_type;
+  std::vector<double>  obj_dims;
+  double               obj_pos[] = {0.,0.,0.};
+  double               rot_pos[] = {0.,0.,0.};
+  std::cout << "Insert following infomation about the obj.\n";
+  std::cout << "Name: "; std::cin >> name;
+  std::cout << "Object type: 1 for BOX, 2 for SPHERE, 3 for CYLINDER, 4 for CONE.\n"; std::cin >> obj_type;
+  //If box chosen
+  if (obj_type == 1)       {obj_dims = {0.,0.,0.,};
+                            std::cout << "X dim: "; std::cin >> obj_dims[0];
+                            std::cout << "Y dim: "; std::cin >> obj_dims[1];
+                            std::cout << "Z dim: "; std::cin >> obj_dims[2];}
+  // If sphere chosen
+  else if (obj_type == 2)  {obj_dims = {0.};
+                            std::cout << "X dim: "; std::cin >> obj_dims[0];}
+  // Else
+  else                     {obj_dims = {0.,0.};
+                            std::cout << "X dim: "; std::cin >> obj_dims[0];
+                            std::cout << "Y dim: "; std::cin >> obj_dims[1];}
+
+  std::cout << "Insert position\n";
+  std::cout << "X position: "; std::cin >> obj_pos[0];
+  std::cout << "Y position: "; std::cin >> obj_pos[1];
+  std::cout << "Z position: "; std::cin >> obj_pos[2];
+  std::cout << "Insert orientation\n";
+  std::cout << "RX rotation: "; std::cin >> rot_pos[0];
+  std::cout << "RY rotation: "; std::cin >> rot_pos[1];
+  std::cout << "RZ rotation: "; std::cin >> rot_pos[2];
+
+  geometry_msgs::Quaternion rot_quat = quaternion_from_euler(rot_pos[0],rot_pos[1],rot_pos[2]);
+  double rot_pos_quat[4] = {rot_quat.x,rot_quat.y,rot_quat.z,rot_quat.w};
+
+  addAttachedObj(name,obj_type,obj_dims,obj_pos,rot_pos_quat,0);
 }
 
 // --------------------- COLLISION OBJECTS PRIVATE MENU HANDLER ---------------------
@@ -1474,8 +1588,13 @@ void ManipulatorMenu::processChoice(int choice)
     break;
 
   case 15:
-    ROS_INFO("You selected Option 15");
-    addCollObj();
+    {
+      ROS_INFO("You selected Option 15");
+      std::cout << "Insert 1 if the object has to be attached to the tcp, 2 otherwise.\n";
+      int val; std::cin >> val;
+      if      (val == 1) {addUserAttachedObj();}
+      else if (val == 2) {addCollObj();}
+    }
     break;
   case 16:
     ROS_INFO("You selected Option 16");

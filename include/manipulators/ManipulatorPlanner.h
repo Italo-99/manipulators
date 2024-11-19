@@ -99,6 +99,18 @@ class ManipulatorPlanner
       // Callback function for goals in the 3D cartesian space for the robot TCP
       void addCollObjCallback(const moveit_msgs::CollisionObject& obj);
 
+      // Creation of a collision attached object
+      void createAttObj( const std::string&  link_name,
+                         const std::string&  name,
+                         const int           obj_type, 
+                         std::vector<double> obj_dims, 
+                         double              obj_pos[], 
+                         double              rot_pos[],
+                         uint                operation);
+
+      // Callback function to add collision objects
+      void addAttachObjCallback(const moveit_msgs::AttachedCollisionObject& obj);
+
       // Get manipulator ee pose thourgh FKINE of current joints pose
       const geometry_msgs::Pose get_manip_FKine(void);
       const geometry_msgs::Twist get_manip_TcpVel(void);
@@ -225,6 +237,8 @@ class ManipulatorPlanner
 
     // Environment objects handler
       ros::Subscriber add_coll_obj_sub_;      // Subscriber to add a collision object
+      ros::Subscriber add_att_obj_sub_;       // Subscriber to add an attached object
+      ros::Publisher planning_scene_pub_;     // Publisher to the planning scene
 
     // Planner args
       std::string manipulator_name_;          // Manipulator name

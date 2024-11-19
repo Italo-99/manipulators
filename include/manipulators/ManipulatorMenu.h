@@ -154,6 +154,15 @@ class ManipulatorMenu
                 double               rot_pos[],
                 uint                 operation);
 
+    // Add attached collision objects
+      void publishAttachedCollisionObject(const moveit_msgs::AttachedCollisionObject collisionAttachedObjectMsg);
+      void addAttachedObj(const std::string&  name,
+                          const int           obj_type, 
+                          std::vector<double> obj_dims, 
+                          double              obj_pos[], 
+                          double              rot_pos[],
+                          uint                operation);
+
     // Gripper control
       void openGripper(void);
       void closeGripper(void);
@@ -216,8 +225,9 @@ class ManipulatorMenu
     
     // --------------------- UTILS FUNCTIONS ---------------------
       // Enviornment updates functions
-        void addCollObj(void);    // Add a collision object by the user
-        void deleteCollObj(void); // Delete a given collision object from the user menu
+        void addCollObj(void);          // Add a collision object by the user
+        void deleteCollObj(void);       // Delete a given collision object from the user menu
+        void addUserAttachedObj(void);  // Add an attached collision object by the user
 
       // Menu handling
         void  printMenu();
@@ -238,6 +248,7 @@ class ManipulatorMenu
       ros::Publisher  display_goal_pub_;
       ros::Publisher  eepose_pub_;
       ros::Publisher  collisionObjectPublisher_;
+      ros::Publisher  collisionAttObjectPublisher_;
       ros::Publisher  moveGripperPublisher_;
       ros::Subscriber jointStateSubscriber_;
 

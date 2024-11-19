@@ -92,7 +92,9 @@ ManipulatorPlanner::ManipulatorPlanner(std::string node_name)
 
   // ---------------------  ADD COLLISION OBJECT SUBSCRIBER  ---------------------
 
-  add_coll_obj_sub_ = nh_.subscribe(manipulator_name_+"/add_collision_object", 1, &ManipulatorPlanner::addCollObjCallback, this);
+  add_coll_obj_sub_   = nh_.subscribe(manipulator_name_+"/add_collision_object", 1, &ManipulatorPlanner::addCollObjCallback, this);
+  add_att_obj_sub_    = nh_.subscribe(manipulator_name_+"/add_attached_object",  1, &ManipulatorPlanner::addAttachObjCallback, this);
+  planning_scene_pub_ = nh_.advertise<moveit_msgs::PlanningScene>("planning_scene", 1);
 
   // ---------------------  MOTOR CONTROLLERS FOR INVKINE  ---------------------------
   instKine_setter_srv_ = nh_.advertiseService(manipulator_name_+"/instKine_setter", &ManipulatorPlanner::instantKineSetterCallback, this);
@@ -723,6 +725,92 @@ void ManipulatorPlanner::addCollObjCallback(const moveit_msgs::CollisionObject& 
   double rot_array[]            = {obj.primitive_poses[0].orientation.x, obj.primitive_poses[0].orientation.y, obj.primitive_poses[0].orientation.z, obj.primitive_poses[0].orientation.w};
   uint operation                = obj.operation;
   createObj(obj.id,obj.primitives[0].type,dim_array,pos_array,rot_array,operation);
+}
+
+// Creation of a collision attached object
+void ManipulatorPlanner::createAttObj( const std::string&  link_name,
+                                       const std::string&  name,
+                                       const int           obj_type, 
+                                       std::vector<double> obj_dims, 
+                                       double              obj_pos[], 
+                                       double              rot_pos[],
+                                       uint                operation)
+{
+  // Creation of the obj
+  moveit_msgs::CollisionObject obj;
+  // Set header msg
+  obj.header.seq = 1;
+  obj.header.stamp = ros::Time::now();
+  // Set frames
+  obj.header.frame_id = link_name;
+  obj.id              = name;
+  // Set pose
+  obj.pose.orientation.w = 1.;
+  obj.primitives.resize(1);
+  obj.primitives[0].type = obj_type;
+  int size_obj_dims = obj_dims.size();
+  obj.primitives[0].dimensions.resize(size_obj_dims);
+
+  // Set primitive type
+  switch(obj_type)
+  {
+    case 1:   // BOX: Rectangular shape setting
+      if (size_obj_dims != 3)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set the three dimensions of the parallelepiped
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];
+                                obj.primitives[0].dimensions[2] = obj_dims[2];}
+      break;
+
+    case 2:   // SPHERE
+      if (size_obj_dims != 1)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set the sphere radius
+                                obj.primitives[0].dimensions[0] = obj_dims[0];}
+      break;
+
+    default:   // CYLINDER OR CONE
+      if (size_obj_dims != 2)  {ROS_WARN_THROTTLE(3, "obj_dims array is not compatible with obj_type");}
+      else                     {// Set height and radius of the cylinder/cone
+                                obj.primitives[0].dimensions[0] = obj_dims[0];
+                                obj.primitives[0].dimensions[1] = obj_dims[1];}
+      break;
+  }
+
+    // Set obj position
+  obj.primitive_poses.resize(1);
+  obj.primitive_poses[0].position.x = obj_pos[0];
+  obj.primitive_poses[0].position.y = obj_pos[1];
+  obj.primitive_poses[0].position.z = obj_pos[2];
+
+  // Set obj orientation
+  obj.primitive_poses[0].orientation.x = rot_pos[0];
+  obj.primitive_poses[0].orientation.y = rot_pos[1];
+  obj.primitive_poses[0].orientation.z = rot_pos[2];
+  obj.primitive_poses[0].orientation.w = rot_pos[3];
+
+  // Set obj operation: ADD=0, REMOVE=1, APPEND=2, MOVE=3
+  obj.operation = operation;
+
+  // Add the object to the attached objects vector
+  moveit_msgs::AttachedCollisionObject attached_obj;
+  attached_obj.link_name = link_name;
+  attached_obj.object    = obj;
+  planner_->getAttachedCollisionObjects().push_back(attached_obj);
+  planner_->getPlanningScenePtr()->processAttachedCollisionObjectMsg(attached_obj);
+  planner_->getPlanningSceneInterface().applyAttachedCollisionObjects(planner_->getAttachedCollisionObjects());
+}
+
+// Callback function to add collision objects (default behaviour: attach to the tcp)
+void ManipulatorPlanner::addAttachObjCallback(const moveit_msgs::AttachedCollisionObject& attached_obj)
+{
+  std::vector<double> dim_array;
+  moveit_msgs::CollisionObject obj = attached_obj.object;
+  for(unsigned int k = 0;k<obj.primitives[0].dimensions.size();k++)
+      {dim_array.push_back(obj.primitives[0].dimensions[k]);}
+  double pos_array[]            = {obj.primitive_poses[0].position.x,    obj.primitive_poses[0].position.y,    obj.primitive_poses[0].position.z};
+  double rot_array[]            = {obj.primitive_poses[0].orientation.x, obj.primitive_poses[0].orientation.y, obj.primitive_poses[0].orientation.z, obj.primitive_poses[0].orientation.w};
+  uint operation                = obj.operation;
+  createAttObj(ee_name_,obj.id,obj.primitives[0].type,dim_array,pos_array,rot_array,operation);
 }
 
 // --------------------- JACOBIAN-FKINE-INVKINE FUNCTIONS -------------------- //
