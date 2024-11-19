@@ -68,9 +68,33 @@ Visualization Manager:
           Value: false
         base_link_inertia:
           Value: false
+        camera_base_link:
+          Value: true
+        camera_bottom_screw_frame:
+          Value: false
+        camera_link:
+          Value: false
         flange:
           Value: false
         forearm_link:
+          Value: false
+        left_inner_finger:
+          Value: false
+        left_inner_knuckle:
+          Value: false
+        left_outer_finger:
+          Value: false
+        left_outer_knuckle:
+          Value: false
+        right_inner_finger:
+          Value: false
+        right_inner_knuckle:
+          Value: false
+        right_outer_finger:
+          Value: false
+        right_outer_knuckle:
+          Value: false
+        robotiq_85_base_link:
           Value: false
         shoulder_link:
           Value: false
@@ -105,6 +129,23 @@ Visualization Manager:
                       wrist_3_link:
                         flange:
                           tool0:
+                            camera_base_link:
+                              camera_bottom_screw_frame:
+                                camera_link:
+                                  {}
+                            robotiq_85_base_link:
+                              left_inner_knuckle:
+                                left_inner_finger:
+                                  {}
+                              left_outer_knuckle:
+                                left_outer_finger:
+                                  {}
+                              right_inner_knuckle:
+                                right_inner_finger:
+                                  {}
+                              right_outer_knuckle:
+                                right_outer_finger:
+                                  {}
                             tcp_gripper:
                               {}
       Update Interval: 0
@@ -159,11 +200,70 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
+          camera_base_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          camera_bottom_screw_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
           flange:
             Alpha: 1
             Show Axes: false
             Show Trail: false
           forearm_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          left_inner_finger:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          left_inner_knuckle:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          left_outer_finger:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          left_outer_knuckle:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          right_inner_finger:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          right_inner_knuckle:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          right_outer_finger:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          right_outer_knuckle:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          robotiq_85_base_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -245,7 +345,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.032209634780884
+      Distance: 2.6941723823547363
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -253,17 +353,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.5493327379226685
-        Y: 0.021768152713775635
-        Z: -3.201200229341339e-07
+        X: -0.1529221534729004
+        Y: -0.5912312865257263
+        Z: -1.41306088607962e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4597977101802826
+      Pitch: 0.06979797035455704
       Target Frame: base_link
-      Yaw: 2.3261911869049072
+      Yaw: 5.3762383460998535
     Saved: ~
 Window Geometry:
   Displays:
@@ -279,5 +379,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1920
-  X: 1366
+  X: 0
   Y: 0

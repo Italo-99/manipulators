@@ -79,7 +79,7 @@
   <xacro:if value="$(arg ee)">
 
     <!-- Import Robotiq85Gripper -->
-    <xacro:include filename="$(find gripper)/models/robotiq_85.urdf.xacro"/>
+    <xacro:include filename="$(find motors_trajectory)/models/robotiq_85.urdf.xacro"/>
     
     <!-- Fixed joint gripper -->
     <joint name="gripper_robot_joint" type="fixed">
