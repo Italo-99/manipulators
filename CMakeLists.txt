@@ -10,7 +10,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 find_package(catkin REQUIRED COMPONENTS
   dynamic_planner
   geometry_msgs
-  gripper
+  motors_trajectory
   message_generation
   roscpp
   rospy

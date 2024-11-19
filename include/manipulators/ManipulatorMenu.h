@@ -63,8 +63,8 @@
   #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
   #include <tf2_ros/transform_listener.h>
 
-  #include <gripper/RobotiQGripperControl.h>
   #include <manipulators/CoppeliaMenu.h>
+  #include <motors_trajectory/RobotiQGripperControl.h>
   #include <std_srvs/SetBool.h>
 
   #include <manipulators/InvKine.h>

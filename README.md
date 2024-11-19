@@ -91,11 +91,15 @@ Now, you can download the Universal Robot pkg for ROS, and a out custom code imp
     git clone -b noetic-devel https://github.com/ros-industrial/universal_robot.git
     git clone https://github.com/ARSControl/ur_rtde_controller.git
 
+Furthermore, to enable the usage of the Tiago Robot (by Pal Robotics), follow the instructions here:
+
+    http://wiki.ros.org/Robots/TIAGo/Tutorials/Installation/InstallUbuntuAndROS
+
 Finally, you can download the libraries used by the repo:
 
     cd src
     git clone -b almirante/devel git@github.com:apupa/dynamic_planner.git
-    git clone git@github.com:Italo-99/gripper.git
+    git clone git@github.com:Italo-99/motors_trajectory.git
     git clone git@github.com:Italo-99/manipulators.git
 
 Compile the pkg (it's suggested to compile one pkg at the time to avoid compiler bugs):
@@ -130,6 +134,14 @@ The main differences between the simulation and the hardware code are two: the j
 
 You can read more about planner args in the configuration files .yaml in the folder "config".
 You can read more about real drivers args in the configuration files .yaml in the folder "config/drivers".
+
+NOTE: for the Tiago robot configuration, copy the following lines into the file "kinematics.yaml" of its "tiago_moveit_config" pkg.
+
+    tiago_arm:
+        kinematics_solver: trac_ik_kinematics_plugin/TRAC_IKKinematicsPlugin
+        solve_type: Distance
+        kinematics_solver_search_resolution: 0.005
+        kinematics_solver_timeout: 0.005
 
 ### Coppelia start
 

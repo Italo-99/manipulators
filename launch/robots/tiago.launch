@@ -5,7 +5,7 @@
   <arg name="robotpkg_name"       default="$(find tiago_moveit_config)" />
   <arg name="custom_pkg"          default="true" />
   <arg name="custom_plan_file"    default="true"  />
-  <arg name="planning_group_file" default="$(find irim24_challenge)/config/$(arg robot_name).yaml" />
+  <arg name="planning_group_file" default="$(find manipulators)/config/$(arg robot_name).yaml" />
   <!-- Simulation -->
   <arg name="rviz"                default="true"  />
   <arg name="def_config"          default="false" />
@@ -19,12 +19,12 @@
 
   <!-- Custom models -->
   <arg name="default_desc"  default="false" />
-  <arg name="xacro_file"    default="$(find irim24_challenge)/models/urdf/$(arg robot_name).urdf.xacro"/>
-  <arg name="srdf_file"     default="$(find irim24_challenge)/models/srdf/$(arg robot_name).srdf.xacro"/>
+  <arg name="xacro_file"    default="$(find manipulators)/models/urdf/$(arg robot_name).urdf.xacro"/>
+  <arg name="srdf_file"     default="$(find manipulators)/models/srdf/$(arg robot_name).srdf.xacro"/>
   
   <!-- If true, launch the trajectory converter node -->
   <arg name="real_control"        default ="false" />
-  <arg name="drivers_config_file" default ="$(find irim24_challenge)/config/drivers/$(arg robot_name).yaml"/>
+  <arg name="drivers_config_file" default ="$(find manipulators)/config/drivers/$(arg robot_name).yaml"/>
   
   <!-- Launch ur10 planner -->
   <include file="$(find manipulators)/launch/planner.launch">
@@ -64,7 +64,7 @@
 
   <!-- Launch rviz -->
   <node if="$(arg rviz)" name="rviz_tiago" pkg="rviz" type="rviz"
-    args="-d $(find irim24_challenge)/config/rviz/tiago.rviz">
+    args="-d $(find manipulators)/rviz/tiago.rviz">
   </node>
 
 </launch>

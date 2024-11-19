@@ -141,7 +141,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams& params)
     gripper_client_ = nh_.serviceClient<std_srvs::SetBool>(params_.ee_joint_name+"/move_gripper");
 
     if (params_.enable_real_gripper)
-    {real_gripper_client_ = nh_.serviceClient<gripper::RobotiQGripperControl>(params_.gripper_topic);}
+    {real_gripper_client_ = nh_.serviceClient<motors_trajectory::RobotiQGripperControl>(params_.gripper_topic);}
   }
 }
 
@@ -1210,7 +1210,7 @@ void ManipulatorMenu::callGrabbingSrv(const bool command)
 void ManipulatorMenu::callRealGripperSrv(const float command)
 {
     // Create a request
-    gripper::RobotiQGripperControl srv;
+    motors_trajectory::RobotiQGripperControl srv;
     srv.request.position = command;
     srv.request.speed    = 50;
     srv.request.force    = 50;
