@@ -887,8 +887,6 @@ void ManipulatorPlanner::tcpGoalCallback(const geometry_msgs::Pose::ConstPtr& p)
   {
     ROS_ERROR("Quaternion must have unit norm.");
     return;
-    ROS_ERROR("Quaternion must have unit norm.");
-    return;
   }
   // If the norm is not so far from the unit, normalize the orientation quaternion
   quat_tf.normalize();
