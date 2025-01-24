@@ -1,9 +1,0 @@
-# Example of network config
-
-sudo ip link set enx00e04c680261 down
-sudo ip link set enx00e04c680261 up
-sudo ifconfig enx00e04c680261 192.168.1.134 netmask 255.255.255.0
-ping 192.168.1.196
-
-sudo gedit /etc/hosts
-192.168.1.196 projectred
