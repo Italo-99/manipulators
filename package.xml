@@ -4,7 +4,7 @@
   <name>manipulators</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="italoalmirante.10@gmail.com">italo</maintainer>
+  <maintainer email="italo.almirante@unimore.it">italo</maintainer>
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
@@ -12,6 +12,11 @@
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>trajectory_msgs</depend>
+  <depend>moveit_core</depend>
+  <depend>moveit_ros_planning</depend>
+  <depend>moveit_ros_planning_interface</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
