@@ -32,3 +32,15 @@ Some useful instructions for new ROS2 use.
   "velocity": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
   "effort": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 }'
+
+8) To launch planning_context with sirio manipulator:
+
+    ros2 launch manipulators planning_context.launch.py manipulator_type:='sirio' description_package:="sirio_manipulator" moveit_config_package:="sirio_manipulator_moveit_config" 
+    description_path:="<path_to_ws>/install/sirio_manipulator/share/sirio_manipulator/models/urdf/sirio.xacro" 
+    description_semantic_file:="sirio.srdf" 
+    rviz_config_path:="<path_to_ws>/install/sirio_manipulator/share/sirio_manipulator/config/rviz/view_sirio.rviz"
+
+9) To test sirio movement:
+
+    ros2 topic pub --once /move_group/fake_controller_joint_states sensor_msgs/msg/JointState "{header: {}, name: ["joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6"], 
+    position: [0.0, -0.6, -0.35, 0.0, -0.45, 0.0]}"

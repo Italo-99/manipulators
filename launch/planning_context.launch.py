@@ -10,36 +10,191 @@ from ur_moveit_config.launch_common import load_yaml
 
 import os
 
-def launch_setup(context, *args, **kwargs):
+def launch_setup_sirio(context, *args, **kwargs):
 
     # Initialize Arguments
-    ur_type             = LaunchConfiguration("ur_type")
-    description_file    = LaunchConfiguration("description_file")
-    tf_prefix           = LaunchConfiguration("tf_prefix")
-    rviz_config_file    = LaunchConfiguration("rviz_config_file")
-    rate                = LaunchConfiguration("rate")
+    
+    manipulator_name          = LaunchConfiguration("manipulator_name")
+    description_path          = LaunchConfiguration("description_path")
+    tf_prefix                 = LaunchConfiguration("tf_prefix")                          # Prefix for tf, useful for multi-robot setup
+    rviz_config_path          = LaunchConfiguration("rviz_config_path")                   # RViz config file
+    rate                      = LaunchConfiguration("rate")                               # Publish rate for the joint_state_publisher
+    description_package       = LaunchConfiguration("description_package")                # Description package 
+    moveit_config_package     = LaunchConfiguration("moveit_config_package")              # Moveit config package
+    description_semantic_file = LaunchConfiguration("description_semantic_file")
+    prefix                    = LaunchConfiguration("prefix")
 
-    description_package = LaunchConfiguration("description_package")
-    moveit_config_package = LaunchConfiguration("moveit_config_package")
-    moveit_joint_limits_file = LaunchConfiguration("moveit_joint_limits_file")
-    moveit_config_file = LaunchConfiguration("moveit_config_file")
-    prefix = LaunchConfiguration("prefix")
+    robot_description_content = Command(
+        [
+            PathJoinSubstitution([FindExecutable(name="xacro")]),
+            " ",    
+            description_path
+        ]
+    )
+
+    robot_description = {"robot_description": robot_description_content}
+
+    # MoveIt Configuration
+    with open(PathJoinSubstitution([FindPackageShare(moveit_config_package), "config", description_semantic_file]).perform(context), "r") as file:
+        robot_description_semantic_content = file.read()
+
+    robot_description_semantic = {"robot_description_semantic": robot_description_semantic_content}
+
+
+    #KINEMATICS
+    robot_description_kinematics = {
+        "robot_description_kinematics": load_yaml(
+            str(moveit_config_package.perform(context)),
+            os.path.join("config", "kinematics.yaml")
+        )
+    }
+
+    # PLANNING CONFIGURATION
+    robot_description_planning = {
+        "robot_description_planning": load_yaml(
+            str(moveit_config_package.perform(context)),
+            os.path.join("config", "joint_limits.yaml")
+        )
+    }
+
+    ompl_planning_pipeline_config = {
+        "move_group": {
+            "planning_plugin": "ompl_interface/OMPLPlanner",
+            "request_adapters": """default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints""",
+            "start_state_max_bounds_error": 0.1,
+        }
+    }
+
+    ompl_planning_yaml = load_yaml(
+        str(moveit_config_package.perform(context)),
+        os.path.join("config", "ompl_planning.yaml"),
+    )
+
+    ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
+
+    trajectory_execution = {
+        "moveit_manage_controllers": False,
+        "trajectory_execution.allowed_execution_duration_scaling": 1.2,
+        "trajectory_execution.allowed_goal_duration_margin": 0.5,
+        "trajectory_execution.allowed_start_tolerance": 0.01,
+        # Execution time monitoring can be incompatible with the scaled JTC
+        "trajectory_execution.execution_duration_monitoring": False,
+    }
+
+    robot_state_publisher_node = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        name="robot_state_publisher",
+        output="both",
+        parameters=[robot_description],
+        # parameters=[{"robot_description": ParameterValue(value=robot_description_content, value_type=str)}],
+    )
+
+    joint_state_publisher_gui_node = Node(
+        package="joint_state_publisher_gui",
+        executable="joint_state_publisher_gui",
+        name="joint_state_publisher_gui",
+        output="screen",
+        parameters=[{"rate": rate,}], 
+        condition=IfCondition(LaunchConfiguration("gui"))
+    )
+
+    joint_state_publisher_node = Node(
+        package="joint_state_publisher",
+        executable="joint_state_publisher",
+        name="joint_state_publisher",
+        output="screen",        
+        parameters=[{"source_list": ['/move_group/fake_controller_joint_states'],
+                      "rate": rate,}],
+        condition=IfCondition(PythonExpression([LaunchConfiguration("gui"), " == False"]))    
+    )
+
+    rviz_node = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        output="screen",
+        arguments=["-d", rviz_config_path],
+        parameters=[
+            robot_description,
+            robot_description_semantic,
+            ompl_planning_pipeline_config,
+            robot_description_kinematics,
+            robot_description_planning,
+        ],
+        condition=IfCondition(LaunchConfiguration("rviz"))
+    )
+
+    # # Trajectory Execution Configuration
+    # controllers_yaml = load_yaml("ur_moveit_config", "config/controllers.yaml")
+    # # # the scaled_joint_trajectory_controller does not work on fake hardware
+    # # change_controllers = context.perform_substitution(use_sim_time)
+    # # if change_controllers == "true":
+    # controllers_yaml["scaled_joint_trajectory_controller"]["default"] = False
+    # controllers_yaml["joint_trajectory_controller"]["default"] = True
+
+    moveit_controllers = {
+        #"moveit_simple_controller_manager" : controllers_yaml, 
+        "moveit_controller_manager": "moveit_simple_controller_manager/MoveItSimpleControllerManager"
+    }
+
+
+    move_group_node = Node(
+        package="moveit_ros_move_group",
+        executable="move_group",
+        output="screen",
+        parameters=[
+            robot_description,
+            robot_description_semantic,
+            robot_description_kinematics,
+            robot_description_planning,
+            ompl_planning_pipeline_config,
+            trajectory_execution,
+            moveit_controllers,
+        ],
+    )
+
+    nodes_to_start = [
+            robot_state_publisher_node,
+            joint_state_publisher_gui_node, 
+            joint_state_publisher_node,
+            move_group_node,
+            rviz_node
+        ]
+    return nodes_to_start
+
+def launch_setup_ur(context, *args, **kwargs):
+
+    # Initialize Arguments
+    
+    manipulator_name          = LaunchConfiguration("manipulator_name")
+    ur_type                   = LaunchConfiguration("ur_type")
+    description_path          = LaunchConfiguration("description_path")
+    tf_prefix                 = LaunchConfiguration("tf_prefix")                          # Prefix for tf, useful for multi-robot setup
+    rviz_config_path          = LaunchConfiguration("rviz_config_path")                   # RViz config file
+    rate                      = LaunchConfiguration("rate")                               # Publish rate for the joint_state_publisher
+    description_package       = LaunchConfiguration("description_package")                # Description package 
+    moveit_config_package     = LaunchConfiguration("moveit_config_package")              # Moveit config package
+    moveit_joint_limits_file  = LaunchConfiguration("moveit_joint_limits_file")           # Joint limits file
+    moveit_kinematics_file    = LaunchConfiguration("moveit_kinematics_file")             # Kinematics file
+    description_semantic_file = LaunchConfiguration("description_semantic_file")
+    prefix                    = LaunchConfiguration("prefix")
 
     joint_limit_params = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", ur_type, "joint_limits.yaml"]
+        [FindPackageShare(description_package), "config", ur_type, moveit_joint_limits_file]
     )
     kinematics_params = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", ur_type, "default_kinematics.yaml"]
+        [FindPackageShare(description_package), "config", ur_type, moveit_kinematics_file]
     )
 
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
-            " ",
-            description_file,
+            " ",    
+            description_path,
             " ",
             "name:=",
-            "ur",
+            manipulator_name,
             " ",
             "ur_type:=",
             ur_type,
@@ -67,13 +222,13 @@ def launch_setup(context, *args, **kwargs):
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
             PathJoinSubstitution(
-                [FindPackageShare(moveit_config_package), "srdf", moveit_config_file]
+                [FindPackageShare(moveit_config_package), "srdf", description_semantic_file]
             ),
             " ",
             "name:=",
             # Also ur_type parameter could be used but then the planning group names in yaml
             # configs has to be updated!
-            "ur",
+            manipulator_name,
             " ",
             "prefix:=",
             prefix,
@@ -91,7 +246,7 @@ def launch_setup(context, *args, **kwargs):
     robot_description_planning = {
         "robot_description_planning": load_yaml(
             str(moveit_config_package.perform(context)),
-            os.path.join("config", str(moveit_joint_limits_file.perform(context))),
+            os.path.join("config", "joint_limits.yaml"),
         )
     }
 
@@ -104,9 +259,13 @@ def launch_setup(context, *args, **kwargs):
             "start_state_max_bounds_error": 0.1,
         }
     }
-    ompl_planning_yaml = load_yaml("ur_moveit_config", "config/ompl_planning.yaml")
-    ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
 
+    ompl_planning_yaml = load_yaml(
+        str(moveit_config_package.perform(context)),
+        os.path.join("config", "ompl_planning.yaml"),
+    )
+
+    ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
 
     trajectory_execution = {
         "moveit_manage_controllers": False,
@@ -131,7 +290,7 @@ def launch_setup(context, *args, **kwargs):
         executable="joint_state_publisher_gui",
         name="joint_state_publisher_gui",
         output="screen",
-        parameters=[{"rate": rate}],   
+        parameters=[{"rate": rate,}], 
         condition=IfCondition(LaunchConfiguration("gui"))
     )
 
@@ -150,7 +309,7 @@ def launch_setup(context, *args, **kwargs):
         executable="rviz2",
         name="rviz2",
         output="screen",
-        arguments=["-d", rviz_config_file],
+        arguments=["-d", rviz_config_path],
         parameters=[
             robot_description,
             robot_description_semantic,
@@ -158,28 +317,20 @@ def launch_setup(context, *args, **kwargs):
             robot_description_kinematics,
             robot_description_planning,
         ],
+        condition=IfCondition(LaunchConfiguration("rviz"))
     )
-    
-    # moveit_configs = (
-    #     MoveItConfigsBuilder(
-    #     robot_name="ur5e_robot", 
-    #     package_name="ur_moveit_config")
-    #     .robot_description(file_path=description_file)
-    #     .robot_description_semantic(file_path=robot_description_semantic_path)
-    #     .to_moveit_configs()
-    # )
 
-    # Trajectory Execution Configuration
-    controllers_yaml = load_yaml("ur_moveit_config", "config/controllers.yaml")
-    # # the scaled_joint_trajectory_controller does not work on fake hardware
-    # change_controllers = context.perform_substitution(use_sim_time)
-    # if change_controllers == "true":
-    controllers_yaml["scaled_joint_trajectory_controller"]["default"] = False
-    controllers_yaml["joint_trajectory_controller"]["default"] = True
+    # # Trajectory Execution Configuration
+    # controllers_yaml = load_yaml("ur_moveit_config", "config/controllers.yaml")
+    # # # the scaled_joint_trajectory_controller does not work on fake hardware
+    # # change_controllers = context.perform_substitution(use_sim_time)
+    # # if change_controllers == "true":
+    # controllers_yaml["scaled_joint_trajectory_controller"]["default"] = False
+    # controllers_yaml["joint_trajectory_controller"]["default"] = True
 
     moveit_controllers = {
-        "moveit_simple_controller_manager": controllers_yaml,
-        "moveit_controller_manager": "moveit_simple_controller_manager/MoveItSimpleControllerManager",
+        #"moveit_simple_controller_manager" : controllers_yaml, 
+        "moveit_controller_manager": "moveit_simple_controller_manager/MoveItSimpleControllerManager"
     }
 
 
@@ -213,6 +364,15 @@ def generate_launch_description():
 
     declared_arguments.append(
         DeclareLaunchArgument(
+            "manipulator_type",
+            description="What kind of manipulator is used, must be one of the supported types ('ur' or 'sirio').",
+            default_value="ur",
+            choices=["ur", "sirio"]
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
             "rate",
             description="Rate for the joint_state_publisher (hz).",
             default_value="500",
@@ -222,7 +382,27 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "gui",
-            default_value="False"
+            default_value="False",
+            choices=["True", "False"],
+            description="Whether to run joint_state_publisher with gui or not.",
+        )
+    )
+
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "rviz",
+            default_value="True",
+            choices=["True", "False"],
+            description="Whether to run rviz or not.",
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "manipulator_name",
+            description="Name for the manipulator.",
+            default_value="ur",
         )
     )
 
@@ -245,9 +425,9 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
-            "moveit_config_file",
+            "description_semantic_file",
             default_value="ur.srdf.xacro",
-            description="MoveIt SRDF/XACRO description file with the robot.",
+            description="MoveIt SRDF/XACRO description file with the robot (just filename, file must be inside <moveit_config_pkg>/config/ ).",
         )
     )
     declared_arguments.append(
@@ -260,10 +440,9 @@ def generate_launch_description():
         )
     )
 
-
     declared_arguments.append(
         DeclareLaunchArgument(
-            "description_file",
+            "description_path",
             default_value=PathJoinSubstitution(
                 [FindPackageShare("ur_description"), "urdf", "ur.urdf.xacro"]
             ),
@@ -273,7 +452,7 @@ def generate_launch_description():
 
     declared_arguments.append(
         DeclareLaunchArgument(
-            "rviz_config_file",
+            "rviz_config_path",
             default_value=PathJoinSubstitution(
                 [FindPackageShare("ur_description"), "rviz", "view_robot.rviz"]
             ),
@@ -294,16 +473,31 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "moveit_joint_limits_file",
             default_value="joint_limits.yaml",
-            description="MoveIt joint limits that augment or override the values from the URDF robot_description.",
+            description="MoveIt joint limits filename, only needed for UR robots",
         )
     )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "moveit_kinematics_file",
+            default_value="default_kinematics.yaml",
+            description="MoveIt kinematics filename, only needed for UR robots",
+        )
+    )
+
     declared_arguments.append(
         DeclareLaunchArgument(
             "moveit_config_package",
             default_value="ur_moveit_config",
-            description="MoveIt config package with robot SRDF/XACRO files. Usually the argument "
-            "is not set, it enables use of a custom moveit config.",
+            description="MoveIt config package with robot SRDF/XACRO files and MoveIt configuration files."
         )
     )
 
-    return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])
+    manipulator_type = LaunchConfiguration("manipulator_type")
+
+    return LaunchDescription(
+        declared_arguments + [
+            OpaqueFunction(function=launch_setup_ur, condition=IfCondition(PythonExpression(["'", manipulator_type, "' == 'ur'"]))),
+            OpaqueFunction(function=launch_setup_sirio, condition=IfCondition(PythonExpression(["'", manipulator_type, "' == 'sirio'"]))),
+        ]
+    )
