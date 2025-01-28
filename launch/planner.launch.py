@@ -1,5 +1,6 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution, FindExecutable, PythonExpression
 from launch.conditions import IfCondition
 from launch_ros.actions import Node
@@ -155,85 +156,63 @@ def get_ur_moveit_launch_params(context,
 
     return params
 
-def launch_setup_ur(context, *args, **kwargs):
+def launch_setup(context, *args, **kwargs):
 
-    # Initialize Arguments
+    # ---------------------------------------- ACTIONS ----------------------------------------
+
+    mp_params = load_yaml(
+        "manipulators",
+        os.path.join(
+            "config",
+            LaunchConfiguration("ur_type").perform(context) + ".yaml"
+        )
+    )
+
+    mp_params["ee_name"] = "tool0"
 
     moveit_params = get_ur_moveit_launch_params(context)
-    rate = LaunchConfiguration("rate")
-    rviz_config_path = LaunchConfiguration("rviz_config_path")
 
-    robot_state_publisher_node = Node(
-        package="robot_state_publisher",
-        executable="robot_state_publisher",
-        name="robot_state_publisher",
-        output="both",
-        parameters=[
-            moveit_params[0]
-            #robot description
-        ], 
-        # parameters=[{"robot_description": ParameterValue(value=robot_description_content, value_type=str)}],
+    # ---------------------------------------- NODES ----------------------------------------
+
+
+    nodes_to_start = []
+
+    nodes_to_start.append(
+        Node(
+            package="manipulators",
+            executable="manipulator_planner",
+            name="manipulator_planner",
+            output="both",
+            parameters=[
+                mp_params
+            ] + moveit_params,
+        )
     )
 
-    joint_state_publisher_gui_node = Node(
-        package="joint_state_publisher_gui",
-        executable="joint_state_publisher_gui",
-        name="joint_state_publisher_gui",
-        output="screen",
-        parameters=[{"rate": rate,}], 
-        condition=IfCondition(LaunchConfiguration("gui"))
+    nodes_to_start.append(
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                FindPackageShare("manipulators").perform(context) + "/launch/planning_context.launch.py"
+            ),
+            launch_arguments=[
+                ("ur_type", LaunchConfiguration("ur_type")),
+                ("description_package", LaunchConfiguration("description_package")),
+                ("description_semantic_file", LaunchConfiguration("description_semantic_file")),
+                ("prefix", LaunchConfiguration("prefix")),
+                ("description_path", LaunchConfiguration("description_path")),
+                ("tf_prefix", LaunchConfiguration("tf_prefix")),
+                ("moveit_joint_limits_file", LaunchConfiguration("moveit_joint_limits_file")),
+                ("moveit_kinematics_file", LaunchConfiguration("moveit_kinematics_file")),
+                ("moveit_config_package", LaunchConfiguration("moveit_config_package")),
+            ]
+        )
     )
 
-    joint_state_publisher_node = Node(
-        package="joint_state_publisher",
-        executable="joint_state_publisher",
-        name="joint_state_publisher",
-        output="screen",        
-        parameters=[{"source_list": ['/move_group/fake_controller_joint_states'],
-                      "rate": rate,}],
-        condition=IfCondition(PythonExpression([LaunchConfiguration("gui"), " == False"]))    
-    )
-
-    rviz_node = Node(
-        package="rviz2",
-        executable="rviz2",
-        name="rviz2",
-        output="screen",
-        arguments=["-d", rviz_config_path],
-        parameters=moveit_params[0:5],
-            # Get only desired parameters:
-            # robot_description,
-            # robot_description_semantic,
-            # robot_description_kinematics,
-            # robot_description_planning,
-            # ompl_planning_pipeline_config,
-        condition=IfCondition(LaunchConfiguration("rviz"))
-    )
-
-    move_group_node = Node(
-        package="moveit_ros_move_group",
-        executable="move_group",
-        output="screen",
-        parameters=moveit_params
-            # robot_description,
-            # robot_description_semantic,
-            # robot_description_kinematics,
-            # robot_description_planning,
-            # ompl_planning_pipeline_config,
-            # trajectory_execution,
-            # moveit_controllers,
-    )
-
-    nodes_to_start = [
-            robot_state_publisher_node,
-            joint_state_publisher_gui_node, 
-            joint_state_publisher_node,
-            move_group_node,
-            rviz_node
-        ]
     return nodes_to_start
 
 def generate_launch_description():
+
+    # ---------------------------------------- ARGS DECLARATION ----------------------------------------
 
     declared_arguments = []
 
@@ -273,7 +252,7 @@ def generate_launch_description():
         )
     )
 
-    declared_arguments.append(
+    declared_arguments.append( 
         DeclareLaunchArgument(
             "description_package",
             default_value="ur_description",
@@ -352,7 +331,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-        declared_arguments + [
-            OpaqueFunction(function=launch_setup_ur)
-        ]
+        declared_arguments + [OpaqueFunction(function=launch_setup)]
     )
