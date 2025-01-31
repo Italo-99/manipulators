@@ -334,7 +334,7 @@ const geometry_msgs::msg::Pose ManipulatorPlannerNode::getFKine() {
 const geometry_msgs::msg::Twist ManipulatorPlannerNode::getTcpVel()
 {
     // Initialize dq with the appropriate size and assign values
-    const int NUM_JOINTS = get_parameter("joint_names").as_string_array().size();
+    const unsigned int NUM_JOINTS = get_parameter("joint_names").as_string_array().size();
     Eigen::VectorXd dq(NUM_JOINTS);
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
@@ -407,6 +407,7 @@ void ManipulatorPlannerNode::getFKine_callback(
         response: 
             geometry_msgs::msg::PoseStamped tcp_pose: End effector pose
     */
+    request.get(); //Suppress unused var warning
     response->tcp_pose = dynamic_planner_->getFKine(this->get_parameter("ee_name").as_string());
 }
 
@@ -440,6 +441,8 @@ void ManipulatorPlannerNode::getJacobian_callback(
         response: 
             float64[] matrix_values: Flattened jacobian matrix
     */
+    request.get(); //Suppress unused var warning
+
     Eigen::MatrixXd jacobian = dynamic_planner_->getJacobian(this->get_parameter("ee_name").as_string());
     std::vector<double> jacobian_values(jacobian.data(), jacobian.data() + jacobian.size()); //Flattens the matrix into a vector
 
@@ -457,6 +460,8 @@ void ManipulatorPlannerNode::getPseudoInverseJacobian_callback(
         response: 
             float64[] matrix_values: Flattened pseudo-inverse jacobian matrix
     */
+    request.get(); //Suppress unused var warning
+
     Eigen::MatrixXd pseudo_inv = getPseudoInverseJacobian();
     std::vector<double> pseudo_inv_values(pseudo_inv.data(), pseudo_inv.data() + pseudo_inv.size()); //Flattens the matrix into a vector
 
@@ -481,6 +486,7 @@ void ManipulatorPlannerNode::changePlannerParams_callback(
     params.acc_factor = request->acc_factor;
     params.vel_factor = request->vel_factor;
     dynamic_planner_->setParams(params);
+    response->success = true;
     RCLCPP_INFO(this->get_logger(), "Planner parameters changed successfully (vel_factor: %f, acc_factor: %f)", params.vel_factor, params.acc_factor);
 }
 
@@ -499,7 +505,8 @@ void ManipulatorPlannerNode::attachedCollisionObject_callback(
         response: 
             bool success: True if the object was added successfully
     */
-
+    response.get(); //Suppress unused var warning
+    
     std::string link_name = request->link_name.empty() ? this->get_parameter("ee_name").as_string() : request->link_name;
     addAttachedCollisionObject(
         request->object_name,
@@ -754,7 +761,7 @@ void ManipulatorPlannerNode::jacobianControl()
     for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(arm_vel_cmd_[k]);}
 
     // Compute the speed
-    const int NUM_JOINTS = joint_names.size();
+    const unsigned int NUM_JOINTS = joint_names.size();
     Eigen::VectorXd dq(NUM_JOINTS);
     dq = getPseudoInverseJacobian() * arm_vel_cmd_;
 
@@ -795,7 +802,7 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
     std::vector<std::string> joint_names = this->get_parameter("joint_names").as_string_array();
     int ros_freq = this->get_parameter("ros_freq").as_int();
     double max_acc_jnts = this->get_parameter("max_acc_jnts").as_double();
-    const int NUM_JOINTS = joint_names.size();
+    const unsigned int NUM_JOINTS = joint_names.size();
 
     // Check if the accelerations are acceptable and map the joints speed from the JointState message
     for (unsigned int k = 0; k < NUM_JOINTS; k++)

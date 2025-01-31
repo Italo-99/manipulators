@@ -751,7 +751,7 @@ void DynamicPlanner::mergeTrajectory(moveit_msgs::msg::RobotTrajectory &new_traj
 
 // ------------------------------------- HELPER METHODS -------------------------------------
 
-const bool DynamicPlanner::checkJointDiff(const std::vector<double>& final_position)
+bool DynamicPlanner::checkJointDiff(const std::vector<double>& final_position)
 {
   // Set a reasonable threshold 
   double th = 0.0001;

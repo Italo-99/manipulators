@@ -196,7 +196,7 @@ class DynamicPlanner
         void mergeTrajectory(moveit_msgs::msg::RobotTrajectory &new_traj, size_t start_index); //Merge the old trajectory with the new one from start_index onwards
 
         // --------------- HELPER METHODS ----------------
-        const bool checkJointDiff(const std::vector<double> &joint_values); //Check if the difference between joint_values and current pose is negligible
+        bool checkJointDiff(const std::vector<double> &joint_values); //Check if the difference between joint_values and current pose is negligible
         void updatePlannerParams(); //Update the planner parameters with values stored in params_
         geometry_msgs::msg::PoseStamped toPoseStamped(const Eigen::Isometry3d& pose, const std::string &frame_id=""); //Converts an Eigen pose to a PoseStamped message
 
