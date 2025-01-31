@@ -7,6 +7,8 @@
 //Interfaces
 #include "shape_msgs/msg/solid_primitive.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
+#include "std_srvs/srv/set_bool.hpp"
+#include "std_msgs/msg/float64.hpp"
 #include "manipulator_interfaces/srv/f_kine.hpp"
 #include "manipulator_interfaces/srv/inv_kine.hpp"
 #include "manipulator_interfaces/srv/jacobian.hpp"
@@ -65,6 +67,9 @@ class ManipulatorPlannerNode : public rclcpp::Node {
 
         // --------------- KINEMATICS FUNCTIONS ---------------
 
+        const geometry_msgs::msg::Pose getFKine();
+        const geometry_msgs::msg::Twist getTcpVel();
+
         const Eigen::MatrixXd getJacobian(const std::string &end_effector_link);
         const Eigen::MatrixXd getJacobian();
         
@@ -75,47 +80,78 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         
         //SERVICES
         void getFKine_callback(
-            const std::shared_ptr<manipulator_interfaces::srv::FKine::Request> request, 
-            std::shared_ptr<manipulator_interfaces::srv::FKine::Response> response
+            const manipulator_interfaces::srv::FKine::Request::SharedPtr request, 
+            manipulator_interfaces::srv::FKine::Response::SharedPtr response
         );
 
         void getInvKine_callback(
-            const std::shared_ptr<manipulator_interfaces::srv::InvKine::Request> request,
-            std::shared_ptr<manipulator_interfaces::srv::InvKine::Response> response
+            const manipulator_interfaces::srv::InvKine::Request::SharedPtr request,
+            manipulator_interfaces::srv::InvKine::Response::SharedPtr response
         );
 
         void getJacobian_callback(
-            const std::shared_ptr<manipulator_interfaces::srv::Jacobian::Request> request,
-            std::shared_ptr<manipulator_interfaces::srv::Jacobian::Response> response
+            const manipulator_interfaces::srv::Jacobian::Request::SharedPtr request,
+            manipulator_interfaces::srv::Jacobian::Response::SharedPtr response
         );
 
         void getPseudoInverseJacobian_callback(
-            const std::shared_ptr<manipulator_interfaces::srv::PseudoInverse::Request> request,
-            std::shared_ptr<manipulator_interfaces::srv::PseudoInverse::Response> response
+            const manipulator_interfaces::srv::PseudoInverse::Request::SharedPtr request,
+            manipulator_interfaces::srv::PseudoInverse::Response::SharedPtr response
         );
 
         void changePlannerParams_callback(
-            const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerParameters::Request> request,
-            std::shared_ptr<manipulator_interfaces::srv::ChangePlannerParameters::Response> response
+            const manipulator_interfaces::srv::ChangePlannerParameters::Request::SharedPtr request,
+            manipulator_interfaces::srv::ChangePlannerParameters::Response::SharedPtr response
         );
 
         void attachedCollisionObject_callback(
-            const std::shared_ptr<manipulator_interfaces::srv::AttachedCollisionObject::Request> request,
-            std::shared_ptr<manipulator_interfaces::srv::AttachedCollisionObject::Response> response
+            const manipulator_interfaces::srv::AttachedCollisionObject::Request::SharedPtr request,
+            manipulator_interfaces::srv::AttachedCollisionObject::Response::SharedPtr response
         );
+
+        bool instantKineSetter_callback(
+            const std_srvs::srv::SetBool::Request::SharedPtr &req, 
+            std_srvs::srv::SetBool::Response::SharedPtr &res
+        );
+
+        bool jointsRealTimeSetter_callback( // Set the real time joints speed based control
+            const std_srvs::srv::SetBool::Request::SharedPtr &req, 
+            std_srvs::srv::SetBool::Response::SharedPtr &res
+        );    
+        
+        bool jacobianControlSetter_callback( // Set the jacobian speed based control
+            const std_srvs::srv::SetBool::Request::SharedPtr &req, 
+            std_srvs::srv::SetBool::Response::SharedPtr &res
+        );  
 
         //SUBSCRIBERS
         void tcpGoal_callback(const geometry_msgs::msg::Pose::SharedPtr goal_pose);
         void jointGoal_callback(const sensor_msgs::msg::JointState::SharedPtr goal_joints);
         void collisionObject_callback(const manipulator_interfaces::msg::CollisionObject::SharedPtr collision_object);
+        void cartesianPlan_callback(const geometry_msgs::msg::PoseArray::SharedPtr waypoints);
+        void velJacSetpoint_callback(const geometry_msgs::msg::Twist::SharedPtr &msg); // Update the velocity setpoint of the arm for the jacobian speed based control
+        void realTimeSetpoint_callback(const sensor_msgs::msg::JointState::SharedPtr &msg); // Update speed setpoint of the arm for the real time joints speed based control
 
+        // --------------- CONTROL FUNCTIONS ---------------
+
+        // Motors controller when no planner
+        void motorsController(const sensor_msgs::msg::JointState &js);
+
+        // Execute the jacobian based control
+        void jacobianControl();
+
+        // Execute the real time joints speed based control
+        void jointsRealTimeControl();
+
+        // Instantaneous kine param setter
+        void set_instKine(bool set);
 
         // --------------- HELPER FUNCTIONS ---------------
 
         void initializePlanner(); //Creates a node for the DynamicPlanner, adds it to the executor and initializes the planner_ object
         void declareParameters(); //Declare the parameters for the node
         void setPrimitiveDimensions(const ShapeType object_type, const std::vector<double> &object_dims, shape_msgs::msg::SolidPrimitive &primitive); //Set the dimensions of the primitive object
-
+        double sign(double val); //Returns the sign of a number or 0 (+1.0 or -1.0)
 
         // --------------- VARIABLES INITIALIZATION ---------------
 
@@ -128,20 +164,42 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Service<manipulator_interfaces::srv::PseudoInverse>::SharedPtr pseudoInverse_service_;
         rclcpp::Service<manipulator_interfaces::srv::ChangePlannerParameters>::SharedPtr changePlannerParams_service_;
         rclcpp::Service<manipulator_interfaces::srv::AttachedCollisionObject>::SharedPtr attachedCollisionObject_service_;
+        rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr instantKineSetter_service_;
+        rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jointsRealTimeSetter_service_;
+        rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jacobianControlSetter_service_;
+
+        //Clients
+        rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr instantKineSetter_client_;
 
         //Subscribers
         rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr tcpGoal_sub_; //Subscriber for TCP goal (cartesian space goals) requests
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointGoal_sub_; //Subscriber for joint space goal requests
         rclcpp::Subscription<manipulator_interfaces::msg::CollisionObject>::SharedPtr collisionObject_sub_; //Subscriber for addition and update of collision objects
+        rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr cartesianPlan_sub_; //Subscriber for cartesian space waypoints
+        rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr velJacSetpoint_sub_; //Subscriber for the velocity setpoint for the jacobian speed based control
+        rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr realTimeSetpoint_sub_; //Subscriber for the speed setpoint for the real time joints speed based control
 
+        //Publishers
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j0_pub_;           // Publisher to j0 motor controller
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j1_pub_;           // Publisher to j1 motor controller
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j2_pub_;           // Publisher to j2 motor controller
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j3_pub_;           // Publisher to j3 motor controller
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j4_pub_;           // Publisher to j4 motor controller
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j5_pub_;           // Publisher to j5 motor controller
+        rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr tcpPose_pub_;    // Publisher to end effector pose
+        rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr tcpVel_pub_;    // Publisher to end effector velocity
 
         std::shared_ptr<DynamicPlanner> dynamic_planner_; //Dynamic planner object
         rclcpp::TimerBase::SharedPtr dynamic_planner_timer_; //Timer for dynamic planner initialization
         rclcpp::executors::SingleThreadedExecutor executor_; //Executor for accessory nodes (e.g. dynamic planner)
 
         //Real time control variables
-        Eigen::VectorXd joints_vel_cmd_; //Speed command for the joints
-        Eigen::VectorXd ee_vel_cmd_; //Speed command for the end effector
+        bool   jac_control_ = false;            // True if the speed control through inverse Jacobian has been enabled
+        bool js_rt_control_ = false;            // True if the speed control through direct real time joints cmd has been enabled
+        Eigen::VectorXd arm_vel_cmd_; // Command of speed to the end_effector
+        Eigen::VectorXd  js_vel_cmd_; // Command of speed to the joints
+        Eigen::VectorXd arm_msg_new_; // New command of speed to the ee
+        Eigen::VectorXd js_msg_new_;  // New command of joints speed
 
         double spinner_mean_ = 0.0; //Mean value for the time taken for each iteration of the spinner
 };

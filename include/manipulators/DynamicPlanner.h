@@ -10,6 +10,8 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <trajectory_msgs/msg/joint_trajectory.hpp>
+#include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/u_int32.hpp>
 #include <tf2/convert.h>
 
 //MoveIt2 Imports
@@ -19,6 +21,7 @@
 #include <moveit_msgs/msg/robot_trajectory.hpp>
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
 // Struct definition of the parameters of the Dynamic Planner
 struct DynamicPlannerParams
@@ -28,7 +31,7 @@ struct DynamicPlannerParams
     double planning_time   = 2;            // maximum planning time in seconds (default 0: no limit)
     double vel_factor      = 1.;           // velocity factor
     double acc_factor      = 1.;           // acceleration factor
-    double sample_time     = 0.002;        // sample time for cartesian planner
+    double sample_time     = 0.002;        // sample time for cartesian planner (seconds)
     double max_velocity    = 0.5;          // maximum ee velocity for cartesian planner
     double tolerance       = 0.01;         // tolerance for goal position
 
@@ -61,6 +64,10 @@ class DynamicPlanner
         void initialize(); //Initialize the dynamic planner (vars, subscribers, publishers, ...)
         void spinner(); 
 
+        // Current joints values 
+        std::vector<double> joints_values_group_;
+        std::vector<double> joints_speed_group_;
+
         // --------------- CONTROL METHODS ---------------
         
         enum PlanningSpace : bool
@@ -88,11 +95,19 @@ class DynamicPlanner
         void plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link);
         void plan(const geometry_msgs::msg::Pose& goal_pose);
 
+        /*plan: cartesian goal
+            Args:
+                waypoints: Array of target positions to follow
+        */
+        double cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints);
+
+        void moveRobot(const sensor_msgs::msg::JointState &joint_state); //Single trajectory point
         void moveRobot(const trajectory_msgs::msg::JointTrajectoryPoint &traj_pt); //Single trajectory point
         void moveRobot(); //Execute the last planned trajectory
         void moveRobot(moveit_msgs::msg::RobotTrajectory& robot_trajectory); //Execute the passed trajectory (waypoints)
 
         bool isMoving(); //Check if the robot is moving
+        bool isReady() const; //Check if the planner has received group definition, so the dynamic planner can start working
 
         void stop(); //Stop the execution of the planned trajectory
 
@@ -161,14 +176,27 @@ class DynamicPlanner
 
 
     private:
+        // --------------- CALLBACK METHODS ----------------
+
+        void stop_callback(const std_msgs::msg::Bool::SharedPtr msg); //Stop the robot if true
+        void jointsState_callback(const sensor_msgs::msg::JointState::SharedPtr &joints_state); //Update the joint states
+        void trajpoint_callback(const std_msgs::msg::UInt32::SharedPtr msg); //Update the current trajectory point
+
+        // --------------- TRAJECTORY METHODS ----------------
+
         void setTrajectory(const moveit_msgs::msg::RobotTrajectory& trajectory, const std::string &end_effector_link=""); //Set the planned trajectory
+
+        //Computes the passed trajectory to make waypoints spaced equally in time
+        //Returns true if successfull
+        bool processTrajectory(moveit_msgs::msg::RobotTrajectory &trajectory); 
 
         bool checkTrajectory(); //Check if trajectory_ is still clear of obstacles
         void recalculateTrajectory(size_t start_index); //Recalculates the trajectory from the point at start_index onwards
 
         void mergeTrajectory(moveit_msgs::msg::RobotTrajectory &new_traj, size_t start_index); //Merge the old trajectory with the new one from start_index onwards
 
-        // --------------- HELPER FUNCTIONS ----------------
+        // --------------- HELPER METHODS ----------------
+        const bool checkJointDiff(const std::vector<double> &joint_values); //Check if the difference between joint_values and current pose is negligible
         void updatePlannerParams(); //Update the planner parameters with values stored in params_
         geometry_msgs::msg::PoseStamped toPoseStamped(const Eigen::Isometry3d& pose, const std::string &frame_id=""); //Converts an Eigen pose to a PoseStamped message
 
@@ -177,9 +205,14 @@ class DynamicPlanner
         rclcpp::Node::SharedPtr node_;
 
         //Parameters for planning
-        DynamicPlannerParams params_; //Dynamic planner parameters
-        bool dynamic_behavior_; //Whether or not the planner should recalculate its paths based on updates of collision objects
-        PlanningSpace planning_space_ = JOINTS_SPACE; //When recalculating trajectories, the space in which the planning is done
+        DynamicPlannerParams params_;                   //Dynamic planner parameters
+        bool dynamic_behavior_;                         //Whether or not the planner should recalculate its paths based on updates of collision objects
+        PlanningSpace planning_space_ = JOINTS_SPACE;   //When recalculating trajectories, the space in which the planning is done
+
+        std::vector<std::string> joints_names_group_;               // Joints group names
+        std::unordered_map<std::string, double> joints_map_group_;  // Set group joints names and positions values through mapping
+        std::unordered_map<std::string, double> dq_jts_map_group_;  // Set group joints names and velocity  values through mapping
+        bool joints_group_received_ = false;                        // Check if joints group was received
 
         //MoveIt2 interfaces
         std::shared_ptr<moveit::planning_interface::MoveGroupInterface> move_group_;
@@ -196,16 +229,31 @@ class DynamicPlanner
         std::vector<std::string> joint_names_;
 
         //Trajectory variables
-        moveit_msgs::msg::RobotTrajectory robot_trajectory_;
-        std::vector<double> final_joint_positions_; //End joint positions of the planned trajectory
-        geometry_msgs::msg::Pose final_pose_; //End effector pose of the planned trajectory
-        std::string traj_end_effector_link_; //End effector link of the planned trajectory
-        size_t traj_current_index_ = 0; //Current index of the trajectory being executed
-        bool is_moving = false;
+        moveit_msgs::msg::RobotTrajectory robot_trajectory_;    //Planned trajectory
+        std::vector<double> final_joint_positions_;             //End joint positions of the planned trajectory
+        geometry_msgs::msg::Pose final_pose_;                   //End effector pose of the planned trajectory
+        std::string traj_end_effector_link_;                    //End effector link of the planned trajectory
+        unsigned long trajpoint_;                               //Index of the current trajectory point
+        bool is_moving = false;                                 //Whether the robot is moving or not, can be set to false to stop execution of trajectory
+
+        //Time optimal trajectory generation 
+        trajectory_processing::TimeOptimalTrajectoryGenerationPtr time_optimal_traj_gen;
+        const double totg_resample_dt = 0.002;
+        const double totg_tolerance = 0.1;
+        const double totg_min_angle_change = 0.001;
+        const double totg_max_vel_scaling_factor = 1.0;
+        const double totg_max_acc_scaling_factor = 1.0;
 
         //Publishers
-        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_publisher_; //Joint state publisher for the fake controller
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;            //Joint state publisher for the fake controller
+        rclcpp::Publisher<trajectory_msgs::msg::JointTrajectory>::SharedPtr trajectory_pub_;    //Joint trajectory publisher
+        rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr trajectory_res_pub_;                  //Publisher for the end of the trajectory
         
+        //Subscribers
+        rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr stop_sub_;                     //Subscriber for stopping the robot
+        rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joints_state_sub_;    //Subscriber for updating the joint states
+        rclcpp::Subscription<std_msgs::msg::UInt32>::SharedPtr trajpoint_sub_;              //Current trajpoint subscriber
+
         //Default values for the 'plan' function
         std::string end_effector_link_ = "tool0";
         std::string world_frame_ = "world";
