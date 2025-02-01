@@ -27,7 +27,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
 
     const std::string manipulator_name = this->get_parameter("manipulator_name").as_string();
 
-    // Initialize service servers using lambdas
+    // Initialize service servers
     fkine_service_ = this->create_service<manipulator_interfaces::srv::FKine>(
         manipulator_name + "/get_fkine", 
         [this](const std::shared_ptr<manipulator_interfaces::srv::FKine::Request> request,
@@ -68,14 +68,6 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         }
     );
 
-    attachedCollisionObject_service_ = this->create_service<manipulator_interfaces::srv::AttachedCollisionObject>(
-        manipulator_name + "/attached_collision_object",
-        [this](const std::shared_ptr<manipulator_interfaces::srv::AttachedCollisionObject::Request> request,
-               std::shared_ptr<manipulator_interfaces::srv::AttachedCollisionObject::Response> response) {
-            this->attachedCollisionObject_callback(request, response);
-        }
-    );
-
     instantKineSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
         manipulator_name + "/instKine_setter",
         [this](const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -100,7 +92,11 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         }
     );
 
-    // Initialize subscribers using lambdas
+    // Initialize clients
+
+    instantKineSetter_client_ = this->create_client<std_srvs::srv::SetBool>(manipulator_name + "/instKine_setter");
+
+    // Initialize subscribers
     tcpGoal_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
         manipulator_name + "/tcp_goal", 1, 
         [this](const geometry_msgs::msg::Pose::SharedPtr msg) {
@@ -115,10 +111,17 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         }
     );
 
-    collisionObject_sub_ = this->create_subscription<manipulator_interfaces::msg::CollisionObject>(
+    collisionObject_sub_ = this->create_subscription<moveit_msgs::msg::CollisionObject>(
         manipulator_name + "/collision_object", 1, 
-        [this](const manipulator_interfaces::msg::CollisionObject::SharedPtr msg) {
+        [this](const moveit_msgs::msg::CollisionObject::SharedPtr msg) {
             this->collisionObject_callback(msg);
+        }
+    );
+
+    attachedcollisionObject_sub_ = this->create_subscription<moveit_msgs::msg::AttachedCollisionObject>(
+        manipulator_name + "/attached_collision_object", 1, 
+        [this](const moveit_msgs::msg::AttachedCollisionObject::SharedPtr msg) {
+            this->attachedCollisionObject_callback(msg);
         }
     );
 
@@ -143,7 +146,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         }
     );
 
-    // Initialize publishers (no changes here)
+    // Initialize publishers
     std::vector<std::string> joint_names = this->get_parameter("joint_names").as_string_array();
 
     j0_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name + "/" + joint_names[0] + "/motor_control", 1);
@@ -490,33 +493,6 @@ void ManipulatorPlannerNode::changePlannerParams_callback(
     RCLCPP_INFO(this->get_logger(), "Planner parameters changed successfully (vel_factor: %f, acc_factor: %f)", params.vel_factor, params.acc_factor);
 }
 
-void ManipulatorPlannerNode::attachedCollisionObject_callback(
-    const std::shared_ptr<manipulator_interfaces::srv::AttachedCollisionObject::Request> request,
-    std::shared_ptr<manipulator_interfaces::srv::AttachedCollisionObject::Response> response
-) {
-    /*
-    Callback function for the attached collision object service
-    Interface:
-        request: 
-            string object_name: Name of the object
-            shape_msgs::msg::SolidPrimitive object_primitive: Object primitive (shape)
-            geometry_msgs::msg::Pose object_pose: Position of the object
-            string link_name: Name of the link to attach the object (if left empty, the 'ee_name' parameter is used)
-        response: 
-            bool success: True if the object was added successfully
-    */
-    response.get(); //Suppress unused var warning
-    
-    std::string link_name = request->link_name.empty() ? this->get_parameter("ee_name").as_string() : request->link_name;
-    addAttachedCollisionObject(
-        request->object_name,
-        request->primitive,
-        request->pose,
-        link_name,
-        this->get_parameter("gripper_links").as_string_array()
-    );
-}
-
 void ManipulatorPlannerNode::tcpGoal_callback(const geometry_msgs::msg::Pose::SharedPtr msg) 
 {
     /*
@@ -546,20 +522,23 @@ void ManipulatorPlannerNode::jointGoal_callback(const sensor_msgs::msg::JointSta
     dynamic_planner_->moveRobot();
 }
 
-void ManipulatorPlannerNode::collisionObject_callback(const manipulator_interfaces::msg::CollisionObject::SharedPtr collision_object) 
+void ManipulatorPlannerNode::collisionObject_callback(const moveit_msgs::msg::CollisionObject::SharedPtr collision_object) 
 {
-    /*
-    Callback function for the collision object subscriber
-    Interface:: 
-        string object_name: Name of the object
-        shape_msgs::msg::SolidPrimitive object_primitive: Object primitive (shape)
-        geometry_msgs::msg::Pose object_pose: Position of the object
-    */
-    addCollisionObject(
-        collision_object->object_name,
-        this->get_parameter("world_frame").as_string(),
-        collision_object->primitive,
-        collision_object->pose
+    // Add the collision object to the planning scene
+    dynamic_planner_->getPlanningScene()->applyCollisionObjects({*collision_object});
+}
+
+void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs::msg::AttachedCollisionObject::SharedPtr collision_object) 
+{
+    // Add the collision object to the planning scene and attach it to a link
+    // If link_name is empty, the 'ee_name' parameter is used
+    std::string link_name = collision_object->link_name.empty() ? this->get_parameter("ee_name").as_string() : collision_object->link_name;
+
+    dynamic_planner_->getPlanningScene()->applyCollisionObjects({collision_object->object});
+    dynamic_planner_->getMoveGroup()->attachObject(
+        collision_object->object.id, 
+        link_name, 
+        this->get_parameter("gripper_links").as_string_array()
     );
 }
 

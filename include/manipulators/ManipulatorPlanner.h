@@ -1,3 +1,6 @@
+#ifndef MANIPULATOR_PLANNER_H
+#define MANIPULATOR_PLANNER_H
+
 #include "manipulators/DynamicPlanner.h"
 #include "rclcpp/rclcpp.hpp"
 #include <string>
@@ -9,6 +12,7 @@
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 #include "std_msgs/msg/float64.hpp"
+
 #include "manipulator_interfaces/srv/f_kine.hpp"
 #include "manipulator_interfaces/srv/inv_kine.hpp"
 #include "manipulator_interfaces/srv/jacobian.hpp"
@@ -33,7 +37,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
             CONE = 4            //Sizes: height, radius
         };
 
-        void addCollisionObject(
+        void addCollisionObject( //UNUSED
             const std::string &object_name,
             const std::string &object_frame,
             const ShapeType object_type,
@@ -41,14 +45,14 @@ class ManipulatorPlannerNode : public rclcpp::Node {
             const geometry_msgs::msg::Pose &object_pose
         );
 
-        void addCollisionObject(
+        void addCollisionObject( //UNUSED
             const std::string &object_name,
             const std::string &object_frame,
             const shape_msgs::msg::SolidPrimitive &object_primitive,
             const geometry_msgs::msg::Pose &object_pose
         );
 
-        void addAttachedCollisionObject(
+        void addAttachedCollisionObject( //UNUSED
             const std::string &object_name,
             const shape_msgs::msg::SolidPrimitive &object_primitive,
             const geometry_msgs::msg::Pose &object_pose,
@@ -56,7 +60,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
             const std::vector<std::string> &disabled_collisions={}
         );
 
-        void addAttachedCollisionObject(
+        void addAttachedCollisionObject( //UNUSED
             const std::string &object_name,
             const ShapeType object_type,
             const std::vector<double> &object_dims,
@@ -104,11 +108,6 @@ class ManipulatorPlannerNode : public rclcpp::Node {
             manipulator_interfaces::srv::ChangePlannerParameters::Response::SharedPtr response
         );
 
-        void attachedCollisionObject_callback(
-            const manipulator_interfaces::srv::AttachedCollisionObject::Request::SharedPtr request,
-            manipulator_interfaces::srv::AttachedCollisionObject::Response::SharedPtr response
-        );
-
         bool instantKineSetter_callback(
             const std_srvs::srv::SetBool::Request::SharedPtr &req, 
             std_srvs::srv::SetBool::Response::SharedPtr &res
@@ -127,7 +126,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         //SUBSCRIBERS
         void tcpGoal_callback(const geometry_msgs::msg::Pose::SharedPtr goal_pose);
         void jointGoal_callback(const sensor_msgs::msg::JointState::SharedPtr goal_joints);
-        void collisionObject_callback(const manipulator_interfaces::msg::CollisionObject::SharedPtr collision_object);
+        void collisionObject_callback(const moveit_msgs::msg::CollisionObject::SharedPtr collision_object);
+        void attachedCollisionObject_callback(const moveit_msgs::msg::AttachedCollisionObject::SharedPtr attached_collision_object);
         void cartesianPlan_callback(const geometry_msgs::msg::PoseArray::SharedPtr waypoints);
         void velJacSetpoint_callback(const geometry_msgs::msg::Twist::SharedPtr &msg); // Update the velocity setpoint of the arm for the jacobian speed based control
         void realTimeSetpoint_callback(const sensor_msgs::msg::JointState::SharedPtr &msg); // Update speed setpoint of the arm for the real time joints speed based control
@@ -174,7 +174,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         //Subscribers
         rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr tcpGoal_sub_; //Subscriber for TCP goal (cartesian space goals) requests
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointGoal_sub_; //Subscriber for joint space goal requests
-        rclcpp::Subscription<manipulator_interfaces::msg::CollisionObject>::SharedPtr collisionObject_sub_; //Subscriber for addition and update of collision objects
+        rclcpp::Subscription<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObject_sub_; //Subscriber for addition and update of collision objects
+        rclcpp::Subscription<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr attachedcollisionObject_sub_; //Subscriber for addition and update of collision objects
         rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr cartesianPlan_sub_; //Subscriber for cartesian space waypoints
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr velJacSetpoint_sub_; //Subscriber for the velocity setpoint for the jacobian speed based control
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr realTimeSetpoint_sub_; //Subscriber for the speed setpoint for the real time joints speed based control
@@ -203,3 +204,5 @@ class ManipulatorPlannerNode : public rclcpp::Node {
 
         double spinner_mean_ = 0.0; //Mean value for the time taken for each iteration of the spinner
 };
+
+#endif

@@ -26,6 +26,7 @@ find_package(moveit_ros_planning_interface REQUIRED)
 find_package(moveit_msgs REQUIRED)
 find_package(moveit_visual_tools REQUIRED)
 find_package(manipulator_interfaces REQUIRED)
+find_package(motors_trajectory REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -114,6 +115,50 @@ ament_target_dependencies(manipulator_planner
 
 install(
     TARGETS manipulator_planner
+    DESTINATION lib/${PROJECT_NAME}
+)
+
+add_executable(manipulator_menu_nouser src/manipulator_menu.cpp src/manipulator_menu_node_nouser.cpp)
+
+ament_target_dependencies(manipulator_menu_nouser
+    rclcpp
+    geometry_msgs
+    sensor_msgs
+    std_msgs
+    trajectory_msgs
+    moveit_core
+    moveit_msgs
+    moveit_ros_planning
+    moveit_ros_planning_interface
+    moveit_visual_tools
+    manipulator_interfaces
+    motors_trajectory
+)
+
+install(
+    TARGETS manipulator_menu_nouser
+    DESTINATION lib/${PROJECT_NAME}
+)
+
+add_executable(manipulator_menu_user src/manipulator_menu.cpp src/manipulator_menu_node_user.cpp)
+
+ament_target_dependencies(manipulator_menu_user
+    rclcpp
+    geometry_msgs
+    sensor_msgs
+    std_msgs
+    trajectory_msgs
+    moveit_core
+    moveit_msgs
+    moveit_ros_planning
+    moveit_ros_planning_interface
+    moveit_visual_tools
+    manipulator_interfaces
+    motors_trajectory
+)
+
+install(
+    TARGETS manipulator_menu_user
     DESTINATION lib/${PROJECT_NAME}
 )
 
