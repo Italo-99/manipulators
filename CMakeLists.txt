@@ -27,11 +27,12 @@ find_package(moveit_msgs REQUIRED)
 find_package(moveit_visual_tools REQUIRED)
 find_package(manipulator_interfaces REQUIRED)
 find_package(motors_trajectory REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # comment the line when a copyright and license is added to all source files
+    # the following line skips the linter which checks for copyrights
+    # comment the line when a copyright and license is added to all source files
   set(ament_cmake_copyright_FOUND TRUE)
   # the following line skips cpplint (only works in a git repo)
   # comment the line when this package is in a git repo and when
@@ -113,6 +114,8 @@ ament_target_dependencies(manipulator_planner
     manipulator_interfaces
 )
 
+target_link_libraries(manipulator_planner Eigen3::Eigen)
+
 install(
     TARGETS manipulator_planner
     DESTINATION lib/${PROJECT_NAME}
@@ -125,12 +128,10 @@ ament_target_dependencies(manipulator_menu_nouser
     geometry_msgs
     sensor_msgs
     std_msgs
+    std_srvs
     trajectory_msgs
     moveit_core
     moveit_msgs
-    moveit_ros_planning
-    moveit_ros_planning_interface
-    moveit_visual_tools
     manipulator_interfaces
     motors_trajectory
 )
@@ -147,18 +148,31 @@ ament_target_dependencies(manipulator_menu_user
     geometry_msgs
     sensor_msgs
     std_msgs
+    std_srvs
     trajectory_msgs
     moveit_core
     moveit_msgs
-    moveit_ros_planning
-    moveit_ros_planning_interface
-    moveit_visual_tools
     manipulator_interfaces
     motors_trajectory
 )
 
 install(
     TARGETS manipulator_menu_user
+    DESTINATION lib/${PROJECT_NAME}
+)
+
+add_executable(driver_trajectory_converter src/driver_trajectory_converter.cpp src/driver_trajectory_converter_node.cpp)
+
+ament_target_dependencies(driver_trajectory_converter
+    rclcpp
+    std_msgs
+    sensor_msgs
+)
+
+target_link_libraries(driver_trajectory_converter Eigen3::Eigen)
+
+install(
+    TARGETS driver_trajectory_converter
     DESTINATION lib/${PROJECT_NAME}
 )
 

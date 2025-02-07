@@ -3,7 +3,8 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(const std::string node_name, const rclcpp::NodeOptions &options) : rclcpp::Node(node_name, options)
+ManipulatorMenu::ManipulatorMenu(const std::string node_name, const rclcpp::NodeOptions &options) 
+    : rclcpp::Node(node_name, options), coppelia_req_(std::make_shared<manipulator_interfaces::srv::CoppeliaMenu::Request>())
 {
 
     declareParameters();
@@ -30,8 +31,8 @@ ManipulatorMenu::ManipulatorMenu(const std::string node_name, const rclcpp::Node
     current_joint_pose_.name      = joint_names;
 
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
-    jointGoalPublisher_           = this->create_publisher<sensor_msgs::msg::JointState>(manipulator_name+"/desired_joint_pose", 1);
-    tcpPosePublisher_             = this->create_publisher<geometry_msgs::msg::Pose>(manipulator_name+"/desired_tcp_pose", 1);
+    jointGoalPublisher_           = this->create_publisher<sensor_msgs::msg::JointState>(manipulator_name+"/joint_goal", 1);
+    tcpPosePublisher_             = this->create_publisher<geometry_msgs::msg::Pose>(manipulator_name+"/tcp_goal", 1);
     tcpPoseIKPublisher_           = this->create_publisher<geometry_msgs::msg::Pose>(manipulator_name+"/desired_tcpIK_pose", 1);
     carthesianMovePublisher_      = this->create_publisher<geometry_msgs::msg::PoseArray>(manipulator_name+"/desired_cartesian_move", 1);
     display_goal_pub_             = this->create_publisher<geometry_msgs::msg::PoseStamped>(manipulator_name+"/display_robot_goal", 1);
@@ -48,10 +49,10 @@ ManipulatorMenu::ManipulatorMenu(const std::string node_name, const rclcpp::Node
     );
 
     // --------------------- Kinematics client init ---------------------
-    invKineClient_                = this->create_client<manipulator_interfaces::srv::InvKine>(manipulator_name+"/invKine");
-    pseudoInvClient_              = this->create_client<manipulator_interfaces::srv::PseudoInverse>(manipulator_name+"/pseudoInverse");
-    fKineClient_                  = this->create_client<manipulator_interfaces::srv::FKine>(manipulator_name+"/FKine");
-    jacobianClient_               = this->create_client<manipulator_interfaces::srv::Jacobian>(manipulator_name+"/Jacobian");
+    invKineClient_                = this->create_client<manipulator_interfaces::srv::InvKine>(manipulator_name+"/get__invkine");
+    pseudoInvClient_              = this->create_client<manipulator_interfaces::srv::PseudoInverse>(manipulator_name+"/get_pseudo_inverse");
+    fKineClient_                  = this->create_client<manipulator_interfaces::srv::FKine>(manipulator_name+"/get_fkine");
+    jacobianClient_               = this->create_client<manipulator_interfaces::srv::Jacobian>(manipulator_name+"/get_jacobian");
 
     setInstKineClient_            = this->create_client<std_srvs::srv::SetBool>(manipulator_name+"/instKine_setter");
     setJacobianControlClient_     = this->create_client<std_srvs::srv::SetBool>(manipulator_name+"/jacobian_control_setter");
@@ -83,7 +84,7 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
     std::vector<double> joint_values;
 
     // Set target pose
-    manipulator_interfaces::srv::InvKine::Request::SharedPtr request;
+    auto request = std::make_shared<manipulator_interfaces::srv::InvKine::Request>();
     request->target_pose = pose;
 
     while (!invKineClient_->wait_for_service(std::chrono::seconds(1)))
@@ -118,7 +119,7 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
     std::vector<std::string> joint_names = this->get_parameter("joint_names").as_string_array(); 
     Eigen::MatrixXd matrix(joint_names.size(), 6);
 
-    manipulator_interfaces::srv::PseudoInverse::Request::SharedPtr request;
+    auto request = std::make_shared<manipulator_interfaces::srv::PseudoInverse::Request>();
 
     while (!pseudoInvClient_->wait_for_service(std::chrono::seconds(1)))
     {
@@ -156,7 +157,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::getCurrentFKineClient()
 {
     geometry_msgs::msg::Pose pose;
 
-    manipulator_interfaces::srv::FKine::Request::SharedPtr request;
+    auto request = std::make_shared<manipulator_interfaces::srv::FKine::Request>();
 
     while (!fKineClient_->wait_for_service(std::chrono::seconds(1)))
     {
@@ -187,7 +188,7 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
     std::vector<std::string> joint_names = this->get_parameter("joint_names").as_string_array(); 
     Eigen::MatrixXd matrix(joint_names.size(), 6);
 
-    manipulator_interfaces::srv::Jacobian::Request::SharedPtr request;
+    auto request = std::make_shared<manipulator_interfaces::srv::Jacobian::Request>();
 
     while (!jacobianClient_->wait_for_service(std::chrono::seconds(1)))
     {
@@ -928,7 +929,7 @@ void ManipulatorMenu::moveRealGripper(const float command)
 // Set Jacobian-based speed control
 void ManipulatorMenu::setJacobianSpeedControl(bool set)
 {
-    std_srvs::srv::SetBool::Request::SharedPtr request;
+    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
     request->data = set;
     
     //Wait for srv
@@ -962,7 +963,7 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
 // Set Instantaneous kinematics mode
 void ManipulatorMenu::setInstantKineMode(bool set)
 {
-    std_srvs::srv::SetBool::Request::SharedPtr request;
+    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
     request->data = set;
     
     //Wait for srv
@@ -996,7 +997,7 @@ void ManipulatorMenu::setInstantKineMode(bool set)
 // Set new dynamic planners vel/acc params
 void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
 {
-    manipulator_interfaces::srv::ChangePlannerParameters::Request::SharedPtr request;
+    auto request = std::make_shared<manipulator_interfaces::srv::ChangePlannerParameters::Request>();
     request->acc_factor = new_acc;
     request->vel_factor = new_vel;
     
@@ -1031,7 +1032,7 @@ void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
 // Set Joints real time speed control
 void ManipulatorMenu::setJsRealTimeControl(bool set)
 {
-    std_srvs::srv::SetBool::Request::SharedPtr request;
+    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
     request->data = set;
     
     //Wait for srv
@@ -1448,7 +1449,7 @@ void ManipulatorMenu::userGripperMove()
 void ManipulatorMenu::callGripperSrv(const bool command)
 {
     // Create a request
-    std_srvs::srv::SetBool::Request::SharedPtr request;
+    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
     request->data = command;
 
     //Wait for srv
@@ -1482,7 +1483,7 @@ void ManipulatorMenu::callGripperSrv(const bool command)
 void ManipulatorMenu::callGrabbingSrv(const bool command)
 {
     // Create a request
-    std_srvs::srv::SetBool::Request::SharedPtr request;
+    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
     request->data = command;
 
     //Wait for srv
@@ -1516,7 +1517,7 @@ void ManipulatorMenu::callGrabbingSrv(const bool command)
 void ManipulatorMenu::callRealGripperSrv(const float command)
 {
     // Create a request
-    motors_trajectory::srv::RobotiQGripperControl::Request::SharedPtr request;
+    auto request = std::make_shared<motors_trajectory::srv::RobotiQGripperControl::Request>();
     request->position = command;
     request->speed = 50;
     request->force = 50;
