@@ -38,7 +38,7 @@ DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, cons
         }
     );
 
-    velocity_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(get_parameter("vel_topic").as_string(), 1);
+    velocity_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(get_parameter("velocity_topic").as_string(), 1);
 
     // Initialize Eigen matrices to zero
     joints_values_.setZero();
@@ -46,16 +46,6 @@ DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, cons
     qd_cmd_.setZero();
     real_vel_.setZero();
     vel_msg_.data.resize(6);
-
-    // Only compute if both joint state and command maps are initialized
-    rclcpp::Rate wait_rate(10);
-    while(!isReady())
-    {
-        rclcpp::spin_some(shared_from_this());
-        wait_rate.sleep();
-    }
-
-    RCLCPP_INFO(get_logger(), "Driver Trajectory Converter initialized successfully.");
 }
 
 void DriverTrajectoryConverter::declareParameters(){
@@ -69,6 +59,8 @@ void DriverTrajectoryConverter::declareParameters(){
 // Shutdown handler
 void DriverTrajectoryConverter::shutdown_handler(int sig)
 {
+    sig++; //Suppress unused var warning
+
     // Show the result of the jacobian control mean duration
     RCLCPP_INFO(get_logger(), "Mean duration of real driver control computations: %f seconds", mean_);
     rclcpp::sleep_for(std::chrono::seconds(1));
@@ -84,7 +76,7 @@ bool DriverTrajectoryConverter::isReady()
 }
 
 // Callback to receive actual joint states
-void DriverTrajectoryConverter::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr& joints_state)
+void DriverTrajectoryConverter::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr joints_state)
 {
     uint counter_group = 0;
 
@@ -111,7 +103,7 @@ void DriverTrajectoryConverter::jointStateCallback(const sensor_msgs::msg::Joint
 }
 
 // Callback to receive the fake controller joint states (commands)
-void DriverTrajectoryConverter::jointCmdCallback(const sensor_msgs::msg::JointState::SharedPtr& cmd_state)
+void DriverTrajectoryConverter::jointCmdCallback(const sensor_msgs::msg::JointState::SharedPtr cmd_state)
 {
     uint counter_group = 0;
 
@@ -167,7 +159,7 @@ void DriverTrajectoryConverter::spinner()
     // Number of samples for mean computation
     unsigned long long int k = 0;
     //signal(SIGINT, [this](int sig) {shutdown_handler(sig);});
-    rclcpp::Rate rate(get_parameter("spinner_rate").as_double());
+    rclcpp::Rate rate(get_parameter("spinner_rate").as_int());
 
     while (rclcpp::ok())
     {

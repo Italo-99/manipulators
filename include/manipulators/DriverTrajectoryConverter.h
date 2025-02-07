@@ -14,22 +14,23 @@ class DriverTrajectoryConverter : public rclcpp::Node
 public:
     DriverTrajectoryConverter(std::string node_name, const rclcpp::NodeOptions &options);
     void spinner();
+    bool isReady();
 
 private:
     // ROS objects
-    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
-    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_cmd_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr   joint_state_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr   joint_cmd_sub_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr  velocity_publisher_;
 
     void declareParameters();
 
     // Computation of the average computation time
-    static void shutdown_handler(int sig);
+    void shutdown_handler(int sig);
     static double mean_; // Average value for the duration of the driver control computation
 
     // ROS callbacks
-    void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr& joint_state);
-    void jointCmdCallback(const sensor_msgs::msg::JointState::SharedPtr& joint_cmd);
+    void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr joint_state);
+    void jointCmdCallback(const sensor_msgs::msg::JointState::SharedPtr joint_cmd);
 
     // Controller implementation
     void computeVel();
@@ -46,8 +47,6 @@ private:
 
     bool joint_map_initialized_;  // Flag to check if the joint state map is initialized
     bool cmd_map_initialized_;    // Flag to check if the command state map is initialized
-
-    bool isReady();
 };
 
 #endif // DRIVERTRAJECTORYCONVERTER_H
