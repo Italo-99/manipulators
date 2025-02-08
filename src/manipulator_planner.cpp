@@ -525,13 +525,15 @@ void ManipulatorPlannerNode::jointGoal_callback(const sensor_msgs::msg::JointSta
 void ManipulatorPlannerNode::collisionObject_callback(const moveit_msgs::msg::CollisionObject::SharedPtr collision_object) 
 {
     // Add the collision object to the planning scene
-    dynamic_planner_->getPlanningScene()->applyCollisionObjects({*collision_object});
+    RCLCPP_INFO(this->get_logger(), "Received collision object: %s, operation: %d", collision_object->id.c_str(), collision_object->operation);
+    dynamic_planner_->getPlanningScene()->applyCollisionObjects({*collision_object.get()});
 }
 
 void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs::msg::AttachedCollisionObject::SharedPtr collision_object) 
 {
     // Add the collision object to the planning scene and attach it to a link
     // If link_name is empty, the 'ee_name' parameter is used
+    RCLCPP_INFO(this->get_logger(), "Received attached collision object: %s, operation: %d", collision_object->object.id.c_str(), collision_object->object.operation);
     std::string link_name = collision_object->link_name.empty() ? this->get_parameter("ee_name").as_string() : collision_object->link_name;
 
     dynamic_planner_->getPlanningScene()->applyCollisionObjects({collision_object->object});

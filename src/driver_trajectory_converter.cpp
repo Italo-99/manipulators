@@ -1,11 +1,11 @@
 // Import libraries
 #include "manipulators/DriverTrajectoryConverter.h"
 
-double DriverTrajectoryConverter::mean_ = 0.0;
+DriverTrajectoryConverter* DriverTrajectoryConverter::instance__ = nullptr;
 
 // Constructor
 DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, const rclcpp::NodeOptions &options)
-    : rclcpp::Node(node_name, options), joint_map_initialized_(false), cmd_map_initialized_(false)
+    : rclcpp::Node(node_name, options), joint_map_initialized_(false), cmd_map_initialized_(false), mean_(0.0)
 {
     declareParameters();
 
@@ -48,6 +48,11 @@ DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, cons
     vel_msg_.data.resize(6);
 }
 
+DriverTrajectoryConverter::~DriverTrajectoryConverter()
+{
+    instance__ = nullptr;
+}
+
 void DriverTrajectoryConverter::declareParameters(){
     this->declare_parameter("joints_names_group", std::vector<std::string>());
     this->declare_parameter("velocity_topic", "/ur_rtde/controllers/joint_velocity_controller/command");
@@ -56,14 +61,29 @@ void DriverTrajectoryConverter::declareParameters(){
     this->declare_parameter("spinner_rate", 500);
 }
 
-// Shutdown handler
-void DriverTrajectoryConverter::shutdown_handler(int sig)
+void DriverTrajectoryConverter::static_shutdown_handler(int sig)
 {
+    //Very unelegant way to call a non-static shutdown handler before the context is destroyed, but it works
     sig++; //Suppress unused var warning
+    instance__->shutdown_handler();
+}
 
+// Shutdown handler
+void DriverTrajectoryConverter::shutdown_handler()
+{
     // Show the result of the jacobian control mean duration
     RCLCPP_INFO(get_logger(), "Mean duration of real driver control computations: %f seconds", mean_);
-    rclcpp::sleep_for(std::chrono::seconds(1));
+    // Publish zero velocities when shutting down
+    std_msgs::msg::Float64MultiArray zero_vel;
+    zero_vel.data.resize(6, 0.0);
+    
+    velocity_publisher_->publish(zero_vel);
+
+    for(size_t i = 0; i < 20; ++i)
+    {
+        rclcpp::spin_some(shared_from_this());
+        rclcpp::sleep_for(std::chrono::milliseconds(100));
+    }
 
     // Shutdown ROS
     rclcpp::shutdown();
@@ -146,7 +166,7 @@ void DriverTrajectoryConverter::computeVel()
         }
 
         // Set the velocity message
-        vel_msg_.data[i] = real_vel_[i];
+        vel_msg_.data[i] = 1.0; //real_vel_[i];
     }
 
     // Publish velocity command to the robot
@@ -158,7 +178,8 @@ void DriverTrajectoryConverter::spinner()
 {
     // Number of samples for mean computation
     unsigned long long int k = 0;
-    //signal(SIGINT, [this](int sig) {shutdown_handler(sig);});
+    instance__ = this;
+    signal(SIGINT, DriverTrajectoryConverter::static_shutdown_handler);
     rclcpp::Rate rate(get_parameter("spinner_rate").as_int());
 
     while (rclcpp::ok())
@@ -178,11 +199,4 @@ void DriverTrajectoryConverter::spinner()
         // Sleep according to the defined spinner rate
         rate.sleep();
     }
-
-    // Publish zero velocities when shutting down
-    std_msgs::msg::Float64MultiArray zero_vel;
-    zero_vel.data.resize(6, 0.0);
-    velocity_publisher_->publish(zero_vel);
-    rclcpp::sleep_for(std::chrono::seconds(1));
-    shutdown_handler(0); //TODO: Implement this the right way, or not?
 }

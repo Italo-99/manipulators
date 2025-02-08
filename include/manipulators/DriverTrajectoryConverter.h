@@ -13,6 +13,7 @@ class DriverTrajectoryConverter : public rclcpp::Node
 {
 public:
     DriverTrajectoryConverter(std::string node_name, const rclcpp::NodeOptions &options);
+    ~DriverTrajectoryConverter();
     void spinner();
     bool isReady();
 
@@ -25,8 +26,9 @@ private:
     void declareParameters();
 
     // Computation of the average computation time
-    void shutdown_handler(int sig);
-    static double mean_; // Average value for the duration of the driver control computation
+    static DriverTrajectoryConverter* instance__;
+    static void static_shutdown_handler(int sig);
+    void shutdown_handler();
 
     // ROS callbacks
     void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr joint_state);
@@ -47,6 +49,8 @@ private:
 
     bool joint_map_initialized_;  // Flag to check if the joint state map is initialized
     bool cmd_map_initialized_;    // Flag to check if the command state map is initialized
+    
+    double mean_; // Average value for the duration of the driver control computation
 };
 
 #endif // DRIVERTRAJECTORYCONVERTER_H

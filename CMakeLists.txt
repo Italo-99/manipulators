@@ -9,11 +9,11 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+#Set include dir
 include_directories(include)
 
 # Find dependencies
 find_package(moveit_common REQUIRED)
-
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -28,6 +28,21 @@ find_package(moveit_visual_tools REQUIRED)
 find_package(manipulator_interfaces REQUIRED)
 find_package(motors_trajectory REQUIRED)
 find_package(Eigen3 REQUIRED)
+
+# ---------------- VARIABLES -----------------
+
+set(MANIPULATOR_MENU_DEPENDS
+    rclcpp
+    geometry_msgs
+    sensor_msgs
+    std_msgs
+    std_srvs
+    trajectory_msgs
+    moveit_core
+    moveit_msgs
+    manipulator_interfaces
+    motors_trajectory
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -60,16 +75,22 @@ endif()
 #   DESTINATION lib/${PROJECT_NAME}
 # )
 
+
+#Add directories to be installed
 install(DIRECTORY
   launch
   config
   DESTINATION share/${PROJECT_NAME}
 )
 
+#Install include directory
 install(
     DIRECTORY include/
     DESTINATION include
 )
+
+#Export include for use of in other packages
+ament_export_include_directories(include)
 
 # add_library(dynamic_planner SHARED src/dynamic_planner.cpp)
 # ament_export_targets(dynamic_planner)
@@ -98,6 +119,8 @@ install(
 #   DESTINATION lib/${PROJECT_NAME}
 # )
 
+# ---------------- MANIPULATOR PLANNER -----------------
+
 add_executable(manipulator_planner src/manipulator_planner.cpp src/manipulator_planner_node.cpp src/dynamic_planner.cpp)
 
 ament_target_dependencies(manipulator_planner
@@ -121,45 +144,44 @@ install(
     DESTINATION lib/${PROJECT_NAME}
 )
 
+# ---------------- MANIPULATOR MENU -----------------
+
 add_executable(manipulator_menu_nouser src/manipulator_menu.cpp src/manipulator_menu_node_nouser.cpp)
 
 ament_target_dependencies(manipulator_menu_nouser
-    rclcpp
-    geometry_msgs
-    sensor_msgs
-    std_msgs
-    std_srvs
-    trajectory_msgs
-    moveit_core
-    moveit_msgs
-    manipulator_interfaces
-    motors_trajectory
-)
-
-install(
-    TARGETS manipulator_menu_nouser
-    DESTINATION lib/${PROJECT_NAME}
+    ${MANIPULATOR_MENU_DEPENDS}
 )
 
 add_executable(manipulator_menu_user src/manipulator_menu.cpp src/manipulator_menu_node_user.cpp)
 
 ament_target_dependencies(manipulator_menu_user
-    rclcpp
-    geometry_msgs
-    sensor_msgs
-    std_msgs
-    std_srvs
-    trajectory_msgs
-    moveit_core
-    moveit_msgs
-    manipulator_interfaces
-    motors_trajectory
+    ${MANIPULATOR_MENU_DEPENDS}
 )
 
 install(
-    TARGETS manipulator_menu_user
+    TARGETS manipulator_menu_user manipulator_menu_nouser
     DESTINATION lib/${PROJECT_NAME}
 )
+
+#Export library
+add_library(manipulator_menu SHARED src/manipulator_menu.cpp)
+ament_export_targets(manipulator_menu)
+
+install(
+    TARGETS manipulator_menu
+    EXPORT manipulator_menu
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+ament_target_dependencies(manipulator_menu
+    ${MANIPULATOR_MENU_DEPENDS}
+)
+ament_export_dependencies(${MANIPULATOR_MENU_DEPENDS})
+
+# ---------------- DRIVER TRAJECTORY CONVERTER -----------------
 
 add_executable(driver_trajectory_converter src/driver_trajectory_converter.cpp src/driver_trajectory_converter_node.cpp)
 
@@ -176,5 +198,6 @@ install(
     DESTINATION lib/${PROJECT_NAME}
 )
 
-# Create the pkg with the above setup
+# ------------------------------------------------------------
+
 ament_package()

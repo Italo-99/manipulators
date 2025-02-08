@@ -3,23 +3,22 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(const std::string node_name, const rclcpp::NodeOptions &options) 
-    : rclcpp::Node(node_name, options), coppelia_req_(std::make_shared<manipulator_interfaces::srv::CoppeliaMenu::Request>())
+ManipulatorMenu::ManipulatorMenu(const rclcpp::Node::SharedPtr& node) 
+    : node_(node), coppelia_req_(std::make_shared<manipulator_interfaces::srv::CoppeliaMenu::Request>())
 {
-
     declareParameters();
 
-    std::vector<std::string> joint_names = this->get_parameter("joint_names").as_string_array();
-    std::string manipulator_name = this->get_parameter("manipulator_name").as_string();
-    std::string ee_joint_name = this->get_parameter("ee_joint_name").as_string();
+    std::vector<std::string> joint_names = node_->get_parameter("joint_names").as_string_array();
+    std::string manipulator_name = node_->get_parameter("manipulator_name").as_string();
+    std::string ee_joint_name = node_->get_parameter("ee_joint_name").as_string();
 
     // Display Manipulator
-    RCLCPP_INFO(get_logger(), "Manipulator menu initialized with the following setup:");
-    RCLCPP_INFO(get_logger(), "Manipulator name: %s", manipulator_name.c_str());
+    RCLCPP_INFO(node_->get_logger(), "Manipulator menu initialized with the following setup:");
+    RCLCPP_INFO(node_->get_logger(), "Manipulator name: %s", manipulator_name.c_str());
 
     for (unsigned long k = 0; k< joint_names.size(); k++)
     {
-        RCLCPP_INFO(get_logger(), "Joint %ld name: %s", k, joint_names[k].c_str());
+        RCLCPP_INFO(node_->get_logger(), "Joint %ld name: %s", k, joint_names[k].c_str());
     }
 
     // Init arrays
@@ -31,17 +30,17 @@ ManipulatorMenu::ManipulatorMenu(const std::string node_name, const rclcpp::Node
     current_joint_pose_.name      = joint_names;
 
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
-    jointGoalPublisher_           = this->create_publisher<sensor_msgs::msg::JointState>(manipulator_name+"/joint_goal", 1);
-    tcpPosePublisher_             = this->create_publisher<geometry_msgs::msg::Pose>(manipulator_name+"/tcp_goal", 1);
-    tcpPoseIKPublisher_           = this->create_publisher<geometry_msgs::msg::Pose>(manipulator_name+"/desired_tcpIK_pose", 1);
-    carthesianMovePublisher_      = this->create_publisher<geometry_msgs::msg::PoseArray>(manipulator_name+"/desired_cartesian_move", 1);
-    display_goal_pub_             = this->create_publisher<geometry_msgs::msg::PoseStamped>(manipulator_name+"/display_robot_goal", 1);
-    eepose_pub_                   = this->create_publisher<geometry_msgs::msg::PoseStamped>(manipulator_name+"/display_ee_pose", 1);
-    collisionObjectPublisher_     = this->create_publisher<moveit_msgs::msg::CollisionObject>(manipulator_name+"/add_collision_object", 1);
-    collisionAttObjectPublisher_  = this->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(manipulator_name+"/add_attached_object", 1);
-    moveGripperPublisher_         = this->create_publisher<std_msgs::msg::Float64>(ee_joint_name+"/motor_control", 1);
+    jointGoalPublisher_           = node_->create_publisher<sensor_msgs::msg::JointState>(manipulator_name+"/joint_goal", 1);
+    tcpPosePublisher_             = node_->create_publisher<geometry_msgs::msg::Pose>(manipulator_name+"/tcp_goal", 1);
+    tcpPoseIKPublisher_           = node_->create_publisher<geometry_msgs::msg::Pose>(manipulator_name+"/desired_tcpIK_pose", 1);
+    carthesianMovePublisher_      = node_->create_publisher<geometry_msgs::msg::PoseArray>(manipulator_name+"/desired_cartesian_move", 1);
+    display_goal_pub_             = node_->create_publisher<geometry_msgs::msg::PoseStamped>(manipulator_name+"/display_robot_goal", 1);
+    eepose_pub_                   = node_->create_publisher<geometry_msgs::msg::PoseStamped>(manipulator_name+"/display_ee_pose", 1);
+    collisionObjectPublisher_     = node_->create_publisher<moveit_msgs::msg::CollisionObject>(manipulator_name+"/collision_object", 1);
+    collisionAttObjectPublisher_  = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(manipulator_name+"/attached_collision_object", 1);
+    moveGripperPublisher_         = node_->create_publisher<std_msgs::msg::Float64>(ee_joint_name+"/motor_control", 1);
 
-    jointStateSubscriber_ = this->create_subscription<sensor_msgs::msg::JointState>(
+    jointStateSubscriber_ = node_->create_subscription<sensor_msgs::msg::JointState>(
         "/joint_states", 1, 
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->jointStateCallback(msg);
@@ -49,30 +48,30 @@ ManipulatorMenu::ManipulatorMenu(const std::string node_name, const rclcpp::Node
     );
 
     // --------------------- Kinematics client init ---------------------
-    invKineClient_                = this->create_client<manipulator_interfaces::srv::InvKine>(manipulator_name+"/get__invkine");
-    pseudoInvClient_              = this->create_client<manipulator_interfaces::srv::PseudoInverse>(manipulator_name+"/get_pseudo_inverse");
-    fKineClient_                  = this->create_client<manipulator_interfaces::srv::FKine>(manipulator_name+"/get_fkine");
-    jacobianClient_               = this->create_client<manipulator_interfaces::srv::Jacobian>(manipulator_name+"/get_jacobian");
+    invKineClient_                = node_->create_client<manipulator_interfaces::srv::InvKine>(manipulator_name+"/get__invkine");
+    pseudoInvClient_              = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(manipulator_name+"/get_pseudo_inverse");
+    fKineClient_                  = node_->create_client<manipulator_interfaces::srv::FKine>(manipulator_name+"/get_fkine");
+    jacobianClient_               = node_->create_client<manipulator_interfaces::srv::Jacobian>(manipulator_name+"/get_jacobian");
 
-    setInstKineClient_            = this->create_client<std_srvs::srv::SetBool>(manipulator_name+"/instKine_setter");
-    setJacobianControlClient_     = this->create_client<std_srvs::srv::SetBool>(manipulator_name+"/jacobian_control_setter");
-    setRealTimeControlClient_     = this->create_client<std_srvs::srv::SetBool>(manipulator_name+"/joints_real_time_setter");
-    plannerParamsClient_          = this->create_client<manipulator_interfaces::srv::ChangePlannerParameters>(manipulator_name+"/change_planner_params");
+    setInstKineClient_            = node_->create_client<std_srvs::srv::SetBool>(manipulator_name+"/instKine_setter");
+    setJacobianControlClient_     = node_->create_client<std_srvs::srv::SetBool>(manipulator_name+"/jacobian_control_setter");
+    setRealTimeControlClient_     = node_->create_client<std_srvs::srv::SetBool>(manipulator_name+"/joints_real_time_setter");
+    plannerParamsClient_          = node_->create_client<manipulator_interfaces::srv::ChangePlannerParameters>(manipulator_name+"/change_planner_params");
 
     // --------------------- CoppeliaSim client init ---------------------
-    if (this->get_parameter("enable_coppelia").as_bool())
+    if (node_->get_parameter("enable_coppelia").as_bool())
     {
-        coppeliaClient_ = this->create_client<manipulator_interfaces::srv::CoppeliaMenu>("coppelia_menu");
+        coppeliaClient_ = node_->create_client<manipulator_interfaces::srv::CoppeliaMenu>("coppelia_menu");
     }   
 
     // --------------------- Gripper client init ---------------------
-    if (ee_joint_name != "" && get_parameter("enable_sim_gripper").as_bool() == true)
+    if (ee_joint_name != "" && node_->get_parameter("enable_sim_gripper").as_bool() == true)
     {
-        grab_client_    = this->create_client<std_srvs::srv::SetBool>(ee_joint_name+"/grabbing_gripper");
-        gripper_client_ = this->create_client<std_srvs::srv::SetBool>(ee_joint_name+"/move_gripper");
+        grab_client_    = node_->create_client<std_srvs::srv::SetBool>(ee_joint_name+"/grabbing_gripper");
+        gripper_client_ = node_->create_client<std_srvs::srv::SetBool>(ee_joint_name+"/move_gripper");
 
-        if (get_parameter("enable_real_gripper").as_bool()){
-            real_gripper_client_ = this->create_client<motors_trajectory::srv::RobotiQGripperControl>(get_parameter("gripper_topic").as_string());
+        if (node_->get_parameter("enable_real_gripper").as_bool()){
+            real_gripper_client_ = node_->create_client<motors_trajectory::srv::RobotiQGripperControl>(node_->get_parameter("gripper_topic").as_string());
         }
     }
 }
@@ -90,16 +89,16 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
     while (!invKineClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return joint_values;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "invKine service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "invKine service not available, waiting again...");
     }
 
     auto response = invKineClient_->async_send_request(request);
 
     // Call the srv
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
         for (unsigned long k = 0; k < response.get()->joint_values.size(); k++)
         {
@@ -108,7 +107,7 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call service invKine");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service invKine");
     }
 
     return joint_values;
@@ -116,7 +115,7 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
 
 Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
 {
-    std::vector<std::string> joint_names = this->get_parameter("joint_names").as_string_array(); 
+    std::vector<std::string> joint_names = node_->get_parameter("joint_names").as_string_array(); 
     Eigen::MatrixXd matrix(joint_names.size(), 6);
 
     auto request = std::make_shared<manipulator_interfaces::srv::PseudoInverse::Request>();
@@ -124,18 +123,18 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
     while (!pseudoInvClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return matrix;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "pseudoInverse service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "pseudoInverse service not available, waiting again...");
     }
 
     auto response = pseudoInvClient_->async_send_request(request);
 
 
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
-        // RCLCPP_INFO(get_logger(), "Pseudoinverse matrix received:");
+        // RCLCPP_INFO(node_->get_logger(), "Pseudoinverse matrix received:");
         // Assign data from Float64[] to Eigen::MatrixXd
         for (unsigned long i = 0; i < joint_names.size(); ++i)
         {
@@ -147,7 +146,7 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call service pseudoInverse");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service pseudoInverse");
     }
 
     return matrix;
@@ -162,30 +161,30 @@ geometry_msgs::msg::Pose ManipulatorMenu::getCurrentFKineClient()
     while (!fKineClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return pose;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "fKine service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "fKine service not available, waiting again...");
     }
 
     auto response = fKineClient_->async_send_request(request);
 
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
-        // RCLCPP_INFO(get_logger(), "Forward Kinematics Pose received:");
+        // RCLCPP_INFO(node_->get_logger(), "Forward Kinematics Pose received:");
         // ROS_INFO_STREAM(fKine_srv_.response.tcp_pose);
         pose = response.get()->tcp_pose.pose;
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call service getCurrentFKine");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service getCurrentFKine");
     }
     return pose;
 }
 
 Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 {
-    std::vector<std::string> joint_names = this->get_parameter("joint_names").as_string_array(); 
+    std::vector<std::string> joint_names = node_->get_parameter("joint_names").as_string_array(); 
     Eigen::MatrixXd matrix(joint_names.size(), 6);
 
     auto request = std::make_shared<manipulator_interfaces::srv::Jacobian::Request>();
@@ -193,18 +192,18 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
     while (!jacobianClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return matrix;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "jacobian service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "jacobian service not available, waiting again...");
     }
 
     auto response = jacobianClient_->async_send_request(request);
 
 
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
-        // RCLCPP_INFO(get_logger(), "jacobian matrix received:");
+        // RCLCPP_INFO(node_->get_logger(), "jacobian matrix received:");
         // Assign data from Float64[] to Eigen::MatrixXd
         for (unsigned long i = 0; i < joint_names.size(); ++i)
         {
@@ -216,7 +215,7 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call service jacobian");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service jacobian");
     }
 
     return matrix;
@@ -228,13 +227,13 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 void ManipulatorMenu::spinner()
 {
     // Setup a rate for ROS loop execution
-    rclcpp::Rate r(this->get_parameter("spinner_rate").as_int());
+    rclcpp::Rate r(node_->get_parameter("spinner_rate").as_int());
 
     // ROS loop
     while (rclcpp::ok())
     {
         // ROS spinner
-        rclcpp::spin_some(shared_from_this());
+        rclcpp::spin_some(node_->shared_from_this());
         getEEpose();
 
         // Test funtion for InvKine computations time measurement: about 10-20 ms, not acceptable
@@ -242,7 +241,7 @@ void ManipulatorMenu::spinner()
         // invKineClient(getCurrentFKineClient());
         // getCurrentFKineClient();
         // pseudoInverseClient();
-        // RCLCPP_INFO(get_logger(), "Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
+        // RCLCPP_INFO(node_->get_logger(), "Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
 
         // Wait for next loop time
         r.sleep();
@@ -260,7 +259,7 @@ void ManipulatorMenu::spinnerMenu()
 
     while (rclcpp::ok())
     {
-        rclcpp::spin_some(shared_from_this());          // ROS Once spinner
+        rclcpp::spin_some(node_->shared_from_this());          // ROS Once spinner
         getEEpos_rpy();                                 // Update current robot pose
         printMenu();                                    // Print choice menu
         userChoice = getUserChoice();                   // Get user choice from the terminal
@@ -268,7 +267,7 @@ void ManipulatorMenu::spinnerMenu()
         rclcpp::sleep_for(std::chrono::seconds(1));     // Wait 1s until next command
     }
 
-    RCLCPP_INFO(get_logger(), "Closing the menu!\n");
+    RCLCPP_INFO(node_->get_logger(), "Closing the menu!\n");
     rclcpp::shutdown();
 }
 
@@ -302,7 +301,7 @@ sensor_msgs::msg::JointState ManipulatorMenu::publishJointGoal(const std::vector
 {
     // Fill the joint msg with degToRad conversion
     sensor_msgs::msg::JointState jointStateMsg;
-    jointStateMsg.header.stamp = get_clock()->now();
+    jointStateMsg.header.stamp = node_->get_clock()->now();
     for (unsigned long k = 0; k < joints.size(); k++)
     {
         jointStateMsg.position.push_back(joints[k] * M_PI / 180);
@@ -341,8 +340,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(const geometry_msgs::ms
 
     // Display the goal on RViz
     geometry_msgs::msg::PoseStamped robot_goal_msg;
-    robot_goal_msg.header.frame_id = get_parameter("base_link_name").as_string();
-    robot_goal_msg.header.stamp = get_clock()->now();
+    robot_goal_msg.header.frame_id = node_->get_parameter("base_link_name").as_string();
+    robot_goal_msg.header.stamp = node_->get_clock()->now();
     robot_goal_msg.pose = tcpPoseMsg,
 
     display_goal_pub_->publish(robot_goal_msg);
@@ -372,8 +371,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::
 
     // Display the goal on RViz
     geometry_msgs::msg::PoseStamped robot_goal_msg;
-    robot_goal_msg.header.frame_id = get_parameter("base_link_name").as_string();
-    robot_goal_msg.header.stamp = get_clock()->now();
+    robot_goal_msg.header.frame_id = node_->get_parameter("base_link_name").as_string();
+    robot_goal_msg.header.stamp = node_->get_clock()->now();
     robot_goal_msg.pose = tcpPoseMsg;
 
     display_goal_pub_->publish(robot_goal_msg);
@@ -396,14 +395,14 @@ geometry_msgs::msg::Pose ManipulatorMenu::publishCartesianMove(const uint axis1,
     geometry_msgs::msg::PoseArray waypoints;
     geometry_msgs::msg::Pose final_pose;
 
-    waypoints.header.frame_id = get_parameter("base_link_name").as_string();
+    waypoints.header.frame_id = node_->get_parameter("base_link_name").as_string();
     double step_axisX = 0.;
     double step_axisY = 0.;
     double step_axisZ = 0.;
     // Compute axis step
     if (axis1 == axis2)
     {
-        RCLCPP_WARN(get_logger(), "Error in axis input!");
+        RCLCPP_WARN(node_->get_logger(), "Error in axis input!");
         return final_pose;
     }
     else
@@ -489,10 +488,10 @@ geometry_msgs::msg::Pose ManipulatorMenu::publishCartesianMove(const uint axis1,
 sensor_msgs::msg::JointState ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 {
     // Read from subscribers the current joints state
-    rclcpp::spin_some(shared_from_this());
+    rclcpp::spin_some(node_->shared_from_this());
     // Fill current joints pose as target
     std::vector<double> joint_target;
-    for (unsigned long k = 0; k < get_parameter("joint_names").as_string_array().size(); k++)
+    for (unsigned long k = 0; k < node_->get_parameter("joint_names").as_string_array().size(); k++)
     {
         joint_target.push_back(current_joint_pose_.position[k] * 180 / M_PI);
     }
@@ -513,9 +512,9 @@ sensor_msgs::msg::JointState ManipulatorMenu::goHome(const bool ee_orient)
     {
         start_joint_pose = {0., -90., -90., 0., +90., 0.};
     }
-    if (get_parameter("joint_names").as_string_array().size() != 6)
+    if (node_->get_parameter("joint_names").as_string_array().size() != 6)
     {
-        for (unsigned long k = 0; k < get_parameter("joint_names").as_string_array().size() - 6; k++)
+        for (unsigned long k = 0; k < node_->get_parameter("joint_names").as_string_array().size() - 6; k++)
         {
             start_joint_pose.push_back(0.);
         }
@@ -531,7 +530,7 @@ sensor_msgs::msg::JointState ManipulatorMenu::goHome(const bool ee_orient)
 geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &source_frame, const std::string &target_frame)
 {
     // Create a TF2 buffer and listener
-    std::unique_ptr<tf2_ros::Buffer> tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
     std::shared_ptr<tf2_ros::TransformListener> tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
     // Wait for the transformation to be available
@@ -541,7 +540,7 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &source
     }
     catch (tf2::TransformException &ex)
     {
-        RCLCPP_WARN(get_logger(), "%s", ex.what());
+        RCLCPP_WARN(node_->get_logger(), "%s", ex.what());
     }
 
     // Get the transformation
@@ -552,14 +551,14 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &source
     }
     catch (tf2::TransformException &ex)
     {
-        RCLCPP_WARN(get_logger(), "%s", ex.what());
+        RCLCPP_WARN(node_->get_logger(), "%s", ex.what());
         rclcpp::sleep_for(std::chrono::seconds(1));
     }
 
     // Convert the tf msg into a PoseStampedrclcp
     geometry_msgs::msg::PoseStamped target_pose;
     target_pose.header.frame_id = source_frame;
-    target_pose.header.stamp = get_clock()->now();
+    target_pose.header.stamp = node_->get_clock()->now();
     target_pose.pose.position.x = transformStamped.transform.translation.x;
     target_pose.pose.position.y = transformStamped.transform.translation.y;
     target_pose.pose.position.z = transformStamped.transform.translation.z;
@@ -572,7 +571,7 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &source
 geometry_msgs::msg::Pose ManipulatorMenu::getEEpose()
 {
     // Compute the FKine between base_link and end-effector
-    current_tcp_pose_.header.frame_id = get_parameter("base_link_name").as_string();
+    current_tcp_pose_.header.frame_id = node_->get_parameter("base_link_name").as_string();
     current_tcp_pose_.pose = getCurrentFKineClient();
     eepose_pub_->publish(current_tcp_pose_);
     return current_tcp_pose_.pose;
@@ -717,7 +716,7 @@ void ManipulatorMenu::addObj(const std::string &name,
     // Creation of the obj
     moveit_msgs::msg::CollisionObject obj;
 
-    obj.header.frame_id = get_parameter("base_link_name").as_string();
+    obj.header.frame_id = node_->get_parameter("base_link_name").as_string();
     obj.id = name;
     obj.primitives.resize(1);
     obj.primitives[0].type = obj_type;
@@ -730,7 +729,7 @@ void ManipulatorMenu::addObj(const std::string &name,
     case 1: // BOX: Rectangular shape setting
         if (size_obj_dims != 3)
         {
-            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "obj_dims array is not compatible with obj_type");
+            RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 3000, "obj_dims array is not compatible with obj_type");
         }
         else
         { // Set the three dimensions of the parallelepiped
@@ -743,7 +742,7 @@ void ManipulatorMenu::addObj(const std::string &name,
     case 2: // SPHERE
         if (size_obj_dims != 1)
         {
-            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "obj_dims array is not compatible with obj_type");
+            RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 3000, "obj_dims array is not compatible with obj_type");
         }
         else
         { // Set the sphere radius
@@ -754,7 +753,7 @@ void ManipulatorMenu::addObj(const std::string &name,
     default: // CYLINDER OR CONE
         if (size_obj_dims != 2)
         {
-            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "obj_dims array is not compatible with obj_type");
+            RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 3000, "obj_dims array is not compatible with obj_type");
         }
         else
         { // Set height and radius of the cylinder/cone
@@ -799,7 +798,7 @@ void ManipulatorMenu::addAttachedObj(const std::string &name,
     // Creation of the obj
     moveit_msgs::msg::CollisionObject obj;
 
-    obj.header.frame_id = get_parameter("base_link_name").as_string();
+    obj.header.frame_id = node_->get_parameter("base_link_name").as_string();
     obj.id = name;
     obj.primitives.resize(1);
     obj.primitives[0].type = obj_type;
@@ -812,7 +811,7 @@ void ManipulatorMenu::addAttachedObj(const std::string &name,
     case 1: // BOX: Rectangular shape setting
         if (size_obj_dims != 3)
         {
-            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "obj_dims array is not compatible with obj_type");
+            RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 3000, "obj_dims array is not compatible with obj_type");
         }
         else
         { // Set the three dimensions of the parallelepiped
@@ -825,7 +824,7 @@ void ManipulatorMenu::addAttachedObj(const std::string &name,
     case 2: // SPHERE
         if (size_obj_dims != 1)
         {
-            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "obj_dims array is not compatible with obj_type");
+            RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 3000, "obj_dims array is not compatible with obj_type");
         }
         else
         { // Set the sphere radius
@@ -836,7 +835,7 @@ void ManipulatorMenu::addAttachedObj(const std::string &name,
     default: // CYLINDER OR CONE
         if (size_obj_dims != 2)
         {
-            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "obj_dims array is not compatible with obj_type");
+            RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 3000, "obj_dims array is not compatible with obj_type");
         }
         else
         { // Set height and radius of the cylinder/cone
@@ -936,27 +935,27 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
     while (!setJacobianControlClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "jacobian_control_setter service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "jacobian_control_setter service not available, waiting again...");
     }
 
     auto response = setJacobianControlClient_->async_send_request(request);
 
     // Call the srv
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
         if (response.get()->success){
-            RCLCPP_INFO(get_logger(), "Jacobian control set to %d", set);
+            RCLCPP_INFO(node_->get_logger(), "Jacobian control set to %d", set);
         }
         else{
-            RCLCPP_ERROR(get_logger(), "Failed to set Jacobian control");
+            RCLCPP_ERROR(node_->get_logger(), "Failed to set Jacobian control");
         }
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call service jacobian_control_setter");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service jacobian_control_setter");
     }
 }
 
@@ -970,27 +969,27 @@ void ManipulatorMenu::setInstantKineMode(bool set)
     while (!setInstKineClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "instKine_setter service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "instKine_setter service not available, waiting again...");
     }
 
     auto response = setJacobianControlClient_->async_send_request(request);
 
     // Call the srv
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
         if (response.get()->success){
-            RCLCPP_INFO(get_logger(), "instKine set to %d", set);
+            RCLCPP_INFO(node_->get_logger(), "instKine set to %d", set);
         }
         else{
-            RCLCPP_ERROR(get_logger(), "Failed to set instKine");
+            RCLCPP_ERROR(node_->get_logger(), "Failed to set instKine");
         }
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call service instKine_setter");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service instKine_setter");
     }
 }
 
@@ -1005,27 +1004,27 @@ void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
     while (!plannerParamsClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "change_planner_params service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "change_planner_params service not available, waiting again...");
     }
 
     auto response = plannerParamsClient_->async_send_request(request);
 
     // Call the srv
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
         if (response.get()->success){
-            RCLCPP_INFO(get_logger(), "Planner params changed: acc_factor = %f, vel_factor = %f", new_acc, new_vel);
+            RCLCPP_INFO(node_->get_logger(), "Planner params changed: acc_factor = %f, vel_factor = %f", new_acc, new_vel);
         }
         else{
-            RCLCPP_ERROR(get_logger(), "Failed to set planner params");
+            RCLCPP_ERROR(node_->get_logger(), "Failed to set planner params");
         }
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call service change_planner_params");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service change_planner_params");
     }
 }
 
@@ -1039,42 +1038,42 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
     while (!setRealTimeControlClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "joints_real_time_setter service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "joints_real_time_setter service not available, waiting again...");
     }
 
     auto response = setJacobianControlClient_->async_send_request(request);
 
     // Call the srv
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
         if (response.get()->success){
-            RCLCPP_INFO(get_logger(), "Joints real time control set to %d", set);
+            RCLCPP_INFO(node_->get_logger(), "Joints real time control set to %d", set);
         }
         else{
-            RCLCPP_ERROR(get_logger(), "Failed to set joints real time control");
+            RCLCPP_ERROR(node_->get_logger(), "Failed to set joints real time control");
         }
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call service joints_real_time_setter");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service joints_real_time_setter");
     }
 }
 
 // --------------------- PRIVATE FUNCTIONS ---------------------
 
 void ManipulatorMenu::declareParameters() {
-    this->declare_parameter("manipulator_name", std::string());
-    this->declare_parameter("joint_names", std::vector<std::string>());
-    this->declare_parameter("ee_joint_name", "");
-    this->declare_parameter("base_link_name", "base_link");
-    this->declare_parameter("ros_freq", 500);
-    this->declare_parameter("enable_coppelia", false);
-    this->declare_parameter("enable_sim_gripper", false);
-    this->declare_parameter("enable_real_gripper", false);
-    this->declare_parameter("gripper_topic", "/ur_rtde/robotiq_gripper/command");
+    node_->declare_parameter("manipulator_name", std::string());
+    node_->declare_parameter("joint_names", std::vector<std::string>());
+    node_->declare_parameter("ee_joint_name", "");
+    node_->declare_parameter("base_link_name", "base_link");
+    node_->declare_parameter("ros_freq", 500);
+    node_->declare_parameter("enable_coppelia", false);
+    node_->declare_parameter("enable_sim_gripper", false);
+    node_->declare_parameter("enable_real_gripper", false);
+    node_->declare_parameter("gripper_topic", "/ur_rtde/robotiq_gripper/command");
 }
 
 // --------------------- COPPELIA HANDLER ---------------------
@@ -1084,22 +1083,22 @@ void ManipulatorMenu::wait_for_response()
 {
     while(coppeliaClient_->wait_for_service(std::chrono::seconds(1))){
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "coppelia service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "coppelia service not available, waiting again...");
     }
 
     auto response = coppeliaClient_->async_send_request(coppelia_req_);
 
     // Call the srv
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
-        RCLCPP_INFO(get_logger(), "Simulation status: %d", response.get()->result);
+        RCLCPP_INFO(node_->get_logger(), "Simulation status: %d", response.get()->result);
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call service invKine");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service invKine");
     }
 }
 
@@ -1113,7 +1112,7 @@ void ManipulatorMenu::userJointGoal()
     // Take user degree angle for each joint
     std::cout << "Enter the values of the joint goal in degrees: \n";
 
-    for (unsigned long k = 0; k < get_parameter("joint_names").as_string_array().size(); k++)
+    for (unsigned long k = 0; k < node_->get_parameter("joint_names").as_string_array().size(); k++)
     {
         double new_joint_value = 0.;
         std::cout << "Joint " << k + 1 << " : ";
@@ -1128,7 +1127,7 @@ void ManipulatorMenu::oneJointMove_user()
 {
     int num = 0;
     double joint_rot = 0.0;
-    std::cout << "Enter the joint to move in [0, " << get_parameter("joint_names").as_string_array().size() - 1 << "]: \n";
+    std::cout << "Enter the joint to move in [0, " << node_->get_parameter("joint_names").as_string_array().size() - 1 << "]: \n";
     std::cin >> num;
     std::cout << "Enter the rotation of the joint in deg: \n";
     std::cin >> joint_rot;
@@ -1198,7 +1197,7 @@ void ManipulatorMenu::userTcpIKGoal()
 // --------------------- USER CARTESIAN MOVES HANDLER ---------------------
 void ManipulatorMenu::userCartesianMove()
 {
-    RCLCPP_INFO(get_logger(), "Setup your cartesian move:");
+    RCLCPP_INFO(node_->get_logger(), "Setup your cartesian move:");
     uint axis1;
     uint axis2;
     double pos1;
@@ -1221,8 +1220,8 @@ void ManipulatorMenu::userCartesianMove()
 
 void ManipulatorMenu::jointStateVisualizer()
 {
-    rclcpp::spin_some(shared_from_this());
-    for (unsigned long k = 0; k < get_parameter("joint_names").as_string_array().size(); k++)
+    rclcpp::spin_some(node_->shared_from_this());
+    for (unsigned long k = 0; k < node_->get_parameter("joint_names").as_string_array().size(); k++)
     {
         std::cout << "Joint " << k << " : " << current_joint_pose_.position[k] * 180 / M_PI << std::endl;
     }
@@ -1232,7 +1231,7 @@ void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::Sha
 {
 
     // Map to store couples joint name - joint values
-    std::vector<std::string> joint_names = get_parameter("joint_names").as_string_array();
+    std::vector<std::string> joint_names = node_->get_parameter("joint_names").as_string_array();
     static std::unordered_map<std::string, double>::iterator it;
     uint counter_group = 0;
 
@@ -1260,7 +1259,7 @@ void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::Sha
                 }
 
                 // Log gripper planning group
-                RCLCPP_INFO_ONCE(get_logger(), "%s joints values received by the menu interface.", get_parameter("manipulator_name").as_string().c_str());
+                RCLCPP_INFO_ONCE(node_->get_logger(), "%s joints values received by the menu interface.", node_->get_parameter("manipulator_name").as_string().c_str());
             }
         }
     }
@@ -1455,27 +1454,27 @@ void ManipulatorMenu::callGripperSrv(const bool command)
     //Wait for srv
     while(gripper_client_->wait_for_service(std::chrono::seconds(1))){
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "gripper service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "gripper service not available, waiting again...");
     }
 
     auto response = gripper_client_->async_send_request(request);
 
     // Call the srv
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
         if (response.get()->success){
-            RCLCPP_INFO(get_logger(), "Gripper command succeeded, set to %d", command);
+            RCLCPP_INFO(node_->get_logger(), "Gripper command succeeded, set to %d", command);
         }
         else{
-            RCLCPP_ERROR(get_logger(), "Failed move gripper");
+            RCLCPP_ERROR(node_->get_logger(), "Failed move gripper");
         }
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call gripper service");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call gripper service");
     }
 }
 
@@ -1489,27 +1488,27 @@ void ManipulatorMenu::callGrabbingSrv(const bool command)
     //Wait for srv
     while(grab_client_->wait_for_service(std::chrono::seconds(1))){
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Gripper grabing service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "Gripper grabing service not available, waiting again...");
     }
 
     auto response = grab_client_->async_send_request(request);
 
     // Call the srv
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
         if (response.get()->success){
-            RCLCPP_INFO(get_logger(), "Gripper grabbing request succeeded");
+            RCLCPP_INFO(node_->get_logger(), "Gripper grabbing request succeeded");
         }
         else{
-            RCLCPP_ERROR(get_logger(), "Gripper grabbing request failed");
+            RCLCPP_ERROR(node_->get_logger(), "Gripper grabbing request failed");
         }
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call service for gripper grabbing");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service for gripper grabbing");
     }
 }
 
@@ -1525,27 +1524,27 @@ void ManipulatorMenu::callRealGripperSrv(const float command)
     //Wait for srv
     while(real_gripper_client_->wait_for_service(std::chrono::seconds(1))){
         if (!rclcpp::ok()){
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "real gripper service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "real gripper service not available, waiting again...");
     }
 
     auto response = real_gripper_client_->async_send_request(request);
 
     // Call the srv
-    if (rclcpp::spin_until_future_complete(shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
     {
         if (response.get()->success){
-            RCLCPP_INFO(get_logger(), "Gripper move request succeeded");
+            RCLCPP_INFO(node_->get_logger(), "Gripper move request succeeded");
         }
         else{
-            RCLCPP_ERROR(get_logger(), "Gripper move request failed");
+            RCLCPP_ERROR(node_->get_logger(), "Gripper move request failed");
         }
     }
     else
     {
-        RCLCPP_ERROR(get_logger(), "Failed to call real gripper service");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call real gripper service");
     }
 }
 
@@ -1654,14 +1653,14 @@ void ManipulatorMenu::printMenu()
     std::cout << "20.Go to home position (gripper at the front)\n";
     std::cout << "\n======= Cartesian move =======\n";
     std::cout << "21.Make a cartesian move\n";
-    if (get_parameter("enable_coppelia").as_bool())
+    if (node_->get_parameter("enable_coppelia").as_bool())
     {
         std::cout << "\n======= CoppeliaSim handling =======\n";
         std::cout << "22. To start twin Coppelia simulation\n";
         std::cout << "23. To stop  twin Coppelia simulation\n";
         std::cout << "24. To save  twin CoppeliaSim scene\n";
     }
-    if (get_parameter("enable_sim_gripper").as_bool())
+    if (node_->get_parameter("enable_sim_gripper").as_bool())
     {
         std::cout << "\n======= Fake gripper control =======\n";
         std::cout << "25.Open the gripper\n";
@@ -1670,7 +1669,7 @@ void ManipulatorMenu::printMenu()
         std::cout << "28.Grab an object at the gripper\n";
         std::cout << "29.Detach an object from the gripper\n";
     }
-    if (get_parameter("enable_real_gripper").as_bool())
+    if (node_->get_parameter("enable_real_gripper").as_bool())
     {
         std::cout << "\n======= Real gripper control =======\n";
         std::cout << "30.Open  real gripper\n";
@@ -1710,34 +1709,34 @@ void ManipulatorMenu::processChoice(int choice)
     switch (choice)
     {
     case 1:
-        RCLCPP_INFO(get_logger(), "You selected Option 1");
-        RCLCPP_ERROR(get_logger(), "no_planner option is obsolete, moveit will be used instead");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 1");
+        RCLCPP_ERROR(node_->get_logger(), "no_planner option is obsolete, moveit will be used instead");
         userTcpGoal();
         break;
     case 2:
-        RCLCPP_INFO(get_logger(), "You selected Option 2");
-        RCLCPP_ERROR(get_logger(), "no_planner option is obsolete, moveit will be used instead");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 2");
+        RCLCPP_ERROR(node_->get_logger(), "no_planner option is obsolete, moveit will be used instead");
         userJointGoal();
         break;
     case 3:
-        RCLCPP_INFO(get_logger(), "You selected Option 3");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 3");
         userJointGoal();
         break;
     case 4:
-        RCLCPP_INFO(get_logger(), "You selected Option 4");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 4");
         userTcpGoal();
         break;
     case 5:
-        RCLCPP_INFO(get_logger(), "You selected Option 5");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 5");
         userTcpIKGoal();
         break;
     case 6:
-        RCLCPP_INFO(get_logger(), "You selected Option 6");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 6");
         oneJointMove_user();
         break;
 
     case 7:
-        RCLCPP_INFO(get_logger(), "You selected Option 7");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 7");
 
         std::cout << "Insert how many metres you want to move along x: \n";
         std::cin >> step;
@@ -1745,14 +1744,14 @@ void ManipulatorMenu::processChoice(int choice)
         break;
 
     case 8:
-        RCLCPP_INFO(get_logger(), "You selected Option 8");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 8");
 
         std::cout << "Insert how many metres you want to move along y:\n";
         std::cin >> step;
         move_along_y(step);
         break;
     case 9:
-        RCLCPP_INFO(get_logger(), "You selected Option 9");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 9");
 
         std::cout << "Insert how many metres you want to move along z:\n";
         std::cin >> step;
@@ -1760,7 +1759,7 @@ void ManipulatorMenu::processChoice(int choice)
         break;
 
     case 10:
-        RCLCPP_INFO(get_logger(), "You selected Option 10\n");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 10\n");
         std::cout << "Insert the rotation around the axis you want to do.\n";
         rot = {0., 0., 0.};
         std::cout << " X rotation: ";
@@ -1773,7 +1772,7 @@ void ManipulatorMenu::processChoice(int choice)
         break;
 
     case 11:
-        RCLCPP_INFO(get_logger(), "You selected Option 11");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 11");
         std::cout << "Insert the rotation around X axis you want to do.\n";
         double x_rot;
         std::cout << " X rotation: ";
@@ -1782,7 +1781,7 @@ void ManipulatorMenu::processChoice(int choice)
         break;
 
     case 12:
-        RCLCPP_INFO(get_logger(), "You selected Option 12");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 12");
         std::cout << "Insert the rotation around Y axis you want to do.\n";
         double y_rot;
         std::cout << " Y rotation: ";
@@ -1791,7 +1790,7 @@ void ManipulatorMenu::processChoice(int choice)
         break;
 
     case 13:
-        RCLCPP_INFO(get_logger(), "You selected Option 13");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 13");
         std::cout << "Insert the rotation around Z axis you want to do.\n";
         double z_rot;
         std::cout << " Z rotation: ";
@@ -1800,7 +1799,7 @@ void ManipulatorMenu::processChoice(int choice)
         break;
 
     case 14:
-        RCLCPP_INFO(get_logger(), "You selected Option 14");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 14");
         std::cout << "Insert the FIXED orientation of the EE you want to have.\n";
         rot = {0., 0., 0.};
         std::cout << " X rotation: ";
@@ -1814,7 +1813,7 @@ void ManipulatorMenu::processChoice(int choice)
 
     case 15:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 15");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 15");
         std::cout << "Insert 1 if the object has to be attached to the tcp, 2 otherwise.\n";
         int val;
         std::cin >> val;
@@ -1829,17 +1828,17 @@ void ManipulatorMenu::processChoice(int choice)
     }
     break;
     case 16:
-        RCLCPP_INFO(get_logger(), "You selected Option 16");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 16");
         deleteCollObj();
         break;
     case 17:
-        RCLCPP_INFO(get_logger(), "You selected Option 17");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 17");
         jointStateVisualizer();
         break;
 
     case 18:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 18");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 18");
         std::vector<double> ee_pose = getEEpos_rpy();
         std::cout << " EE - X position: " << ee_pose[0] << std::endl;
         std::cout << " EE - Y position: " << ee_pose[1] << std::endl;
@@ -1850,80 +1849,80 @@ void ManipulatorMenu::processChoice(int choice)
     }
     break;
     case 19:
-        RCLCPP_INFO(get_logger(), "You selected Option 19");
-        RCLCPP_INFO(get_logger(), "Go to home position, gripper down ...");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 19");
+        RCLCPP_INFO(node_->get_logger(), "Go to home position, gripper down ...");
         goHome(0);
         break;
     case 20:
-        RCLCPP_INFO(get_logger(), "You selected Option 20");
-        RCLCPP_INFO(get_logger(), "Go to home position, gripper at the front ...");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 20");
+        RCLCPP_INFO(node_->get_logger(), "Go to home position, gripper at the front ...");
         goHome(1);
         break;
     case 21:
-        RCLCPP_INFO(get_logger(), "You selected Option 21");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 21");
         userCartesianMove();
         break;
     case 22:
-        RCLCPP_INFO(get_logger(), "You selected Option 22");
-        RCLCPP_INFO(get_logger(), "Start Coppelia simulation");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 22");
+        RCLCPP_INFO(node_->get_logger(), "Start Coppelia simulation");
         startCoppeliaSim();
         break;
     case 23:
-        RCLCPP_INFO(get_logger(), "You selected Option 23");
-        RCLCPP_INFO(get_logger(), "Stop Coppelia simulation");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 23");
+        RCLCPP_INFO(node_->get_logger(), "Stop Coppelia simulation");
         stopCoppeliaSim();
         break;
     case 24:
-        RCLCPP_INFO(get_logger(), "You selected Option 24");
-        RCLCPP_INFO(get_logger(), "Save current Coppelia scene");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 24");
+        RCLCPP_INFO(node_->get_logger(), "Save current Coppelia scene");
         saveCoppeliaScene();
         break;
     case 25:
-        RCLCPP_INFO(get_logger(), "You selected Option 25");
-        RCLCPP_INFO(get_logger(), "Opening the gripper ...");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 25");
+        RCLCPP_INFO(node_->get_logger(), "Opening the gripper ...");
         openGripper();
         break;
     case 26:
-        RCLCPP_INFO(get_logger(), "You selected Option 26");
-        RCLCPP_INFO(get_logger(), "Closing the gripper ...");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 26");
+        RCLCPP_INFO(node_->get_logger(), "Closing the gripper ...");
         closeGripper();
         break;
     case 27:
-        RCLCPP_INFO(get_logger(), "You selected Option 27");
-        RCLCPP_INFO(get_logger(), "Gripper moving setting");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 27");
+        RCLCPP_INFO(node_->get_logger(), "Gripper moving setting");
         userGripperMove();
         break;
     case 28:
-        RCLCPP_INFO(get_logger(), "You selected Option 28");
-        RCLCPP_INFO(get_logger(), "Grab an object to the gripper");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 28");
+        RCLCPP_INFO(node_->get_logger(), "Grab an object to the gripper");
         grabObjGripper();
         break;
     case 29:
-        RCLCPP_INFO(get_logger(), "You selected Option 29");
-        RCLCPP_INFO(get_logger(), "Detach an object from the gripper");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 29");
+        RCLCPP_INFO(node_->get_logger(), "Detach an object from the gripper");
         detachObjGripper();
         break;
     case 30:
-        RCLCPP_INFO(get_logger(), "You selected Option 30");
-        RCLCPP_INFO(get_logger(), "Opening real gripper");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 30");
+        RCLCPP_INFO(node_->get_logger(), "Opening real gripper");
         openRealGripper();
         break;
     case 31:
-        RCLCPP_INFO(get_logger(), "You selected Option 31");
-        RCLCPP_INFO(get_logger(), "Closing real gripper");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 31");
+        RCLCPP_INFO(node_->get_logger(), "Closing real gripper");
         closeRealGripper();
         break;
     case 32:
-        RCLCPP_INFO(get_logger(), "You selected Option 32");
-        RCLCPP_INFO(get_logger(), "Set a real gripper position");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 32");
+        RCLCPP_INFO(node_->get_logger(), "Set a real gripper position");
         float gripper_pos;
         std::cin >> gripper_pos;
         moveRealGripper(gripper_pos);
         break;
     case 33:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 33");
-        RCLCPP_INFO(get_logger(), "Set the pose you want to compute inverse kinematics.");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 33");
+        RCLCPP_INFO(node_->get_logger(), "Set the pose you want to compute inverse kinematics.");
         geometry_msgs::msg::Pose pose;
         float rx, ry, rz;
         std::cout << "X position: ";
@@ -1942,29 +1941,29 @@ void ManipulatorMenu::processChoice(int choice)
         std::vector<double> joints = invKineClient(pose);
         for (unsigned long k = 0; k < joints.size(); k++)
         {
-            RCLCPP_INFO(get_logger(), "Joint %ld: %f", k, joints[k]);
+            RCLCPP_INFO(node_->get_logger(), "Joint %ld: %f", k, joints[k]);
         }
     }
     break;
     case 34:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 34");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 34");
         Eigen::MatrixXd jac = getJacobianClient();
-        RCLCPP_INFO(get_logger(), "Jacobian computed:\n");
+        RCLCPP_INFO(node_->get_logger(), "Jacobian computed:\n");
         std::cout << jac << std::endl;
     }
     break;
     case 35:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 35");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 35");
         Eigen::MatrixXd inv_jac = pseudoInverseClient();
-        RCLCPP_INFO(get_logger(), "Inverse Jacobian computed:\n");
+        RCLCPP_INFO(node_->get_logger(), "Inverse Jacobian computed:\n");
         std::cout << inv_jac << std::endl;
     }
     break;
     case 36:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 36");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 36");
         float vel, acc;
         std::cout << "Insert new vel factor: ";
         std::cin >> vel;
@@ -1975,47 +1974,47 @@ void ManipulatorMenu::processChoice(int choice)
     break;
     case 37:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 37");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 37");
         setInstantKineMode(true);
     }
     break;
     case 38:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 38");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 38");
         setInstantKineMode(false);
     }
     break;
     case 39:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 39");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 39");
         setJacobianSpeedControl(true);
     }
     break;
     case 40:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 40");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 40");
         setJacobianSpeedControl(false);
     }
     break;
     case 41:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 41");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 41");
         setJsRealTimeControl(true);
     }
     break;
     case 42:
     {
-        RCLCPP_INFO(get_logger(), "You selected Option 42");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 42");
         setJsRealTimeControl(false);
     }
     break;
     case 43:
-        RCLCPP_INFO(get_logger(), "You selected Option 41");
-        RCLCPP_INFO(get_logger(), "Exiting...\n");
+        RCLCPP_INFO(node_->get_logger(), "You selected Option 41");
+        RCLCPP_INFO(node_->get_logger(), "Exiting...\n");
         rclcpp::shutdown();
         break;
     default:
-        RCLCPP_WARN(get_logger(), "Invalid choice. Please choose a valid option.");
+        RCLCPP_WARN(node_->get_logger(), "Invalid choice. Please choose a valid option.");
         break;
     }
 }

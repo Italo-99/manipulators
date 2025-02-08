@@ -36,11 +36,11 @@
 #include "manipulator_interfaces/srv/jacobian.hpp"
 #include "manipulator_interfaces/srv/change_planner_parameters.hpp"
 
-class ManipulatorMenu : public rclcpp::Node
+class ManipulatorMenu
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-    ManipulatorMenu(const std::string node_name, const rclcpp::NodeOptions& options);
+    ManipulatorMenu(const rclcpp::Node::SharedPtr& node);
 
     sensor_msgs::msg::JointState current_joint_pose_;
 
@@ -179,6 +179,8 @@ class ManipulatorMenu : public rclcpp::Node
         void declareParameters();       // Declare the parameters for the node
 
   // --------------------- PRIVATE VARIABLES ---------------------
+
+    const rclcpp::Node::SharedPtr node_;
 
     // ---------------------  ROS HANDLING ---------------------
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr jointGoalPublisher_;   

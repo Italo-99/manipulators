@@ -4,8 +4,10 @@ int main(int argc, char* argv[]) {
 
     rclcpp::init(argc, argv);
 
-    auto node = std::make_shared<ManipulatorMenu>("manipulator_menu", rclcpp::NodeOptions());
-    node->spinner();
+    rclcpp::Node::SharedPtr node = std::make_shared<rclcpp::Node>("manipulator_menu", rclcpp::NodeOptions());
+
+    auto menu = std::make_shared<ManipulatorMenu>(node);
+    menu->spinner();
 
     rclcpp::shutdown();
 
