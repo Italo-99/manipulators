@@ -29,7 +29,6 @@
 
 #include "motors_trajectory/srv/roboti_q_gripper_control.hpp"
 #include "manipulator_interfaces/srv/coppelia_menu.hpp"
-#include "manipulator_interfaces/srv/attached_collision_object.hpp"
 #include "manipulator_interfaces/srv/inv_kine.hpp"
 #include "manipulator_interfaces/srv/pseudo_inverse.hpp"
 #include "manipulator_interfaces/srv/f_kine.hpp"

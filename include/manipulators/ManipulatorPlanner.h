@@ -18,8 +18,6 @@
 #include "manipulator_interfaces/srv/jacobian.hpp"
 #include "manipulator_interfaces/srv/change_planner_parameters.hpp"
 #include "manipulator_interfaces/srv/pseudo_inverse.hpp"
-#include "manipulator_interfaces/srv/attached_collision_object.hpp"
-#include "manipulator_interfaces/msg/collision_object.hpp"
 
 class ManipulatorPlannerNode : public rclcpp::Node {
     public:
@@ -163,7 +161,6 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Service<manipulator_interfaces::srv::Jacobian>::SharedPtr jacobian_service_;
         rclcpp::Service<manipulator_interfaces::srv::PseudoInverse>::SharedPtr pseudoInverse_service_;
         rclcpp::Service<manipulator_interfaces::srv::ChangePlannerParameters>::SharedPtr changePlannerParams_service_;
-        rclcpp::Service<manipulator_interfaces::srv::AttachedCollisionObject>::SharedPtr attachedCollisionObject_service_;
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr instantKineSetter_service_;
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jointsRealTimeSetter_service_;
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jacobianControlSetter_service_;

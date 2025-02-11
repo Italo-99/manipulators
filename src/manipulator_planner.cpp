@@ -516,6 +516,8 @@ void ManipulatorPlannerNode::jointGoal_callback(const sensor_msgs::msg::JointSta
         msg: Joint goal positions
     */
 
+    RCLCPP_INFO(this->get_logger(), "Received joint goal");
+
     dynamic_planner_->stop(); //Stop the execution of the current trajectory (if any)
     
     dynamic_planner_->plan(msg->position);

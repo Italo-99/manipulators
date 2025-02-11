@@ -44,3 +44,35 @@ Some useful instructions for new ROS2 use.
 
     ros2 topic pub --once /move_group/fake_controller_joint_states sensor_msgs/msg/JointState "{header: {}, name: ["joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6"], 
     position: [0.0, -0.6, -0.35, 0.0, -0.45, 0.0]}"
+
+## Setup TODO
+   
+### 1. Pre-requisites
+ - Ubuntu 22.04 (LTS)
+ - Ros 2 Humble
+ - Moveit2 installed [(Guide)](https://moveit.picknik.ai/main/doc/tutorials/getting_started/getting_started.html)
+
+### 2. Creating the workspace
+
+    mkdir manipulators_ws
+    cd manipulators_ws
+    mkdir src
+    colcon build
+
+### 3. Downloading the packages
+
+Inside the src folder of your workspace:
+
+    git clone https://github.com/Italo-99/manipulators.git -b ros2-humble
+    git clone https://github.com/Italo-99/motors_trajectory.git -b ros2-devel
+    git clone https://github.com/UniversalRobots/Universal_Robots_ROS2_Description.git -b humble ur_description
+    git clone https://github.com/Projectredunimore/manipulator_interfaces.git
+
+Download the ur drivers repository to wherever you want on your system, then only the ur_moveit_config package will be needed:
+
+    git clone https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver -b humble
+    mv Universal_Robots_ROS2_Driver/ur_moveit_config <WORKSPACE_PATH>/src/ur_moveit_config
+
+
+
+    

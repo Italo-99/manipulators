@@ -27,6 +27,20 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
 
     move_group_->startStateMonitor();
 
+    joints_names_group_ = move_group_->getJointNames();
+
+    joints_values_group_.resize(joints_names_group_.size());  // Adjust joints values array size
+    joints_speed_group_.resize(joints_names_group_.size());  // Adjust joints values array size
+
+    // Initialize joints map for robot state update: per each joint name, set its value to 0
+    for (const std::string& name : joints_names_group_)
+    {
+        RCLCPP_INFO(node_->get_logger(), "Joint name: %s", name.c_str());
+        joints_map_group_[name] = 0.;
+        dq_jts_map_group_[name] = 0.;
+    }
+
+
     //Fetch robot state
     robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>(node_);
     robot_model_ = robot_model_loader_->getModel();
@@ -122,6 +136,7 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
     
     moveit::planning_interface::MoveGroupInterface::Plan plan;
     moveit::core::MoveItErrorCode error = move_group_->plan(plan);
+
     if (error != moveit::core::MoveItErrorCode::SUCCESS)
     {
         RCLCPP_ERROR(node_->get_logger(), "Planning failed with error code: %d", error.val);
@@ -129,6 +144,7 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
         trajectory_res_pub_->publish(result_msg);
         return;
     }
+
     moveit_msgs::msg::RobotTrajectory trajectory = plan.trajectory_;
 
     bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
@@ -564,45 +580,48 @@ void DynamicPlanner::stop_callback(const std_msgs::msg::Bool::SharedPtr msg)
     }
 }
 
-void DynamicPlanner::jointsState_callback(const sensor_msgs::msg::JointState::SharedPtr &joints_state)
-{
-  // Map to store couples joint name - joint values
-  static std::unordered_map<std::string, double>::iterator it;
-  uint counter_group  = 0;
-
-  for (uint i = 0; i < joints_state->name.size(); i++)
-  {
-    // Look for joints group names within joints current state
-    it = joints_map_group_.find(joints_state->name[i]);
-    // Exclude last link (gripper) from the search
-    if (it != joints_map_group_.end())
+    void DynamicPlanner::jointsState_callback(const sensor_msgs::msg::JointState::SharedPtr &joints_state)
     {
-      // At the second position of the iteration, insert current joint position and velocity
-      it->second = joints_state->position[i];
-      
-      // Insert the joint velocity into a velocity map (assuming you have dq_jts_map_group_ for velocities)
-      dq_jts_map_group_[it->first] = (i < joints_state->velocity.size()) ? joints_state->velocity[i] : 0.0;
+    // Map to store couples joint name - joint values
+    static std::unordered_map<std::string, double>::iterator it;
+    uint counter_group  = 0;
 
-      // Increment the number of joints received from the joints state subscriber
-      counter_group++;
+    for (uint i = 0; i < joints_state->name.size(); i++)
+    {
+        // Look for joints group names within joints current state
+        it = joints_map_group_.find(joints_state->name[i]);
 
-      // If we have reached the last joint of the group
-      if (counter_group == joints_names_group_.size())
-      {
-        // Iterate over the joints
-        for (uint k = 0; k < joints_names_group_.size(); k++)
+        if (it != joints_map_group_.end()) //Check if joint has been found in planning group
         {
-          // Store the joints values from the joints map
-          joints_values_group_[k] = joints_map_group_[joints_names_group_[k]];
-          joints_speed_group_[k]  = dq_jts_map_group_[joints_names_group_[k]];
-        }
+            // At the second position of the iteration, insert current joint position and velocity
+            it->second = joints_state->position[i];
+            
+            // Insert the joint velocity into a velocity map (assuming you have dq_jts_map_group_ for velocities)
+            dq_jts_map_group_[it->first] = (i < joints_state->velocity.size()) ? joints_state->velocity[i] : 0.0;
 
-        // Log gripper planning group
-        RCLCPP_INFO(node_->get_logger(), "%s joints values received.", planning_group_.c_str());
-        joints_group_received_ = true;
-      }
+            // Increment the number of joints received from the joints state subscriber
+            counter_group++;
+
+            // If we have reached the last joint of the group
+            if (counter_group == joints_names_group_.size())
+            {
+                // Iterate over the joints
+                for (uint k = 0; k < joints_names_group_.size(); k++)
+                {
+                    // Store the joints values from the joints map
+                    joints_values_group_[k] = joints_map_group_[joints_names_group_[k]];
+                    joints_speed_group_[k]  = dq_jts_map_group_[joints_names_group_[k]];
+                }
+
+                // Log gripper planning group
+                if (!isReady())
+                {
+                    RCLCPP_INFO(node_->get_logger(), "%s joints values received, planner is ready.", planning_group_.c_str());
+                }
+                joints_group_received_ = true;
+            }
+        }
     }
-  }
 }
 
 void DynamicPlanner::trajpoint_callback(const std_msgs::msg::UInt32::SharedPtr msg)
@@ -753,30 +772,37 @@ void DynamicPlanner::mergeTrajectory(moveit_msgs::msg::RobotTrajectory &new_traj
 
 bool DynamicPlanner::checkJointDiff(const std::vector<double>& final_position)
 {
-  // Set a reasonable threshold 
-  double th = 0.0001;
-  // Counter check: it's increased by 1 if two joint positions are similar
-  unsigned long counter_check = 0;
-  // Iterate above all joints
-  for(uint k = 0; k < final_position.size(); k++)
-  {
-    // If current and goal single joint position are similar
-    if ((joints_values_group_[k] - final_position[k] < +th) && 
-        (joints_values_group_[k] - final_position[k] > -th))
+    // Set a reasonable threshold 
+    double th = 0.0001;
+    // Counter check: it's increased by 1 if two joint positions are similar
+    unsigned long counter_check = 0;
+    // Iterate above all joints
+
+    if (!isReady()){
+        RCLCPP_ERROR(node_->get_logger(), "Unable to check joint difference: joints group not received.");
+        return false;
+    }
+    
+    for(unsigned long k = 0; k < final_position.size(); k++)
     {
-      counter_check++;  // Increment counter check
-    }    
-  }
-  if (counter_check == joints_values_group_.size())
-  {
-    RCLCPP_WARN(node_->get_logger(), "User input error: sent goal state is near or equal to current joint pose.");
-    RCLCPP_WARN(node_->get_logger(), "Checked %ld out of %ld joints equal to current position.",counter_check,final_position.size());
-    return true;
-  }
-  else
-  {
-    return false;
-  }  
+        RCLCPP_INFO(node_->get_logger(), "Joint %ld: current %.4f, goal %.4f", k, joints_values_group_[k], final_position[k]);
+        // If current and goal single joint position are similar
+        if ((joints_values_group_[k] - final_position[k] < +th) && 
+            (joints_values_group_[k] - final_position[k] > -th))
+        {
+            counter_check++;  // Increment counter check
+        }    
+    }
+    if (counter_check == joints_values_group_.size())
+    {
+        RCLCPP_WARN(node_->get_logger(), "User input error: sent goal state is near or equal to current joint pose.");
+        RCLCPP_WARN(node_->get_logger(), "Checked %ld out of %ld joints equal to current position.",counter_check,final_position.size());
+        return true;
+    }
+    else
+    {
+        return false;
+    }  
 }
 
 void DynamicPlanner::updatePlannerParams()
