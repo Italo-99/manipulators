@@ -15,6 +15,7 @@ include_directories(include)
 # Find dependencies
 find_package(moveit_common REQUIRED)
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -118,6 +119,11 @@ ament_export_include_directories(include)
 # install(TARGETS manipulator_planner
 #   DESTINATION lib/${PROJECT_NAME}
 # )
+
+# ---------------- LAUNCH UTILS -----------------
+
+ament_python_install_package(${PROJECT_NAME})
+ament_python_install_module(${PROJECT_NAME}/launch_utils.py)
 
 # ---------------- MANIPULATOR PLANNER -----------------
 

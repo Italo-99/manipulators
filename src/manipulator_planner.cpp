@@ -157,6 +157,11 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     j5_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name + "/" + joint_names[5] + "/motor_control", 1);
 }
 
+ManipulatorPlannerNode::~ManipulatorPlannerNode() {
+    // Stop the spinner thread
+    executor_.cancel();
+}
+
 void ManipulatorPlannerNode::spinner() {
     unsigned long long int num_samples = 0; // Number of samples for the mean time calculation
 
@@ -843,7 +848,7 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("ee_name", "tool_0");
     this->declare_parameter("base_link", "base_link");
     this->declare_parameter("sample_time", 0.002);
-    this->declare_parameter("world_frame", "world");
+    this->declare_parameter("world_frame", "base_link");
     this->declare_parameter("vel_factor", 1.0);
     this->declare_parameter("acc_factor", 1.0);
     this->declare_parameter("ros_freq", 500);
@@ -857,7 +862,7 @@ void ManipulatorPlannerNode::declareParameters() {
  
 void ManipulatorPlannerNode::initializePlanner() {
     //Initialize the dynamic planner
-    auto move_group_interface_node = std::make_shared<rclcpp::Node>("dynamic_planner_node");
+    auto move_group_interface_node = std::make_shared<rclcpp::Node>("dynamic_planner_node", rclcpp::NodeOptions());
     executor_.add_node(move_group_interface_node);
     dynamic_planner_ = std::make_shared<DynamicPlanner>(move_group_interface_node,
                                                         this->get_parameter("planning_group").as_string(),

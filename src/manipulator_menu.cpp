@@ -3,42 +3,36 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(const rclcpp::Node::SharedPtr& node) 
-    : node_(node), coppelia_req_(std::make_shared<manipulator_interfaces::srv::CoppeliaMenu::Request>())
+ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::Node::SharedPtr& node) 
+    : params_(params), node_(node), coppelia_req_(std::make_shared<manipulator_interfaces::srv::CoppeliaMenu::Request>())
 {
-    declareParameters();
-
-    std::vector<std::string> joint_names = node_->get_parameter("joint_names").as_string_array();
-    std::string manipulator_name = node_->get_parameter("manipulator_name").as_string();
-    std::string ee_joint_name = node_->get_parameter("ee_joint_name").as_string();
-
     // Display Manipulator
     RCLCPP_INFO(node_->get_logger(), "Manipulator menu initialized with the following setup:");
-    RCLCPP_INFO(node_->get_logger(), "Manipulator name: %s", manipulator_name.c_str());
+    RCLCPP_INFO(node_->get_logger(), "Manipulator name: %s", params_.manipulator_name.c_str());
 
-    for (unsigned long k = 0; k< joint_names.size(); k++)
+    for (unsigned long k = 0; k< params_.joint_names.size(); k++)
     {
-        RCLCPP_INFO(node_->get_logger(), "Joint %ld name: %s", k, joint_names[k].c_str());
+        RCLCPP_INFO(node_->get_logger(), "Joint %ld name: %s", k, params_.joint_names[k].c_str());
     }
 
     // Init arrays
-    for (const std::string& name : joint_names) {
+    for (const std::string& name : params_.joint_names) {
         joints_map_group_[name] = 0.;
     }
 
-    joints_values_group_.resize(joint_names.size());
-    current_joint_pose_.name      = joint_names;
+    joints_values_group_.resize(params_.joint_names.size());
+    current_joint_pose_.name      = params_.joint_names;
 
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
-    jointGoalPublisher_           = node_->create_publisher<sensor_msgs::msg::JointState>(manipulator_name+"/joint_goal", 1);
-    tcpPosePublisher_             = node_->create_publisher<geometry_msgs::msg::Pose>(manipulator_name+"/tcp_goal", 1);
-    tcpPoseIKPublisher_           = node_->create_publisher<geometry_msgs::msg::Pose>(manipulator_name+"/desired_tcpIK_pose", 1);
-    carthesianMovePublisher_      = node_->create_publisher<geometry_msgs::msg::PoseArray>(manipulator_name+"/desired_cartesian_move", 1);
-    display_goal_pub_             = node_->create_publisher<geometry_msgs::msg::PoseStamped>(manipulator_name+"/display_robot_goal", 1);
-    eepose_pub_                   = node_->create_publisher<geometry_msgs::msg::PoseStamped>(manipulator_name+"/display_ee_pose", 1);
-    collisionObjectPublisher_     = node_->create_publisher<moveit_msgs::msg::CollisionObject>(manipulator_name+"/collision_object", 1);
-    collisionAttObjectPublisher_  = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(manipulator_name+"/attached_collision_object", 1);
-    moveGripperPublisher_         = node_->create_publisher<std_msgs::msg::Float64>(ee_joint_name+"/motor_control", 1);
+    jointGoalPublisher_           = node_->create_publisher<sensor_msgs::msg::JointState>(params_.manipulator_name+"/joint_goal", 1);
+    tcpPosePublisher_             = node_->create_publisher<geometry_msgs::msg::Pose>(params_.manipulator_name+"/tcp_goal", 1);
+    tcpPoseIKPublisher_           = node_->create_publisher<geometry_msgs::msg::Pose>(params_.manipulator_name+"/desired_tcpIK_pose", 1);
+    carthesianMovePublisher_      = node_->create_publisher<geometry_msgs::msg::PoseArray>(params_.manipulator_name+"/desired_cartesian_move", 1);
+    display_goal_pub_             = node_->create_publisher<geometry_msgs::msg::PoseStamped>(params_.manipulator_name+"/display_robot_goal", 1);
+    eepose_pub_                   = node_->create_publisher<geometry_msgs::msg::PoseStamped>(params_.manipulator_name+"/display_ee_pose", 1);
+    collisionObjectPublisher_     = node_->create_publisher<moveit_msgs::msg::CollisionObject>(params_.manipulator_name+"/collision_object", 1);
+    collisionAttObjectPublisher_  = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(params_.manipulator_name+"/attached_collision_object", 1);
+    moveGripperPublisher_         = node_->create_publisher<std_msgs::msg::Float64>(params_.ee_joint_name+"/motor_control", 1);
 
     jointStateSubscriber_ = node_->create_subscription<sensor_msgs::msg::JointState>(
         "/joint_states", 1, 
@@ -48,30 +42,30 @@ ManipulatorMenu::ManipulatorMenu(const rclcpp::Node::SharedPtr& node)
     );
 
     // --------------------- Kinematics client init ---------------------
-    invKineClient_                = node_->create_client<manipulator_interfaces::srv::InvKine>(manipulator_name+"/get__invkine");
-    pseudoInvClient_              = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(manipulator_name+"/get_pseudo_inverse");
-    fKineClient_                  = node_->create_client<manipulator_interfaces::srv::FKine>(manipulator_name+"/get_fkine");
-    jacobianClient_               = node_->create_client<manipulator_interfaces::srv::Jacobian>(manipulator_name+"/get_jacobian");
+    invKineClient_                = node_->create_client<manipulator_interfaces::srv::InvKine>(params_.manipulator_name+"/get__invkine");
+    pseudoInvClient_              = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(params_.manipulator_name+"/get_pseudo_inverse");
+    fKineClient_                  = node_->create_client<manipulator_interfaces::srv::FKine>(params_.manipulator_name+"/get_fkine");
+    jacobianClient_               = node_->create_client<manipulator_interfaces::srv::Jacobian>(params_.manipulator_name+"/get_jacobian");
 
-    setInstKineClient_            = node_->create_client<std_srvs::srv::SetBool>(manipulator_name+"/instKine_setter");
-    setJacobianControlClient_     = node_->create_client<std_srvs::srv::SetBool>(manipulator_name+"/jacobian_control_setter");
-    setRealTimeControlClient_     = node_->create_client<std_srvs::srv::SetBool>(manipulator_name+"/joints_real_time_setter");
-    plannerParamsClient_          = node_->create_client<manipulator_interfaces::srv::ChangePlannerParameters>(manipulator_name+"/change_planner_params");
+    setInstKineClient_            = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/instKine_setter");
+    setJacobianControlClient_     = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/jacobian_control_setter");
+    setRealTimeControlClient_     = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
+    plannerParamsClient_          = node_->create_client<manipulator_interfaces::srv::ChangePlannerParameters>(params_.manipulator_name+"/change_planner_params");
 
     // --------------------- CoppeliaSim client init ---------------------
-    if (node_->get_parameter("enable_coppelia").as_bool())
+    if (params_.enable_coppelia)
     {
         coppeliaClient_ = node_->create_client<manipulator_interfaces::srv::CoppeliaMenu>("coppelia_menu");
     }   
 
     // --------------------- Gripper client init ---------------------
-    if (ee_joint_name != "" && node_->get_parameter("enable_sim_gripper").as_bool() == true)
+    if (params_.ee_joint_name != "" && params_.enable_sim_gripper == true)
     {
-        grab_client_    = node_->create_client<std_srvs::srv::SetBool>(ee_joint_name+"/grabbing_gripper");
-        gripper_client_ = node_->create_client<std_srvs::srv::SetBool>(ee_joint_name+"/move_gripper");
+        grab_client_    = node_->create_client<std_srvs::srv::SetBool>(params_.ee_joint_name+"/grabbing_gripper");
+        gripper_client_ = node_->create_client<std_srvs::srv::SetBool>(params_.ee_joint_name+"/move_gripper");
 
-        if (node_->get_parameter("enable_real_gripper").as_bool()){
-            real_gripper_client_ = node_->create_client<motors_trajectory::srv::RobotiQGripperControl>(node_->get_parameter("gripper_topic").as_string());
+        if (params_.enable_real_gripper){
+            real_gripper_client_ = node_->create_client<motors_trajectory::srv::RobotiQGripperControl>(params_.gripper_topic);
         }
     }
 }
@@ -115,8 +109,7 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
 
 Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
 {
-    std::vector<std::string> joint_names = node_->get_parameter("joint_names").as_string_array(); 
-    Eigen::MatrixXd matrix(joint_names.size(), 6);
+    Eigen::MatrixXd matrix(params_.joint_names.size(), 6);
 
     auto request = std::make_shared<manipulator_interfaces::srv::PseudoInverse::Request>();
 
@@ -136,11 +129,11 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
     {
         // RCLCPP_INFO(node_->get_logger(), "Pseudoinverse matrix received:");
         // Assign data from Float64[] to Eigen::MatrixXd
-        for (unsigned long i = 0; i < joint_names.size(); ++i)
+        for (unsigned long i = 0; i < params_.joint_names.size(); ++i)
         {
             for (int j = 0; j < 6; ++j)
             {
-                matrix(i, j) = response.get()->matrix_values[i * joint_names.size() + j];
+                matrix(i, j) = response.get()->matrix_values[i * params_.joint_names.size() + j];
             }
         }
     }
@@ -184,8 +177,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::getCurrentFKineClient()
 
 Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 {
-    std::vector<std::string> joint_names = node_->get_parameter("joint_names").as_string_array(); 
-    Eigen::MatrixXd matrix(joint_names.size(), 6);
+    Eigen::MatrixXd matrix(params_.joint_names.size(), 6);
 
     auto request = std::make_shared<manipulator_interfaces::srv::Jacobian::Request>();
 
@@ -205,11 +197,11 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
     {
         // RCLCPP_INFO(node_->get_logger(), "jacobian matrix received:");
         // Assign data from Float64[] to Eigen::MatrixXd
-        for (unsigned long i = 0; i < joint_names.size(); ++i)
+        for (unsigned long i = 0; i < params_.joint_names.size(); ++i)
         {
             for (int j = 0; j < 6; ++j)
             {
-                matrix(i, j) = response.get()->matrix_values[i * joint_names.size() + j];
+                matrix(i, j) = response.get()->matrix_values[i * params_.joint_names.size() + j];
             }
         }
     }
@@ -227,7 +219,7 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 void ManipulatorMenu::spinner()
 {
     // Setup a rate for ROS loop execution
-    rclcpp::Rate r(node_->get_parameter("spinner_rate").as_int());
+    rclcpp::Rate r(params_.ros_freq);
 
     // ROS loop
     while (rclcpp::ok())
@@ -340,7 +332,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(const geometry_msgs::ms
 
     // Display the goal on RViz
     geometry_msgs::msg::PoseStamped robot_goal_msg;
-    robot_goal_msg.header.frame_id = node_->get_parameter("base_link_name").as_string();
+    robot_goal_msg.header.frame_id = params_.base_link_name;
     robot_goal_msg.header.stamp = node_->get_clock()->now();
     robot_goal_msg.pose = tcpPoseMsg,
 
@@ -371,7 +363,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::
 
     // Display the goal on RViz
     geometry_msgs::msg::PoseStamped robot_goal_msg;
-    robot_goal_msg.header.frame_id = node_->get_parameter("base_link_name").as_string();
+    robot_goal_msg.header.frame_id = params_.base_link_name;
     robot_goal_msg.header.stamp = node_->get_clock()->now();
     robot_goal_msg.pose = tcpPoseMsg;
 
@@ -395,7 +387,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::publishCartesianMove(const uint axis1,
     geometry_msgs::msg::PoseArray waypoints;
     geometry_msgs::msg::Pose final_pose;
 
-    waypoints.header.frame_id = node_->get_parameter("base_link_name").as_string();
+    waypoints.header.frame_id = params_.base_link_name;
     double step_axisX = 0.;
     double step_axisY = 0.;
     double step_axisZ = 0.;
@@ -491,7 +483,7 @@ sensor_msgs::msg::JointState ManipulatorMenu::oneJointMove(const int num, const 
     rclcpp::spin_some(node_->shared_from_this());
     // Fill current joints pose as target
     std::vector<double> joint_target;
-    for (unsigned long k = 0; k < node_->get_parameter("joint_names").as_string_array().size(); k++)
+    for (unsigned long k = 0; k < params_.joint_names.size(); k++)
     {
         joint_target.push_back(current_joint_pose_.position[k] * 180 / M_PI);
     }
@@ -512,9 +504,9 @@ sensor_msgs::msg::JointState ManipulatorMenu::goHome(const bool ee_orient)
     {
         start_joint_pose = {0., -90., -90., 0., +90., 0.};
     }
-    if (node_->get_parameter("joint_names").as_string_array().size() != 6)
+    if (params_.joint_names.size() != 6)
     {
-        for (unsigned long k = 0; k < node_->get_parameter("joint_names").as_string_array().size() - 6; k++)
+        for (unsigned long k = 0; k < params_.joint_names.size() - 6; k++)
         {
             start_joint_pose.push_back(0.);
         }
@@ -571,7 +563,7 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &source
 geometry_msgs::msg::Pose ManipulatorMenu::getEEpose()
 {
     // Compute the FKine between base_link and end-effector
-    current_tcp_pose_.header.frame_id = node_->get_parameter("base_link_name").as_string();
+    current_tcp_pose_.header.frame_id = params_.base_link_name;
     current_tcp_pose_.pose = getCurrentFKineClient();
     eepose_pub_->publish(current_tcp_pose_);
     return current_tcp_pose_.pose;
@@ -716,7 +708,7 @@ void ManipulatorMenu::addObj(const std::string &name,
     // Creation of the obj
     moveit_msgs::msg::CollisionObject obj;
 
-    obj.header.frame_id = node_->get_parameter("base_link_name").as_string();
+    obj.header.frame_id = params_.base_link_name;
     obj.id = name;
     obj.primitives.resize(1);
     obj.primitives[0].type = obj_type;
@@ -798,7 +790,7 @@ void ManipulatorMenu::addAttachedObj(const std::string &name,
     // Creation of the obj
     moveit_msgs::msg::CollisionObject obj;
 
-    obj.header.frame_id = node_->get_parameter("base_link_name").as_string();
+    obj.header.frame_id = params_.base_link_name;
     obj.id = name;
     obj.primitives.resize(1);
     obj.primitives[0].type = obj_type;
@@ -1064,18 +1056,6 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
 
 // --------------------- PRIVATE FUNCTIONS ---------------------
 
-void ManipulatorMenu::declareParameters() {
-    node_->declare_parameter("manipulator_name", std::string());
-    node_->declare_parameter("joint_names", std::vector<std::string>());
-    node_->declare_parameter("ee_joint_name", "");
-    node_->declare_parameter("base_link_name", "base_link");
-    node_->declare_parameter("ros_freq", 500);
-    node_->declare_parameter("enable_coppelia", false);
-    node_->declare_parameter("enable_sim_gripper", false);
-    node_->declare_parameter("enable_real_gripper", false);
-    node_->declare_parameter("gripper_topic", "/ur_rtde/robotiq_gripper/command");
-}
-
 // --------------------- COPPELIA HANDLER ---------------------
 
 // Send the request to coppelia and wait for the response
@@ -1112,7 +1092,7 @@ void ManipulatorMenu::userJointGoal()
     // Take user degree angle for each joint
     std::cout << "Enter the values of the joint goal in degrees: \n";
 
-    for (unsigned long k = 0; k < node_->get_parameter("joint_names").as_string_array().size(); k++)
+    for (unsigned long k = 0; k < params_.joint_names.size(); k++)
     {
         double new_joint_value = 0.;
         std::cout << "Joint " << k + 1 << " : ";
@@ -1127,7 +1107,7 @@ void ManipulatorMenu::oneJointMove_user()
 {
     int num = 0;
     double joint_rot = 0.0;
-    std::cout << "Enter the joint to move in [0, " << node_->get_parameter("joint_names").as_string_array().size() - 1 << "]: \n";
+    std::cout << "Enter the joint to move in [0, " << params_.joint_names.size() - 1 << "]: \n";
     std::cin >> num;
     std::cout << "Enter the rotation of the joint in deg: \n";
     std::cin >> joint_rot;
@@ -1221,7 +1201,7 @@ void ManipulatorMenu::userCartesianMove()
 void ManipulatorMenu::jointStateVisualizer()
 {
     rclcpp::spin_some(node_->shared_from_this());
-    for (unsigned long k = 0; k < node_->get_parameter("joint_names").as_string_array().size(); k++)
+    for (unsigned long k = 0; k < params_.joint_names.size(); k++)
     {
         std::cout << "Joint " << k << " : " << current_joint_pose_.position[k] * 180 / M_PI << std::endl;
     }
@@ -1231,7 +1211,6 @@ void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::Sha
 {
 
     // Map to store couples joint name - joint values
-    std::vector<std::string> joint_names = node_->get_parameter("joint_names").as_string_array();
     static std::unordered_map<std::string, double>::iterator it;
     uint counter_group = 0;
 
@@ -1249,17 +1228,17 @@ void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::Sha
             counter_group++;
 
             // If we have reached the last joint of the group
-            if (counter_group == joint_names.size())
+            if (counter_group == params_.joint_names.size())
             {
                 // Iterate over the joints
-                for (unsigned long k = 0; k < joint_names.size(); k++)
+                for (unsigned long k = 0; k < params_.joint_names.size(); k++)
                 {
                     // Store the joints values from the joints map
-                    joints_values_group_[k] = joints_map_group_[joint_names[k]];
+                    joints_values_group_[k] = joints_map_group_[params_.joint_names[k]];
                 }
 
                 // Log gripper planning group
-                RCLCPP_INFO_ONCE(node_->get_logger(), "%s joints values received by the menu interface.", node_->get_parameter("manipulator_name").as_string().c_str());
+                RCLCPP_INFO_ONCE(node_->get_logger(), "%s joints values received by the menu interface.", params_.manipulator_name.c_str());
             }
         }
     }
@@ -1653,14 +1632,14 @@ void ManipulatorMenu::printMenu()
     std::cout << "20.Go to home position (gripper at the front)\n";
     std::cout << "\n======= Cartesian move =======\n";
     std::cout << "21.Make a cartesian move\n";
-    if (node_->get_parameter("enable_coppelia").as_bool())
+    if (params_.enable_coppelia)
     {
         std::cout << "\n======= CoppeliaSim handling =======\n";
         std::cout << "22. To start twin Coppelia simulation\n";
         std::cout << "23. To stop  twin Coppelia simulation\n";
         std::cout << "24. To save  twin CoppeliaSim scene\n";
     }
-    if (node_->get_parameter("enable_sim_gripper").as_bool())
+    if (params_.enable_sim_gripper)
     {
         std::cout << "\n======= Fake gripper control =======\n";
         std::cout << "25.Open the gripper\n";
@@ -1669,7 +1648,7 @@ void ManipulatorMenu::printMenu()
         std::cout << "28.Grab an object at the gripper\n";
         std::cout << "29.Detach an object from the gripper\n";
     }
-    if (node_->get_parameter("enable_real_gripper").as_bool())
+    if (params_.enable_real_gripper)
     {
         std::cout << "\n======= Real gripper control =======\n";
         std::cout << "30.Open  real gripper\n";

@@ -35,11 +35,30 @@
 #include "manipulator_interfaces/srv/jacobian.hpp"
 #include "manipulator_interfaces/srv/change_planner_parameters.hpp"
 
+
+struct ManipulatorMenuParams
+{
+    std::string node_name         = "manipulator_menu_node";
+    std::string ee_joint_name     = "";
+    double ros_freq               = 500;
+    std::string manipulator_name  = "manipulator";
+    bool enable_coppelia          = false;
+    bool enable_sim_gripper       = false;
+    bool enable_real_gripper      = false;
+    std::string gripper_topic     = "/ur_rtde/robotiq_gripper/command";
+    std::vector<std::string> joint_names = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
+                                            "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
+    std::string base_link_name    = "base_link";
+};
+
 class ManipulatorMenu
 {
  public:
   // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-    ManipulatorMenu(const rclcpp::Node::SharedPtr& node);
+    ManipulatorMenu(
+        ManipulatorMenuParams &params,
+        const rclcpp::Node::SharedPtr& node
+    );
 
     sensor_msgs::msg::JointState current_joint_pose_;
 
@@ -175,9 +194,9 @@ class ManipulatorMenu
         int   getUserChoice();
         void  processChoice(int choice);
 
-        void declareParameters();       // Declare the parameters for the node
-
   // --------------------- PRIVATE VARIABLES ---------------------
+
+    ManipulatorMenuParams params_;
 
     const rclcpp::Node::SharedPtr node_;
 

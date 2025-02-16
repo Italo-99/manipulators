@@ -61,6 +61,8 @@ class DynamicPlanner
                        const double acc_factor = 0.2,
                        bool dynamic_behavior = true);
 
+        ~DynamicPlanner();
+
         void initialize(); //Initialize the dynamic planner (vars, subscribers, publishers, ...)
         void spinner(); 
 
@@ -256,7 +258,7 @@ class DynamicPlanner
 
         //Default values for the 'plan' function
         std::string end_effector_link_ = "tool0";
-        std::string world_frame_ = "world";
+        std::string world_frame_ = "base_link";
 };
 
 #endif //DYNAMIC_PLANNER_H

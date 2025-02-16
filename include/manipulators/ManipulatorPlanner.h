@@ -21,7 +21,12 @@
 
 class ManipulatorPlannerNode : public rclcpp::Node {
     public:
-        ManipulatorPlannerNode(const std::string node_name, const rclcpp::NodeOptions &options);
+        ManipulatorPlannerNode(
+            const std::string node_name, 
+            const rclcpp::NodeOptions &options
+        );
+
+        ~ManipulatorPlannerNode();
 
         void spinner(); //Spins the main node and executor_ in a different thread
 

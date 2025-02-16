@@ -73,6 +73,15 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
     RCLCPP_INFO(node_->get_logger(), "DynamicPlanner initialized");
 }
 
+DynamicPlanner::~DynamicPlanner()
+{
+    RCLCPP_INFO(node_->get_logger(), "Destroying DynamicPlanner...");
+    move_group_.reset();
+    planning_scene_interface_.reset();
+    planning_scene_.reset();
+    robot_model_loader_.reset();
+}
+
 void DynamicPlanner::initialize()
 {
     // Publishers
@@ -785,7 +794,6 @@ bool DynamicPlanner::checkJointDiff(const std::vector<double>& final_position)
     
     for(unsigned long k = 0; k < final_position.size(); k++)
     {
-        RCLCPP_INFO(node_->get_logger(), "Joint %ld: current %.4f, goal %.4f", k, joints_values_group_[k], final_position[k]);
         // If current and goal single joint position are similar
         if ((joints_values_group_[k] - final_position[k] < +th) && 
             (joints_values_group_[k] - final_position[k] > -th))
