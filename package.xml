@@ -21,6 +21,10 @@
     <depend>manipulator_interfaces</depend>
     <depend>motors_trajectory</depend>
 
+    <depend>ur_description</depend>
+    <depend>ur_moveit_config</depend>
+    <depend>robotiq_85_description</depend>
+
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>
 

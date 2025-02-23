@@ -4,13 +4,13 @@
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
 ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::Node::SharedPtr& node) 
-    : params_(params), node_(node), coppelia_req_(std::make_shared<manipulator_interfaces::srv::CoppeliaMenu::Request>())
+    : params_(params), node_(node)
 {
     // Display Manipulator
     RCLCPP_INFO(node_->get_logger(), "Manipulator menu initialized with the following setup:");
     RCLCPP_INFO(node_->get_logger(), "Manipulator name: %s", params_.manipulator_name.c_str());
 
-    for (unsigned long k = 0; k< params_.joint_names.size(); k++)
+    for (unsigned long k = 0; k < params_.joint_names.size(); k++)
     {
         RCLCPP_INFO(node_->get_logger(), "Joint %ld name: %s", k, params_.joint_names[k].c_str());
     }
@@ -26,13 +26,9 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
     jointGoalPublisher_           = node_->create_publisher<sensor_msgs::msg::JointState>(params_.manipulator_name+"/joint_goal", 1);
     tcpPosePublisher_             = node_->create_publisher<geometry_msgs::msg::Pose>(params_.manipulator_name+"/tcp_goal", 1);
-    tcpPoseIKPublisher_           = node_->create_publisher<geometry_msgs::msg::Pose>(params_.manipulator_name+"/desired_tcpIK_pose", 1);
-    carthesianMovePublisher_      = node_->create_publisher<geometry_msgs::msg::PoseArray>(params_.manipulator_name+"/desired_cartesian_move", 1);
     display_goal_pub_             = node_->create_publisher<geometry_msgs::msg::PoseStamped>(params_.manipulator_name+"/display_robot_goal", 1);
-    eepose_pub_                   = node_->create_publisher<geometry_msgs::msg::PoseStamped>(params_.manipulator_name+"/display_ee_pose", 1);
     collisionObjectPublisher_     = node_->create_publisher<moveit_msgs::msg::CollisionObject>(params_.manipulator_name+"/collision_object", 1);
     collisionAttObjectPublisher_  = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(params_.manipulator_name+"/attached_collision_object", 1);
-    moveGripperPublisher_         = node_->create_publisher<std_msgs::msg::Float64>(params_.ee_joint_name+"/motor_control", 1);
 
     jointStateSubscriber_ = node_->create_subscription<sensor_msgs::msg::JointState>(
         "/joint_states", 1, 
@@ -42,32 +38,14 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     );
 
     // --------------------- Kinematics client init ---------------------
-    invKineClient_                = node_->create_client<manipulator_interfaces::srv::InvKine>(params_.manipulator_name+"/get__invkine");
+    invKineClient_                = node_->create_client<manipulator_interfaces::srv::InvKine>(params_.manipulator_name+"/get_invkine");
     pseudoInvClient_              = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(params_.manipulator_name+"/get_pseudo_inverse");
     fKineClient_                  = node_->create_client<manipulator_interfaces::srv::FKine>(params_.manipulator_name+"/get_fkine");
     jacobianClient_               = node_->create_client<manipulator_interfaces::srv::Jacobian>(params_.manipulator_name+"/get_jacobian");
 
-    setInstKineClient_            = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/instKine_setter");
     setJacobianControlClient_     = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/jacobian_control_setter");
     setRealTimeControlClient_     = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
     plannerParamsClient_          = node_->create_client<manipulator_interfaces::srv::ChangePlannerParameters>(params_.manipulator_name+"/change_planner_params");
-
-    // --------------------- CoppeliaSim client init ---------------------
-    if (params_.enable_coppelia)
-    {
-        coppeliaClient_ = node_->create_client<manipulator_interfaces::srv::CoppeliaMenu>("coppelia_menu");
-    }   
-
-    // --------------------- Gripper client init ---------------------
-    if (params_.ee_joint_name != "" && params_.enable_sim_gripper == true)
-    {
-        grab_client_    = node_->create_client<std_srvs::srv::SetBool>(params_.ee_joint_name+"/grabbing_gripper");
-        gripper_client_ = node_->create_client<std_srvs::srv::SetBool>(params_.ee_joint_name+"/move_gripper");
-
-        if (params_.enable_real_gripper){
-            real_gripper_client_ = node_->create_client<motors_trajectory::srv::RobotiQGripperControl>(params_.gripper_topic);
-        }
-    }
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
@@ -80,6 +58,7 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
     auto request = std::make_shared<manipulator_interfaces::srv::InvKine::Request>();
     request->target_pose = pose;
 
+    // Wait for the service to be available
     while (!invKineClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
@@ -89,23 +68,26 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
         RCLCPP_INFO(node_->get_logger(), "invKine service not available, waiting again...");
     }
 
-    auto response = invKineClient_->async_send_request(request);
+    // Send the request asynchronously
+    auto response_future = invKineClient_->async_send_request(request);
 
-    // Call the srv
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    // Wait until the future is completed
+    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
     {
-        for (unsigned long k = 0; k < response.get()->joint_values.size(); k++)
-        {
-            joint_values.push_back(response.get()->joint_values[k]);
-        }
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call invKine service");
+        return joint_values;
     }
-    else
+
+    // If the service call was successful, process the response
+    auto response = response_future.get();
+    for (unsigned long k = 0; k < response->joint_values.size(); ++k)
     {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service invKine");
+        joint_values.push_back(response->joint_values[k]);
     }
 
     return joint_values;
 }
+
 
 Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
 {
@@ -113,6 +95,7 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
 
     auto request = std::make_shared<manipulator_interfaces::srv::PseudoInverse::Request>();
 
+    // Wait for the service to be available
     while (!pseudoInvClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
@@ -122,25 +105,19 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
         RCLCPP_INFO(node_->get_logger(), "pseudoInverse service not available, waiting again...");
     }
 
-    auto response = pseudoInvClient_->async_send_request(request);
+    // Send the request asynchronously
+    auto response_future = pseudoInvClient_->async_send_request(request);
 
+    // Wait until the future is completed
+    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call pseudoInverse service");
+        return matrix;
+    }
 
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
-    {
-        // RCLCPP_INFO(node_->get_logger(), "Pseudoinverse matrix received:");
-        // Assign data from Float64[] to Eigen::MatrixXd
-        for (unsigned long i = 0; i < params_.joint_names.size(); ++i)
-        {
-            for (int j = 0; j < 6; ++j)
-            {
-                matrix(i, j) = response.get()->matrix_values[i * params_.joint_names.size() + j];
-            }
-        }
-    }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service pseudoInverse");
-    }
+    // If the service call was successful, process the response
+    auto response = response_future.get();
+    listToMatrix(response->matrix_values, matrix);
 
     return matrix;
 }
@@ -151,6 +128,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::getCurrentFKineClient()
 
     auto request = std::make_shared<manipulator_interfaces::srv::FKine::Request>();
 
+    // Wait for the service to be available
     while (!fKineClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
@@ -160,20 +138,23 @@ geometry_msgs::msg::Pose ManipulatorMenu::getCurrentFKineClient()
         RCLCPP_INFO(node_->get_logger(), "fKine service not available, waiting again...");
     }
 
-    auto response = fKineClient_->async_send_request(request);
+    // Send the request asynchronously
+    auto response_future = fKineClient_->async_send_request(request);
 
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    // Wait until the future is completed
+    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
     {
-        // RCLCPP_INFO(node_->get_logger(), "Forward Kinematics Pose received:");
-        // ROS_INFO_STREAM(fKine_srv_.response.tcp_pose);
-        pose = response.get()->tcp_pose.pose;
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call getCurrentFKine service");
+        return pose;
     }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service getCurrentFKine");
-    }
+
+    // If the service call was successful, process the response
+    auto response = response_future.get();
+    pose = response->tcp_pose.pose;
+
     return pose;
 }
+
 
 Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 {
@@ -181,39 +162,105 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 
     auto request = std::make_shared<manipulator_interfaces::srv::Jacobian::Request>();
 
+    // Wait for the service to be available
     while (!jacobianClient_->wait_for_service(std::chrono::seconds(1)))
     {
-        if (!rclcpp::ok()){
+        if (!rclcpp::ok()) {
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return matrix;
         }
-        RCLCPP_INFO(node_->get_logger(), "jacobian service not available, waiting again...");
+        RCLCPP_INFO(node_->get_logger(), "Jacobian service not available, waiting again...");
     }
 
-    auto response = jacobianClient_->async_send_request(request);
+    // Send the request asynchronously and get the response
+    auto response_future = jacobianClient_->async_send_request(request);
 
-
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    // Wait until the future is completed
+    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
     {
-        // RCLCPP_INFO(node_->get_logger(), "jacobian matrix received:");
-        // Assign data from Float64[] to Eigen::MatrixXd
-        for (unsigned long i = 0; i < params_.joint_names.size(); ++i)
-        {
-            for (int j = 0; j < 6; ++j)
-            {
-                matrix(i, j) = response.get()->matrix_values[i * params_.joint_names.size() + j];
-            }
-        }
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call Jacobian service");
+        return matrix;
     }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service jacobian");
-    }
+
+    // If we reached this point, the response is valid, so process it
+    auto response = response_future.get();
+
+    // Assign data from Float64[] to Eigen::MatrixXd
+    listToMatrix(response->matrix_values, matrix);
 
     return matrix;
 }
 
+// --------------------- SUBSCRIBERS CALLBACKS ---------------------
+
+void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr &joints_state)
+{
+
+    // Map to store couples joint name - joint values
+    static std::unordered_map<std::string, double>::iterator it;
+    uint counter_group = 0;
+
+    for (uint i = 0; i < joints_state->name.size(); i++)
+    {
+        // Look for joints group names within joints current state
+        it = joints_map_group_.find(joints_state->name[i]);
+        // Exclude last link (gripper) from the search
+        if (it != joints_map_group_.end())
+        {
+            // At the second position of the iteration, insert current joint position and velocity
+            it->second = joints_state->position[i];
+
+            // Increment the number of joints received from the joints state subscriber
+            counter_group++;
+
+            // If we have reached the last joint of the group
+            if (counter_group == params_.joint_names.size())
+            {
+                // Iterate over the joints
+                for (unsigned long k = 0; k < params_.joint_names.size(); k++)
+                {
+                    // Store the joints values from the joints map
+                    joints_values_group_[k] = joints_map_group_[params_.joint_names[k]];
+                }
+
+                // Log gripper planning group
+                RCLCPP_INFO_ONCE(node_->get_logger(), "%s joints values received by the menu interface.", params_.manipulator_name.c_str());
+            }
+        }
+    }
+
+    // Store the value into the global (public) class variable
+    current_joint_pose_.position = joints_values_group_;
+}
+
 // --------------------- ROS HANDLER ---------------------
+
+void ManipulatorMenu::spinnerMenu()
+{
+    // Setup a rate for ROS loop execution
+    rclcpp::Rate r(params_.ros_freq);
+    initializeMenu();
+
+    std::thread spinner_thread = std::thread([this] {
+        spinner();
+    });
+
+    // ROS loop
+    while (rclcpp::ok())
+    {
+        // Display the user menu and process user choices
+        menu_.printMenu();
+        int choice = menu_.getUserChoice();
+        RCLCPP_INFO(node_->get_logger(), "User choice: %d", choice);
+        menu_.processChoice(choice);
+
+        // Wait for next loop time
+        r.sleep();
+    }
+
+    // Shutdown ROS if Ctrl+C or Ctrl+D are pressed
+    rclcpp::shutdown();
+}
 
 // Asynchronous spinner for ROS routines without user menu
 void ManipulatorMenu::spinner()
@@ -225,65 +272,14 @@ void ManipulatorMenu::spinner()
     while (rclcpp::ok())
     {
         // ROS spinner
-        rclcpp::spin_some(node_->shared_from_this());
+        rclcpp::spin_some(node_->get_node_base_interface());
         getEEpose();
 
-        // Test funtion for InvKine computations time measurement: about 10-20 ms, not acceptable
-        // ros::Time start = ros::Time::now();
-        // invKineClient(getCurrentFKineClient());
-        // getCurrentFKineClient();
-        // pseudoInverseClient();
-        // RCLCPP_INFO(node_->get_logger(), "Total duration of the computations: %f", ros::Time::now().toSec()-start.toSec());
-
-        // Wait for next loop time
         r.sleep();
     }
 
     // Shutdown ROS if Ctrl+C or Ctrl+D are pressed
     rclcpp::shutdown();
-}
-
-// Asynchronous spinner for ROS routines with user menu
-void ManipulatorMenu::spinnerMenu()
-{
-    // Initialize user choice variable
-    int userChoice = 0;
-
-    while (rclcpp::ok())
-    {
-        rclcpp::spin_some(node_->shared_from_this());          // ROS Once spinner
-        getEEpos_rpy();                                 // Update current robot pose
-        printMenu();                                    // Print choice menu
-        userChoice = getUserChoice();                   // Get user choice from the terminal
-        processChoice(userChoice);                      // Execute the command
-        rclcpp::sleep_for(std::chrono::seconds(1));     // Wait 1s until next command
-    }
-
-    RCLCPP_INFO(node_->get_logger(), "Closing the menu!\n");
-    rclcpp::shutdown();
-}
-
-// --------------------- COPPELIASIM HANDLER ---------------------
-
-// Open Coppelia simulation
-void ManipulatorMenu::startCoppeliaSim()
-{
-    coppelia_req_->command = 0;
-    wait_for_response();
-}
-
-// Close Coppelia simulation
-void ManipulatorMenu::stopCoppeliaSim()
-{
-    coppelia_req_->command = 1;
-    wait_for_response();
-}
-
-// Save Coppelia scene
-void ManipulatorMenu::saveCoppeliaScene()
-{
-    coppelia_req_->command = 2;
-    wait_for_response();
 }
 
 // --------------------- MOVEMENTS HANDLER ---------------------
@@ -341,146 +337,11 @@ geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(const geometry_msgs::ms
     return tcpPoseMsg;
 }
 
-// Publish a TcpIK goal by passing a vector (rotations must be expressed in deg)
-geometry_msgs::msg::Pose ManipulatorMenu::publishTcpIKGoal(const std::vector<double> position)
-{
-    // TCP pose
-    geometry_msgs::msg::Pose tcpPoseMsg;
-    tcpPoseMsg.position.x = position[0];
-    tcpPoseMsg.position.y = position[1];
-    tcpPoseMsg.position.z = position[2];
-
-    tcpPoseMsg.orientation = quaternion_from_euler(position[3], position[4], position[5]);
-
-    return publishTcpIKGoal(tcpPoseMsg);
-}
-
-// Publish a TcpIK goal by passing a geometry_msgs::msg::Pose
-geometry_msgs::msg::Pose ManipulatorMenu::publishTcpIKGoal(const geometry_msgs::msg::Pose tcpPoseMsg)
-{
-    // Plan trajectory through inverse kinematics
-    tcpPoseIKPublisher_->publish(tcpPoseMsg);
-
-    // Display the goal on RViz
-    geometry_msgs::msg::PoseStamped robot_goal_msg;
-    robot_goal_msg.header.frame_id = params_.base_link_name;
-    robot_goal_msg.header.stamp = node_->get_clock()->now();
-    robot_goal_msg.pose = tcpPoseMsg;
-
-    display_goal_pub_->publish(robot_goal_msg);
-
-    return tcpPoseMsg;
-}
-
-// Publish a cartesian goal of poses sequence along the same line
-// Specify axis1 and axis2 as 0 for x, 1 for y and 2 for z
-// Define pos1 and pos2 the final poses along those axis (the 3rd won't change)
-// steps value will define how many waypoints to put in
-geometry_msgs::msg::Pose ManipulatorMenu::publishCartesianMove(const uint axis1,
-                                                               const uint axis2,
-                                                               const double pos1,
-                                                               const double pos2,
-                                                               const uint steps)
-{
-    // Initialize starting and waypoints variables
-    geometry_msgs::msg::Pose current_pose = getCurrentFKineClient();
-    geometry_msgs::msg::PoseArray waypoints;
-    geometry_msgs::msg::Pose final_pose;
-
-    waypoints.header.frame_id = params_.base_link_name;
-    double step_axisX = 0.;
-    double step_axisY = 0.;
-    double step_axisZ = 0.;
-    // Compute axis step
-    if (axis1 == axis2)
-    {
-        RCLCPP_WARN(node_->get_logger(), "Error in axis input!");
-        return final_pose;
-    }
-    else
-    {
-        if (axis1 == 0)
-        {
-            step_axisX = pos1 - current_pose.position.x;
-        }
-        else if (axis1 == 1)
-        {
-            step_axisY = pos1 - current_pose.position.y;
-        }
-        else if (axis1 == 2)
-        {
-            step_axisZ = pos1 - current_pose.position.z;
-        }
-        if (axis2 == 0)
-        {
-            step_axisX = pos2 - current_pose.position.x;
-        }
-        else if (axis2 == 1)
-        {
-            step_axisY = pos2 - current_pose.position.y;
-        }
-        else if (axis2 == 2)
-        {
-            step_axisZ = pos2 - current_pose.position.z;
-        }
-    }
-    // Compute common step
-    step_axisX = step_axisX / static_cast<double>(steps);
-    step_axisY = step_axisY / static_cast<double>(steps);
-    step_axisZ = step_axisZ / static_cast<double>(steps);
-    // Fill waypoints msgs
-    for (unsigned long k = 0; k < steps; k++)
-    {
-        geometry_msgs::msg::Pose wp;
-        // Same orientation for every waypoint
-        wp.orientation = current_pose.orientation;
-        // Fill the position
-        wp.position.x = current_pose.position.x + (k + 1) * step_axisX;
-        wp.position.y = current_pose.position.y + (k + 1) * step_axisY;
-        wp.position.z = current_pose.position.z + (k + 1) * step_axisZ;
-        // Last position should be accurate
-        if (k == steps - 1)
-        {
-            if (axis1 == 0)
-            {
-                wp.position.x = pos1;
-            }
-            else if (axis2 == 0)
-            {
-                wp.position.x = pos2;
-            }
-            if (axis1 == 1)
-            {
-                wp.position.y = pos1;
-            }
-            else if (axis2 == 1)
-            {
-                wp.position.y = pos2;
-            }
-            if (axis1 == 2)
-            {
-                wp.position.z = pos1;
-            }
-            else if (axis2 == 2)
-            {
-                wp.position.z = pos2;
-            }
-            final_pose = wp;
-        }
-        // Add current computed waypoints to the vector
-        waypoints.poses.push_back(wp);
-    }
-    // Publish the msg
-    carthesianMovePublisher_->publish(waypoints);
-
-    return final_pose;
-}
-
 // Move a single joint, joint rotation must be in deg
 sensor_msgs::msg::JointState ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 {
     // Read from subscribers the current joints state
-    rclcpp::spin_some(node_->shared_from_this());
+    rclcpp::spin_some(node_->get_node_base_interface());
     // Fill current joints pose as target
     std::vector<double> joint_target;
     for (unsigned long k = 0; k < params_.joint_names.size(); k++)
@@ -565,7 +426,6 @@ geometry_msgs::msg::Pose ManipulatorMenu::getEEpose()
     // Compute the FKine between base_link and end-effector
     current_tcp_pose_.header.frame_id = params_.base_link_name;
     current_tcp_pose_.pose = getCurrentFKineClient();
-    eepose_pub_->publish(current_tcp_pose_);
     return current_tcp_pose_.pose;
 }
 
@@ -586,16 +446,16 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
 // -------------------- SIMPLE MOVES ALONG CARTHESIAN AXES -----------------------//
 
 // Set a carthesian move along x axis in metres
-geometry_msgs::msg::Pose ManipulatorMenu::move_along_x(const double x_step, bool cartesian)
+geometry_msgs::msg::Pose ManipulatorMenu::move_along_x(const double x_step, bool linear)
 {
     // Get current EE pose
     std::vector<double> goal_pose = getEEpos_rpy();
     // Update position along X
     goal_pose[0] = goal_pose[0] + x_step;
-    if (cartesian)
+    if (linear)
     {
-        uint8_t n_steps = std::max(int(x_step / 0.1), 1);
-        return publishCartesianMove(0, 1, goal_pose[0], goal_pose[1], n_steps);
+        //TODO: implement linear movement using constraints
+        return geometry_msgs::msg::Pose();
     }
     else
     {
@@ -612,8 +472,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_y(const double y_step, bool
     goal_pose[1] = goal_pose[1] + y_step;
     if (cartesian)
     {
-        uint8_t n_steps = std::max(int(y_step / 0.1), 1);
-        return publishCartesianMove(0, 1, goal_pose[0], goal_pose[1], n_steps);
+        //TODO: implement linear movement using constraints
+        return geometry_msgs::msg::Pose();
     }
     else
     {
@@ -630,8 +490,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_z(const double z_step, bool
     // Update position along Z
     if (cartesian)
     {
-        uint8_t n_steps = std::max(int(z_step / 0.1), 1);
-        return publishCartesianMove(0, 2, goal_pose[0], goal_pose[2], n_steps);
+        //TODO: implement linear movement using constraints
+        return geometry_msgs::msg::Pose();
     }
     else
     {
@@ -864,57 +724,6 @@ void ManipulatorMenu::publishAttachedCollisionObject(const moveit_msgs::msg::Att
     collisionAttObjectPublisher_->publish(collisionAttachedObjectMsg);
 }
 
-// --------------------- GRIPPER CONTROL ---------------------
-
-// Open the gripper
-void ManipulatorMenu::openGripper()
-{
-    callGripperSrv(false);
-}
-
-// Close the gripper
-void ManipulatorMenu::closeGripper()
-{
-    callGripperSrv(true);
-}
-
-// Move the gripper
-void ManipulatorMenu::moveGripper(const double gripper_position)
-{
-    std_msgs::msg::Float64 gripper_pos_msg;
-    gripper_pos_msg.data = gripper_position;
-    moveGripperPublisher_->publish(gripper_pos_msg);
-}
-
-// Grab an object at the gripper
-void ManipulatorMenu::grabObjGripper()
-{
-    callGrabbingSrv(true);
-}
-// Detach an object from the gripper
-void ManipulatorMenu::detachObjGripper()
-{
-    callGrabbingSrv(false);
-}
-
-// Open real gripper
-void ManipulatorMenu::openRealGripper()
-{
-    callRealGripperSrv(100.);
-}
-
-// Close real gripper
-void ManipulatorMenu::closeRealGripper()
-{
-    callRealGripperSrv(0.);
-}
-
-// Move real gripper (input is in range [0,100])
-void ManipulatorMenu::moveRealGripper(const float command)
-{
-    callRealGripperSrv(command);
-}
-
 // ------------------- KINEMATICS PARAMS SETTERS ---------------------- //
 
 // Set Jacobian-based speed control
@@ -922,8 +731,8 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
 {
     auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
     request->data = set;
-    
-    //Wait for srv
+
+    // Wait for the service to be available
     while (!setJacobianControlClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
@@ -933,57 +742,28 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
         RCLCPP_INFO(node_->get_logger(), "jacobian_control_setter service not available, waiting again...");
     }
 
-    auto response = setJacobianControlClient_->async_send_request(request);
+    // Send the request asynchronously
+    auto response_future = setJacobianControlClient_->async_send_request(request);
 
-    // Call the srv
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
-    {
-        if (response.get()->success){
-            RCLCPP_INFO(node_->get_logger(), "Jacobian control set to %d", set);
-        }
-        else{
-            RCLCPP_ERROR(node_->get_logger(), "Failed to set Jacobian control");
-        }
-    }
-    else
+    // Wait until the future is completed
+    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
     {
         RCLCPP_ERROR(node_->get_logger(), "Failed to call service jacobian_control_setter");
-    }
-}
-
-// Set Instantaneous kinematics mode
-void ManipulatorMenu::setInstantKineMode(bool set)
-{
-    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-    request->data = set;
-    
-    //Wait for srv
-    while (!setInstKineClient_->wait_for_service(std::chrono::seconds(1)))
-    {
-        if (!rclcpp::ok()){
-            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
-            return;
-        }
-        RCLCPP_INFO(node_->get_logger(), "instKine_setter service not available, waiting again...");
+        return;
     }
 
-    auto response = setJacobianControlClient_->async_send_request(request);
-
-    // Call the srv
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    // If the service call was successful, process the response
+    auto response = response_future.get();
+    if (response->success)
     {
-        if (response.get()->success){
-            RCLCPP_INFO(node_->get_logger(), "instKine set to %d", set);
-        }
-        else{
-            RCLCPP_ERROR(node_->get_logger(), "Failed to set instKine");
-        }
+        RCLCPP_INFO(node_->get_logger(), "Jacobian control set to %d", set);
     }
     else
     {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service instKine_setter");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to set Jacobian control");
     }
 }
+
 
 // Set new dynamic planners vel/acc params
 void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
@@ -991,8 +771,8 @@ void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
     auto request = std::make_shared<manipulator_interfaces::srv::ChangePlannerParameters::Request>();
     request->acc_factor = new_acc;
     request->vel_factor = new_vel;
-    
-    //Wait for srv
+
+    // Wait for the service to be available
     while (!plannerParamsClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
@@ -1002,21 +782,25 @@ void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
         RCLCPP_INFO(node_->get_logger(), "change_planner_params service not available, waiting again...");
     }
 
-    auto response = plannerParamsClient_->async_send_request(request);
+    // Send the request asynchronously
+    auto response_future = plannerParamsClient_->async_send_request(request);
 
-    // Call the srv
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    // Wait until the future is completed
+    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
     {
-        if (response.get()->success){
-            RCLCPP_INFO(node_->get_logger(), "Planner params changed: acc_factor = %f, vel_factor = %f", new_acc, new_vel);
-        }
-        else{
-            RCLCPP_ERROR(node_->get_logger(), "Failed to set planner params");
-        }
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service change_planner_params");
+        return;
+    }
+
+    // If the service call was successful, process the response
+    auto response = response_future.get();
+    if (response->success)
+    {
+        RCLCPP_INFO(node_->get_logger(), "Planner params changed: acc_factor = %f, vel_factor = %f", new_acc, new_vel);
     }
     else
     {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service change_planner_params");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to set planner params");
     }
 }
 
@@ -1025,8 +809,8 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
 {
     auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
     request->data = set;
-    
-    //Wait for srv
+
+    // Wait for the service to be available
     while (!setRealTimeControlClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
@@ -1036,51 +820,138 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
         RCLCPP_INFO(node_->get_logger(), "joints_real_time_setter service not available, waiting again...");
     }
 
-    auto response = setJacobianControlClient_->async_send_request(request);
+    // Send the request asynchronously
+    auto response_future = setRealTimeControlClient_->async_send_request(request);
 
-    // Call the srv
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
-    {
-        if (response.get()->success){
-            RCLCPP_INFO(node_->get_logger(), "Joints real time control set to %d", set);
-        }
-        else{
-            RCLCPP_ERROR(node_->get_logger(), "Failed to set joints real time control");
-        }
-    }
-    else
+    // Wait until the future is completed
+    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
     {
         RCLCPP_ERROR(node_->get_logger(), "Failed to call service joints_real_time_setter");
-    }
-}
-
-// --------------------- PRIVATE FUNCTIONS ---------------------
-
-// --------------------- COPPELIA HANDLER ---------------------
-
-// Send the request to coppelia and wait for the response
-void ManipulatorMenu::wait_for_response()
-{
-    while(coppeliaClient_->wait_for_service(std::chrono::seconds(1))){
-        if (!rclcpp::ok()){
-            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
-            return;
-        }
-        RCLCPP_INFO(node_->get_logger(), "coppelia service not available, waiting again...");
+        return;
     }
 
-    auto response = coppeliaClient_->async_send_request(coppelia_req_);
-
-    // Call the srv
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    // If the service call was successful, process the response
+    auto response = response_future.get();
+    if (response->success)
     {
-        RCLCPP_INFO(node_->get_logger(), "Simulation status: %d", response.get()->result);
+        RCLCPP_INFO(node_->get_logger(), "Joints real time control set to %d", set);
     }
     else
     {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service invKine");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to set joints real time control");
     }
 }
+
+// --------------------- MATRIX UTILS ------------------------
+
+void ManipulatorMenu::printMatrix(const Eigen::MatrixXd &matrix)
+{
+    for (long i = 0; i < matrix.rows(); i++)
+    {
+        for (long j = 0; j < matrix.cols(); j++)
+        {
+            std::cout << matrix(i, j) << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+void ManipulatorMenu::listToMatrix(const std::vector<double> &list, Eigen::MatrixXd &matrix)
+{
+    for (long i = 0; i < matrix.rows(); ++i)
+    {
+        for (long j = 0; j < 6; ++j)
+        {
+            matrix(i, j) = list[i * 6 + j];  // Fix the index to access correct values
+        }
+    }
+}
+
+// --------------------- QUATERNIONS UTILS -------------------
+
+// Conversion from degrees euler angles to quaternion
+geometry_msgs::msg::Quaternion ManipulatorMenu::quaternion_from_euler(double roll, double pitch, double yaw)
+{
+    // Declaration of empty quaternion
+    geometry_msgs::msg::Quaternion quaternion;
+
+    // Conversion from euler rotation to pose quaternion
+    tf2::Quaternion quat;
+    quat.setRPY(roll * M_PI / 180, pitch * M_PI / 180, yaw * M_PI / 180);
+    quat.normalize();
+    quaternion.x = quat.getX();
+    quaternion.y = quat.getY();
+    quaternion.z = quat.getZ();
+    quaternion.w = quat.getW();
+
+    return quaternion;
+}
+// Conversion from quaternion to degrees euler angles
+std::vector<double> ManipulatorMenu::euler_from_quaternion(const geometry_msgs::msg::Quaternion quaternion)
+{
+    tf2::Quaternion tf_quaternion;
+    tf2::fromMsg(quaternion, tf_quaternion);
+
+    // Get Euler angles
+    double roll, pitch, yaw;
+    tf2::Matrix3x3(tf_quaternion).getRPY(roll, pitch, yaw);
+
+    // Store the angles in a vector
+    std::vector<double> euler_angles = {roll * 180.0 / M_PI, pitch * 180.0 / M_PI, yaw * 180.0 / M_PI};
+
+    // Check if angles are in the interval (-180,180]
+    for (unsigned long k = 0; k < 3; k++)
+    {
+        if (euler_angles[k] < -179.9999999999)
+        {
+            euler_angles[k] += 360.;
+        }
+        else if (euler_angles[k] > +180.)
+        {
+            euler_angles[k] -= 360.;
+        }
+    }
+
+    return euler_angles;
+}
+
+// --------------------- DEG-RADIANS UTILS -------------------
+std::vector<double> ManipulatorMenu::deg_from_rad(const std::vector<double> joint_rad)
+{
+    std::vector<double> joint_deg(joint_rad.size(), 0);
+    // Iterate over input vector
+    for (unsigned long k = 0; k < joint_deg.size(); k++)
+    {
+        joint_deg[k] = joint_rad[k] * 180 / M_PI;
+    }
+    // Return result
+    return joint_deg;
+}
+
+std::vector<double> ManipulatorMenu::rad_from_deg(const std::vector<double> joint_deg)
+{
+    std::vector<double> joint_rad(joint_deg.size(), 0);
+    // Iterate over input vector
+    for (unsigned long k = 0; k < joint_rad.size(); k++)
+    {
+        joint_rad[k] = joint_deg[k] / 180 * M_PI;
+    }
+    // Return result
+    return joint_rad;
+}
+
+/*
+    ================================================================
+    ================== USER INTERFACE FUNCTIONS ====================
+    ================================================================
+    Each one of the following functions are called by the user menu
+    inteface after being chosen by the user.
+    At the end of the file lies the initializeMenu function which 
+    will bind each user function to a specific code in the menu.
+
+    NOTE: For ease of recognition these functions should always have 
+          the prefix "user".
+*/
 
 // --------------------- JOINT GOALS HANDLER ---------------------
 
@@ -1103,7 +974,7 @@ void ManipulatorMenu::userJointGoal()
     publishJointGoal(joints);
 }
 
-void ManipulatorMenu::oneJointMove_user()
+void ManipulatorMenu::userOneJointMove_user()
 {
     int num = 0;
     double joint_rot = 0.0;
@@ -1145,112 +1016,107 @@ void ManipulatorMenu::userTcpGoal()
     publishTcpGoal(position);
 }
 
-void ManipulatorMenu::userTcpIKGoal()
+// --------------------- LINEAR MOVEMENTS HANDLER ---------------------
+//For now the ee will move to the corresponding path but it won't follow a linear path
+
+void ManipulatorMenu::userMoveAlongX()
 {
-    // Declare the empty vector of joints goals
-    std::vector<double> position = {0., 0., 0., 0., 0., 0.};
+    double x_step = 0.0;
+    std::cout << "Enter the step along X axis in meters: \n";
+    std::cin >> x_step;
+    move_along_x(x_step, false); 
+}
 
-    // Take user degree angle for each joint
-    std::cout << "Enter the values of the tcp goal through InvKine, with rotation angles in degrees:\n";
+void ManipulatorMenu::userMoveAlongY()
+{
+    double y_step = 0.0;
+    std::cout << "Enter the step along Y axis in meters: \n";
+    std::cin >> y_step;
+    move_along_y(y_step, false);
+}
 
-    // X position input
-    std::cout << "X position:  ";
-    std::cin >> position[0];
-    // Y position input
-    std::cout << "Y position:  ";
-    std::cin >> position[1];
-    // Z position input
-    std::cout << "Z position:  ";
-    std::cin >> position[2];
+void ManipulatorMenu::userMoveAlongZ()
+{
+    double z_step = 0.0;
+    std::cout << "Enter the step along Z axis in meters: \n";
+    std::cin >> z_step;
+    move_along_z(z_step, false);
+}
 
-    // Deg RPY angles input
+// --------------------- ROTATIONS HANDLER ---------------------
+
+void ManipulatorMenu::userMakeTcpRot()
+{
+    std::vector<double> rot_vec = {0., 0., 0.};
+    std::cout << "Enter the rotation angles in degrees for the tcp goal: \n";
     std::cout << "Rx: ";
-    std::cin >> position[3];
+    std::cin >> rot_vec[0];
     std::cout << "Ry: ";
-    std::cin >> position[4];
+    std::cin >> rot_vec[1];
     std::cout << "Rz: ";
-    std::cin >> position[5];
-
-    publishTcpIKGoal(position);
+    std::cin >> rot_vec[2];
+    make_tcp_rot(rot_vec);
 }
 
-// --------------------- USER CARTESIAN MOVES HANDLER ---------------------
-void ManipulatorMenu::userCartesianMove()
+void ManipulatorMenu::userRotateAroundX()
 {
-    RCLCPP_INFO(node_->get_logger(), "Setup your cartesian move:");
-    uint axis1;
-    uint axis2;
-    double pos1;
-    double pos2;
-    uint steps;
-    std::cout << "Insert the first axis  (0:x, 1:y, 2:z): ";
-    std::cin >> axis1;
-    std::cout << "Insert the second axis (0:x, 1:y, 2:z): ";
-    std::cin >> axis2;
-    std::cout << "Insert the final position on axis1    : ";
-    std::cin >> pos1;
-    std::cout << "Insert the final position on axis2    : ";
-    std::cin >> pos2;
-    std::cout << "Set the number of waypoints passed    : ";
-    std::cin >> steps;
-    publishCartesianMove(axis1, axis2, pos1, pos2, steps);
+    double x_rot_step = 0.0;
+    std::cout << "Enter the rotation around X axis in degrees: \n";
+    std::cin >> x_rot_step;
+    rotate_around_x(x_rot_step);
 }
 
-// --------------------- SUBS HANDLER ---------------------
-
-void ManipulatorMenu::jointStateVisualizer()
+void ManipulatorMenu::userRotateAroundY()
 {
-    rclcpp::spin_some(node_->shared_from_this());
+    double y_rot_step = 0.0;
+    std::cout << "Enter the rotation around Y axis in degrees: \n";
+    std::cin >> y_rot_step;
+    rotate_around_y(y_rot_step);
+}
+
+void ManipulatorMenu::userRotateAroundZ()
+{
+    double z_rot_step = 0.0;
+    std::cout << "Enter the rotation around Z axis in degrees: \n";
+    std::cin >> z_rot_step;
+    rotate_around_z(z_rot_step);
+}
+
+
+// --------------------- KNOWN POSITIONS HANDLERS ---------------------
+
+void ManipulatorMenu::userGoHomeDown()
+{
+    goHome(false);
+}
+
+void ManipulatorMenu::userGoHomeFront()
+{
+    goHome(true);
+}
+
+// --------------------- VISUALIZATION HANDLERS ---------------------
+
+void ManipulatorMenu::userJointStateVisualizer()
+{
+    rclcpp::spin_some(node_->get_node_base_interface());
     for (unsigned long k = 0; k < params_.joint_names.size(); k++)
     {
         std::cout << "Joint " << k << " : " << current_joint_pose_.position[k] * 180 / M_PI << std::endl;
     }
 }
 
-void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr &joints_state)
+void ManipulatorMenu::userEEPoseVisualizer()
 {
-
-    // Map to store couples joint name - joint values
-    static std::unordered_map<std::string, double>::iterator it;
-    uint counter_group = 0;
-
-    for (uint i = 0; i < joints_state->name.size(); i++)
-    {
-        // Look for joints group names within joints current state
-        it = joints_map_group_.find(joints_state->name[i]);
-        // Exclude last link (gripper) from the search
-        if (it != joints_map_group_.end())
-        {
-            // At the second position of the iteration, insert current joint position and velocity
-            it->second = joints_state->position[i];
-
-            // Increment the number of joints received from the joints state subscriber
-            counter_group++;
-
-            // If we have reached the last joint of the group
-            if (counter_group == params_.joint_names.size())
-            {
-                // Iterate over the joints
-                for (unsigned long k = 0; k < params_.joint_names.size(); k++)
-                {
-                    // Store the joints values from the joints map
-                    joints_values_group_[k] = joints_map_group_[params_.joint_names[k]];
-                }
-
-                // Log gripper planning group
-                RCLCPP_INFO_ONCE(node_->get_logger(), "%s joints values received by the menu interface.", params_.manipulator_name.c_str());
-            }
-        }
-    }
-
-    // Store the value into the global (public) class variable
-    current_joint_pose_.position = joints_values_group_;
+    std::vector<double> tcp_pose_rpy = getEEpos_rpy();
+    std::cout << "X: " << tcp_pose_rpy[0] << "m - Y: " << tcp_pose_rpy[1] << "m - Z: " << tcp_pose_rpy[2] << "m" << std::endl;
+    std::cout << "Rx: " << tcp_pose_rpy[3] << "deg - Ry: " << tcp_pose_rpy[4] << "deg - Rz: " << tcp_pose_rpy[5] << "deg" << std::endl;
 }
 
-// --------------------- COLLISION OBJECTS PRIVATE MENU HANDLER ---------------------
+// --------------------- COLLISION OBJECTS PRIVATE MENU HANDLERS ---------------------
 
 // Function to add a collision object from the user menu
-void ManipulatorMenu::addCollObj()
+void ManipulatorMenu::userAddCollObj()
 {
     std::string name;
     int obj_type;
@@ -1316,7 +1182,7 @@ void ManipulatorMenu::addCollObj()
 }
 
 // Function to delete a given collision object from the user menu
-void ManipulatorMenu::deleteCollObj()
+void ManipulatorMenu::userDeleteCollObj()
 {
     std::string obj_name_loc;
     std::cout << "Insert the name of the object you want to delete:" << std::endl;
@@ -1340,7 +1206,7 @@ void ManipulatorMenu::deleteCollObj()
 }
 
 // Function to add a collision object from the user menu
-void ManipulatorMenu::addUserAttachedObj()
+void ManipulatorMenu::userAddAttachedObj()
 {
     std::string name;
     int obj_type;
@@ -1405,595 +1271,150 @@ void ManipulatorMenu::addUserAttachedObj()
     addAttachedObj(name, obj_type, obj_dims, obj_pos, rot_pos_quat, 0);
 }
 
-// --------------------- COLLISION OBJECTS PRIVATE MENU HANDLER ---------------------
+// --------------------- KINEMATICS QUERIES HANDLERS ---------------------
 
-// Gripper Moving command from the user
-void ManipulatorMenu::userGripperMove()
+void ManipulatorMenu::userGetInvKine()
 {
-    double gripper_position = 0.;
+    std::vector<double> position = {0., 0., 0., 0., 0., 0.};
 
-    // Take user gripper position
-    std::cout << "Enter the value (in %) of gripper move :\n";
+    std::cout << "Enter the values of the tcp goal, with rotation angles in degrees:\n";
 
-    // Gripper position input
-    std::cout << "Gripper opening position: ";
-    std::cin >> gripper_position;
+    // X position input
+    std::cout << "X position:  ";
+    std::cin >> position[0];
+    // Y position input
+    std::cout << "Y position:  ";
+    std::cin >> position[1];
+    // Z position input
+    std::cout << "Z position:  ";
+    std::cin >> position[2];
 
-    moveGripper(gripper_position);
-}
+    std::cout << "Rx: ";
+    std::cin >> position[3];
+    std::cout << "Ry: ";
+    std::cin >> position[4];
+    std::cout << "Rz: ";
+    std::cin >> position[5];
 
-// --------------------- GRIPPER SERVICES ---------------------
-// Call the service for open/close gripper
-void ManipulatorMenu::callGripperSrv(const bool command)
-{
-    // Create a request
-    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-    request->data = command;
+    // Get the inverse kinematics
+    geometry_msgs::msg::Pose goal_pose;
+    goal_pose.position.x = position[0];
+    goal_pose.position.y = position[1];
+    goal_pose.position.z = position[2];
+    goal_pose.orientation = quaternion_from_euler(position[3], position[4], position[5]);
 
-    //Wait for srv
-    while(gripper_client_->wait_for_service(std::chrono::seconds(1))){
-        if (!rclcpp::ok()){
-            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
-            return;
-        }
-        RCLCPP_INFO(node_->get_logger(), "gripper service not available, waiting again...");
-    }
+    std::vector<double> inv_kine = invKineClient(goal_pose);
 
-    auto response = gripper_client_->async_send_request(request);
-
-    // Call the srv
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
+    // Print the result
+    std::cout << "The inverse kinematics solution is: \n";
+    for (unsigned long k = 0; k < inv_kine.size(); k++)
     {
-        if (response.get()->success){
-            RCLCPP_INFO(node_->get_logger(), "Gripper command succeeded, set to %d", command);
-        }
-        else{
-            RCLCPP_ERROR(node_->get_logger(), "Failed move gripper");
-        }
-    }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call gripper service");
+        std::cout << "Joint " << k << " : " << inv_kine[k] * 180 / M_PI << std::endl;
     }
 }
 
-// Call the service for grab/detach an object at the gripper
-void ManipulatorMenu::callGrabbingSrv(const bool command)
+void ManipulatorMenu::userGetJacobian()
 {
-    // Create a request
-    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-    request->data = command;
-
-    //Wait for srv
-    while(grab_client_->wait_for_service(std::chrono::seconds(1))){
-        if (!rclcpp::ok()){
-            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
-            return;
-        }
-        RCLCPP_INFO(node_->get_logger(), "Gripper grabing service not available, waiting again...");
-    }
-
-    auto response = grab_client_->async_send_request(request);
-
-    // Call the srv
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
-    {
-        if (response.get()->success){
-            RCLCPP_INFO(node_->get_logger(), "Gripper grabbing request succeeded");
-        }
-        else{
-            RCLCPP_ERROR(node_->get_logger(), "Gripper grabbing request failed");
-        }
-    }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service for gripper grabbing");
-    }
+    Eigen::MatrixXd jacobian = getJacobianClient();
+    std::cout << "The Jacobian matrix is: \n";
+    printMatrix(jacobian);
 }
 
-// Call the service to open/close the real gripper
-void ManipulatorMenu::callRealGripperSrv(const float command)
+void ManipulatorMenu::userGetPseudoInv()
 {
-    // Create a request
-    auto request = std::make_shared<motors_trajectory::srv::RobotiQGripperControl::Request>();
-    request->position = command;
-    request->speed = 50;
-    request->force = 50;
-
-    //Wait for srv
-    while(real_gripper_client_->wait_for_service(std::chrono::seconds(1))){
-        if (!rclcpp::ok()){
-            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
-            return;
-        }
-        RCLCPP_INFO(node_->get_logger(), "real gripper service not available, waiting again...");
-    }
-
-    auto response = real_gripper_client_->async_send_request(request);
-
-    // Call the srv
-    if (rclcpp::spin_until_future_complete(node_->shared_from_this(), response) == rclcpp::FutureReturnCode::SUCCESS)
-    {
-        if (response.get()->success){
-            RCLCPP_INFO(node_->get_logger(), "Gripper move request succeeded");
-        }
-        else{
-            RCLCPP_ERROR(node_->get_logger(), "Gripper move request failed");
-        }
-    }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call real gripper service");
-    }
+    Eigen::MatrixXd jacobian = pseudoInverseClient();
+    std::cout << "The pseudo-inverse Jacobian matrix is: \n";
+    printMatrix(jacobian);
 }
 
-// --------------------- QUATERNIONS HANDLER -------------------
-// Conversion from degrees euler angles to quaternion
-geometry_msgs::msg::Quaternion ManipulatorMenu::quaternion_from_euler(double roll, double pitch, double yaw)
+// --------------------- PARAMS SETTERS HANDLERS ------------------------
+
+void ManipulatorMenu::userSetJacobianSpeedControl()
 {
-    // Declaration of empty quaternion
-    geometry_msgs::msg::Quaternion quaternion;
-
-    // Conversion from euler rotation to pose quaternion
-    tf2::Quaternion quat;
-    quat.setRPY(roll * M_PI / 180, pitch * M_PI / 180, yaw * M_PI / 180);
-    quat.normalize();
-    quaternion.x = quat.getX();
-    quaternion.y = quat.getY();
-    quaternion.z = quat.getZ();
-    quaternion.w = quat.getW();
-
-    return quaternion;
-}
-// Conversion from quaternion to degrees euler angles
-std::vector<double> ManipulatorMenu::euler_from_quaternion(const geometry_msgs::msg::Quaternion quaternion)
-{
-    tf2::Quaternion tf_quaternion;
-    tf2::fromMsg(quaternion, tf_quaternion);
-
-    // Get Euler angles
-    double roll, pitch, yaw;
-    tf2::Matrix3x3(tf_quaternion).getRPY(roll, pitch, yaw);
-
-    // Store the angles in a vector
-    std::vector<double> euler_angles = {roll * 180.0 / M_PI, pitch * 180.0 / M_PI, yaw * 180.0 / M_PI};
-
-    // Check if angles are in the interval (-180,180]
-    for (unsigned long k = 0; k < 3; k++)
-    {
-        if (euler_angles[k] < -179.9999999999)
-        {
-            euler_angles[k] += 360.;
-        }
-        else if (euler_angles[k] > +180.)
-        {
-            euler_angles[k] -= 360.;
-        }
-    }
-
-    return euler_angles;
+    bool set;
+    std::cout << "Enter 1 to set Jacobian speed control, 0 to unset: \n";
+    std::cin >> set;
+    setJacobianSpeedControl(set);
 }
 
-// --------------------- DEG-RADIANS HANDLER -------------------
-std::vector<double> ManipulatorMenu::deg_from_rad(const std::vector<double> joint_rad)
+void ManipulatorMenu::userSetRealTimeControl()
 {
-    std::vector<double> joint_deg(joint_rad.size(), 0);
-    // Iterate over input vector
-    for (unsigned long k = 0; k < joint_deg.size(); k++)
-    {
-        joint_deg[k] = joint_rad[k] * 180 / M_PI;
-    }
-    // Return result
-    return joint_deg;
+    bool set;
+    std::cout << "Enter 1 to set joints real time control, 0 to unset: \n";
+    std::cin >> set;
+    setJsRealTimeControl(set);
 }
 
-std::vector<double> ManipulatorMenu::rad_from_deg(const std::vector<double> joint_deg)
+void ManipulatorMenu::userSetPlannerParams()
 {
-    std::vector<double> joint_rad(joint_deg.size(), 0);
-    // Iterate over input vector
-    for (unsigned long k = 0; k < joint_rad.size(); k++)
-    {
-        joint_rad[k] = joint_deg[k] / 180 * M_PI;
-    }
-    // Return result
-    return joint_rad;
+    float new_vel, new_acc;
+    std::cout << "Enter the new velocity factor: \n";
+    std::cin >> new_vel;
+    std::cout << "Enter the new acceleration factor: \n";
+    std::cin >> new_acc;
+    setNewPlannerParams(new_vel, new_acc);
 }
 
-// --------------------- MENU HANDLER ---------------------
+// --------------------- MENU INITIALIZER ------------------------
 
-void ManipulatorMenu::printMenu()
-{
-    std::cout << "\n======= MANIPULATOR MENU =======\n";
-    std::cout << "\n======= Joint/tcp moving test options =======\n";
-    std::cout << "1. Give a TCP goal through InvKine, with fake controller\n";
-    std::cout << "2. Give a joint goal, with fake controller\n";
-    std::cout << "3. Give a joint goal to MoveIt\n";
-    std::cout << "4. Give a TCP goal to MoveIt\n";
-    std::cout << "5. Give a TCP goal through InvKine to MoveIt\n";
-    std::cout << "6. Move a defined joint\n";
-    std::cout << "\n======= Carthesian moves test options =======\n";
-    std::cout << "7. Move the robot along x\n";
-    std::cout << "8. Move the robot along y\n";
-    std::cout << "9. Move the robot along z\n";
-    std::cout << "\n======= Tcp orientation options =======\n";
-    std::cout << "10.Change TCP orientation\n";
-    std::cout << "11.Rotate the TCP around x\n";
-    std::cout << "12.Rotate the TCP around y\n";
-    std::cout << "13.Rotate the TCP around z\n";
-    std::cout << "14.Get a fixed TCP orientation\n";
-    std::cout << "\n======= Handle objects in the planning scene =======\n";
-    std::cout << "15.Add an object to the scene\n";
-    std::cout << "16.Delete an object from the scene\n";
-    std::cout << "\n======= Visualize current robot state =======\n";
-    std::cout << "17.Visualize joints state\n";
-    std::cout << "18.Visualize current tcp pose\n";
-    std::cout << "\n======= Home positions setting =======\n";
-    std::cout << "19.Go to home position (gripper down)\n";
-    std::cout << "20.Go to home position (gripper at the front)\n";
-    std::cout << "\n======= Cartesian move =======\n";
-    std::cout << "21.Make a cartesian move\n";
-    if (params_.enable_coppelia)
-    {
-        std::cout << "\n======= CoppeliaSim handling =======\n";
-        std::cout << "22. To start twin Coppelia simulation\n";
-        std::cout << "23. To stop  twin Coppelia simulation\n";
-        std::cout << "24. To save  twin CoppeliaSim scene\n";
-    }
-    if (params_.enable_sim_gripper)
-    {
-        std::cout << "\n======= Fake gripper control =======\n";
-        std::cout << "25.Open the gripper\n";
-        std::cout << "26.Close the gripper\n";
-        std::cout << "27.Set the position of the gripper\n";
-        std::cout << "28.Grab an object at the gripper\n";
-        std::cout << "29.Detach an object from the gripper\n";
-    }
-    if (params_.enable_real_gripper)
-    {
-        std::cout << "\n======= Real gripper control =======\n";
-        std::cout << "30.Open  real gripper\n";
-        std::cout << "31.Close real gripper\n";
-        std::cout << "32.Move  real gripper to a given position \n";
-    }
-    std::cout << "\n======= Kinematics srvs =======\n";
-    std::cout << "33. Get joint values through inverse kinematics of a given pose\n";
-    std::cout << "34. Get current Jacobian\n";
-    std::cout << "35. Get current Inverse Jacobian\n";
-    std::cout << "36. Change velocity and acceleration as planner's parameters\n";
-    std::cout << "\n======= Kinematics mode setter =======\n";
-    std::cout << "37. Enable  the instantaneous kinematics mode for motors\n";
-    std::cout << "38. Disable the instantaneous kinematics mode for motors\n";
-    std::cout << "39. Enable  the jacobian speed control mode for robot joints\n";
-    std::cout << "40. Disable the jacobian speed control mode for robot joints\n";
-    std::cout << "41. Enable  the joints real time speed control mode\n";
-    std::cout << "42. Disable the joints real time speed control mode\n";
-    std::cout << "\n======= Closing ROS menu =======\n";
-    std::cout << "43.Shutdown the menu\n";
-    std::cout << "=====================\n";
-}
+void ManipulatorMenu::initializeMenu(){
+    menu_ = MenuUserInterface<ManipulatorMenu>(std::make_shared<ManipulatorMenu>(*this));
 
-int ManipulatorMenu::getUserChoice()
-{
-    int choice;
-    std::cout << "Enter your choice: ";
-    std::cin >> choice;
-    return choice;
-}
+    int section_start = 0; //Temporary variable to hold the last section start point
 
-void ManipulatorMenu::processChoice(int choice)
-{
-    double step;                // Linear move length along axis
-    std::vector<double> rot;    // End effector rotation
-    std::vector<double> ee_pos; // End effector position
-    switch (choice)
-    {
-    case 1:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 1");
-        RCLCPP_ERROR(node_->get_logger(), "no_planner option is obsolete, moveit will be used instead");
-        userTcpGoal();
-        break;
-    case 2:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 2");
-        RCLCPP_ERROR(node_->get_logger(), "no_planner option is obsolete, moveit will be used instead");
-        userJointGoal();
-        break;
-    case 3:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 3");
-        userJointGoal();
-        break;
-    case 4:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 4");
-        userTcpGoal();
-        break;
-    case 5:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 5");
-        userTcpIKGoal();
-        break;
-    case 6:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 6");
-        oneJointMove_user();
-        break;
+    //Joint/TCP Goals
+    menu_.addChoice("Plan and execute joint goal", &ManipulatorMenu::userJointGoal);
+    menu_.addChoice("Plan and execute one joint move", &ManipulatorMenu::userOneJointMove_user);
+    menu_.addChoice("Plan and execute TCP goal", &ManipulatorMenu::userTcpGoal);
+    menu_.addSection("Joint/TCP Goals", section_start, menu_.last_);
+    section_start = menu_.last_ + 1;
 
-    case 7:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 7");
+    //Linear movements
+    menu_.addChoice("Move along X axis", &ManipulatorMenu::userMoveAlongX);
+    menu_.addChoice("Move along Y axis", &ManipulatorMenu::userMoveAlongY);
+    menu_.addChoice("Move along Z axis", &ManipulatorMenu::userMoveAlongZ);
+    menu_.addSection("Linear movements", section_start, menu_.last_);
+    section_start = menu_.last_ + 1;
 
-        std::cout << "Insert how many metres you want to move along x: \n";
-        std::cin >> step;
-        move_along_x(step);
-        break;
+    //Rotations
+    menu_.addChoice("Make TCP rotation", &ManipulatorMenu::userMakeTcpRot);
+    menu_.addChoice("Rotate around X axis", &ManipulatorMenu::userRotateAroundX);
+    menu_.addChoice("Rotate around Y axis", &ManipulatorMenu::userRotateAroundY);
+    menu_.addChoice("Rotate around Z axis", &ManipulatorMenu::userRotateAroundZ);
+    menu_.addSection("Rotations", section_start, menu_.last_);
+    section_start = menu_.last_ + 1;
 
-    case 8:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 8");
+    //Known positions
+    menu_.addChoice("Go to home position with gripper facing down", &ManipulatorMenu::userGoHomeDown);
+    menu_.addChoice("Go to home position with gripper facing front", &ManipulatorMenu::userGoHomeFront);
+    menu_.addSection("Known positions", section_start, menu_.last_);
+    section_start = menu_.last_ + 1;
 
-        std::cout << "Insert how many metres you want to move along y:\n";
-        std::cin >> step;
-        move_along_y(step);
-        break;
-    case 9:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 9");
+    //Visualization
+    menu_.addChoice("Visualize current joint state", &ManipulatorMenu::userJointStateVisualizer);
+    menu_.addChoice("Visualize current EE pose", &ManipulatorMenu::userEEPoseVisualizer);
+    menu_.addSection("Visualization", section_start, menu_.last_);
+    section_start = menu_.last_ + 1;
 
-        std::cout << "Insert how many metres you want to move along z:\n";
-        std::cin >> step;
-        move_along_z(step);
-        break;
+    //Collision objects
+    menu_.addChoice("Add a collision object", &ManipulatorMenu::userAddCollObj);
+    menu_.addChoice("Add an attached object", &ManipulatorMenu::userAddAttachedObj);
+    menu_.addChoice("Delete a collision object", &ManipulatorMenu::userDeleteCollObj);
+    menu_.addSection("Collision objects", section_start, menu_.last_);
+    section_start = menu_.last_ + 1;
 
-    case 10:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 10\n");
-        std::cout << "Insert the rotation around the axis you want to do.\n";
-        rot = {0., 0., 0.};
-        std::cout << " X rotation: ";
-        std::cin >> rot[0];
-        std::cout << " Y rotation: ";
-        std::cin >> rot[1];
-        std::cout << " Z rotation: ";
-        std::cin >> rot[2];
-        make_tcp_rot(rot);
-        break;
+    //Kinematics queries
+    menu_.addChoice("Get inverse kinematics of a given pose", &ManipulatorMenu::userGetInvKine);
+    menu_.addChoice("Get current Jacobian", &ManipulatorMenu::userGetJacobian);
+    menu_.addChoice("Get current pseudo-inverse Jacobian", &ManipulatorMenu::userGetPseudoInv);
+    menu_.addSection("Kinematics queries", section_start, menu_.last_);
+    section_start = menu_.last_ + 1;
 
-    case 11:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 11");
-        std::cout << "Insert the rotation around X axis you want to do.\n";
-        double x_rot;
-        std::cout << " X rotation: ";
-        std::cin >> x_rot;
-        rotate_around_x(x_rot);
-        break;
-
-    case 12:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 12");
-        std::cout << "Insert the rotation around Y axis you want to do.\n";
-        double y_rot;
-        std::cout << " Y rotation: ";
-        std::cin >> y_rot;
-        rotate_around_y(y_rot);
-        break;
-
-    case 13:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 13");
-        std::cout << "Insert the rotation around Z axis you want to do.\n";
-        double z_rot;
-        std::cout << " Z rotation: ";
-        std::cin >> z_rot;
-        rotate_around_z(z_rot);
-        break;
-
-    case 14:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 14");
-        std::cout << "Insert the FIXED orientation of the EE you want to have.\n";
-        rot = {0., 0., 0.};
-        std::cout << " X rotation: ";
-        std::cin >> rot[0];
-        std::cout << " Y rotation: ";
-        std::cin >> rot[1];
-        std::cout << " Z rotation: ";
-        std::cin >> rot[2];
-        change_tcp_orient(rot);
-        break;
-
-    case 15:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 15");
-        std::cout << "Insert 1 if the object has to be attached to the tcp, 2 otherwise.\n";
-        int val;
-        std::cin >> val;
-        if (val == 1)
-        {
-            addUserAttachedObj();
-        }
-        else if (val == 2)
-        {
-            addCollObj();
-        }
-    }
-    break;
-    case 16:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 16");
-        deleteCollObj();
-        break;
-    case 17:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 17");
-        jointStateVisualizer();
-        break;
-
-    case 18:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 18");
-        std::vector<double> ee_pose = getEEpos_rpy();
-        std::cout << " EE - X position: " << ee_pose[0] << std::endl;
-        std::cout << " EE - Y position: " << ee_pose[1] << std::endl;
-        std::cout << " EE - Z position: " << ee_pose[2] << std::endl;
-        std::cout << " EE - X rotation: " << ee_pose[3] << std::endl;
-        std::cout << " EE - Y rotation: " << ee_pose[4] << std::endl;
-        std::cout << " EE - Z rotation: " << ee_pose[5] << std::endl;
-    }
-    break;
-    case 19:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 19");
-        RCLCPP_INFO(node_->get_logger(), "Go to home position, gripper down ...");
-        goHome(0);
-        break;
-    case 20:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 20");
-        RCLCPP_INFO(node_->get_logger(), "Go to home position, gripper at the front ...");
-        goHome(1);
-        break;
-    case 21:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 21");
-        userCartesianMove();
-        break;
-    case 22:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 22");
-        RCLCPP_INFO(node_->get_logger(), "Start Coppelia simulation");
-        startCoppeliaSim();
-        break;
-    case 23:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 23");
-        RCLCPP_INFO(node_->get_logger(), "Stop Coppelia simulation");
-        stopCoppeliaSim();
-        break;
-    case 24:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 24");
-        RCLCPP_INFO(node_->get_logger(), "Save current Coppelia scene");
-        saveCoppeliaScene();
-        break;
-    case 25:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 25");
-        RCLCPP_INFO(node_->get_logger(), "Opening the gripper ...");
-        openGripper();
-        break;
-    case 26:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 26");
-        RCLCPP_INFO(node_->get_logger(), "Closing the gripper ...");
-        closeGripper();
-        break;
-    case 27:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 27");
-        RCLCPP_INFO(node_->get_logger(), "Gripper moving setting");
-        userGripperMove();
-        break;
-    case 28:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 28");
-        RCLCPP_INFO(node_->get_logger(), "Grab an object to the gripper");
-        grabObjGripper();
-        break;
-    case 29:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 29");
-        RCLCPP_INFO(node_->get_logger(), "Detach an object from the gripper");
-        detachObjGripper();
-        break;
-    case 30:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 30");
-        RCLCPP_INFO(node_->get_logger(), "Opening real gripper");
-        openRealGripper();
-        break;
-    case 31:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 31");
-        RCLCPP_INFO(node_->get_logger(), "Closing real gripper");
-        closeRealGripper();
-        break;
-    case 32:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 32");
-        RCLCPP_INFO(node_->get_logger(), "Set a real gripper position");
-        float gripper_pos;
-        std::cin >> gripper_pos;
-        moveRealGripper(gripper_pos);
-        break;
-    case 33:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 33");
-        RCLCPP_INFO(node_->get_logger(), "Set the pose you want to compute inverse kinematics.");
-        geometry_msgs::msg::Pose pose;
-        float rx, ry, rz;
-        std::cout << "X position: ";
-        std::cin >> pose.position.x;
-        std::cout << "Y position: ";
-        std::cin >> pose.position.y;
-        std::cout << "Z position: ";
-        std::cin >> pose.position.z;
-        std::cout << "X rotation (in degrees): ";
-        std::cin >> rx;
-        std::cout << "Y rotation (in degrees): ";
-        std::cin >> ry;
-        std::cout << "Z rotation (in degrees): ";
-        std::cin >> rz;
-        pose.orientation = quaternion_from_euler(rx, ry, rz);
-        std::vector<double> joints = invKineClient(pose);
-        for (unsigned long k = 0; k < joints.size(); k++)
-        {
-            RCLCPP_INFO(node_->get_logger(), "Joint %ld: %f", k, joints[k]);
-        }
-    }
-    break;
-    case 34:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 34");
-        Eigen::MatrixXd jac = getJacobianClient();
-        RCLCPP_INFO(node_->get_logger(), "Jacobian computed:\n");
-        std::cout << jac << std::endl;
-    }
-    break;
-    case 35:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 35");
-        Eigen::MatrixXd inv_jac = pseudoInverseClient();
-        RCLCPP_INFO(node_->get_logger(), "Inverse Jacobian computed:\n");
-        std::cout << inv_jac << std::endl;
-    }
-    break;
-    case 36:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 36");
-        float vel, acc;
-        std::cout << "Insert new vel factor: ";
-        std::cin >> vel;
-        std::cout << "Insert new acc factor: ";
-        std::cin >> acc;
-        setNewPlannerParams(vel, acc);
-    }
-    break;
-    case 37:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 37");
-        setInstantKineMode(true);
-    }
-    break;
-    case 38:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 38");
-        setInstantKineMode(false);
-    }
-    break;
-    case 39:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 39");
-        setJacobianSpeedControl(true);
-    }
-    break;
-    case 40:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 40");
-        setJacobianSpeedControl(false);
-    }
-    break;
-    case 41:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 41");
-        setJsRealTimeControl(true);
-    }
-    break;
-    case 42:
-    {
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 42");
-        setJsRealTimeControl(false);
-    }
-    break;
-    case 43:
-        RCLCPP_INFO(node_->get_logger(), "You selected Option 41");
-        RCLCPP_INFO(node_->get_logger(), "Exiting...\n");
-        rclcpp::shutdown();
-        break;
-    default:
-        RCLCPP_WARN(node_->get_logger(), "Invalid choice. Please choose a valid option.");
-        break;
-    }
+    //Setters
+    menu_.addChoice("Set Jacobian speed control", &ManipulatorMenu::userSetJacobianSpeedControl);
+    menu_.addChoice("Set joints real time control", &ManipulatorMenu::userSetRealTimeControl);
+    menu_.addChoice("Set new planner parameters", &ManipulatorMenu::userSetPlannerParams);
+    menu_.addSection("Setters", section_start, menu_.last_);
+    section_start = menu_.last_ + 1;
+    
 }

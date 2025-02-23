@@ -7,8 +7,21 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
 
     declareParameters();
 
+    manipulator_name_ = this->get_parameter("manipulator_name").as_string();
+    planning_group_ = this->get_parameter("planning_group").as_string();
+    joint_names_ = this->get_parameter("joint_names").as_string_array();
+    ee_name_ = this->get_parameter("ee_name").as_string();
+    ros_freq_ = this->get_parameter("ros_freq").as_int();
+    max_speed_ee_ = this->get_parameter("max_speed_ee").as_double();
+    max_accel_ee_ = this->get_parameter("max_accel_ee").as_double();
+    max_spd_jnts_ = this->get_parameter("max_spd_jnts").as_double();
+    max_acc_jnts_ = this->get_parameter("max_acc_jnts").as_double();
+    gripper_links_ = this->get_parameter("gripper_links").as_string_array();
+    base_link_ = this->get_parameter("base_link").as_string();
+    world_frame_ = this->get_parameter("world_frame").as_string();
+
     //Initialize velocity variables
-    const size_t NUM_JOINTS = this->get_parameter("joint_names").as_string_array().size();
+    const size_t NUM_JOINTS = joint_names_.size();
 
     if (NUM_JOINTS == 0) {
         RCLCPP_ERROR(this->get_logger(), "No joint names provided");
@@ -25,11 +38,9 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     arm_msg_new_.resize(3, 1);
     arm_msg_new_.setZero();
 
-    const std::string manipulator_name = this->get_parameter("manipulator_name").as_string();
-
     // Initialize service servers
     fkine_service_ = this->create_service<manipulator_interfaces::srv::FKine>(
-        manipulator_name + "/get_fkine", 
+        manipulator_name_ + "/get_fkine", 
         [this](const std::shared_ptr<manipulator_interfaces::srv::FKine::Request> request,
                std::shared_ptr<manipulator_interfaces::srv::FKine::Response> response) {
             this->getFKine_callback(request, response);
@@ -37,7 +48,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     invkine_service_ = this->create_service<manipulator_interfaces::srv::InvKine>(
-        manipulator_name + "/get_invkine", 
+        manipulator_name_ + "/get_invkine", 
         [this](const std::shared_ptr<manipulator_interfaces::srv::InvKine::Request> request,
                std::shared_ptr<manipulator_interfaces::srv::InvKine::Response> response) {
             this->getInvKine_callback(request, response);
@@ -45,7 +56,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     jacobian_service_ = this->create_service<manipulator_interfaces::srv::Jacobian>(
-        manipulator_name + "/get_jacobian", 
+        manipulator_name_ + "/get_jacobian", 
         [this](const std::shared_ptr<manipulator_interfaces::srv::Jacobian::Request> request,
                std::shared_ptr<manipulator_interfaces::srv::Jacobian::Response> response) {
             this->getJacobian_callback(request, response);
@@ -53,7 +64,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     pseudoInverse_service_ = this->create_service<manipulator_interfaces::srv::PseudoInverse>(
-        manipulator_name + "/get_pseudo_inverse", 
+        manipulator_name_ + "/get_pseudo_inverse", 
         [this](const std::shared_ptr<manipulator_interfaces::srv::PseudoInverse::Request> request,
                std::shared_ptr<manipulator_interfaces::srv::PseudoInverse::Response> response) {
             this->getPseudoInverseJacobian_callback(request, response);
@@ -61,23 +72,15 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     changePlannerParams_service_ = this->create_service<manipulator_interfaces::srv::ChangePlannerParameters>(
-        manipulator_name + "/change_planner_params",
+        manipulator_name_ + "/change_planner_params",
         [this](const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerParameters::Request> request,
                std::shared_ptr<manipulator_interfaces::srv::ChangePlannerParameters::Response> response) {
             this->changePlannerParams_callback(request, response);
         }
     );
 
-    instantKineSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
-        manipulator_name + "/instKine_setter",
-        [this](const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-               std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
-            this->instantKineSetter_callback(request, response);
-        }
-    );
-
     jointsRealTimeSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
-        manipulator_name + "/joints_real_time_setter",
+        manipulator_name_ + "/joints_real_time_setter",
         [this](const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
             this->jointsRealTimeSetter_callback(request, response);
@@ -85,76 +88,70 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     jacobianControlSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
-        manipulator_name + "/jacobian_control_setter",
+        manipulator_name_ + "/jacobian_control_setter",
         [this](const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
             this->jacobianControlSetter_callback(request, response);
         }
     );
 
-    // Initialize clients
-
-    instantKineSetter_client_ = this->create_client<std_srvs::srv::SetBool>(manipulator_name + "/instKine_setter");
-
     // Initialize subscribers
     tcpGoal_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
-        manipulator_name + "/tcp_goal", 1, 
+        manipulator_name_ + "/tcp_goal", 1, 
         [this](const geometry_msgs::msg::Pose::SharedPtr msg) {
             this->tcpGoal_callback(msg);
         }
     );
 
     jointGoal_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
-        manipulator_name + "/joint_goal", 1, 
+        manipulator_name_ + "/joint_goal", 1, 
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->jointGoal_callback(msg);
         }
     );
 
     collisionObject_sub_ = this->create_subscription<moveit_msgs::msg::CollisionObject>(
-        manipulator_name + "/collision_object", 1, 
+        manipulator_name_ + "/collision_object", 1, 
         [this](const moveit_msgs::msg::CollisionObject::SharedPtr msg) {
             this->collisionObject_callback(msg);
         }
     );
 
     attachedcollisionObject_sub_ = this->create_subscription<moveit_msgs::msg::AttachedCollisionObject>(
-        manipulator_name + "/attached_collision_object", 1, 
+        manipulator_name_ + "/attached_collision_object", 1, 
         [this](const moveit_msgs::msg::AttachedCollisionObject::SharedPtr msg) {
             this->attachedCollisionObject_callback(msg);
         }
     );
 
     cartesianPlan_sub_ = this->create_subscription<geometry_msgs::msg::PoseArray>(
-        manipulator_name + "/desired_cartesian_move", 1, 
+        manipulator_name_ + "/desired_cartesian_move", 1, 
         [this](const geometry_msgs::msg::PoseArray::SharedPtr msg) {
             this->cartesianPlan_callback(msg);
         }
     );
 
     velJacSetpoint_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
-        manipulator_name + "/cmd_vel", 1, 
+        manipulator_name_ + "/cmd_vel", 1, 
         [this](const geometry_msgs::msg::Twist::SharedPtr msg) {
             this->velJacSetpoint_callback(msg);
         }
     );
 
     realTimeSetpoint_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
-        manipulator_name + "/js_cmd_vel", 1, 
+        manipulator_name_ + "/js_cmd_vel", 1, 
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->realTimeSetpoint_callback(msg);
         }
     );
 
     // Initialize publishers
-    std::vector<std::string> joint_names = this->get_parameter("joint_names").as_string_array();
-
-    j0_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name + "/" + joint_names[0] + "/motor_control", 1);
-    j1_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name + "/" + joint_names[1] + "/motor_control", 1);
-    j2_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name + "/" + joint_names[2] + "/motor_control", 1);
-    j3_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name + "/" + joint_names[3] + "/motor_control", 1);
-    j4_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name + "/" + joint_names[4] + "/motor_control", 1);
-    j5_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name + "/" + joint_names[5] + "/motor_control", 1);
+    j0_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[0] + "/motor_control", 1);
+    j1_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[1] + "/motor_control", 1);
+    j2_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[2] + "/motor_control", 1);
+    j3_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[3] + "/motor_control", 1);
+    j4_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[4] + "/motor_control", 1);
+    j5_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[5] + "/motor_control", 1);
 }
 
 ManipulatorPlannerNode::~ManipulatorPlannerNode() {
@@ -165,7 +162,7 @@ ManipulatorPlannerNode::~ManipulatorPlannerNode() {
 void ManipulatorPlannerNode::spinner() {
     unsigned long long int num_samples = 0; // Number of samples for the mean time calculation
 
-    rclcpp::Rate rate(this->get_parameter("ros_freq").as_int());
+    rclcpp::Rate rate(ros_freq_);
 
     initializePlanner(); //Initialize dynamic_planner_
 
@@ -195,7 +192,6 @@ void ManipulatorPlannerNode::spinner() {
             tcpVel_pub_->publish(getTcpVel());
             // Update joints vel command
             jointsRealTimeControl();
-
         }
 
         rclcpp::spin_some(this->shared_from_this());
@@ -289,7 +285,7 @@ void ManipulatorPlannerNode::addAttachedCollisionObject(
     std::string attached_link; //The link the object is attached to (end effector link by default, otherwise link_name)
 
     if (link_name.empty()) {
-        attached_link = this->get_parameter("ee_name").as_string();
+        attached_link = ee_name_;
     } else {
         attached_link = link_name;
     }
@@ -335,14 +331,14 @@ void ManipulatorPlannerNode::addAttachedCollisionObject(
 
 // Get the current tcp pose through forward kinematics
 const geometry_msgs::msg::Pose ManipulatorPlannerNode::getFKine() {
-    return dynamic_planner_->getFKine(this->get_parameter("ee_name").as_string()).pose;
+    return dynamic_planner_->getFKine(ee_name_).pose;
 }
 
 // Get the tcp twist by multiplying joints vels with the jacobian
 const geometry_msgs::msg::Twist ManipulatorPlannerNode::getTcpVel()
 {
     // Initialize dq with the appropriate size and assign values
-    const unsigned int NUM_JOINTS = get_parameter("joint_names").as_string_array().size();
+    const unsigned int NUM_JOINTS = joint_names_.size();
     Eigen::VectorXd dq(NUM_JOINTS);
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
@@ -383,7 +379,7 @@ const Eigen::MatrixXd ManipulatorPlannerNode::getJacobian() {
     Computes the jacobian matrix
     "ee_name" parameter is used as the end effector link
     */
-    return getJacobian(this->get_parameter("ee_name").as_string());
+    return getJacobian(ee_name_);
 }
 
 const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian(const std::string &end_effector_link) {
@@ -400,7 +396,7 @@ const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian() {
     Computes the Moore-Penrose pseudo-inverse of the jacobian matrix
     "ee_name" parameter is used as the end effector link
     */
-    return getPseudoInverseJacobian(this->get_parameter("ee_name").as_string());
+    return getPseudoInverseJacobian(ee_name_);
 }
 
 //CALLBACK FUNCTIONS
@@ -416,7 +412,7 @@ void ManipulatorPlannerNode::getFKine_callback(
             geometry_msgs::msg::PoseStamped tcp_pose: End effector pose
     */
     request.get(); //Suppress unused var warning
-    response->tcp_pose = dynamic_planner_->getFKine(this->get_parameter("ee_name").as_string());
+    response->tcp_pose = dynamic_planner_->getFKine(ee_name_);
 }
 
 
@@ -434,7 +430,7 @@ void ManipulatorPlannerNode::getInvKine_callback(
     */
     response->joint_values = dynamic_planner_->invKine(
         request->target_pose, 
-        this->get_parameter("ee_name").as_string()
+        ee_name_
     );
 }
 
@@ -451,7 +447,7 @@ void ManipulatorPlannerNode::getJacobian_callback(
     */
     request.get(); //Suppress unused var warning
 
-    Eigen::MatrixXd jacobian = dynamic_planner_->getJacobian(this->get_parameter("ee_name").as_string());
+    Eigen::MatrixXd jacobian = dynamic_planner_->getJacobian(ee_name_);
     std::vector<double> jacobian_values(jacobian.data(), jacobian.data() + jacobian.size()); //Flattens the matrix into a vector
 
     response->matrix_values = jacobian_values;
@@ -501,7 +497,7 @@ void ManipulatorPlannerNode::changePlannerParams_callback(
 void ManipulatorPlannerNode::tcpGoal_callback(const geometry_msgs::msg::Pose::SharedPtr msg) 
 {
     /*
-    Callback function for the TCP goal subscriber
+    Callback function for the TCP goal subscriber, plans and moves the robot to the goal pose
     Args:
         msg: TCP goal pose
     */
@@ -509,14 +505,14 @@ void ManipulatorPlannerNode::tcpGoal_callback(const geometry_msgs::msg::Pose::Sh
 
     dynamic_planner_->stop(); //Stop the execution of the current trajectory (if any)
 
-    dynamic_planner_->plan(*msg, this->get_parameter("ee_name").as_string());
+    dynamic_planner_->plan(*msg, ee_name_);
     dynamic_planner_->moveRobot();
 }
 
 void ManipulatorPlannerNode::jointGoal_callback(const sensor_msgs::msg::JointState::SharedPtr msg) 
 {
     /*
-    Callback function for the joint goal subscriber
+    Callback function for the joint goal subscriber, plans and moves the robot to the goal joint positions
     Args:
         msg: Joint goal positions
     */
@@ -541,13 +537,17 @@ void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs:
     // Add the collision object to the planning scene and attach it to a link
     // If link_name is empty, the 'ee_name' parameter is used
     RCLCPP_INFO(this->get_logger(), "Received attached collision object: %s, operation: %d", collision_object->object.id.c_str(), collision_object->object.operation);
-    std::string link_name = collision_object->link_name.empty() ? this->get_parameter("ee_name").as_string() : collision_object->link_name;
+    std::string link_name = collision_object->link_name.empty() ? ee_name_ : collision_object->link_name;
 
-    dynamic_planner_->getPlanningScene()->applyCollisionObjects({collision_object->object});
+    RCLCPP_INFO(get_logger(), "Attaching object to link: %s", link_name.c_str());
+    
+    collision_object->object.header.frame_id = link_name;
+
+    dynamic_planner_->getPlanningScene()->applyCollisionObject(collision_object->object);
     dynamic_planner_->getMoveGroup()->attachObject(
         collision_object->object.id, 
         link_name, 
-        this->get_parameter("gripper_links").as_string_array()
+        gripper_links_
     );
 }
 
@@ -566,36 +566,15 @@ void ManipulatorPlannerNode::cartesianPlan_callback(const geometry_msgs::msg::Po
   if (fraction < 0.01) {RCLCPP_WARN(get_logger(), "Cartesian trajectory unfeasible");}
 }
 
-// Set the instantaneous inverse Kinematics
-bool ManipulatorPlannerNode::instantKineSetter_callback(const std_srvs::srv::SetBool::Request::SharedPtr &req, std_srvs::srv::SetBool::Response::SharedPtr &res)
-{
-    // Set instantaneous kine param
-    this->set_parameter(rclcpp::Parameter("inst_kine", req->data));
-
-    RCLCPP_INFO(get_logger(), "Instantaneous kinematic mode set as %s", req->data ? "True":"False");
-    // Stop the robot to prevent bad behaviours during mode switch
-    arm_vel_cmd_[0] = 0.;
-    arm_vel_cmd_[1] = 0.;
-    arm_vel_cmd_[2] = 0.;
-    arm_vel_cmd_[3] = 0.;
-    arm_vel_cmd_[4] = 0.;
-    arm_vel_cmd_[5] = 0.;
-    // Return success
-    res->success = true;
-    res->message = req->data ? "Instantaneous kinematics control mode enabled":"Instantaneous kinematics control mode disabled";
-
-    return true;
-}
-
 // Set the jacobian speed based control
-bool ManipulatorPlannerNode::jointsRealTimeSetter_callback(const std_srvs::srv::SetBool::Request::SharedPtr &req, std_srvs::srv::SetBool::Response::SharedPtr &res)
+void ManipulatorPlannerNode::jointsRealTimeSetter_callback(const std_srvs::srv::SetBool::Request::SharedPtr req, std_srvs::srv::SetBool::Response::SharedPtr res)
 {
     // Set robot real time joints speed control
     js_rt_control_ = req->data;
     RCLCPP_INFO(get_logger(), "Joints real time control mode set as %s", js_rt_control_ ? "True":"False");
 
     // Stop the robot to prevent bad behaviours during mode switch
-    for (unsigned int k = 0; k < this->get_parameter("joint_names").as_string_array().size(); k++)
+    for (unsigned int k = 0; k < joint_names_.size(); k++)
     {
         js_vel_cmd_[k]  = 0.;
     }
@@ -608,11 +587,10 @@ bool ManipulatorPlannerNode::jointsRealTimeSetter_callback(const std_srvs::srv::
     // Return success
     res->success = true;
     res->message = js_rt_control_ ? "Joints real time control mode enabled":"Joints real time control mode disabled";
-    return true;
 }
 
 // Set the jacobian speed based control
-bool ManipulatorPlannerNode::jacobianControlSetter_callback(const std_srvs::srv::SetBool::Request::SharedPtr &req, std_srvs::srv::SetBool::Response::SharedPtr &res)
+void ManipulatorPlannerNode::jacobianControlSetter_callback(const std_srvs::srv::SetBool::Request::SharedPtr req, std_srvs::srv::SetBool::Response::SharedPtr res)
 {
     // Set robot jacobian control
     jac_control_ = req->data;
@@ -624,27 +602,24 @@ bool ManipulatorPlannerNode::jacobianControlSetter_callback(const std_srvs::srv:
     // Return success
     res->success = true;
     res->message = jac_control_ ? "Jacobian control mode enabled":"Jacobian control mode disabled";
-    return true;
 }
 
 // Update speed setpoint of the arm for the real time joints speed based control
 void ManipulatorPlannerNode::realTimeSetpoint_callback(const sensor_msgs::msg::JointState::SharedPtr& msg)
 {
-    double max_spd_jnts = this->get_parameter("max_spd_jnts").as_double();
-    for (unsigned int k = 0; k < get_parameter("joint_names").as_string_array().size(); k++)
+    for (unsigned int k = 0; k < joint_names_.size(); k++)
     {
         // Update setpoint of the k-th joint
         js_msg_new_[k] = msg->velocity[k];
         // Check if the vel cmds exceed the maximum acceptable speed
-        if (abs(msg->velocity[k]) > max_spd_jnts)
-        {js_msg_new_[k] = sign(msg->velocity[k])*max_spd_jnts;}
+        if (abs(msg->velocity[k]) > max_spd_jnts_)
+        {js_msg_new_[k] = sign(msg->velocity[k])*max_spd_jnts_;}
     }
 }
 
 // Update the velocity setpoint of the arm for the jacobian speed based control
 void ManipulatorPlannerNode::velJacSetpoint_callback(const geometry_msgs::msg::Twist::SharedPtr& msg)
 {
-    double max_speed_ee = this->get_parameter("max_speed_ee").as_double();
     // Compute the norm of the linear vels components of the new msg
     arm_msg_new_[0] = msg->linear.x;
     arm_msg_new_[1] = msg->linear.y;
@@ -660,9 +635,9 @@ void ManipulatorPlannerNode::velJacSetpoint_callback(const geometry_msgs::msg::T
 
     // Check if the speed is below the maximum
     double norm_vel = arm_msg_new_.norm();
-    if (norm_vel > max_speed_ee) {arm_msg_new_ *= (max_speed_ee/norm_vel);}
+    if (norm_vel > max_speed_ee_) {arm_msg_new_ *= (max_speed_ee_/norm_vel);}
     // double norm_vel = arm_vel_cmd_.head<3>().norm();
-    // if (norm_vel > max_speed_ee) {arm_vel_cmd_ *= (max_speed_ee/norm_vel);}
+    // if (norm_vel > max_speed_ee_) {arm_vel_cmd_ *= (max_speed_ee_/norm_vel);}
 }
 
 //CONTROL FUNCTIONS
@@ -706,36 +681,32 @@ void ManipulatorPlannerNode::jacobianControl()
     // Compute the norm of the linear vels components of the new msg
     double norm_msg = arm_msg_new_.norm();
 
-    int ros_freq = this->get_parameter("ros_freq").as_int();
-    double max_accel_ee = this->get_parameter("max_accel_ee").as_double();
-    std::vector<std::string> joint_names = this->get_parameter("joint_names").as_string_array();
-
     // Check if the acceleration is over the maximum, set a limitation
-    if (abs(norm_msg-norm_vel)*ros_freq > max_accel_ee)
+    if (abs(norm_msg-norm_vel)*ros_freq_ > max_accel_ee_)
     {
         // Split the acceleration over the three axes
-        double acc_x = max_accel_ee/3;
-        double acc_y = max_accel_ee/3;
-        double acc_z = max_accel_ee/3;
+        double acc_x = max_accel_ee_/3;
+        double acc_y = max_accel_ee_/3;
+        double acc_z = max_accel_ee_/3;
         if      (norm_msg > 0.001)  // norm_msg < -0.001 || 
         {
-            acc_x = max_accel_ee*abs(arm_msg_new_(0))/norm_msg;
-            acc_y = max_accel_ee*abs(arm_msg_new_(1))/norm_msg;
-            acc_z = max_accel_ee*abs(arm_msg_new_(2))/norm_msg;
+            acc_x = max_accel_ee_*abs(arm_msg_new_(0))/norm_msg;
+            acc_y = max_accel_ee_*abs(arm_msg_new_(1))/norm_msg;
+            acc_z = max_accel_ee_*abs(arm_msg_new_(2))/norm_msg;
             // Update linear velocity components
-            arm_vel_cmd_(0) = arm_vel_cmd_(0) + sign(arm_msg_new_(0)-arm_vel_cmd_(0))*acc_x/ros_freq;
-            arm_vel_cmd_(1) = arm_vel_cmd_(1) + sign(arm_msg_new_(1)-arm_vel_cmd_(1))*acc_y/ros_freq;
-            arm_vel_cmd_(2) = arm_vel_cmd_(2) + sign(arm_msg_new_(2)-arm_vel_cmd_(2))*acc_z/ros_freq;
+            arm_vel_cmd_(0) = arm_vel_cmd_(0) + sign(arm_msg_new_(0)-arm_vel_cmd_(0))*acc_x/ros_freq_;
+            arm_vel_cmd_(1) = arm_vel_cmd_(1) + sign(arm_msg_new_(1)-arm_vel_cmd_(1))*acc_y/ros_freq_;
+            arm_vel_cmd_(2) = arm_vel_cmd_(2) + sign(arm_msg_new_(2)-arm_vel_cmd_(2))*acc_z/ros_freq_;
         }
         else if (norm_vel > 0.001)  // norm_vel < -0.001 || 
         {
-            acc_x = max_accel_ee*(abs(arm_vel_cmd_[0]))/norm_vel;
-            acc_y = max_accel_ee*(abs(arm_vel_cmd_[1]))/norm_vel;
-            acc_z = max_accel_ee*(abs(arm_vel_cmd_[2]))/norm_vel;
+            acc_x = max_accel_ee_*(abs(arm_vel_cmd_[0]))/norm_vel;
+            acc_y = max_accel_ee_*(abs(arm_vel_cmd_[1]))/norm_vel;
+            acc_z = max_accel_ee_*(abs(arm_vel_cmd_[2]))/norm_vel;
             // Update linear velocity components
-            arm_vel_cmd_(0) = arm_vel_cmd_(0) + sign(arm_msg_new_(0)-arm_vel_cmd_(0))*acc_x/ros_freq;
-            arm_vel_cmd_(1) = arm_vel_cmd_(1) + sign(arm_msg_new_(1)-arm_vel_cmd_(1))*acc_y/ros_freq;
-            arm_vel_cmd_(2) = arm_vel_cmd_(2) + sign(arm_msg_new_(2)-arm_vel_cmd_(2))*acc_z/ros_freq;
+            arm_vel_cmd_(0) = arm_vel_cmd_(0) + sign(arm_msg_new_(0)-arm_vel_cmd_(0))*acc_x/ros_freq_;
+            arm_vel_cmd_(1) = arm_vel_cmd_(1) + sign(arm_msg_new_(1)-arm_vel_cmd_(1))*acc_y/ros_freq_;
+            arm_vel_cmd_(2) = arm_vel_cmd_(2) + sign(arm_msg_new_(2)-arm_vel_cmd_(2))*acc_z/ros_freq_;
         }
         else
         {
@@ -749,7 +720,7 @@ void ManipulatorPlannerNode::jacobianControl()
     for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(arm_vel_cmd_[k]);}
 
     // Compute the speed
-    const unsigned int NUM_JOINTS = joint_names.size();
+    const unsigned int NUM_JOINTS = joint_names_.size();
     Eigen::VectorXd dq(NUM_JOINTS);
     dq = getPseudoInverseJacobian() * arm_vel_cmd_;
 
@@ -765,11 +736,11 @@ void ManipulatorPlannerNode::jacobianControl()
 
     // Update joint position setpoint
     Eigen::VectorXd qd(NUM_JOINTS);
-    qd = q + dq / ros_freq;
+    qd = q + dq / ros_freq_;
 
     // Build the msg for the joints setpoint
     sensor_msgs::msg::JointState js;
-    js.name     = joint_names;
+    js.name     = joint_names_;
     js.position.resize(qd.size());
     js.velocity.resize(dq.size());
 
@@ -787,16 +758,13 @@ void ManipulatorPlannerNode::jacobianControl()
 // Execute the jacobian based control
 void ManipulatorPlannerNode::jointsRealTimeControl()
 {
-    std::vector<std::string> joint_names = this->get_parameter("joint_names").as_string_array();
-    int ros_freq = this->get_parameter("ros_freq").as_int();
-    double max_acc_jnts = this->get_parameter("max_acc_jnts").as_double();
-    const unsigned int NUM_JOINTS = joint_names.size();
+    const unsigned int NUM_JOINTS = joint_names_.size();
 
     // Check if the accelerations are acceptable and map the joints speed from the JointState message
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
-        if (abs(js_msg_new_[k]-js_vel_cmd_[k])*ros_freq > max_acc_jnts)
-            {js_vel_cmd_[k] = js_vel_cmd_[k] + sign(js_msg_new_[k]-js_vel_cmd_[k])*max_acc_jnts/ros_freq;}
+        if (abs(js_msg_new_[k]-js_vel_cmd_[k])*ros_freq_ > max_acc_jnts_)
+            {js_vel_cmd_[k] = js_vel_cmd_[k] + sign(js_msg_new_[k]-js_vel_cmd_[k])*max_acc_jnts_/ros_freq_;}
         else  {js_vel_cmd_[k] = js_msg_new_[k];}
     }
 
@@ -812,11 +780,11 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
 
     // Update joint position setpoint
     Eigen::VectorXd qd(NUM_JOINTS);
-    qd = q + js_vel_cmd_ / ros_freq;
+    qd = q + js_vel_cmd_ / ros_freq_;
 
     // Build the msg for the joints setpoint
     sensor_msgs::msg::JointState js;
-    js.name     = joint_names;
+    js.name     = joint_names_;
     js.position.resize(qd.size());
     js.velocity.resize(js_vel_cmd_.size());
 
@@ -831,15 +799,6 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
     dynamic_planner_->moveRobot(js);
 }
 
-void ManipulatorPlannerNode::set_instKine(bool inst_kine)
-{
-    // Set instantaneous kine param
-    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-    request->data = inst_kine;
-    instantKineSetter_client_->wait_for_service();
-    auto result = instantKineSetter_client_->async_send_request(request);
-}
-
 //HELPER FUNCTIONS
 void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("manipulator_name", std::string());
@@ -847,27 +806,41 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("joint_names", std::vector<std::string>());
     this->declare_parameter("ee_name", "tool_0");
     this->declare_parameter("base_link", "base_link");
-    this->declare_parameter("sample_time", 0.002);
     this->declare_parameter("world_frame", "base_link");
-    this->declare_parameter("vel_factor", 1.0);
-    this->declare_parameter("acc_factor", 1.0);
     this->declare_parameter("ros_freq", 500);
     this->declare_parameter("max_speed_ee", 1.0);
     this->declare_parameter("max_accel_ee", 1.0);
     this->declare_parameter("max_spd_jnts", 1.0);
     this->declare_parameter("max_acc_jnts", 1.0);
-    this->declare_parameter("inst_kine", true);
     this->declare_parameter("gripper_links", std::vector<std::string>()); //This is used to disable collision with the fingers when attaching objects
+    
+    this->declare_parameter("planner_id", "geometric::RRTConnect");
+    this->declare_parameter("vel_factor", 0.1);
+    this->declare_parameter("acc_factor", 0.1);
+    this->declare_parameter("max_planning_time", 2.0);
+    this->declare_parameter("max_planning_attempts", 2);
+    this->declare_parameter("sample_time", 0.002);
+    this->declare_parameter("goal_tolerance", 0.01);
 }
  
 void ManipulatorPlannerNode::initializePlanner() {
     //Initialize the dynamic planner
+    DynamicPlannerParams params;
+
+    params.vel_factor = this->get_parameter("vel_factor").as_double();
+    params.acc_factor = this->get_parameter("acc_factor").as_double();
+    params.planning_time = this->get_parameter("max_planning_time").as_double();
+    params.num_attempts = this->get_parameter("max_planning_attempts").as_int();
+    params.tolerance = this->get_parameter("goal_tolerance").as_double();
+    params.planner_id = this->get_parameter("planner_id").as_string();
+    params.sample_time = this->get_parameter("sample_time").as_double();
+    params.max_velocity = max_speed_ee_;
+    
     auto move_group_interface_node = std::make_shared<rclcpp::Node>("dynamic_planner_node", rclcpp::NodeOptions());
     executor_.add_node(move_group_interface_node);
     dynamic_planner_ = std::make_shared<DynamicPlanner>(move_group_interface_node,
-                                                        this->get_parameter("planning_group").as_string(),
-                                                        this->get_parameter("vel_factor").as_double(),
-                                                        this->get_parameter("acc_factor").as_double(),
+                                                        planning_group_,
+                                                        params,
                                                         false);
 }
 

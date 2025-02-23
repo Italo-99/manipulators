@@ -11,7 +11,7 @@ def get_ur_moveit_launch_params(context,
                                 moveit_config_package_: LaunchConfiguration | None = None,
                                 moveit_joint_limits_file_: LaunchConfiguration | None = None,
                                 moveit_kinematics_file_: LaunchConfiguration | None = None,
-                                description_semantic_file_: LaunchConfiguration | None = None,
+                                description_semantic_path_: LaunchConfiguration | None = None,
                                 prefix_: LaunchConfiguration | None = None):
     """
         This function returns a list of dictionaries with all the parameters needed to launch move_group node for UR robots.
@@ -22,13 +22,13 @@ def get_ur_moveit_launch_params(context,
 
         Args:
             ur_type:                   Type/series of used UR robot.
-            description_path:          Path to the URDF/XACRO description file.
+            description_path:          Full path to the URDF/XACRO description file.
             tf_prefix:                 Prefix for tf, useful for multi-robot setup.
             description_package:       Name of the package containing the robot description.
             moveit_config_package:     Name of the package containing the MoveIt configuration.
             moveit_joint_limits_file:  Name of the file containing the joint limits configuration.
             moveit_kinematics_file:    Name of the file containing the kinematics configuration.
-            description_semantic_file: Name of the file containing the semantic description.
+            description_semantic_path: Full path for the file containing the semantic description.
             prefix:                    Prefix for the joint names, useful for multi-robot setup.
     """
 
@@ -39,7 +39,7 @@ def get_ur_moveit_launch_params(context,
     moveit_config_package     = moveit_config_package_ if moveit_config_package_ else         LaunchConfiguration("moveit_config_package")
     moveit_joint_limits_file  = moveit_joint_limits_file_ if moveit_joint_limits_file_ else   LaunchConfiguration("moveit_joint_limits_file")
     moveit_kinematics_file    = moveit_kinematics_file_ if moveit_kinematics_file_ else       LaunchConfiguration("moveit_kinematics_file")
-    description_semantic_file = description_semantic_file_ if description_semantic_file_ else LaunchConfiguration("description_semantic_file")
+    description_semantic_path = description_semantic_path_ if description_semantic_path_ else LaunchConfiguration("description_semantic_path")
     prefix                    = prefix_ if prefix_ else                                       LaunchConfiguration("prefix")
 
     joint_limit_params = PathJoinSubstitution(
@@ -67,31 +67,25 @@ def get_ur_moveit_launch_params(context,
             joint_limit_params,
             " ",
             "kinematics_params:=",
-            kinematics_params,
-            " ",
-            "prefix:=",
-            prefix,
-            " ",
+            kinematics_params
         ]
     )
 
-    robot_description = {"robot_description": robot_description_content}
+    robot_description = {"robot_description": str(robot_description_content.perform(context))}
 
     # MoveIt Configuration
     robot_description_semantic_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
-            PathJoinSubstitution(
-                [FindPackageShare(moveit_config_package), "srdf", description_semantic_file]
-            ),
+            description_semantic_path,
             " ",
             "name:=ur",
             # Also ur_type parameter could be used but then the planning group names in yaml
             # configs has to be updated!
             " ",
             "prefix:=",
-            prefix,
+            tf_prefix,
             " ",
         ]
     )

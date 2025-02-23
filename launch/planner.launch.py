@@ -43,6 +43,13 @@ def launch_setup(context, *args, **kwargs):
     )
 
     nodes_to_start.append(
+        Node(
+            package="motors_trajectory",
+            executable="motor_mover_node",
+        )
+    )
+
+    nodes_to_start.append(
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 FindPackageShare("manipulators").perform(context) + "/launch/planning_context.launch.py"
@@ -50,7 +57,7 @@ def launch_setup(context, *args, **kwargs):
             launch_arguments=[
                 ("ur_type", LaunchConfiguration("ur_type")),
                 ("description_package", LaunchConfiguration("description_package")),
-                ("description_semantic_file", LaunchConfiguration("description_semantic_file")),
+                ("description_semantic_path", LaunchConfiguration("description_semantic_path")),
                 ("prefix", LaunchConfiguration("prefix")),
                 ("description_path", LaunchConfiguration("description_path")),
                 ("tf_prefix", LaunchConfiguration("tf_prefix")),
@@ -115,9 +122,9 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
-            "description_semantic_file",
-            default_value="ur.srdf.xacro",
-            description="MoveIt SRDF/XACRO description file with the robot (just filename, file must be inside <moveit_config_pkg>/config/ ).",
+            "description_semantic_path",
+            default_value=PathJoinSubstitution([FindPackageShare("ur_moveit_config"), "srdf", "ur.srdf.xacro"]),
+            description="MoveIt SRDF/XACRO description file with the robot (full path).",
         )
     )
     declared_arguments.append(

@@ -2,19 +2,15 @@
 
 DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
                                const std::string &planning_group,
-                               const double vel_factor,
-                               const double acc_factor,
+                               DynamicPlannerParams params,
                                bool dynamic_behavior)
     : node_(node),
-      params_(),
+      params_(params),
       dynamic_behavior_(dynamic_behavior),
       planning_group_(planning_group),
       trajpoint_(0UL)
 {
     RCLCPP_INFO(node_->get_logger(), "Initializing DynamicPlanner...");
-
-    params_.vel_factor = vel_factor;
-    params_.acc_factor = acc_factor;
 
     move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
         node_, 
@@ -29,8 +25,8 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
 
     joints_names_group_ = move_group_->getJointNames();
 
-    joints_values_group_.resize(joints_names_group_.size());  // Adjust joints values array size
-    joints_speed_group_.resize(joints_names_group_.size());  // Adjust joints values array size
+    joints_values_group_.resize(joints_names_group_.size());    // Adjust joints values array size
+    joints_speed_group_.resize(joints_names_group_.size());     // Adjust joints values array size
 
     // Initialize joints map for robot state update: per each joint name, set its value to 0
     for (const std::string& name : joints_names_group_)
@@ -39,7 +35,6 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
         joints_map_group_[name] = 0.;
         dq_jts_map_group_[name] = 0.;
     }
-
 
     //Fetch robot state
     robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>(node_);
@@ -130,6 +125,8 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
     if (checkJointDiff(joint_positions)){
         result_msg.data = false;
         trajectory_res_pub_->publish(result_msg);
+        moveit_msgs::msg::RobotTrajectory trajectory;
+        setTrajectory(trajectory); //Set empty trajectory to avoid re-execution of previous trajectory
         return;
     }
 
@@ -138,6 +135,8 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
         RCLCPP_ERROR(node_->get_logger(), "Joint positions are out of bounds");
         result_msg.data = false;
         trajectory_res_pub_->publish(result_msg);
+        moveit_msgs::msg::RobotTrajectory trajectory;
+        setTrajectory(trajectory); //Set empty trajectory to avoid re-execution of previous trajectory
         return;
     }
 
@@ -223,7 +222,7 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
 
 void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose)
 {
-    plan(goal_pose, end_effector_link_, world_frame_);
+    plan(goal_pose, params_.end_effector_link, world_frame_);
 }
 
 double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints)
@@ -376,21 +375,10 @@ DynamicPlannerParams DynamicPlanner::getParams() const
     return params_;
 }
 
-void DynamicPlanner::setParams(const std::string &planner_id, const int attempts, const double time,
-                               const double v_factor, const double a_factor)
-{
-    params_.planner_id = planner_id;
-    params_.num_attempts = attempts;
-    params_.planning_time = time;
-    params_.vel_factor = v_factor;
-    params_.acc_factor = a_factor;
-
-    updatePlannerParams();
-}
-
 void DynamicPlanner::setParams(const DynamicPlannerParams &params)
 {
     params_ = params;
+    updatePlannerParams();
 }
 
 void DynamicPlanner::setDynamicBehavior(bool dynamic_behavior)
@@ -499,7 +487,7 @@ geometry_msgs::msg::PoseStamped DynamicPlanner::getFKine(const std::string &end_
 
 geometry_msgs::msg::PoseStamped DynamicPlanner::getFKine()
 {
-    return getFKine(end_effector_link_);
+    return getFKine(params_.end_effector_link);
 }
 
 // ------------------------------------- INVERSE KINEMATICS ------------------------------------
@@ -530,7 +518,7 @@ std::vector<double> DynamicPlanner::invKine(const geometry_msgs::msg::Pose &targ
 
 std::vector<double> DynamicPlanner::invKine(const geometry_msgs::msg::Pose &target_pose)
 {
-    return invKine(target_pose, end_effector_link_);
+    return invKine(target_pose, params_.end_effector_link);
 }
 
 
@@ -560,7 +548,7 @@ const Eigen::MatrixXd DynamicPlanner::getJacobian(const std::string &end_effecto
 
 const Eigen::MatrixXd DynamicPlanner::getJacobian()
 {
-    return getJacobian(end_effector_link_);
+    return getJacobian(params_.end_effector_link);
 }
 
 const Eigen::MatrixXd DynamicPlanner::getPseudoInverseJacobian(const std::string &end_effector_link)
@@ -570,7 +558,7 @@ const Eigen::MatrixXd DynamicPlanner::getPseudoInverseJacobian(const std::string
 
 const Eigen::MatrixXd DynamicPlanner::getPseudoInverseJacobian()
 {
-    return getPseudoInverseJacobian(end_effector_link_);
+    return getPseudoInverseJacobian(params_.end_effector_link);
 }
 
 // -------------------------------------------------------------------------------------------
@@ -659,7 +647,7 @@ void DynamicPlanner::setTrajectory(const moveit_msgs::msg::RobotTrajectory &traj
     if (planning_space_ == PlanningSpace::OPERATIVE_SPACE){
         if (end_effector_link == ""){
             traj_end_effector_link_ = end_effector_link;
-            RCLCPP_WARN(node_->get_logger(), "End effector link not specified for trajectory. Using default link: %s.", end_effector_link_.c_str());
+            RCLCPP_WARN(node_->get_logger(), "End effector link not specified for trajectory. Using default link: %s.", params_.end_effector_link.c_str());
         }
         //This might be a redundant calculation in some cases but it allows for safe access to the final pose
         final_pose_ = getFKine(final_joint_positions_, traj_end_effector_link_).pose;
@@ -826,7 +814,7 @@ void DynamicPlanner::updatePlannerParams()
     move_group_->setMaxAccelerationScalingFactor(params_.acc_factor);
 
     move_group_->setPoseReferenceFrame(world_frame_);
-    move_group_->setEndEffectorLink(end_effector_link_);
+    move_group_->setEndEffectorLink(params_.end_effector_link);
 }
 
 geometry_msgs::msg::PoseStamped DynamicPlanner::toPoseStamped(const Eigen::Isometry3d &pose, const std::string &frame_id)

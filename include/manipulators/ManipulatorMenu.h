@@ -35,6 +35,7 @@
 #include "manipulator_interfaces/srv/jacobian.hpp"
 #include "manipulator_interfaces/srv/change_planner_parameters.hpp"
 
+#include "manipulators/MenuUserInterface.h"
 
 struct ManipulatorMenuParams
 {
@@ -68,23 +69,12 @@ class ManipulatorMenu
       void spinnerMenu(void);         // Asynchronous spinner for ROS routines with user menu
       void spinner(void);             // Update current robot joints state
 
-    // Coppelia
-      void startCoppeliaSim(void);        // Start simulation on CoppeliaSim
-      void stopCoppeliaSim(void);         // Stop  simulation on CoppeliaSim
-      void saveCoppeliaScene(void);       // Save  scene      on CoppeliaSim
-
     // Joint and TCP moves
       sensor_msgs::msg::JointState publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
       sensor_msgs::msg::JointState publishJointGoal(const sensor_msgs::msg::JointState jointStateMsg);
       geometry_msgs::msg::Pose     publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
       geometry_msgs::msg::Pose     publishTcpGoal(const geometry_msgs::msg::Pose tcpPoseMsg);
-      geometry_msgs::msg::Pose     publishTcpIKGoal(const std::vector<double> position);// publish a tcpIK goal to the manipulator planner
-      geometry_msgs::msg::Pose     publishTcpIKGoal(const geometry_msgs::msg::Pose tcpPoseMsg);
-      geometry_msgs::msg::Pose     publishCartesianMove(const uint   axis1,  // publish a carthesian move command
-                                              const uint   axis2,
-                                              const double pos1,
-                                              const double pos2,
-                                              const uint   steps);
+
       sensor_msgs::msg::JointState oneJointMove(const int num, const double joint_rot); // to define a rotation around a single joint
       sensor_msgs::msg::JointState goHome(const bool);               // to setup home position
 
@@ -124,24 +114,20 @@ class ManipulatorMenu
                           double              obj_pos[], 
                           double              rot_pos[],
                           uint                operation);
-
-    // Gripper control
-      void openGripper(void);
-      void closeGripper(void);
-      void moveGripper(const double);
-      void grabObjGripper(void);
-      void detachObjGripper(void);
-      void openRealGripper(void);
-      void closeRealGripper(void);
-      void moveRealGripper(const float);
       
-    // Quaternions handling
+
+    // Matrix utils
+      void printMatrix(const Eigen::MatrixXd& matrix);
+      void listToMatrix(const std::vector<double> &list, Eigen::MatrixXd &matrix);
+
+    // Quaternions utils
       geometry_msgs::msg::Quaternion quaternion_from_euler(double roll, double pitch, double yaw);
       std::vector<double> euler_from_quaternion(const geometry_msgs::msg::Quaternion quat);
 
     // Degrees and radians conversions
       std::vector<double> deg_from_rad(const std::vector<double>);
       std::vector<double> rad_from_deg(const std::vector<double>);
+
     // Kinematics params getters
       geometry_msgs::msg::Pose getCurrentFKineClient(void);
       Eigen::MatrixXd     pseudoInverseClient(void);
@@ -149,72 +135,78 @@ class ManipulatorMenu
       Eigen::MatrixXd     getJacobianClient(void);
     // Kinematics params setters
       void setJacobianSpeedControl(bool);
-      void setInstantKineMode(bool);
       void setNewPlannerParams(float,float);
       void setJsRealTimeControl(bool);
 
  private:
 
   // --------------------- PRIVATE FUNCTIONS ---------------------
-    // ---------------  PRIVATE COPPELIA METHODS ---------------------
-      void wait_for_response(void);     // Send the request and show the response
 
     // --------------------- PRIVATE PUBS/SUBS ---------------------
 
-      void jointStateVisualizer();      // listen to joint state publisher
-
-    // --------------------- MOVE FUNCTIONS ---------------------
-
-      void testJointGoal(void);             // to test a joint goal
-      void userJointGoal(void);             // to perform a joint goal set by the user 
-      void oneJointMove_user();             // to move only a single joint
-
-      void testTcpGoal(void);               // to test a tcp goal
-      void userTcpGoal(void);               // to perform a tcp goal set by the user 
-      void userTcpIKGoal(void);             // to perform a tcpIK goal set by the user 
-
-      void userCartesianMove(void);         // to perform a cartesian move set by the user
-
-      // Joint state callback function
-      void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr& msg);
-
-      void userGripperMove(void);          // to perform a gripper move set by the user
-      void callGripperSrv(const bool);     // to call open/close gripper srv
-      void callGrabbingSrv(const bool);    // to call grab/detach gripper srv
-      void callRealGripperSrv(const float);// to call real gripper open close
+    void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr& msg);
     
-    // --------------------- UTILS FUNCTIONS ---------------------
-      // Enviornment updates functions
-        void addCollObj(void);          // Add a collision object by the user
-        void deleteCollObj(void);       // Delete a given collision object from the user menu
-        void addUserAttachedObj(void);  // Add an attached collision object by the user
+    // --------------------- USER ACTIONS ---------------------
+    
+    void userJointGoal(void);            // to perform a joint goal set by the user 
+    void userOneJointMove_user();        // to move only a single joint
+    
+    void userTcpGoal(void);              // to perform a tcp goal set by the user 
 
-      // Menu handling
-        void  printMenu();
-        int   getUserChoice();
-        void  processChoice(int choice);
+    void userMoveAlongX(void);           // to move the end effector along the x axis
+    void userMoveAlongY(void);           // to move the end effector along the y axis
+    void userMoveAlongZ(void);           // to move the end effector along the z axis
 
-  // --------------------- PRIVATE VARIABLES ---------------------
+    void userMakeTcpRot(void);           // to rotate the end effector around the 3 carthesian axis
+    void userRotateAroundX(void);        // to rotate the end effector around the x axis
+    void userRotateAroundY(void);        // to rotate the end effector around the y axis
+    void userRotateAroundZ(void);        // to rotate the end effector around the z axis
+    
+    //Known positions
+    void userGoHomeDown(void);           // to go to the home position gripper facing down
+    void userGoHomeFront(void);          // to go to the home position gripper facing front
+
+    //Visualization
+    void userJointStateVisualizer();
+    void userEEPoseVisualizer();
+
+    // Environment updates functions
+    void userAddCollObj(void);          // Add a collision object by the user
+    void userDeleteCollObj(void);       // Delete a given collision object from the user menu
+    void userAddAttachedObj(void);  // Add an attached collision object by the user
+
+    // Kinematics queries
+    void userGetInvKine(void);           // Get the inverse kinematics of a given pose
+    void userGetPseudoInv(void);         // Get the pseudo inverse of the manipulator
+    void userGetJacobian(void);          // Get the jacobian of the manipulator
+
+    // Planner params
+    void userSetPlannerParams(void);            // Set the planner parameters
+    void userSetJacobianSpeedControl(void);     // Set the jacobian speed control
+    void userSetRealTimeControl(void);          // Set the real time control of the joints
+
+    //Initialize the menu instance and add the menu options and sections
+    void initializeMenu();
+
+    // --------------------- PRIVATE VARIABLES ---------------------
 
     ManipulatorMenuParams params_;
 
     const rclcpp::Node::SharedPtr node_;
 
+    MenuUserInterface<ManipulatorMenu> menu_;
+
     // ---------------------  ROS HANDLING ---------------------
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr jointGoalPublisher_;   
     rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr tcpPosePublisher_;
-    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr tcpPoseIKPublisher_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr  carthesianMovePublisher_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr  display_goal_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr  eepose_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr display_goal_pub_;
     rclcpp::Publisher<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObjectPublisher_;
-    rclcpp::Publisher<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr  collisionAttObjectPublisher_;
+    rclcpp::Publisher<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr collisionAttObjectPublisher_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr  moveGripperPublisher_;
 
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointStateSubscriber_;
 
     rclcpp::Client<manipulator_interfaces::srv::ChangePlannerParameters>::SharedPtr plannerParamsClient_;
-    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setInstKineClient_;
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControlClient_;
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setRealTimeControlClient_;
 
@@ -228,21 +220,8 @@ class ManipulatorMenu
     rclcpp::Client<manipulator_interfaces::srv::PseudoInverse>::SharedPtr pseudoInvClient_;
     rclcpp::Client<manipulator_interfaces::srv::FKine>::SharedPtr fKineClient_;
     rclcpp::Client<manipulator_interfaces::srv::Jacobian>::SharedPtr jacobianClient_;
-
-    //   manipulators::InvKine       invKine_srv_;
-    //   manipulators::PseudoInverse pseudoInv_srv_;
-    //   manipulators::FKine         fKine_srv_;
-    //   manipulators::Jacobian      jacobian_srv_;
-
-    // ---------------------  COPPELIA HANDLING ---------------------
-    rclcpp::Client<manipulator_interfaces::srv::CoppeliaMenu>::SharedPtr coppeliaClient_;
-    manipulator_interfaces::srv::CoppeliaMenu::Request::SharedPtr coppelia_req_;
-
-    // // ---------------------  GRIPPER HANDLING ---------------------
-    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripper_client_;
-    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr grab_client_;
-    rclcpp::Client<motors_trajectory::srv::RobotiQGripperControl>::SharedPtr real_gripper_client_;
-
 };
+
+template class MenuUserInterface<ManipulatorMenu>;
 
 #endif /* MANIPULATOR_MENU_H */

@@ -26,14 +26,16 @@
 // Struct definition of the parameters of the Dynamic Planner
 struct DynamicPlannerParams
 {
-    std::string planner_id = "RRTConnect"; // name of the planner method (look up from list in ompl_planning.yaml)
-    int num_attempts       = 2;            // max number of attempts to find a trajectory
-    double planning_time   = 2;            // maximum planning time in seconds (default 0: no limit)
-    double vel_factor      = 1.;           // velocity factor
-    double acc_factor      = 1.;           // acceleration factor
-    double sample_time     = 0.002;        // sample time for cartesian planner (seconds)
-    double max_velocity    = 0.5;          // maximum ee velocity for cartesian planner
-    double tolerance       = 0.01;         // tolerance for goal position
+    std::string planner_id = "geometric::RRTConnect";   // name of the planner method (look up from list in ompl_planning.yaml)
+    int num_attempts       = 2;                         // max number of attempts to find a trajectory
+    double planning_time   = 2;                         // maximum planning time in seconds (0: no limit)
+    double vel_factor      = 1.;                        // velocity factor
+    double acc_factor      = 1.;                        // acceleration factor
+    double sample_time     = 0.002;                     // sample time for cartesian planner (seconds)
+    double max_velocity    = 0.5;                       // maximum ee velocity for cartesian planner
+    double tolerance       = 0.01;                      // tolerance for goal position
+    std::string world_frame = "base_link";              // world frame
+    std::string end_effector_link = "tool0";            // end effector link
 
     // V1: empty struct
     DynamicPlannerParams() {}
@@ -57,8 +59,7 @@ class DynamicPlanner
     public:
         DynamicPlanner(const rclcpp::Node::SharedPtr& node,
                        const std::string& planning_group,
-                       const double vel_factor = 0.2,
-                       const double acc_factor = 0.2,
+                       DynamicPlannerParams params,
                        bool dynamic_behavior = true);
 
         ~DynamicPlanner();
@@ -79,18 +80,20 @@ class DynamicPlanner
         };
 
         /*plan: joint goal
+            NOTE: This is a blocking function, it will stop execution until the planning is done
             Args:
-                joint_positions: Array of target joint positions
+                joint_positions: Array of target joint position
         */
         void plan(const std::vector<double> joint_positions);
 
         /*plan: pose goal
+            NOTE: This is a blocking function, it will stop execution until the planning is done
             Args:
                 goal_pose: Target position
                 ee_link: End effector link
                 frame: Reference frame
             
-            Overloads use default values specified in the class definition
+            Overloads use default values specified in the class definition and params
         */
 
         void plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link, const std::string& frame);
@@ -118,9 +121,6 @@ class DynamicPlanner
         // Dynamic planner parameters getter and setter
         DynamicPlannerParams getParams() const;
 
-        void setParams(const std::string& planner_id, const int attempts, const double time,
-                       const double v_factor, const double a_factor);
-                       
         void setParams(const DynamicPlannerParams& params);
 
         void setDynamicBehavior(bool dynamic_behavior); //Set the dynamic_behavior_ variable

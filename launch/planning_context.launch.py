@@ -134,9 +134,9 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
-            "description_semantic_file",
-            default_value="ur.srdf.xacro",
-            description="MoveIt SRDF/XACRO description file with the robot (just filename, file must be inside <moveit_config_pkg>/config/ ).",
+            "description_semantic_path",
+            default_value=PathJoinSubstitution([FindPackageShare("ur_moveit_config"), "srdf", "ur.srdf.xacro"]),
+            description="MoveIt SRDF/XACRO description file with the robot (full path).",
         )
     )
     declared_arguments.append(

@@ -33,17 +33,8 @@ Some useful instructions for new ROS2 use.
   "effort": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 }'
 
-8) To launch planning_context with sirio manipulator:
-
-    ros2 launch manipulators planning_context.launch.py manipulator_type:='sirio' description_package:="sirio_manipulator" moveit_config_package:="sirio_manipulator_moveit_config" 
-    description_path:="<path_to_ws>/install/sirio_manipulator/share/sirio_manipulator/models/urdf/sirio.xacro" 
-    description_semantic_file:="sirio.srdf" 
-    rviz_config_path:="<path_to_ws>/install/sirio_manipulator/share/sirio_manipulator/config/rviz/view_sirio.rviz"
-
-9) To test sirio movement:
-
-    ros2 topic pub --once /move_group/fake_controller_joint_states sensor_msgs/msg/JointState "{header: {}, name: ["joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6"], 
-    position: [0.0, -0.6, -0.35, 0.0, -0.45, 0.0]}"
+8) To launch planner with robotiq85 gripper attached:
+    ros2 launch manipulators planner.launch.py description_path:="/home/matteo/projectred_ws/install/manipulators/share/manipulators/models/urdf/ur_robotiq_85_gripper.urdf.xacro" description_semantic_path:="/home/matteo/projectred_ws/install/manipulators/share/manipulators/models/srdf/ur_robotiq_85_gripper.srdf.xacro"
 
 ## Setup TODO
    
@@ -73,6 +64,44 @@ Download the ur drivers repository to wherever you want on your system, then onl
     git clone https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver -b humble
     mv Universal_Robots_ROS2_Driver/ur_moveit_config <WORKSPACE_PATH>/src/ur_moveit_config
 
+Do the same with this package and use only the robotiq_85_description package:
 
+    git clone https://github.com/PickNikRobotics/robotiq_85_gripper.git
+    mv robotiq_85_gripper/robotiq_85_description <WORKSPACE_PATH>/src/robotiq_85_description
 
-    
+### 4. Fix known issues
+
+1) The URDF files in the ur_description package have some links that are rotated 180 degrees which will make the manipulator work in unexpected ways, to fix this issues go to ur_description/urdf/ur_macro.xacro and make the following changes:
+
+At line 82, 88, 272:
+<div style="color:#e31e10"> 
+<code> 
+
+\- \<origin xyz="0 0 0" rpy="0 0 ${pi}"/>
+</code>
+</div>
+<div style="color:green"> 
+<code> 
+
+\+ \<origin xyz="0 0 0" rpy="0 0 0"/>
+</code>
+</div>
+
+2) The default values for the RRTConnect planner are not optimized and make the manipulator move in very unoptimized paths, to fix the issue go to ur_moveit_config/config/ompl_planning.yaml and make the following changes:
+
+At line 33:
+
+<div style="color:#e31e10"> 
+<code> 
+- range: 0.0
+</code>
+</div>
+<div style="color:green; background:#151b23; border-radius:8px"> 
+
+\+ range: 0.1
+<br>
+\+ max_num_iterations: 1000
+<br>
+\+ goal_bias: 0.05
+
+</div>

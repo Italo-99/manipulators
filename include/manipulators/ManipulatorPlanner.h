@@ -111,19 +111,14 @@ class ManipulatorPlannerNode : public rclcpp::Node {
             manipulator_interfaces::srv::ChangePlannerParameters::Response::SharedPtr response
         );
 
-        bool instantKineSetter_callback(
-            const std_srvs::srv::SetBool::Request::SharedPtr &req, 
-            std_srvs::srv::SetBool::Response::SharedPtr &res
-        );
-
-        bool jointsRealTimeSetter_callback( // Set the real time joints speed based control
-            const std_srvs::srv::SetBool::Request::SharedPtr &req, 
-            std_srvs::srv::SetBool::Response::SharedPtr &res
+        void jointsRealTimeSetter_callback( // Set the real time joints speed based control
+            const std_srvs::srv::SetBool::Request::SharedPtr req, 
+            std_srvs::srv::SetBool::Response::SharedPtr res
         );    
         
-        bool jacobianControlSetter_callback( // Set the jacobian speed based control
-            const std_srvs::srv::SetBool::Request::SharedPtr &req, 
-            std_srvs::srv::SetBool::Response::SharedPtr &res
+        void jacobianControlSetter_callback( // Set the jacobian speed based control
+            const std_srvs::srv::SetBool::Request::SharedPtr req, 
+            std_srvs::srv::SetBool::Response::SharedPtr res
         );  
 
         //SUBSCRIBERS
@@ -146,9 +141,6 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         // Execute the real time joints speed based control
         void jointsRealTimeControl();
 
-        // Instantaneous kine param setter
-        void set_instKine(bool set);
-
         // --------------- HELPER FUNCTIONS ---------------
 
         void initializePlanner(); //Creates a node for the DynamicPlanner, adds it to the executor and initializes the planner_ object
@@ -160,18 +152,28 @@ class ManipulatorPlannerNode : public rclcpp::Node {
 
         std::string node_name_;
 
+        //Parameters
+        std::string manipulator_name_;
+        std::string planning_group_;
+        std::vector<std::string> joint_names_;
+        std::string ee_name_;
+        std::string base_link_;
+        std::string world_frame_;
+        double ros_freq_;
+        double max_speed_ee_;
+        double max_accel_ee_;
+        double max_spd_jnts_;
+        double max_acc_jnts_;
+        std::vector<std::string> gripper_links_;
+
         //Services
         rclcpp::Service<manipulator_interfaces::srv::FKine>::SharedPtr fkine_service_;
         rclcpp::Service<manipulator_interfaces::srv::InvKine>::SharedPtr invkine_service_;
         rclcpp::Service<manipulator_interfaces::srv::Jacobian>::SharedPtr jacobian_service_;
         rclcpp::Service<manipulator_interfaces::srv::PseudoInverse>::SharedPtr pseudoInverse_service_;
         rclcpp::Service<manipulator_interfaces::srv::ChangePlannerParameters>::SharedPtr changePlannerParams_service_;
-        rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr instantKineSetter_service_;
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jointsRealTimeSetter_service_;
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jacobianControlSetter_service_;
-
-        //Clients
-        rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr instantKineSetter_client_;
 
         //Subscribers
         rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr tcpGoal_sub_; //Subscriber for TCP goal (cartesian space goals) requests
