@@ -34,6 +34,8 @@
 #include "manipulator_interfaces/srv/f_kine.hpp"
 #include "manipulator_interfaces/srv/jacobian.hpp"
 #include "manipulator_interfaces/srv/change_planner_parameters.hpp"
+#include "manipulator_interfaces/msg/joint_goal.hpp"
+#include "manipulator_interfaces/msg/tcp_goal.hpp"
 
 #include "manipulators/MenuUserInterface.h"
 
@@ -54,8 +56,12 @@ struct ManipulatorMenuParams
 
 class ManipulatorMenu
 {
- public:
-  // ---------------------  PUBLIC CONSTRUCTOR ---------------------
+    //NOTE: In general when using the sensor_msgs/JointState type the angles will be expressed in radians, 
+    //      instead when using a vector joint angles will be expressed in degrees.
+    //      In a similar way when using vectors to represent poses, the first 3 elements will be the x, y 
+    //      and z coordinates in meters while the last 3 elements will be the roll, pitch and yaw in degrees.
+    public:
+    // ---------------------  PUBLIC CONSTRUCTOR ---------------------
     ManipulatorMenu(
         ManipulatorMenuParams &params,
         const rclcpp::Node::SharedPtr& node
@@ -63,20 +69,37 @@ class ManipulatorMenu
 
     sensor_msgs::msg::JointState current_joint_pose_;
 
-  // ---------------------  PUBLIC FUNCTIONS ---------------------
+    // ---------------------  PUBLIC FUNCTIONS ---------------------
 
     // Spinner
       void spinnerMenu(void);         // Asynchronous spinner for ROS routines with user menu
       void spinner(void);             // Update current robot joints state
 
     // Joint and TCP moves
-      sensor_msgs::msg::JointState publishJointGoal(const std::vector<double> joints);  // publish a joint goal to the manipulator planner
-      sensor_msgs::msg::JointState publishJointGoal(const sensor_msgs::msg::JointState jointStateMsg);
-      geometry_msgs::msg::Pose     publishTcpGoal(const std::vector<double> position);  // publish a tcp   goal to the manipulator planner
-      geometry_msgs::msg::Pose     publishTcpGoal(const geometry_msgs::msg::Pose tcpPoseMsg);
+      // publish a joint goal to the manipulator planner
+      void publishJointGoal(
+        const std::vector<double> joint_goal, 
+        const std::vector<double> start_state = std::vector<double>(), 
+        const bool execute=true);
 
-      sensor_msgs::msg::JointState oneJointMove(const int num, const double joint_rot); // to define a rotation around a single joint
-      sensor_msgs::msg::JointState goHome(const bool);               // to setup home position
+    void publishJointGoal(
+        const sensor_msgs::msg::JointState joint_goal, 
+        const std::vector<double> start_state = std::vector<double>(), 
+        const bool execute=true);
+
+      // publish a tcp goal to the manipulator planner
+      void publishTcpGoal(
+        const std::vector<double> position, 
+        const std::vector<double> start_state = std::vector<double>(), 
+        const bool execute=true);  
+
+      void publishTcpGoal(
+        const geometry_msgs::msg::Pose tcpPoseMsg, 
+        const std::vector<double> start_state = std::vector<double>(), 
+        const bool execute=true);
+
+      sensor_msgs::msg::JointState oneJointMove(const int num, const double joint_rot); // to execute rotation of a single joint
+      sensor_msgs::msg::JointState goHome(const bool);                                  // to setup home position
 
     // Get the position and orientation of the end effector (they contain a ros spin once)
       geometry_msgs::msg::Pose getEEpose();
@@ -128,6 +151,14 @@ class ManipulatorMenu
       std::vector<double> deg_from_rad(const std::vector<double>);
       std::vector<double> rad_from_deg(const std::vector<double>);
 
+    // Joint states conversions
+      sensor_msgs::msg::JointState joint_state_from_vector(const std::vector<double> positions);
+      std::vector<double> vector_from_joint_state(const sensor_msgs::msg::JointState joint_state);
+
+    // Pose conversions
+      geometry_msgs::msg::Pose pose_from_vector(const std::vector<double> vector_pos);
+      std::vector<double> vector_from_pose(const geometry_msgs::msg::Pose pose);
+
     // Kinematics params getters
       geometry_msgs::msg::Pose getCurrentFKineClient(void);
       Eigen::MatrixXd     pseudoInverseClient(void);
@@ -138,9 +169,9 @@ class ManipulatorMenu
       void setNewPlannerParams(float,float);
       void setJsRealTimeControl(bool);
 
- private:
+    private:
 
-  // --------------------- PRIVATE FUNCTIONS ---------------------
+    // --------------------- PRIVATE FUNCTIONS ---------------------
 
     // --------------------- PRIVATE PUBS/SUBS ---------------------
 
@@ -197,12 +228,12 @@ class ManipulatorMenu
     MenuUserInterface<ManipulatorMenu> menu_;
 
     // ---------------------  ROS HANDLING ---------------------
-    rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr jointGoalPublisher_;   
-    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr tcpPosePublisher_;
+    rclcpp::Publisher<manipulator_interfaces::msg::JointGoal>::SharedPtr jointGoalPublisher_;   
+    rclcpp::Publisher<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpPosePublisher_;
+
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr display_goal_pub_;
     rclcpp::Publisher<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObjectPublisher_;
     rclcpp::Publisher<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr collisionAttObjectPublisher_;
-    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr  moveGripperPublisher_;
 
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointStateSubscriber_;
 

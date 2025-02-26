@@ -18,6 +18,8 @@
 #include "manipulator_interfaces/srv/jacobian.hpp"
 #include "manipulator_interfaces/srv/change_planner_parameters.hpp"
 #include "manipulator_interfaces/srv/pseudo_inverse.hpp"
+#include "manipulator_interfaces/msg/joint_goal.hpp"
+#include "manipulator_interfaces/msg/tcp_goal.hpp"
 
 class ManipulatorPlannerNode : public rclcpp::Node {
     public:
@@ -122,8 +124,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         );  
 
         //SUBSCRIBERS
-        void tcpGoal_callback(const geometry_msgs::msg::Pose::SharedPtr goal_pose);
-        void jointGoal_callback(const sensor_msgs::msg::JointState::SharedPtr goal_joints);
+        void tcpGoal_callback(const manipulator_interfaces::msg::TcpGoal::SharedPtr goal_pose);
+        void jointGoal_callback(const manipulator_interfaces::msg::JointGoal::SharedPtr goal_joints);
         void collisionObject_callback(const moveit_msgs::msg::CollisionObject::SharedPtr collision_object);
         void attachedCollisionObject_callback(const moveit_msgs::msg::AttachedCollisionObject::SharedPtr attached_collision_object);
         void cartesianPlan_callback(const geometry_msgs::msg::PoseArray::SharedPtr waypoints);
@@ -176,8 +178,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jacobianControlSetter_service_;
 
         //Subscribers
-        rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr tcpGoal_sub_; //Subscriber for TCP goal (cartesian space goals) requests
-        rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointGoal_sub_; //Subscriber for joint space goal requests
+        rclcpp::Subscription<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpGoal_sub_; //Subscriber for TCP goal (cartesian space goals) requests
+        rclcpp::Subscription<manipulator_interfaces::msg::JointGoal>::SharedPtr jointGoal_sub_; //Subscriber for joint space goal requests
         rclcpp::Subscription<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObject_sub_; //Subscriber for addition and update of collision objects
         rclcpp::Subscription<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr attachedcollisionObject_sub_; //Subscriber for addition and update of collision objects
         rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr cartesianPlan_sub_; //Subscriber for cartesian space waypoints

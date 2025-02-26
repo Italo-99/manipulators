@@ -24,8 +24,8 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     current_joint_pose_.name      = params_.joint_names;
 
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
-    jointGoalPublisher_           = node_->create_publisher<sensor_msgs::msg::JointState>(params_.manipulator_name+"/joint_goal", 1);
-    tcpPosePublisher_             = node_->create_publisher<geometry_msgs::msg::Pose>(params_.manipulator_name+"/tcp_goal", 1);
+    jointGoalPublisher_           = node_->create_publisher<manipulator_interfaces::msg::JointGoal>(params_.manipulator_name+"/joint_goal", 1);
+    tcpPosePublisher_             = node_->create_publisher<manipulator_interfaces::msg::TcpGoal>(params_.manipulator_name+"/tcp_goal", 1);
     display_goal_pub_             = node_->create_publisher<geometry_msgs::msg::PoseStamped>(params_.manipulator_name+"/display_robot_goal", 1);
     collisionObjectPublisher_     = node_->create_publisher<moveit_msgs::msg::CollisionObject>(params_.manipulator_name+"/collision_object", 1);
     collisionAttObjectPublisher_  = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(params_.manipulator_name+"/attached_collision_object", 1);
@@ -285,56 +285,43 @@ void ManipulatorMenu::spinner()
 // --------------------- MOVEMENTS HANDLER ---------------------
 
 // Publish a joint goal by passing a vector of joints in deg
-sensor_msgs::msg::JointState ManipulatorMenu::publishJointGoal(const std::vector<double> joints)
+void ManipulatorMenu::publishJointGoal(const std::vector<double> joint_goal, const std::vector<double> start_state, const bool execute)
 {
     // Fill the joint msg with degToRad conversion
-    sensor_msgs::msg::JointState jointStateMsg;
-    jointStateMsg.header.stamp = node_->get_clock()->now();
-    for (unsigned long k = 0; k < joints.size(); k++)
-    {
-        jointStateMsg.position.push_back(joints[k] * M_PI / 180);
-    }
-
-    return publishJointGoal(jointStateMsg);
+    sensor_msgs::msg::JointState joint_state = joint_state_from_vector(joint_goal);
+    publishJointGoal(joint_state, start_state, execute);
 }
 
 // Publish a joint goal by passing a JointState msg
-sensor_msgs::msg::JointState ManipulatorMenu::publishJointGoal(const sensor_msgs::msg::JointState jointStateMsg)
+void ManipulatorMenu::publishJointGoal(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state, const bool execute)
 {
+    manipulator_interfaces::msg::JointGoal joint_goal_msg;
+    joint_goal_msg.start_state = joint_state_from_vector(start_state);
+    joint_goal_msg.joint_goal = joint_goal;
+    joint_goal_msg.execute = execute;
     // Publish the JointState message
-    jointGoalPublisher_->publish(jointStateMsg);
-    return jointStateMsg;
+    jointGoalPublisher_->publish(joint_goal_msg);
 }
 
 // Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
-geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(const std::vector<double> position)
+void ManipulatorMenu::publishTcpGoal(const std::vector<double> position, const std::vector<double> start_state, const bool execute)
 {
-    geometry_msgs::msg::Pose tcpPoseMsg;
+    geometry_msgs::msg::Pose tcp_pose = pose_from_vector(position);
 
-    tcpPoseMsg.position.x = position[0];
-    tcpPoseMsg.position.y = position[1];
-    tcpPoseMsg.position.z = position[2];
-
-    // Conversion from euler rotation to pose quaternion
-    tcpPoseMsg.orientation = quaternion_from_euler(position[3], position[4], position[5]);
-
-    return publishTcpGoal(tcpPoseMsg);
+    publishTcpGoal(tcp_pose, start_state, execute);
 }
 
 // Publish a Tcp goal by passing a geometry_msgs::msg::Pose
-geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(const geometry_msgs::msg::Pose tcpPoseMsg)
+void ManipulatorMenu::publishTcpGoal(const geometry_msgs::msg::Pose tcp_pose, const std::vector<double> start_state, const bool execute)
 {
-    tcpPosePublisher_->publish(tcpPoseMsg);
+    manipulator_interfaces::msg::TcpGoal tcp_goal_msg;
+    tcp_goal_msg.target_pose = tcp_pose;
+    tcp_goal_msg.start_state =  joint_state_from_vector(start_state);
+    tcp_goal_msg.execute = execute;
+    tcp_goal_msg.end_effector = manipulator_interfaces::msg::TcpGoal::DEFAULT;
+    tcp_goal_msg.frame = manipulator_interfaces::msg::TcpGoal::DEFAULT;
 
-    // Display the goal on RViz
-    geometry_msgs::msg::PoseStamped robot_goal_msg;
-    robot_goal_msg.header.frame_id = params_.base_link_name;
-    robot_goal_msg.header.stamp = node_->get_clock()->now();
-    robot_goal_msg.pose = tcpPoseMsg,
-
-    display_goal_pub_->publish(robot_goal_msg);
-
-    return tcpPoseMsg;
+    tcpPosePublisher_->publish(tcp_goal_msg);
 }
 
 // Move a single joint, joint rotation must be in deg
@@ -350,7 +337,7 @@ sensor_msgs::msg::JointState ManipulatorMenu::oneJointMove(const int num, const 
     }
     // Change the joint target position
     joint_target[num] = joint_target[num] + joint_rot;
-    return publishJointGoal(joint_target);
+    publishJointGoal(joint_target);
 }
 
 // Go to pre configured home position
@@ -374,7 +361,7 @@ sensor_msgs::msg::JointState ManipulatorMenu::goHome(const bool ee_orient)
     }
 
     // Publish home joint goal
-    return publishJointGoal(start_joint_pose);
+    publishJointGoal(start_joint_pose);
 }
 
 // -------------------- TF END EFFECTOR LISTENER -----------------------//
@@ -938,6 +925,44 @@ std::vector<double> ManipulatorMenu::rad_from_deg(const std::vector<double> join
     }
     // Return result
     return joint_rad;
+}
+
+sensor_msgs::msg::JointState ManipulatorMenu::joint_state_from_vector(const std::vector<double> positions)
+{
+    sensor_msgs::msg::JointState joint_state;
+    joint_state.position = rad_from_deg(positions);
+    return joint_state;
+}
+
+std::vector<double> ManipulatorMenu::vector_from_joint_state(const sensor_msgs::msg::JointState joint_state)
+{
+    return deg_from_rad(joint_state.position);
+}
+
+geometry_msgs::msg::Pose ManipulatorMenu::pose_from_vector(const std::vector<double> position)
+{
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = position[0];
+    pose.position.x = position[1];
+    pose.position.x = position[2];
+
+    pose.orientation = quaternion_from_euler(position[3], position[4], position[5]);
+    return pose;
+}
+
+std::vector<double> ManipulatorMenu::vector_from_pose(const geometry_msgs::msg::Pose pose)
+{
+    std::vector<double> vector = std::vector<double>(6, 0);
+    vector[0] = pose.position.x;
+    vector[1] = pose.position.y;
+    vector[2] = pose.position.z;
+
+    std::vector<double> rpy = euler_from_quaternion(pose.orientation);
+    vector[3] = rpy[0];
+    vector[4] = rpy[1];
+    vector[5] = rpy[2];
+
+    return vector;
 }
 
 /*

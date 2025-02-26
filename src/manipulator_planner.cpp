@@ -96,16 +96,16 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     // Initialize subscribers
-    tcpGoal_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
+    tcpGoal_sub_ = this->create_subscription<manipulator_interfaces::msg::TcpGoal>(
         manipulator_name_ + "/tcp_goal", 1, 
-        [this](const geometry_msgs::msg::Pose::SharedPtr msg) {
+        [this](const manipulator_interfaces::msg::TcpGoal::SharedPtr msg) {
             this->tcpGoal_callback(msg);
         }
     );
 
-    jointGoal_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
+    jointGoal_sub_ = this->create_subscription<manipulator_interfaces::msg::JointGoal>(
         manipulator_name_ + "/joint_goal", 1, 
-        [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
+        [this](const manipulator_interfaces::msg::JointGoal::SharedPtr msg) {
             this->jointGoal_callback(msg);
         }
     );
@@ -494,35 +494,68 @@ void ManipulatorPlannerNode::changePlannerParams_callback(
     RCLCPP_INFO(this->get_logger(), "Planner parameters changed successfully (vel_factor: %f, acc_factor: %f)", params.vel_factor, params.acc_factor);
 }
 
-void ManipulatorPlannerNode::tcpGoal_callback(const geometry_msgs::msg::Pose::SharedPtr msg) 
+void ManipulatorPlannerNode::tcpGoal_callback(const manipulator_interfaces::msg::TcpGoal::SharedPtr msg) 
 {
     /*
     Callback function for the TCP goal subscriber, plans and moves the robot to the goal pose
-    Args:
-        msg: TCP goal pose
+    Interface TcpGoal:
+        start_state     (sensor_msgs/JointState): start joints positions
+        target_pose     (geometry_msgs/Pose): target position for the end effector
+        end_effector    (string): the end effector which will reach the target_pose
+        frame           (string): the reference frame for the pose
+        execute         (bool): wether to execute the planned trajectory rightaway
     */
     RCLCPP_INFO(this->get_logger(), "Received TCP goal");
 
-    dynamic_planner_->stop(); //Stop the execution of the current trajectory (if any)
+    std::string ee_link_name;
+    std::string ref_frame;
 
-    dynamic_planner_->plan(*msg, ee_name_);
-    dynamic_planner_->moveRobot();
+    if(msg->end_effector == manipulator_interfaces::msg::TcpGoal::DEFAULT){
+        ee_link_name = ee_name_;
+    } else {
+        ee_link_name = msg->end_effector;
+    }
+
+    if(msg->frame == manipulator_interfaces::msg::TcpGoal::DEFAULT){
+        ref_frame = world_frame_;
+    } else {
+        ref_frame = msg->frame;
+    }
+
+    if(!msg->start_state.empty()){ //If a start state is provided set the robot to that state
+        moveit::core::RobotStatePtr robot_state = dynamic_planner_->getRobotState();
+        robot_state->setJointGroupPositions(planning_group_, msg->start_state.position);
+    }
+
+    dynamic_planner_->plan(msg->target_pose, ee_link_name, ref_frame);
+
+    if(msg->execute){
+        dynamic_planner_->moveRobot();
+    }
 }
 
-void ManipulatorPlannerNode::jointGoal_callback(const sensor_msgs::msg::JointState::SharedPtr msg) 
+void ManipulatorPlannerNode::jointGoal_callback(const manipulator_interfaces::msg::JointGoal::SharedPtr msg) 
 {
     /*
     Callback function for the joint goal subscriber, plans and moves the robot to the goal joint positions
-    Args:
-        msg: Joint goal positions
+    Interface JointGoal:
+        start_state     (sensor_msgs/JointState): start joints positions
+        joint_goal      (sensor_msgs/JointState): joints positions to reach
+        execute         (bool): wether to execute the planned trajectory rightaway
     */
 
     RCLCPP_INFO(this->get_logger(), "Received joint goal");
 
-    dynamic_planner_->stop(); //Stop the execution of the current trajectory (if any)
+    if(!msg->start_state.empty()){ //If a start state is provided set the robot to that state
+        moveit::core::RobotStatePtr robot_state = dynamic_planner_->getRobotState();
+        robot_state->setJointGroupPositions(planning_group_, msg->start_state.position);
+    }
     
-    dynamic_planner_->plan(msg->position);
-    dynamic_planner_->moveRobot();
+    dynamic_planner_->plan(msg->joint_goal.position);
+
+    if (msg->execute){
+        dynamic_planner_->moveRobot();
+    }
 }
 
 void ManipulatorPlannerNode::collisionObject_callback(const moveit_msgs::msg::CollisionObject::SharedPtr collision_object) 
