@@ -110,6 +110,13 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         }
     );
 
+    execution_ctrl_sub_ = this->create_subscription<std_msgs::msg::Bool>(
+        planning_group_ + "/execution_control", 1, 
+        [this](const std_msgs::msg::Bool::SharedPtr msg) {
+            this->executionControl_callback(msg);
+        }
+    );
+
     collisionObject_sub_ = this->create_subscription<moveit_msgs::msg::CollisionObject>(
         manipulator_name_ + "/collision_object", 1, 
         [this](const moveit_msgs::msg::CollisionObject::SharedPtr msg) {
@@ -407,12 +414,20 @@ void ManipulatorPlannerNode::getFKine_callback(
     /*
     Callback function for the forward kinematics service
     Interface:
-        request: None
+        request: 
+            joint_state (sensor_msgs/JointState): Joint state to compute the forward kinematics, 
+                                                  if empty the current joint state is used
         response: 
-            geometry_msgs::msg::PoseStamped tcp_pose: End effector pose
+            tcp_pose (geometry_msgs/PoseStamped): End effector pose
     */
-    request.get(); //Suppress unused var warning
-    response->tcp_pose = dynamic_planner_->getFKine(ee_name_);
+    sensor_msgs::msg::JointState joint_state = request->joint_state;
+
+    if (joint_state.position.empty()) {
+        response->tcp_pose = dynamic_planner_->getFKine(ee_name_); //Return current position fkine
+    } else {
+        response->tcp_pose = dynamic_planner_->getFKine(joint_state.position, ee_name_);
+    }
+
 }
 
 
@@ -424,9 +439,9 @@ void ManipulatorPlannerNode::getInvKine_callback(
     Callback function for the inverse kinematics service
     Interface:
         request: 
-            geometry_msgs::msg::Pose target_pose: End effector pose
+            target_pose: (geometry_msgs/Pose): End effector pose
         response: 
-            float64[] joint_values: inverse kinematics result
+            joint_values           (float64[]): inverse kinematics result
     */
     response->joint_values = dynamic_planner_->invKine(
         request->target_pose, 
@@ -443,7 +458,7 @@ void ManipulatorPlannerNode::getJacobian_callback(
     Interface:
         request: None
         response: 
-            float64[] matrix_values: Flattened jacobian matrix
+            matrix_values (float64[]): Flattened jacobian matrix
     */
     request.get(); //Suppress unused var warning
 
@@ -462,7 +477,7 @@ void ManipulatorPlannerNode::getPseudoInverseJacobian_callback(
     Interface:
         request: None
         response: 
-            float64[] matrix_values: Flattened pseudo-inverse jacobian matrix
+            matrix_values (float64[]): Flattened pseudo-inverse jacobian matrix
     */
     request.get(); //Suppress unused var warning
 
@@ -480,16 +495,23 @@ void ManipulatorPlannerNode::changePlannerParams_callback(
     Callback function for the change planner parameters service
     Interface:
         request: 
-            float64 vel_factor: Velocity factor
-            float64 acc_factor: Acceleration factor
+            vel_factor (float64): Velocity factor
+            acc_factor (float64): Acceleration factor
         response: 
-            bool success: True if the parameters were changed successfully
+            success       (bool): True if the parameters were changed successfully
     */
 
     DynamicPlannerParams params = dynamic_planner_->getParams();
     params.acc_factor = request->acc_factor;
     params.vel_factor = request->vel_factor;
     dynamic_planner_->setParams(params);
+
+    //Also apply changes to the actual parameters of the node
+    rclcpp::Parameter new_acc("max_acc_ee", params.acc_factor);
+    rclcpp::Parameter new_vel("max_speed_ee", params.vel_factor);
+    this->set_parameter(new_acc);
+    this->set_parameter(new_vel);
+
     response->success = true;
     RCLCPP_INFO(this->get_logger(), "Planner parameters changed successfully (vel_factor: %f, acc_factor: %f)", params.vel_factor, params.acc_factor);
 }
@@ -499,11 +521,11 @@ void ManipulatorPlannerNode::tcpGoal_callback(const manipulator_interfaces::msg:
     /*
     Callback function for the TCP goal subscriber, plans and moves the robot to the goal pose
     Interface TcpGoal:
-        start_state     (sensor_msgs/JointState): start joints positions
+        start_state (sensor_msgs/JointState): start joints positions
         target_pose     (geometry_msgs/Pose): target position for the end effector
-        end_effector    (string): the end effector which will reach the target_pose
-        frame           (string): the reference frame for the pose
-        execute         (bool): wether to execute the planned trajectory rightaway
+        end_effector                (string): the end effector which will reach the target_pose
+        frame                       (string): the reference frame for the pose
+        execute                       (bool): wether to execute the planned trajectory rightaway
     */
     RCLCPP_INFO(this->get_logger(), "Received TCP goal");
 
@@ -522,7 +544,7 @@ void ManipulatorPlannerNode::tcpGoal_callback(const manipulator_interfaces::msg:
         ref_frame = msg->frame;
     }
 
-    if(!msg->start_state.empty()){ //If a start state is provided set the robot to that state
+    if(!msg->start_state.position.empty()){ //If a start state is provided set the robot to that state
         moveit::core::RobotStatePtr robot_state = dynamic_planner_->getRobotState();
         robot_state->setJointGroupPositions(planning_group_, msg->start_state.position);
     }
@@ -546,7 +568,7 @@ void ManipulatorPlannerNode::jointGoal_callback(const manipulator_interfaces::ms
 
     RCLCPP_INFO(this->get_logger(), "Received joint goal");
 
-    if(!msg->start_state.empty()){ //If a start state is provided set the robot to that state
+    if(!msg->start_state.position.empty()){ //If a start state is provided set the robot to that state
         moveit::core::RobotStatePtr robot_state = dynamic_planner_->getRobotState();
         robot_state->setJointGroupPositions(planning_group_, msg->start_state.position);
     }
@@ -555,6 +577,17 @@ void ManipulatorPlannerNode::jointGoal_callback(const manipulator_interfaces::ms
 
     if (msg->execute){
         dynamic_planner_->moveRobot();
+    }
+}
+
+void ManipulatorPlannerNode::executionControl_callback(const std_msgs::msg::Bool::SharedPtr msg)
+{
+    //If true move the robot, otherwise stop
+    if (msg->data)
+    {
+        dynamic_planner_->moveRobot();
+    } else {
+        dynamic_planner_->stop();
     }
 }
 
@@ -848,8 +881,8 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("gripper_links", std::vector<std::string>()); //This is used to disable collision with the fingers when attaching objects
     
     this->declare_parameter("planner_id", "geometric::RRTConnect");
-    this->declare_parameter("vel_factor", 0.1);
-    this->declare_parameter("acc_factor", 0.1);
+    this->declare_parameter("vel_factor", 0.1); //MUTABLE
+    this->declare_parameter("acc_factor", 0.1); //MUTABLE
     this->declare_parameter("max_planning_time", 2.0);
     this->declare_parameter("max_planning_attempts", 2);
     this->declare_parameter("sample_time", 0.002);
@@ -869,9 +902,9 @@ void ManipulatorPlannerNode::initializePlanner() {
     params.sample_time = this->get_parameter("sample_time").as_double();
     params.max_velocity = max_speed_ee_;
     
-    auto move_group_interface_node = std::make_shared<rclcpp::Node>("dynamic_planner_node", rclcpp::NodeOptions());
-    executor_.add_node(move_group_interface_node);
-    dynamic_planner_ = std::make_shared<DynamicPlanner>(move_group_interface_node,
+    auto sub_node = rclcpp::Node::make_shared("dynamic_planner_node");
+    executor_.add_node(sub_node);
+    dynamic_planner_ = std::make_shared<DynamicPlanner>(sub_node,
                                                         planning_group_,
                                                         params,
                                                         false);

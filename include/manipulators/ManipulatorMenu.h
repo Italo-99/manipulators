@@ -19,6 +19,7 @@
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
+#include "std_msgs/msg/bool.hpp"
 
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
@@ -36,6 +37,8 @@
 #include "manipulator_interfaces/srv/change_planner_parameters.hpp"
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
+#include "manipulator_interfaces/msg/trajectory_result.hpp"
+#include "trajectory_msgs/msg/joint_trajectory.hpp"
 
 #include "manipulators/MenuUserInterface.h"
 
@@ -45,6 +48,7 @@ struct ManipulatorMenuParams
     std::string ee_joint_name     = "";
     double ros_freq               = 500;
     std::string manipulator_name  = "manipulator";
+    std::string planning_group    = "ur_manipulator";
     bool enable_coppelia          = false;
     bool enable_sim_gripper       = false;
     bool enable_real_gripper      = false;
@@ -76,30 +80,41 @@ class ManipulatorMenu
       void spinner(void);             // Update current robot joints state
 
     // Joint and TCP moves
+      //The following functions will plan and execute a trajectory, then return immediatly
       // publish a joint goal to the manipulator planner
-      void publishJointGoal(
+      sensor_msgs::msg::JointState publishJointGoal(
         const std::vector<double> joint_goal, 
         const std::vector<double> start_state = std::vector<double>(), 
         const bool execute=true);
 
-    void publishJointGoal(
+      sensor_msgs::msg::JointState publishJointGoal(
         const sensor_msgs::msg::JointState joint_goal, 
         const std::vector<double> start_state = std::vector<double>(), 
         const bool execute=true);
 
       // publish a tcp goal to the manipulator planner
-      void publishTcpGoal(
+      geometry_msgs::msg::Pose publishTcpGoal(
         const std::vector<double> position, 
         const std::vector<double> start_state = std::vector<double>(), 
         const bool execute=true);  
 
-      void publishTcpGoal(
+      geometry_msgs::msg::Pose publishTcpGoal(
         const geometry_msgs::msg::Pose tcpPoseMsg, 
         const std::vector<double> start_state = std::vector<double>(), 
         const bool execute=true);
-
+        
       sensor_msgs::msg::JointState oneJointMove(const int num, const double joint_rot); // to execute rotation of a single joint
       sensor_msgs::msg::JointState goHome(const bool);                                  // to setup home position
+
+      // Planning 
+
+      //The following functions will plan a trajectory and return it (if timeout or error return an empty trajectory)
+      //timeout arg is in seconds
+      moveit_msgs::msg::RobotTrajectory planAndWait(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state = std::vector<double>(), uint timeout=2);
+      moveit_msgs::msg::RobotTrajectory planAndWait(const geometry_msgs::msg::Pose tcp_goal, const std::vector<double> start_state = std::vector<double>(), uint timeout=2);
+
+      //The following functions will execute a trajectory and return once it's finished
+      bool executeAndWait(const moveit_msgs::msg::RobotTrajectory joint_trajectory, uint timeout=20);
 
     // Get the position and orientation of the end effector (they contain a ros spin once)
       geometry_msgs::msg::Pose getEEpose();
@@ -158,12 +173,21 @@ class ManipulatorMenu
     // Pose conversions
       geometry_msgs::msg::Pose pose_from_vector(const std::vector<double> vector_pos);
       std::vector<double> vector_from_pose(const geometry_msgs::msg::Pose pose);
+    
+    // Distance utils
+      double euclidean_distance(const std::vector<double>& a, const std::vector<double>& b);
+      double euclidean_distance(const geometry_msgs::msg::Point& a, const geometry_msgs::msg::Point& b);
+      double angular_distance(const geometry_msgs::msg::Quaternion& q1, const geometry_msgs::msg::Quaternion& q2);
 
     // Kinematics params getters
-      geometry_msgs::msg::Pose getCurrentFKineClient(void);
-      Eigen::MatrixXd     pseudoInverseClient(void);
-      std::vector<double> invKineClient(const geometry_msgs::msg::Pose pose);
-      Eigen::MatrixXd     getJacobianClient(void);
+      geometry_msgs::msg::Pose  getFKineClient(const sensor_msgs::msg::JointState joint_state = sensor_msgs::msg::JointState()); // Get the forward kinematics of the pose, if empty uses the current joint state
+      Eigen::MatrixXd           pseudoInverseClient(void);
+      std::vector<double>       invKineClient(const geometry_msgs::msg::Pose pose);
+      Eigen::MatrixXd           getJacobianClient(void);
+
+      template <typename T>
+      T getManipulatorParameter(const std::string& param_name);
+
     // Kinematics params setters
       void setJacobianSpeedControl(bool);
       void setNewPlannerParams(float,float);
@@ -176,6 +200,7 @@ class ManipulatorMenu
     // --------------------- PRIVATE PUBS/SUBS ---------------------
 
     void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr& msg);
+    void trajectoryCallback(const manipulator_interfaces::msg::TrajectoryResult::SharedPtr& msg);
     
     // --------------------- USER ACTIONS ---------------------
     
@@ -216,6 +241,8 @@ class ManipulatorMenu
     void userSetJacobianSpeedControl(void);     // Set the jacobian speed control
     void userSetRealTimeControl(void);          // Set the real time control of the joints
 
+    void userRunTest(void);                     // Run a test function
+
     //Initialize the menu instance and add the menu options and sections
     void initializeMenu();
 
@@ -223,7 +250,7 @@ class ManipulatorMenu
 
     ManipulatorMenuParams params_;
 
-    const rclcpp::Node::SharedPtr node_;
+    rclcpp::Node::SharedPtr node_;
 
     MenuUserInterface<ManipulatorMenu> menu_;
 
@@ -237,9 +264,11 @@ class ManipulatorMenu
 
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointStateSubscriber_;
 
-    rclcpp::Client<manipulator_interfaces::srv::ChangePlannerParameters>::SharedPtr plannerParamsClient_;
+    rclcpp::Client<manipulator_interfaces::srv::ChangePlannerParameters>::SharedPtr changePlannerParamsClient_;
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControlClient_;
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setRealTimeControlClient_;
+
+    rclcpp::SyncParametersClient::SharedPtr manipulator_params_client_; //gets the parameter from the manipulator planner node
 
     // --------------------- ROBOT STATE ---------------------------
     geometry_msgs::msg::PoseStamped current_tcp_pose_;
@@ -251,6 +280,16 @@ class ManipulatorMenu
     rclcpp::Client<manipulator_interfaces::srv::PseudoInverse>::SharedPtr pseudoInvClient_;
     rclcpp::Client<manipulator_interfaces::srv::FKine>::SharedPtr fKineClient_;
     rclcpp::Client<manipulator_interfaces::srv::Jacobian>::SharedPtr jacobianClient_;
+
+    // ---------------------- Planning ----------------------
+
+    rclcpp::Subscription<manipulator_interfaces::msg::TrajectoryResult>::SharedPtr planned_traj_sub_;   // Subscription to the planned trajectory
+    rclcpp::Publisher<moveit_msgs::msg::RobotTrajectory>::SharedPtr trajectory_pub_;                    // Publishes the trajectory to be executed
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr execution_ctrl_pub_;                              // Moves or stops the robot
+
+    moveit_msgs::msg::RobotTrajectory planned_trajectory_;
+    bool traj_received_;
+    bool traj_error_;
 };
 
 template class MenuUserInterface<ManipulatorMenu>;

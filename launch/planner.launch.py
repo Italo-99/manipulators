@@ -34,7 +34,6 @@ def launch_setup(context, *args, **kwargs):
         Node(
             package="manipulators",
             executable="manipulator_planner",
-            name="manipulator_planner",
             output="both",
             parameters=[
                 mp_params

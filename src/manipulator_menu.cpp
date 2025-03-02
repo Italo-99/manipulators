@@ -4,7 +4,7 @@
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
 ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::Node::SharedPtr& node) 
-    : params_(params), node_(node)
+    : params_(params), node_(node), planned_trajectory_(), traj_received_(false), traj_error_(false)
 {
     // Display Manipulator
     RCLCPP_INFO(node_->get_logger(), "Manipulator menu initialized with the following setup:");
@@ -45,7 +45,20 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
 
     setJacobianControlClient_     = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/jacobian_control_setter");
     setRealTimeControlClient_     = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
-    plannerParamsClient_          = node_->create_client<manipulator_interfaces::srv::ChangePlannerParameters>(params_.manipulator_name+"/change_planner_params");
+    changePlannerParamsClient_    = node_->create_client<manipulator_interfaces::srv::ChangePlannerParameters>(params_.manipulator_name+"/change_planner_params");
+
+    manipulator_params_client_    = std::make_shared<rclcpp::SyncParametersClient>(node_, "/" + params_.manipulator_name + "_planner");
+
+    // ---------------------- Planning ----------------------
+    planned_traj_sub_ = node_->create_subscription<manipulator_interfaces::msg::TrajectoryResult>(
+        params_.planning_group+"/planned_trajectory", 1,
+        [this](const manipulator_interfaces::msg::TrajectoryResult::SharedPtr msg) {
+            trajectoryCallback(msg);
+        }
+    );
+
+    trajectory_pub_ = node_->create_publisher<moveit_msgs::msg::RobotTrajectory>(params_.planning_group+"/trajectory", 1);
+    execution_ctrl_pub_ = node_->create_publisher<std_msgs::msg::Bool>(params_.planning_group+"/execution_control", 1);
 }
 
 // --------------------- PUBLIC FUNCTIONS ---------------------
@@ -88,7 +101,6 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
     return joint_values;
 }
 
-
 Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
 {
     Eigen::MatrixXd matrix(params_.joint_names.size(), 6);
@@ -122,11 +134,12 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
     return matrix;
 }
 
-geometry_msgs::msg::Pose ManipulatorMenu::getCurrentFKineClient()
+geometry_msgs::msg::Pose ManipulatorMenu::getFKineClient(const sensor_msgs::msg::JointState joint_positions)
 {
     geometry_msgs::msg::Pose pose;
 
     auto request = std::make_shared<manipulator_interfaces::srv::FKine::Request>();
+    request->joint_state = joint_positions;
 
     // Wait for the service to be available
     while (!fKineClient_->wait_for_service(std::chrono::seconds(1)))
@@ -144,7 +157,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::getCurrentFKineClient()
     // Wait until the future is completed
     if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
     {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call getCurrentFKine service");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call getFKine service");
         return pose;
     }
 
@@ -154,7 +167,6 @@ geometry_msgs::msg::Pose ManipulatorMenu::getCurrentFKineClient()
 
     return pose;
 }
-
 
 Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 {
@@ -189,6 +201,27 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
     listToMatrix(response->matrix_values, matrix);
 
     return matrix;
+}
+
+template <typename T>
+T ManipulatorMenu::getManipulatorParameter(const std::string& param_name)
+{
+    // Check if the parameter client is initialized
+    if (!manipulator_params_client_)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Parameter client is not initialized.");
+        return T{};
+    }
+
+    // Check if the parameter exists
+    if (!manipulator_params_client_->has_parameter(param_name))
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Parameter %s does not exist in planner node.", param_name.c_str());
+        return T{};
+    }
+
+    // Get the parameter
+    return manipulator_params_client_->get_parameter<T>(param_name);
 }
 
 // --------------------- SUBSCRIBERS CALLBACKS ---------------------
@@ -231,6 +264,24 @@ void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::Sha
 
     // Store the value into the global (public) class variable
     current_joint_pose_.position = joints_values_group_;
+}
+
+void ManipulatorMenu::trajectoryCallback(const manipulator_interfaces::msg::TrajectoryResult::SharedPtr& msg)
+{
+    //std::lock_guard<std::mutex> lock(traj_mtx_);
+    if(msg->success)
+    {
+        RCLCPP_INFO(node_->get_logger(), "Trajectory planned successfully.");
+        traj_error_ = false;
+        planned_trajectory_ = msg->trajectory;
+    }
+    else
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Trajectory planning failed, error code: %d, error msg: %s", msg->error_code, msg->message.c_str());
+        traj_error_ = true;
+    }
+
+    traj_received_ = true;
 }
 
 // --------------------- ROS HANDLER ---------------------
@@ -285,15 +336,15 @@ void ManipulatorMenu::spinner()
 // --------------------- MOVEMENTS HANDLER ---------------------
 
 // Publish a joint goal by passing a vector of joints in deg
-void ManipulatorMenu::publishJointGoal(const std::vector<double> joint_goal, const std::vector<double> start_state, const bool execute)
+sensor_msgs::msg::JointState ManipulatorMenu::publishJointGoal(const std::vector<double> joint_goal, const std::vector<double> start_state, const bool execute)
 {
     // Fill the joint msg with degToRad conversion
     sensor_msgs::msg::JointState joint_state = joint_state_from_vector(joint_goal);
-    publishJointGoal(joint_state, start_state, execute);
+    return publishJointGoal(joint_state, start_state, execute);
 }
 
 // Publish a joint goal by passing a JointState msg
-void ManipulatorMenu::publishJointGoal(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state, const bool execute)
+sensor_msgs::msg::JointState ManipulatorMenu::publishJointGoal(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state, const bool execute)
 {
     manipulator_interfaces::msg::JointGoal joint_goal_msg;
     joint_goal_msg.start_state = joint_state_from_vector(start_state);
@@ -301,18 +352,19 @@ void ManipulatorMenu::publishJointGoal(const sensor_msgs::msg::JointState joint_
     joint_goal_msg.execute = execute;
     // Publish the JointState message
     jointGoalPublisher_->publish(joint_goal_msg);
+    return joint_goal;
 }
 
 // Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
-void ManipulatorMenu::publishTcpGoal(const std::vector<double> position, const std::vector<double> start_state, const bool execute)
+geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(const std::vector<double> position, const std::vector<double> start_state, const bool execute)
 {
     geometry_msgs::msg::Pose tcp_pose = pose_from_vector(position);
 
-    publishTcpGoal(tcp_pose, start_state, execute);
+    return publishTcpGoal(tcp_pose, start_state, execute);
 }
 
 // Publish a Tcp goal by passing a geometry_msgs::msg::Pose
-void ManipulatorMenu::publishTcpGoal(const geometry_msgs::msg::Pose tcp_pose, const std::vector<double> start_state, const bool execute)
+geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(const geometry_msgs::msg::Pose tcp_pose, const std::vector<double> start_state, const bool execute)
 {
     manipulator_interfaces::msg::TcpGoal tcp_goal_msg;
     tcp_goal_msg.target_pose = tcp_pose;
@@ -322,6 +374,7 @@ void ManipulatorMenu::publishTcpGoal(const geometry_msgs::msg::Pose tcp_pose, co
     tcp_goal_msg.frame = manipulator_interfaces::msg::TcpGoal::DEFAULT;
 
     tcpPosePublisher_->publish(tcp_goal_msg);
+    return tcp_pose;
 }
 
 // Move a single joint, joint rotation must be in deg
@@ -337,7 +390,7 @@ sensor_msgs::msg::JointState ManipulatorMenu::oneJointMove(const int num, const 
     }
     // Change the joint target position
     joint_target[num] = joint_target[num] + joint_rot;
-    publishJointGoal(joint_target);
+    return publishJointGoal(joint_target);
 }
 
 // Go to pre configured home position
@@ -361,10 +414,107 @@ sensor_msgs::msg::JointState ManipulatorMenu::goHome(const bool ee_orient)
     }
 
     // Publish home joint goal
-    publishJointGoal(start_joint_pose);
+    return publishJointGoal(start_joint_pose);
 }
 
-// -------------------- TF END EFFECTOR LISTENER -----------------------//
+// -------------------- PLANNING --------------------
+
+moveit_msgs::msg::RobotTrajectory ManipulatorMenu::planAndWait(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state, uint timeout)
+{
+    traj_received_ = false;
+    traj_error_ = false;
+    
+    // Publish the joint goal
+    publishJointGoal(joint_goal, start_state, false);
+    auto start_time = std::chrono::high_resolution_clock::now();
+    rclcpp::Rate rate(params_.ros_freq);
+
+    while (rclcpp::ok()){
+        if((std::chrono::high_resolution_clock::now() - start_time) > std::chrono::seconds(timeout)){
+            RCLCPP_ERROR(node_->get_logger(), "Timeout reached while waiting for planned trajectory.");
+            break;
+        }
+
+        if(traj_received_ && !traj_error_){
+            return planned_trajectory_;
+        } else if(traj_received_ && traj_error_){
+            break;
+        }
+
+        rate.sleep();
+    }
+
+    return moveit_msgs::msg::RobotTrajectory();
+}
+
+moveit_msgs::msg::RobotTrajectory ManipulatorMenu::planAndWait(const geometry_msgs::msg::Pose tcp_goal, const std::vector<double> start_state, uint timeout)
+{
+    traj_received_ = false;
+    traj_error_ = false;
+    
+    // Publish the tcp goal
+    publishTcpGoal(tcp_goal, start_state, false);
+    auto start_time = std::chrono::high_resolution_clock::now();
+    rclcpp::Rate rate(params_.ros_freq);
+
+    while (rclcpp::ok()){
+
+        if((std::chrono::high_resolution_clock::now() - start_time) > std::chrono::seconds(timeout)){
+            RCLCPP_ERROR(node_->get_logger(), "Timeout reached while waiting for planned trajectory.");
+            break;
+        }
+
+        if(traj_received_ && !traj_error_){
+            return planned_trajectory_;
+        } else if(traj_received_ && traj_error_){
+            break;
+        }
+
+        rate.sleep();
+    }
+
+    return moveit_msgs::msg::RobotTrajectory();
+}
+
+bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajectory, uint timeout)
+{
+    trajectory_pub_->publish(trajectory);
+    rclcpp::Rate rate(params_.ros_freq);
+
+    sensor_msgs::msg::JointState goal_state;
+    trajectory_msgs::msg::JointTrajectoryPoint last_traj_pt = trajectory.joint_trajectory.points.back();
+    goal_state.position = last_traj_pt.positions;
+
+    double tolerance = getManipulatorParameter<double>("goal_tolerance");
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    //Tell the planner to start the execution
+    std_msgs::msg::Bool ctrl_msg;
+    ctrl_msg.data = true;
+    RCLCPP_INFO(node_->get_logger(), "Starting trajectory execution");
+    execution_ctrl_pub_->publish(ctrl_msg);
+
+    while(rclcpp::ok()){
+        if((std::chrono::high_resolution_clock::now() - start_time) > std::chrono::seconds(timeout)){
+            RCLCPP_ERROR(node_->get_logger(), "Timeout reached while waiting for trajectory execution.");
+            break;
+        }
+        //Repeatedly check joint states to see if the goal has been reached
+        for (size_t i {0}; i < goal_state.position.size(); i++){
+            if (std::abs(goal_state.position[i] - current_joint_pose_.position[i]) > tolerance){
+                break; //At least one joint is not in the goal position
+            }
+            return true;
+        }
+
+        rate.sleep();
+    }
+
+    return false;
+}
+
+// -------------------- TF END EFFECTOR LISTENER -----------------------
 
 // Listen a TF between two given frames
 geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &source_frame, const std::string &target_frame)
@@ -412,7 +562,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::getEEpose()
 {
     // Compute the FKine between base_link and end-effector
     current_tcp_pose_.header.frame_id = params_.base_link_name;
-    current_tcp_pose_.pose = getCurrentFKineClient();
+    current_tcp_pose_.pose = getFKineClient();
     return current_tcp_pose_.pose;
 }
 
@@ -760,7 +910,7 @@ void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
     request->vel_factor = new_vel;
 
     // Wait for the service to be available
-    while (!plannerParamsClient_->wait_for_service(std::chrono::seconds(1)))
+    while (!changePlannerParamsClient_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
@@ -770,7 +920,7 @@ void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
     }
 
     // Send the request asynchronously
-    auto response_future = plannerParamsClient_->async_send_request(request);
+    auto response_future = changePlannerParamsClient_->async_send_request(request);
 
     // Wait until the future is completed
     if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
@@ -963,6 +1113,51 @@ std::vector<double> ManipulatorMenu::vector_from_pose(const geometry_msgs::msg::
     vector[5] = rpy[2];
 
     return vector;
+}
+
+// --------------------- GENERIC UTILS -------------------
+
+double ManipulatorMenu::euclidean_distance(const std::vector<double>& a, const std::vector<double>& b)
+{   
+    if (a.size() != b.size())
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Vectors must have the same size to compute euclidean distance.");
+        return -1;
+    }
+
+    double sum = 0;
+    for (size_t i{0}; i < a.size(); i++)
+    {
+        sum += std::pow(a[i] - b[i], 2);
+    }
+
+    return sqrt(sum);
+}
+
+double ManipulatorMenu::euclidean_distance(const geometry_msgs::msg::Point& a, const geometry_msgs::msg::Point& b)
+{
+    return euclidean_distance({a.x, a.y, a.z}, {b.x, b.y, b.z});
+}
+
+double ManipulatorMenu::angular_distance(const geometry_msgs::msg::Quaternion& q1, const geometry_msgs::msg::Quaternion& q2)
+{
+    // Convert geometry_msgs::msg::Quaternion to Eigen::Quaterniond
+    Eigen::Quaterniond quat1(q1.w, q1.x, q1.y, q1.z);
+    Eigen::Quaterniond quat2(q2.w, q2.x, q2.y, q2.z);
+
+    // Compute the relative rotation
+    Eigen::Quaterniond relative_rotation = quat1.inverse() * quat2;
+
+    // Extract the angle of rotation
+    double angle = 2 * std::acos(relative_rotation.w());
+
+    // Normalize the angle to the range [0, pi]
+    if (angle > M_PI)
+    {
+        angle = 2 * M_PI - angle;
+    }
+
+    return angle;
 }
 
 /*
@@ -1380,10 +1575,28 @@ void ManipulatorMenu::userSetPlannerParams()
     setNewPlannerParams(new_vel, new_acc);
 }
 
+void ManipulatorMenu::userRunTest(){
+    // Test the planner
+    std::vector<double> position = {-0.3, 0.3, 0.7, 0., 0., 0.};
+    moveit_msgs::msg::RobotTrajectory traj = planAndWait(pose_from_vector(position));
+    printf("Planned trajectory with %d points, executing...\n", traj.joint_trajectory.points.size());
+
+    // Execute the trajectory
+    bool success = executeAndWait(traj);
+    if (success)
+    {
+        RCLCPP_INFO(node_->get_logger(), "Trajectory executed successfully");
+    }
+    else
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to execute trajectory");
+    }
+}
+
 // --------------------- MENU INITIALIZER ------------------------
 
 void ManipulatorMenu::initializeMenu(){
-    menu_ = MenuUserInterface<ManipulatorMenu>(std::make_shared<ManipulatorMenu>(*this));
+    menu_ = MenuUserInterface<ManipulatorMenu>(std::shared_ptr<ManipulatorMenu>(this));
 
     int section_start = 0; //Temporary variable to hold the last section start point
 
@@ -1441,5 +1654,7 @@ void ManipulatorMenu::initializeMenu(){
     menu_.addChoice("Set new planner parameters", &ManipulatorMenu::userSetPlannerParams);
     menu_.addSection("Setters", section_start, menu_.last_);
     section_start = menu_.last_ + 1;
+
+    menu_.addChoice("Run test", &ManipulatorMenu::userRunTest);
     
 }

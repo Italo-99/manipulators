@@ -73,35 +73,22 @@ Do the same with this package and use only the robotiq_85_description package:
 
 1) The URDF files in the ur_description package have some links that are rotated 180 degrees which will make the manipulator work in unexpected ways, to fix this issues go to ur_description/urdf/ur_macro.xacro and make the following changes:
 
-At line 82, 88, 272:
-<div style="color:#e31e10"> 
-<code> 
+    At lines 153, 159, 343:
 
-\- \<origin xyz="0 0 0" rpy="0 0 ${pi}"/>
-</code>
-</div>
-<div style="color:green"> 
-<code> 
+    ```diff
+    - <origin xyz="0 0 0" rpy="0 0 ${pi}"/>
 
-\+ \<origin xyz="0 0 0" rpy="0 0 0"/>
-</code>
-</div>
+    + <origin xyz="0 0 0" rpy="0 0 0"/>
+    ```
 
 2) The default values for the RRTConnect planner are not optimized and make the manipulator move in very unoptimized paths, to fix the issue go to ur_moveit_config/config/ompl_planning.yaml and make the following changes:
 
-At line 33:
+    At line 33:
 
-<div style="color:#e31e10"> 
-<code> 
-- range: 0.0
-</code>
-</div>
-<div style="color:green; background:#151b23; border-radius:8px"> 
+    ```diff
+    - range: 0.0
 
-\+ range: 0.1
-<br>
-\+ max_num_iterations: 1000
-<br>
-\+ goal_bias: 0.05
-
-</div>
+    + range: 0.1
+    + max_num_iterations: 1000
+    + goal_bias: 0.05
+    ```

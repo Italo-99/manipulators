@@ -22,6 +22,9 @@
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
+#include "manipulator_interfaces/msg/joint_goal.hpp"
+#include "manipulator_interfaces/msg/tcp_goal.hpp"
+#include "manipulator_interfaces/msg/trajectory_result.hpp"
 
 // Struct definition of the parameters of the Dynamic Planner
 struct DynamicPlannerParams
@@ -144,7 +147,7 @@ class DynamicPlanner
         moveit_msgs::msg::Constraints getPathConstraints() const; //Get the current path constraints
 
         // --------------- FORWARD KINEMATICS ----------------
-        /* getFKine: computes forward kinematics
+        /* \: computes forward kinematics
             Args:
                 joint_positions: Array of joint positions
                 end_effector_link: End effector link
@@ -180,9 +183,8 @@ class DynamicPlanner
     private:
         // --------------- CALLBACK METHODS ----------------
 
-        void stop_callback(const std_msgs::msg::Bool::SharedPtr msg); //Stop the robot if true
-        void jointsState_callback(const sensor_msgs::msg::JointState::SharedPtr &joints_state); //Update the joint states
-        void trajpoint_callback(const std_msgs::msg::UInt32::SharedPtr msg); //Update the current trajectory point
+        void jointsState_callback(const sensor_msgs::msg::JointState::SharedPtr &joints_state);     //Update the joint states
+        void trajpoint_callback(const std_msgs::msg::UInt32::SharedPtr msg);                        //Update the current trajectory point
 
         // --------------- TRAJECTORY METHODS ----------------
 
@@ -192,14 +194,14 @@ class DynamicPlanner
         //Returns true if successfull
         bool processTrajectory(moveit_msgs::msg::RobotTrajectory &trajectory); 
 
-        bool checkTrajectory(); //Check if trajectory_ is still clear of obstacles
-        void recalculateTrajectory(size_t start_index); //Recalculates the trajectory from the point at start_index onwards
+        bool checkTrajectory();                             //Check if trajectory_ is still clear of obstacles
+        void recalculateTrajectory(size_t start_index);     //Recalculates the trajectory from the point at start_index onwards
 
         void mergeTrajectory(moveit_msgs::msg::RobotTrajectory &new_traj, size_t start_index); //Merge the old trajectory with the new one from start_index onwards
 
         // --------------- HELPER METHODS ----------------
-        bool checkJointDiff(const std::vector<double> &joint_values); //Check if the difference between joint_values and current pose is negligible
-        void updatePlannerParams(); //Update the planner parameters with values stored in params_
+        bool checkJointDiff(const std::vector<double> &joint_values);   //Check if the difference between joint_values and current pose is negligible
+        void updatePlannerParams();                                     //Update the planner parameters with values stored in params_
         geometry_msgs::msg::PoseStamped toPoseStamped(const Eigen::Isometry3d& pose, const std::string &frame_id=""); //Converts an Eigen pose to a PoseStamped message
 
         //ROS Node
@@ -243,18 +245,15 @@ class DynamicPlanner
         const double totg_resample_dt = 0.002;
         const double totg_tolerance = 0.1;
         const double totg_min_angle_change = 0.001;
-        const double totg_max_vel_scaling_factor = 1.0;
-        const double totg_max_acc_scaling_factor = 1.0;
 
         //Publishers
-        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;            //Joint state publisher for the fake controller
-        rclcpp::Publisher<trajectory_msgs::msg::JointTrajectory>::SharedPtr trajectory_pub_;    //Joint trajectory publisher
-        rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr trajectory_res_pub_;                  //Publisher for the end of the trajectory
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;                    //Joint state publisher for the fake controller
+        rclcpp::Publisher<manipulator_interfaces::msg::TrajectoryResult>::SharedPtr trajectory_pub_;    //Trajectory result publisher see manipulator_interfaces/TrajectoryResult
         
         //Subscribers
-        rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr stop_sub_;                     //Subscriber for stopping the robot
-        rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joints_state_sub_;    //Subscriber for updating the joint states
-        rclcpp::Subscription<std_msgs::msg::UInt32>::SharedPtr trajpoint_sub_;              //Current trajpoint subscriber
+        rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joints_state_sub_;        //Subscriber for updating the joint states
+        rclcpp::Subscription<std_msgs::msg::UInt32>::SharedPtr trajpoint_sub_;                  //Current trajpoint subscriber
+        rclcpp::Subscription<moveit_msgs::msg::RobotTrajectory>::SharedPtr trajectory_sub_;     //Subscriber for trajectories
 
         //Default values for the 'plan' function
         std::string end_effector_link_ = "tool0";

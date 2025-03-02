@@ -8,6 +8,7 @@ int main(int argc, char* argv[]) {
     params.ee_joint_name      = "";
     params.ros_freq           = 10.;
     params.manipulator_name   = "manipulator";
+    params.planning_group     = "ur_manipulator";
     params.enable_coppelia    = false;
     params.enable_sim_gripper = false;
     params.enable_real_gripper= false;
