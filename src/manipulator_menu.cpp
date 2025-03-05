@@ -24,13 +24,13 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     current_joint_pose_.name      = params_.joint_names;
 
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
-    jointGoalPublisher_           = node_->create_publisher<manipulator_interfaces::msg::JointGoal>(params_.manipulator_name+"/joint_goal", 1);
-    tcpPosePublisher_             = node_->create_publisher<manipulator_interfaces::msg::TcpGoal>(params_.manipulator_name+"/tcp_goal", 1);
-    display_goal_pub_             = node_->create_publisher<geometry_msgs::msg::PoseStamped>(params_.manipulator_name+"/display_robot_goal", 1);
-    collisionObjectPublisher_     = node_->create_publisher<moveit_msgs::msg::CollisionObject>(params_.manipulator_name+"/collision_object", 1);
-    collisionAttObjectPublisher_  = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(params_.manipulator_name+"/attached_collision_object", 1);
+    jointGoal_pub_               = node_->create_publisher<manipulator_interfaces::msg::JointGoal>(params_.manipulator_name+"/joint_goal", 1);
+    tcpGoal_pub_                 = node_->create_publisher<manipulator_interfaces::msg::TcpGoal>(params_.manipulator_name+"/tcp_goal", 1);
+    displayGoal_pub_             = node_->create_publisher<geometry_msgs::msg::PoseStamped>(params_.manipulator_name+"/display_robot_goal", 1);
+    collisionObject_pub_         = node_->create_publisher<moveit_msgs::msg::CollisionObject>(params_.manipulator_name+"/collision_object", 1);
+    attachedCollisionObject_pub_ = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(params_.manipulator_name+"/attached_collision_object", 1);
 
-    jointStateSubscriber_ = node_->create_subscription<sensor_msgs::msg::JointState>(
+    jointState_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
         "/joint_states", 1, 
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->jointStateCallback(msg);
@@ -38,19 +38,19 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     );
 
     // --------------------- Kinematics client init ---------------------
-    invKineClient_                = node_->create_client<manipulator_interfaces::srv::InvKine>(params_.manipulator_name+"/get_invkine");
-    pseudoInvClient_              = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(params_.manipulator_name+"/get_pseudo_inverse");
-    fKineClient_                  = node_->create_client<manipulator_interfaces::srv::FKine>(params_.manipulator_name+"/get_fkine");
-    jacobianClient_               = node_->create_client<manipulator_interfaces::srv::Jacobian>(params_.manipulator_name+"/get_jacobian");
+    invKine_client_              = node_->create_client<manipulator_interfaces::srv::InvKine>(params_.manipulator_name+"/get_invkine");
+    pseudoInverse_client_        = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(params_.manipulator_name+"/get_pseudo_inverse");
+    fKine_client_                 = node_->create_client<manipulator_interfaces::srv::FKine>(params_.manipulator_name+"/get_fkine");
+    jacobian_client_             = node_->create_client<manipulator_interfaces::srv::Jacobian>(params_.manipulator_name+"/get_jacobian");
 
-    setJacobianControlClient_     = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/jacobian_control_setter");
-    setRealTimeControlClient_     = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
-    changePlannerParamsClient_    = node_->create_client<manipulator_interfaces::srv::ChangePlannerParameters>(params_.manipulator_name+"/change_planner_params");
+    setJacobianControl_client_   = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/jacobian_control_setter");
+    setRealTimeControl_client_   = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
+    changePlannerParams_client_  = node_->create_client<manipulator_interfaces::srv::ChangePlannerParameters>(params_.manipulator_name+"/change_planner_params");
 
-    manipulator_params_client_    = std::make_shared<rclcpp::SyncParametersClient>(node_, "/" + params_.manipulator_name + "_planner");
+    getManipulatorParams_client_ = std::make_shared<rclcpp::SyncParametersClient>(node_, "/" + params_.manipulator_name + "_planner");
 
     // ---------------------- Planning ----------------------
-    planned_traj_sub_ = node_->create_subscription<manipulator_interfaces::msg::TrajectoryResult>(
+    plannedTrajectory_sub_ = node_->create_subscription<manipulator_interfaces::msg::TrajectoryResult>(
         params_.planning_group+"/planned_trajectory", 1,
         [this](const manipulator_interfaces::msg::TrajectoryResult::SharedPtr msg) {
             trajectoryCallback(msg);
@@ -58,10 +58,21 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     );
 
     trajectory_pub_ = node_->create_publisher<moveit_msgs::msg::RobotTrajectory>(params_.planning_group+"/trajectory", 1);
-    execution_ctrl_pub_ = node_->create_publisher<std_msgs::msg::Bool>(params_.planning_group+"/execution_control", 1);
+    executionControl_pub_ = node_->create_publisher<std_msgs::msg::Bool>(params_.planning_group+"/execution_control", 1);
+
+    // ---------------------- Gripper ----------------------
+
+    if(params_.robotiq_85_gripper){
+        gripperMove_client_ = node_->create_client<std_srvs::srv::SetBool>(params_.gripper_group+"/move_gripper");
+    }
+
 }
 
-// --------------------- PUBLIC FUNCTIONS ---------------------
+/*
+    ================================================================
+    ====================== PUBLIC FUNCTIONS ========================
+    ================================================================
+*/
 
 std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pose pose)
 {
@@ -72,7 +83,7 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
     request->target_pose = pose;
 
     // Wait for the service to be available
-    while (!invKineClient_->wait_for_service(std::chrono::seconds(1)))
+    while (!invKine_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
@@ -82,10 +93,10 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
     }
 
     // Send the request asynchronously
-    auto response_future = invKineClient_->async_send_request(request);
+    auto response_future = invKine_client_->async_send_request(request);
 
     // Wait until the future is completed
-    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
     {
         RCLCPP_ERROR(node_->get_logger(), "Failed to call invKine service");
         return joint_values;
@@ -108,7 +119,7 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
     auto request = std::make_shared<manipulator_interfaces::srv::PseudoInverse::Request>();
 
     // Wait for the service to be available
-    while (!pseudoInvClient_->wait_for_service(std::chrono::seconds(1)))
+    while (!pseudoInverse_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
@@ -118,10 +129,10 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
     }
 
     // Send the request asynchronously
-    auto response_future = pseudoInvClient_->async_send_request(request);
+    auto response_future = pseudoInverse_client_->async_send_request(request);
 
     // Wait until the future is completed
-    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
     {
         RCLCPP_ERROR(node_->get_logger(), "Failed to call pseudoInverse service");
         return matrix;
@@ -142,7 +153,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::getFKineClient(const sensor_msgs::msg:
     request->joint_state = joint_positions;
 
     // Wait for the service to be available
-    while (!fKineClient_->wait_for_service(std::chrono::seconds(1)))
+    while (!fKine_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
@@ -152,10 +163,10 @@ geometry_msgs::msg::Pose ManipulatorMenu::getFKineClient(const sensor_msgs::msg:
     }
 
     // Send the request asynchronously
-    auto response_future = fKineClient_->async_send_request(request);
+    auto response_future = fKine_client_->async_send_request(request);
 
     // Wait until the future is completed
-    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
     {
         RCLCPP_ERROR(node_->get_logger(), "Failed to call getFKine service");
         return pose;
@@ -175,7 +186,7 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
     auto request = std::make_shared<manipulator_interfaces::srv::Jacobian::Request>();
 
     // Wait for the service to be available
-    while (!jacobianClient_->wait_for_service(std::chrono::seconds(1)))
+    while (!jacobian_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()) {
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
@@ -185,10 +196,10 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
     }
 
     // Send the request asynchronously and get the response
-    auto response_future = jacobianClient_->async_send_request(request);
+    auto response_future = jacobian_client_->async_send_request(request);
 
     // Wait until the future is completed
-    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
     {
         RCLCPP_ERROR(node_->get_logger(), "Failed to call Jacobian service");
         return matrix;
@@ -203,25 +214,60 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
     return matrix;
 }
 
+// -------------------- GRIPPERS ---------------------
+
+bool ManipulatorMenu::gripperMoveRobotiq(const bool close)
+{
+    std_srvs::srv::SetBool::Request::SharedPtr request = std::make_shared<std_srvs::srv::SetBool::Request>();
+    request->data = close;
+
+    // Wait for the service to be available
+    while (!gripperMove_client_->wait_for_service(std::chrono::seconds(1)))
+    {
+        if (!rclcpp::ok()) {
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
+            return false;
+        }
+        RCLCPP_INFO(node_->get_logger(), "gripperMove service not available, waiting again...");
+    }
+
+    // Send the request asynchronously and get the response
+    auto response_future = gripperMove_client_->async_send_request(request);
+
+    // Wait until the future is completed
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call gripperMove service");
+        return false;
+    }
+
+    // If we reached this point, the response is valid, so process it
+    auto response = response_future.get();
+
+    return response->success;
+}
+
+// -------------------- PARAMETERS ---------------------
+
 template <typename T>
 T ManipulatorMenu::getManipulatorParameter(const std::string& param_name)
 {
     // Check if the parameter client is initialized
-    if (!manipulator_params_client_)
+    if (!getManipulatorParams_client_)
     {
         RCLCPP_ERROR(node_->get_logger(), "Parameter client is not initialized.");
         return T{};
     }
 
     // Check if the parameter exists
-    if (!manipulator_params_client_->has_parameter(param_name))
+    if (!getManipulatorParams_client_->has_parameter(param_name))
     {
         RCLCPP_ERROR(node_->get_logger(), "Parameter %s does not exist in planner node.", param_name.c_str());
         return T{};
     }
 
     // Get the parameter
-    return manipulator_params_client_->get_parameter<T>(param_name);
+    return getManipulatorParams_client_->get_parameter<T>(param_name);
 }
 
 // --------------------- SUBSCRIBERS CALLBACKS ---------------------
@@ -351,7 +397,7 @@ sensor_msgs::msg::JointState ManipulatorMenu::publishJointGoal(const sensor_msgs
     joint_goal_msg.joint_goal = joint_goal;
     joint_goal_msg.execute = execute;
     // Publish the JointState message
-    jointGoalPublisher_->publish(joint_goal_msg);
+    jointGoal_pub_->publish(joint_goal_msg);
     return joint_goal;
 }
 
@@ -373,7 +419,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(const geometry_msgs::ms
     tcp_goal_msg.end_effector = manipulator_interfaces::msg::TcpGoal::DEFAULT;
     tcp_goal_msg.frame = manipulator_interfaces::msg::TcpGoal::DEFAULT;
 
-    tcpPosePublisher_->publish(tcp_goal_msg);
+    tcpGoal_pub_->publish(tcp_goal_msg);
     return tcp_pose;
 }
 
@@ -493,7 +539,7 @@ bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajector
     std_msgs::msg::Bool ctrl_msg;
     ctrl_msg.data = true;
     RCLCPP_INFO(node_->get_logger(), "Starting trajectory execution");
-    execution_ctrl_pub_->publish(ctrl_msg);
+    executionControl_pub_->publish(ctrl_msg);
 
     while(rclcpp::ok()){
         if((std::chrono::high_resolution_clock::now() - start_time) > std::chrono::seconds(timeout)){
@@ -773,7 +819,7 @@ void ManipulatorMenu::addObj(const std::string &name,
 // Collision object publisher
 void ManipulatorMenu::publishCollisionObject(const moveit_msgs::msg::CollisionObject collisionObjectMsg)
 {
-    collisionObjectPublisher_->publish(collisionObjectMsg);
+    collisionObject_pub_->publish(collisionObjectMsg);
 }
 
 // Create a collision object from a selected primitive
@@ -858,7 +904,7 @@ void ManipulatorMenu::addAttachedObj(const std::string &name,
 // Collision Attached object publisher
 void ManipulatorMenu::publishAttachedCollisionObject(const moveit_msgs::msg::AttachedCollisionObject collisionAttachedObjectMsg)
 {
-    collisionAttObjectPublisher_->publish(collisionAttachedObjectMsg);
+    attachedCollisionObject_pub_->publish(collisionAttachedObjectMsg);
 }
 
 // ------------------- KINEMATICS PARAMS SETTERS ---------------------- //
@@ -870,7 +916,7 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
     request->data = set;
 
     // Wait for the service to be available
-    while (!setJacobianControlClient_->wait_for_service(std::chrono::seconds(1)))
+    while (!setJacobianControl_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
@@ -880,10 +926,10 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
     }
 
     // Send the request asynchronously
-    auto response_future = setJacobianControlClient_->async_send_request(request);
+    auto response_future = setJacobianControl_client_->async_send_request(request);
 
     // Wait until the future is completed
-    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
     {
         RCLCPP_ERROR(node_->get_logger(), "Failed to call service jacobian_control_setter");
         return;
@@ -910,7 +956,7 @@ void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
     request->vel_factor = new_vel;
 
     // Wait for the service to be available
-    while (!changePlannerParamsClient_->wait_for_service(std::chrono::seconds(1)))
+    while (!changePlannerParams_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
@@ -920,10 +966,10 @@ void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
     }
 
     // Send the request asynchronously
-    auto response_future = changePlannerParamsClient_->async_send_request(request);
+    auto response_future = changePlannerParams_client_->async_send_request(request);
 
     // Wait until the future is completed
-    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
     {
         RCLCPP_ERROR(node_->get_logger(), "Failed to call service change_planner_params");
         return;
@@ -948,7 +994,7 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
     request->data = set;
 
     // Wait for the service to be available
-    while (!setRealTimeControlClient_->wait_for_service(std::chrono::seconds(1)))
+    while (!setRealTimeControl_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
@@ -958,10 +1004,10 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
     }
 
     // Send the request asynchronously
-    auto response_future = setRealTimeControlClient_->async_send_request(request);
+    auto response_future = setRealTimeControl_client_->async_send_request(request);
 
     // Wait until the future is completed
-    if (rclcpp::spin_until_future_complete(node_->get_node_base_interface(), response_future) != rclcpp::FutureReturnCode::SUCCESS)
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
     {
         RCLCPP_ERROR(node_->get_logger(), "Failed to call service joints_real_time_setter");
         return;
@@ -1093,8 +1139,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::pose_from_vector(const std::vector<dou
 {
     geometry_msgs::msg::Pose pose;
     pose.position.x = position[0];
-    pose.position.x = position[1];
-    pose.position.x = position[2];
+    pose.position.y = position[1];
+    pose.position.z = position[2];
 
     pose.orientation = quaternion_from_euler(position[3], position[4], position[5]);
     return pose;
@@ -1159,6 +1205,7 @@ double ManipulatorMenu::angular_distance(const geometry_msgs::msg::Quaternion& q
 
     return angle;
 }
+
 
 /*
     ================================================================
@@ -1575,22 +1622,61 @@ void ManipulatorMenu::userSetPlannerParams()
     setNewPlannerParams(new_vel, new_acc);
 }
 
+// --------------------- GRIPPER HANDLERS ------------------------
+
+void ManipulatorMenu::userGripperMove()
+{
+    bool close;
+    std::cout << "Enter 1 to close the gripper, 0 to open: \n";
+    std::cin >> close;
+    if (params_.robotiq_85_gripper){
+        gripperMoveRobotiq(close);
+    } else if (params_.sirio_gripper){
+        //gripperMoveSirio(close);
+    } else {
+        RCLCPP_ERROR(node_->get_logger(), "No gripper available for this robot");
+    }
+}
+
 void ManipulatorMenu::userRunTest(){
     // Test the planner
-    std::vector<double> position = {-0.3, 0.3, 0.7, 0., 0., 0.};
+    std::vector<double> position = {0.5, 0.0, 0.2, 180., 0., 90.};
     moveit_msgs::msg::RobotTrajectory traj = planAndWait(pose_from_vector(position));
-    printf("Planned trajectory with %d points, executing...\n", traj.joint_trajectory.points.size());
 
-    // Execute the trajectory
-    bool success = executeAndWait(traj);
-    if (success)
+    if (traj.joint_trajectory.points.size() == 0)
     {
-        RCLCPP_INFO(node_->get_logger(), "Trajectory executed successfully");
+        RCLCPP_ERROR(node_->get_logger(), "Failed to plan trajectory");
+        return;
     }
-    else
+
+    bool success = executeAndWait(traj);
+
+    if (!success)
     {
         RCLCPP_ERROR(node_->get_logger(), "Failed to execute trajectory");
     }
+
+    gripperMoveRobotiq(true); // Grab obj
+
+    rclcpp::sleep_for(std::chrono::seconds(2));
+
+    position = {0.0, 0.5, 0.4, 180., 0., 0.};
+    traj = planAndWait(pose_from_vector(position));
+
+    if (traj.joint_trajectory.points.size() == 0)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to plan trajectory");
+        return;
+    }
+
+    success = executeAndWait(traj);
+
+    if (!success)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to execute trajectory");
+    }
+
+    gripperMoveRobotiq(false); // Release obj
 }
 
 // --------------------- MENU INITIALIZER ------------------------
@@ -1655,6 +1741,12 @@ void ManipulatorMenu::initializeMenu(){
     menu_.addSection("Setters", section_start, menu_.last_);
     section_start = menu_.last_ + 1;
 
-    menu_.addChoice("Run test", &ManipulatorMenu::userRunTest);
-    
+    //Gripper
+    menu_.addChoice("Move gripper", &ManipulatorMenu::userGripperMove);
+    menu_.addSection("Gripper", section_start, menu_.last_);
+    section_start = menu_.last_ + 1;
+
+    menu_.addChoice("Example routine", &ManipulatorMenu::userRunTest);
+    menu_.addSection("Routines", section_start, menu_.last_);
+    section_start = menu_.last_ + 1;
 }

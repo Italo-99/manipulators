@@ -34,7 +34,7 @@ Some useful instructions for new ROS2 use.
 }'
 
 8) To launch planner with robotiq85 gripper attached:
-    ros2 launch manipulators planner.launch.py description_path:="/home/matteo/projectred_ws/install/manipulators/share/manipulators/models/urdf/ur_robotiq_85_gripper.urdf.xacro" description_semantic_path:="/home/matteo/projectred_ws/install/manipulators/share/manipulators/models/srdf/ur_robotiq_85_gripper.srdf.xacro"
+    ros2 launch manipulators planner.launch.py description_path:="/home/matteo/projectred_ws/install/manipulators/share/manipulators/models/urdf/ur_robotiq_85_gripper.urdf.xacro" description_semantic_path:="/home/matteo/projectred_ws/install/manipulators/share/manipulators/models/srdf/ur_robotiq_85_gripper.srdf.xacro" gripper:=True
 
 ## Setup TODO
    

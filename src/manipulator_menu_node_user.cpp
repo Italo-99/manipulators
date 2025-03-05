@@ -9,9 +9,10 @@ int main(int argc, char* argv[]) {
     params.ros_freq           = 10.;
     params.manipulator_name   = "manipulator";
     params.planning_group     = "ur_manipulator";
-    params.enable_coppelia    = false;
-    params.enable_sim_gripper = false;
-    params.enable_real_gripper= false;
+
+    params.robotiq_85_gripper = true;
+    params.sirio_gripper      = false;
+
     params.gripper_topic      = "/ur_rtde/robotiq_gripper/command";
     params.joint_names        = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
         "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};

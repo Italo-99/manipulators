@@ -49,6 +49,14 @@ def launch_setup(context, *args, **kwargs):
     )
 
     nodes_to_start.append(
+        Node(
+            package="motors_trajectory",
+            executable="robotiq_85_gripper_node",
+            condition=IfCondition(LaunchConfiguration("gripper")),
+        )
+    )
+
+    nodes_to_start.append(
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 FindPackageShare("manipulators").perform(context) + "/launch/planning_context.launch.py"
@@ -186,6 +194,15 @@ def generate_launch_description():
             "moveit_config_package",
             default_value="ur_moveit_config",
             description="MoveIt config package with robot SRDF/XACRO files and MoveIt configuration files."
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "gripper",
+            default_value="False",
+            choices=["True", "False"],
+            description="Whether to run the robotiq 85 gripper node or not."
         )
     )
 

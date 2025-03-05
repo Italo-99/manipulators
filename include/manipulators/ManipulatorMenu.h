@@ -49,9 +49,13 @@ struct ManipulatorMenuParams
     double ros_freq               = 500;
     std::string manipulator_name  = "manipulator";
     std::string planning_group    = "ur_manipulator";
-    bool enable_coppelia          = false;
-    bool enable_sim_gripper       = false;
-    bool enable_real_gripper      = false;
+
+    bool robotiq_85_gripper       = false;
+    std::string gripper_group     = "robotiq_85_gripper";
+
+    bool sirio_gripper            = false;
+    std::string Client       = "sirio_gripper";
+
     std::string gripper_topic     = "/ur_rtde/robotiq_gripper/command";
     std::vector<std::string> joint_names = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
                                             "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
@@ -184,6 +188,8 @@ class ManipulatorMenu
       Eigen::MatrixXd           pseudoInverseClient(void);
       std::vector<double>       invKineClient(const geometry_msgs::msg::Pose pose);
       Eigen::MatrixXd           getJacobianClient(void);
+      bool                      gripperMoveRobotiq(const bool close);
+      bool                      gripperMoveSirio(const bool close);
 
       template <typename T>
       T getManipulatorParameter(const std::string& param_name);
@@ -201,6 +207,8 @@ class ManipulatorMenu
 
     void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr& msg);
     void trajectoryCallback(const manipulator_interfaces::msg::TrajectoryResult::SharedPtr& msg);
+
+    // --------------------- GRIPPER ---------------------
     
     // --------------------- USER ACTIONS ---------------------
     
@@ -241,6 +249,9 @@ class ManipulatorMenu
     void userSetJacobianSpeedControl(void);     // Set the jacobian speed control
     void userSetRealTimeControl(void);          // Set the real time control of the joints
 
+    // Gripper
+    void userGripperMove(void);                 // Move the gripper
+
     void userRunTest(void);                     // Run a test function
 
     //Initialize the menu instance and add the menu options and sections
@@ -254,21 +265,26 @@ class ManipulatorMenu
 
     MenuUserInterface<ManipulatorMenu> menu_;
 
+    uint clients_wait_timeout_ {10}; //Seconds
+
     // ---------------------  ROS HANDLING ---------------------
-    rclcpp::Publisher<manipulator_interfaces::msg::JointGoal>::SharedPtr jointGoalPublisher_;   
-    rclcpp::Publisher<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpPosePublisher_;
+    rclcpp::Publisher<manipulator_interfaces::msg::JointGoal>::SharedPtr jointGoal_pub_;   
+    rclcpp::Publisher<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpGoal_pub_;
 
-    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr display_goal_pub_;
-    rclcpp::Publisher<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObjectPublisher_;
-    rclcpp::Publisher<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr collisionAttObjectPublisher_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr displayGoal_pub_;
+    rclcpp::Publisher<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObject_pub_;
+    rclcpp::Publisher<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr attachedCollisionObject_pub_;
 
-    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointStateSubscriber_;
+    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointState_sub_;
 
-    rclcpp::Client<manipulator_interfaces::srv::ChangePlannerParameters>::SharedPtr changePlannerParamsClient_;
-    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControlClient_;
-    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setRealTimeControlClient_;
+    rclcpp::Client<manipulator_interfaces::srv::ChangePlannerParameters>::SharedPtr changePlannerParams_client_;
+    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControl_client_;
+    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setRealTimeControl_client_;
+    
+    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripperGrab_client_; //Not implemented for now
+    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripperMove_client_;
 
-    rclcpp::SyncParametersClient::SharedPtr manipulator_params_client_; //gets the parameter from the manipulator planner node
+    rclcpp::SyncParametersClient::SharedPtr getManipulatorParams_client_; //gets the parameter from the manipulator planner node
 
     // --------------------- ROBOT STATE ---------------------------
     geometry_msgs::msg::PoseStamped current_tcp_pose_;
@@ -276,16 +292,16 @@ class ManipulatorMenu
     std::vector<double> joints_values_group_;
 
     // --------------------- Kinematics client init ---------------------
-    rclcpp::Client<manipulator_interfaces::srv::InvKine>::SharedPtr invKineClient_;
-    rclcpp::Client<manipulator_interfaces::srv::PseudoInverse>::SharedPtr pseudoInvClient_;
-    rclcpp::Client<manipulator_interfaces::srv::FKine>::SharedPtr fKineClient_;
-    rclcpp::Client<manipulator_interfaces::srv::Jacobian>::SharedPtr jacobianClient_;
+    rclcpp::Client<manipulator_interfaces::srv::InvKine>::SharedPtr invKine_client_;
+    rclcpp::Client<manipulator_interfaces::srv::PseudoInverse>::SharedPtr pseudoInverse_client_;
+    rclcpp::Client<manipulator_interfaces::srv::FKine>::SharedPtr fKine_client_;
+    rclcpp::Client<manipulator_interfaces::srv::Jacobian>::SharedPtr jacobian_client_;
 
     // ---------------------- Planning ----------------------
 
-    rclcpp::Subscription<manipulator_interfaces::msg::TrajectoryResult>::SharedPtr planned_traj_sub_;   // Subscription to the planned trajectory
+    rclcpp::Subscription<manipulator_interfaces::msg::TrajectoryResult>::SharedPtr plannedTrajectory_sub_;   // Subscription to the planned trajectory
     rclcpp::Publisher<moveit_msgs::msg::RobotTrajectory>::SharedPtr trajectory_pub_;                    // Publishes the trajectory to be executed
-    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr execution_ctrl_pub_;                              // Moves or stops the robot
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr executionControl_pub_;                              // Moves or stops the robot
 
     moveit_msgs::msg::RobotTrajectory planned_trajectory_;
     bool traj_received_;
