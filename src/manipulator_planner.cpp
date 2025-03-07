@@ -159,6 +159,9 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     j3_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[3] + "/motor_control", 1);
     j4_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[4] + "/motor_control", 1);
     j5_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[5] + "/motor_control", 1);
+
+    tcpPose_pub_ = this->create_publisher<geometry_msgs::msg::Pose>(manipulator_name_ + "/tcp_pose", 1);
+    tcpVel_pub_  = this->create_publisher<geometry_msgs::msg::Twist>(manipulator_name_ + "/tcp_vel", 1);
 }
 
 ManipulatorPlannerNode::~ManipulatorPlannerNode() {
@@ -679,7 +682,9 @@ void ManipulatorPlannerNode::realTimeSetpoint_callback(const sensor_msgs::msg::J
         js_msg_new_[k] = msg->velocity[k];
         // Check if the vel cmds exceed the maximum acceptable speed
         if (abs(msg->velocity[k]) > max_spd_jnts_)
-        {js_msg_new_[k] = sign(msg->velocity[k])*max_spd_jnts_;}
+        {
+            js_msg_new_[k] = sign(msg->velocity[k])*max_spd_jnts_;
+        }
     }
 }
 
@@ -743,7 +748,7 @@ void ManipulatorPlannerNode::jacobianControl()
 {
     // Compute the norm of the current linear vels components
     double norm_vel = arm_vel_cmd_.head<3>().norm();
-
+    
     // Compute the norm of the linear vels components of the new msg
     double norm_msg = arm_msg_new_.norm();
 
@@ -781,25 +786,25 @@ void ManipulatorPlannerNode::jacobianControl()
 
     }
     else {arm_vel_cmd_.head<3>() = arm_msg_new_;}
-
+    
     // Set a lower limit to velocities to avoid noises
     for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(arm_vel_cmd_[k]);}
-
+    
     // Compute the speed
     const unsigned int NUM_JOINTS = joint_names_.size();
     Eigen::VectorXd dq(NUM_JOINTS);
     dq = getPseudoInverseJacobian() * arm_vel_cmd_;
-
+    
     // Set a lower limit to joint velocities to avoid noises
     for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(dq[k]);}
-
+    
     // Convert joints state into Eigen::VectorXd
     Eigen::VectorXd q(NUM_JOINTS);
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
         q(k) = dynamic_planner_->joints_values_group_[k];
     }
-
+    
     // Update joint position setpoint
     Eigen::VectorXd qd(NUM_JOINTS);
     qd = q + dq / ros_freq_;
@@ -809,14 +814,14 @@ void ManipulatorPlannerNode::jacobianControl()
     js.name     = joint_names_;
     js.position.resize(qd.size());
     js.velocity.resize(dq.size());
-
+    
     // Insert positions and velocity setpoints
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
         js.position[k] = qd[k];
         js.velocity[k] = dq[k];
     }
-
+    
     // Send the goal to the move it fake controller as trajectory point
     dynamic_planner_->moveRobot(js);
 }

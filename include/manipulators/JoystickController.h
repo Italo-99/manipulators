@@ -1,0 +1,59 @@
+#include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/joy.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
+#include "geometry_msgs/msg/twist.hpp"
+#include "manipulators/ManipulatorMenu.h"
+
+enum AxesMap {
+    LEFTX = 0,
+    LEFTY = 1,
+    RIGHTX = 2,
+    RIGHTY = 3,
+    TRIGGERLEFT = 4,
+    TRIGGERRIGHT = 5
+};
+
+enum ButtonsMap {
+    CROSS = 0,
+    CIRCLE = 1,
+    SQUARE = 2,
+    TRIANGLE = 3,
+    SELECT = 4,
+    GUIDE = 5,
+    START = 6,
+    LEFTSTICK = 7,
+    RIGHTSTICK = 8,
+    LEFTSHOULDER = 9,
+    RIGHTSHOULDER = 10,
+    DPAD_UP = 11,
+    DPAD_DOWN = 12,
+    DPAD_LEFT = 13,
+    DPAD_RIGHT = 14
+};
+
+class JoystickController : public rclcpp::Node
+{
+    public:
+        JoystickController(const std::string& node_name, ManipulatorMenuParams& params);
+
+        void spinner();
+
+    private:
+        void joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy);
+
+        void publishCmd();
+
+        std::shared_ptr<ManipulatorMenu> manipulator_menu_;
+        ManipulatorMenuParams params_;
+
+        rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;                    //Receive commands from joystick
+
+        rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velJacSetpoint_pub_;        //Publish end effector velocity commands to manipulator
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr velJsRtSetpoint_pub_;    //Publish joint velocity commands to manipulator
+
+        sensor_msgs::msg::JointState js_cmd_vel_;
+        geometry_msgs::msg::Twist arm_cmd_vel_;
+
+        double vel_step, rot_step, js_step;
+        bool jacobian_control_, real_time_control_;
+};

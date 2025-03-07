@@ -186,7 +186,6 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr realTimeSetpoint_sub_;                        //Subscriber for the speed setpoint for the real time joints speed based control
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr execution_ctrl_sub_;                                   //Subscriber for moving and stopping the robot
 
-
         //Publishers
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j0_pub_;           // Publisher to j0 motor controller
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j1_pub_;           // Publisher to j1 motor controller

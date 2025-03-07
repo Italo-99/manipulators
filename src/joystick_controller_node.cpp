@@ -1,4 +1,4 @@
-#include "manipulators/ManipulatorMenu.h"
+#include "manipulators/JoystickController.h"
 
 int main(int argc, char* argv[]) {
 
@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
     params.manipulator_name   = "manipulator";
     params.planning_group     = "ur_manipulator";
 
-    params.robotiq_85_gripper = false;
+    params.robotiq_85_gripper = true;
     params.sirio_gripper      = false;
 
     params.gripper_topic      = "/ur_rtde/robotiq_gripper/command";
@@ -21,10 +21,8 @@ int main(int argc, char* argv[]) {
     rclcpp::init(argc, argv);
 
     rclcpp::NodeOptions options;
-    rclcpp::Node::SharedPtr node = std::make_shared<rclcpp::Node>(params.node_name, options);
-
-    auto menu = std::make_shared<ManipulatorMenu>(params, node);
-    menu->spinner();
+    auto controller = std::make_shared<JoystickController>(params.manipulator_name + "_joystick_controller", params);
+    controller->spinner();
 
     rclcpp::shutdown();
 

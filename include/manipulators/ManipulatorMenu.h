@@ -188,8 +188,7 @@ class ManipulatorMenu
       Eigen::MatrixXd           pseudoInverseClient(void);
       std::vector<double>       invKineClient(const geometry_msgs::msg::Pose pose);
       Eigen::MatrixXd           getJacobianClient(void);
-      bool                      gripperMoveRobotiq(const bool close);
-      bool                      gripperMoveSirio(const bool close);
+      bool                      gripperMove(const bool close);
 
       template <typename T>
       T getManipulatorParameter(const std::string& param_name);
@@ -209,6 +208,9 @@ class ManipulatorMenu
     void trajectoryCallback(const manipulator_interfaces::msg::TrajectoryResult::SharedPtr& msg);
 
     // --------------------- GRIPPER ---------------------
+
+    bool gripperMoveRobotiq(const bool close);
+    bool gripperMoveSirio(const bool close);
     
     // --------------------- USER ACTIONS ---------------------
     

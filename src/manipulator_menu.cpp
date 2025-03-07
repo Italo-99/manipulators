@@ -216,35 +216,15 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 
 // -------------------- GRIPPERS ---------------------
 
-bool ManipulatorMenu::gripperMoveRobotiq(const bool close)
-{
-    std_srvs::srv::SetBool::Request::SharedPtr request = std::make_shared<std_srvs::srv::SetBool::Request>();
-    request->data = close;
-
-    // Wait for the service to be available
-    while (!gripperMove_client_->wait_for_service(std::chrono::seconds(1)))
-    {
-        if (!rclcpp::ok()) {
-            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
-            return false;
-        }
-        RCLCPP_INFO(node_->get_logger(), "gripperMove service not available, waiting again...");
-    }
-
-    // Send the request asynchronously and get the response
-    auto response_future = gripperMove_client_->async_send_request(request);
-
-    // Wait until the future is completed
-    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call gripperMove service");
+bool ManipulatorMenu::gripperMove(const bool close){
+    if(params_.robotiq_85_gripper){
+        return gripperMoveRobotiq(close);
+    } else if(params_.sirio_gripper){
+        return gripperMoveSirio(close);
+    } else {
+        RCLCPP_ERROR(node_->get_logger(), "Gripper not implemented for this manipulator.");
         return false;
     }
-
-    // If we reached this point, the response is valid, so process it
-    auto response = response_future.get();
-
-    return response->success;
 }
 
 // -------------------- PARAMETERS ---------------------
@@ -370,8 +350,6 @@ void ManipulatorMenu::spinner()
     {
         // ROS spinner
         rclcpp::spin_some(node_->get_node_base_interface());
-        getEEpose();
-
         r.sleep();
     }
 
@@ -616,13 +594,13 @@ geometry_msgs::msg::Pose ManipulatorMenu::getEEpose()
 std::vector<double> ManipulatorMenu::getEEpos_rpy()
 {
     // Read current EE pose by FKine
-    getEEpose();
+    geometry_msgs::msg::Pose pose = getEEpose();
 
     // Fill the rotation vector
-    std::vector<double> tcp_rpy = euler_from_quaternion(current_tcp_pose_.pose.orientation);
+    std::vector<double> tcp_rpy = euler_from_quaternion(pose.orientation);
 
     // Declaration of the pose vector
-    std::vector<double> tcp_pose_rpy = {current_tcp_pose_.pose.position.x, current_tcp_pose_.pose.position.y, current_tcp_pose_.pose.position.z, tcp_rpy[0], tcp_rpy[1], tcp_rpy[2]};
+    std::vector<double> tcp_pose_rpy = {pose.position.x, pose.position.y, pose.position.z, tcp_rpy[0], tcp_rpy[1], tcp_rpy[2]};
     return tcp_pose_rpy;
 }
 
@@ -1205,6 +1183,49 @@ double ManipulatorMenu::angular_distance(const geometry_msgs::msg::Quaternion& q
 
     return angle;
 }
+/*
+    ================================================================
+    ===================== PRIVATE FUNCTIONS  =======================
+    ================================================================
+*/
+
+// --------------------- GRIPPERS ---------------------
+
+bool ManipulatorMenu::gripperMoveRobotiq(const bool close)
+{
+    std_srvs::srv::SetBool::Request::SharedPtr request = std::make_shared<std_srvs::srv::SetBool::Request>();
+    request->data = close;
+
+    // Wait for the service to be available
+    while (!gripperMove_client_->wait_for_service(std::chrono::seconds(1)))
+    {
+        if (!rclcpp::ok()) {
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
+            return false;
+        }
+        RCLCPP_INFO(node_->get_logger(), "gripperMove service not available, waiting again...");
+    }
+
+    // Send the request asynchronously and get the response
+    auto response_future = gripperMove_client_->async_send_request(request);
+
+    // Wait until the future is completed
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call gripperMove service");
+        return false;
+    }
+
+    // If we reached this point, the response is valid, so process it
+    auto response = response_future.get();
+
+    return response->success;
+}
+
+bool ManipulatorMenu::gripperMoveSirio(const bool close){
+    return close;
+}
+
 
 
 /*
@@ -1629,13 +1650,7 @@ void ManipulatorMenu::userGripperMove()
     bool close;
     std::cout << "Enter 1 to close the gripper, 0 to open: \n";
     std::cin >> close;
-    if (params_.robotiq_85_gripper){
-        gripperMoveRobotiq(close);
-    } else if (params_.sirio_gripper){
-        //gripperMoveSirio(close);
-    } else {
-        RCLCPP_ERROR(node_->get_logger(), "No gripper available for this robot");
-    }
+    gripperMove(close);
 }
 
 void ManipulatorMenu::userRunTest(){

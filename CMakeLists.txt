@@ -186,7 +186,6 @@ install(
 ament_target_dependencies(manipulator_menu
     ${MANIPULATOR_MENU_DEPENDS}
 )
-ament_export_dependencies(${MANIPULATOR_MENU_DEPENDS})
 
 # ---------------- DRIVER TRAJECTORY CONVERTER -----------------
 
@@ -205,6 +204,36 @@ install(
     DESTINATION lib/${PROJECT_NAME}
 )
 
+# ---------------- JOYSTICK CONTROLLER -----------------
+
+add_executable(joystick_controller_node src/joystick_controller.cpp src/joystick_controller_node.cpp)
+
+target_link_libraries(joystick_controller_node manipulator_menu)
+
+install(
+    TARGETS joystick_controller_node
+    DESTINATION lib/${PROJECT_NAME}
+)
+
+#Export library
+add_library(joystick_controller SHARED src/joystick_controller.cpp)
+ament_export_targets(joystick_controller)
+
+install(
+    TARGETS joystick_controller
+    EXPORT joystick_controller
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+ament_target_dependencies(joystick_controller
+    ${MANIPULATOR_MENU_DEPENDS}
+)
+
 # ------------------------------------------------------------
+
+ament_export_dependencies(${MANIPULATOR_MENU_DEPENDS})
 
 ament_package()
