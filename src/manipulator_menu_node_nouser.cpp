@@ -5,15 +5,12 @@ int main(int argc, char* argv[]) {
     
     ManipulatorMenuParams params;
     params.node_name          = "manipulator_menu_node_nouser";
-    params.ee_joint_name      = "";
-    params.ros_freq           = 10.;
+    params.ros_freq           = 50;
     params.manipulator_name   = "manipulator";
     params.planning_group     = "ur_manipulator";
 
-    params.robotiq_85_gripper = false;
-    params.sirio_gripper      = false;
+    params.gripper            = true;
 
-    params.gripper_topic      = "/ur_rtde/robotiq_gripper/command";
     params.joint_names        = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
         "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
     params.base_link_name     = "base_link";

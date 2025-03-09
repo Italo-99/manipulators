@@ -206,9 +206,11 @@ install(
 
 # ---------------- JOYSTICK CONTROLLER -----------------
 
-add_executable(joystick_controller_node src/joystick_controller.cpp src/joystick_controller_node.cpp)
+add_executable(joystick_controller_node src/joystick_controller.cpp src/joystick_controller_node.cpp src/manipulator_menu.cpp)
 
-target_link_libraries(joystick_controller_node manipulator_menu)
+ament_target_dependencies(joystick_controller_node
+    ${MANIPULATOR_MENU_DEPENDS}
+)
 
 install(
     TARGETS joystick_controller_node
@@ -216,7 +218,7 @@ install(
 )
 
 #Export library
-add_library(joystick_controller SHARED src/joystick_controller.cpp)
+add_library(joystick_controller SHARED src/joystick_controller.cpp src/manipulator_menu.cpp)
 ament_export_targets(joystick_controller)
 
 install(

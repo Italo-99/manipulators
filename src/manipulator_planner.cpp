@@ -182,6 +182,8 @@ void ManipulatorPlannerNode::spinner() {
         executor_.spin();
     });
 
+    auto time = std::chrono::high_resolution_clock::now();
+
     //This is the spinner for the main node of the manipulator_planner
     while (rclcpp::ok()) {
         auto start_time = std::chrono::high_resolution_clock::now();

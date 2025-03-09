@@ -45,18 +45,13 @@
 struct ManipulatorMenuParams
 {
     std::string node_name         = "manipulator_menu_node";
-    std::string ee_joint_name     = "";
     double ros_freq               = 500;
     std::string manipulator_name  = "manipulator";
     std::string planning_group    = "ur_manipulator";
 
-    bool robotiq_85_gripper       = false;
+    bool gripper                  = false;
     std::string gripper_group     = "robotiq_85_gripper";
 
-    bool sirio_gripper            = false;
-    std::string Client       = "sirio_gripper";
-
-    std::string gripper_topic     = "/ur_rtde/robotiq_gripper/command";
     std::vector<std::string> joint_names = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
                                             "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
     std::string base_link_name    = "base_link";
@@ -188,7 +183,7 @@ class ManipulatorMenu
       Eigen::MatrixXd           pseudoInverseClient(void);
       std::vector<double>       invKineClient(const geometry_msgs::msg::Pose pose);
       Eigen::MatrixXd           getJacobianClient(void);
-      bool                      gripperMove(const bool close);
+      bool                      gripperMoveClient(const bool close);
 
       template <typename T>
       T getManipulatorParameter(const std::string& param_name);
@@ -200,18 +195,13 @@ class ManipulatorMenu
 
     private:
 
-    // --------------------- PRIVATE FUNCTIONS ---------------------
-
     // --------------------- PRIVATE PUBS/SUBS ---------------------
 
     void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr& msg);
     void trajectoryCallback(const manipulator_interfaces::msg::TrajectoryResult::SharedPtr& msg);
-
-    // --------------------- GRIPPER ---------------------
-
-    bool gripperMoveRobotiq(const bool close);
-    bool gripperMoveSirio(const bool close);
     
+    protected:
+
     // --------------------- USER ACTIONS ---------------------
     
     void userJointGoal(void);            // to perform a joint goal set by the user 
@@ -259,7 +249,7 @@ class ManipulatorMenu
     //Initialize the menu instance and add the menu options and sections
     void initializeMenu();
 
-    // --------------------- PRIVATE VARIABLES ---------------------
+    // --------------------- PROTECTED VARIABLES ---------------------
 
     ManipulatorMenuParams params_;
 

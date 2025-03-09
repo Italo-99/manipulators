@@ -47,7 +47,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     setRealTimeControl_client_   = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
     changePlannerParams_client_  = node_->create_client<manipulator_interfaces::srv::ChangePlannerParameters>(params_.manipulator_name+"/change_planner_params");
 
-    getManipulatorParams_client_ = std::make_shared<rclcpp::SyncParametersClient>(node_, "/" + params_.manipulator_name + "_planner");
+    getManipulatorParams_client_ = std::make_shared<rclcpp::SyncParametersClient>(node_, "/manipulator_planner");
 
     // ---------------------- Planning ----------------------
     plannedTrajectory_sub_ = node_->create_subscription<manipulator_interfaces::msg::TrajectoryResult>(
@@ -62,7 +62,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
 
     // ---------------------- Gripper ----------------------
 
-    if(params_.robotiq_85_gripper){
+    if(params_.gripper){
         gripperMove_client_ = node_->create_client<std_srvs::srv::SetBool>(params_.gripper_group+"/move_gripper");
     }
 
@@ -216,15 +216,40 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 
 // -------------------- GRIPPERS ---------------------
 
-bool ManipulatorMenu::gripperMove(const bool close){
-    if(params_.robotiq_85_gripper){
-        return gripperMoveRobotiq(close);
-    } else if(params_.sirio_gripper){
-        return gripperMoveSirio(close);
-    } else {
-        RCLCPP_ERROR(node_->get_logger(), "Gripper not implemented for this manipulator.");
+bool ManipulatorMenu::gripperMoveClient(const bool close){
+
+    if(!params_.gripper){
+        RCLCPP_ERROR(node_->get_logger(), "Gripper is not available in this manipulator.");
         return false;
     }
+
+    std_srvs::srv::SetBool::Request::SharedPtr request = std::make_shared<std_srvs::srv::SetBool::Request>();
+    request->data = close;
+
+    // Wait for the service to be available
+    while (!gripperMove_client_->wait_for_service(std::chrono::seconds(1)))
+    {
+        if (!rclcpp::ok()) {
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
+            return false;
+        }
+        RCLCPP_INFO(node_->get_logger(), "gripperMove service not available, waiting again...");
+    }
+
+    // Send the request asynchronously and get the response
+    auto response_future = gripperMove_client_->async_send_request(request);
+
+    // Wait until the future is completed
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call gripperMove service");
+        return false;
+    }
+
+    // If we reached this point, the response is valid, so process it
+    auto response = response_future.get();
+
+    return response->success;
 }
 
 // -------------------- PARAMETERS ---------------------
@@ -250,65 +275,6 @@ T ManipulatorMenu::getManipulatorParameter(const std::string& param_name)
     return getManipulatorParams_client_->get_parameter<T>(param_name);
 }
 
-// --------------------- SUBSCRIBERS CALLBACKS ---------------------
-
-void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr &joints_state)
-{
-
-    // Map to store couples joint name - joint values
-    static std::unordered_map<std::string, double>::iterator it;
-    uint counter_group = 0;
-
-    for (uint i = 0; i < joints_state->name.size(); i++)
-    {
-        // Look for joints group names within joints current state
-        it = joints_map_group_.find(joints_state->name[i]);
-        // Exclude last link (gripper) from the search
-        if (it != joints_map_group_.end())
-        {
-            // At the second position of the iteration, insert current joint position and velocity
-            it->second = joints_state->position[i];
-
-            // Increment the number of joints received from the joints state subscriber
-            counter_group++;
-
-            // If we have reached the last joint of the group
-            if (counter_group == params_.joint_names.size())
-            {
-                // Iterate over the joints
-                for (unsigned long k = 0; k < params_.joint_names.size(); k++)
-                {
-                    // Store the joints values from the joints map
-                    joints_values_group_[k] = joints_map_group_[params_.joint_names[k]];
-                }
-
-                // Log gripper planning group
-                RCLCPP_INFO_ONCE(node_->get_logger(), "%s joints values received by the menu interface.", params_.manipulator_name.c_str());
-            }
-        }
-    }
-
-    // Store the value into the global (public) class variable
-    current_joint_pose_.position = joints_values_group_;
-}
-
-void ManipulatorMenu::trajectoryCallback(const manipulator_interfaces::msg::TrajectoryResult::SharedPtr& msg)
-{
-    //std::lock_guard<std::mutex> lock(traj_mtx_);
-    if(msg->success)
-    {
-        RCLCPP_INFO(node_->get_logger(), "Trajectory planned successfully.");
-        traj_error_ = false;
-        planned_trajectory_ = msg->trajectory;
-    }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Trajectory planning failed, error code: %d, error msg: %s", msg->error_code, msg->message.c_str());
-        traj_error_ = true;
-    }
-
-    traj_received_ = true;
-}
 
 // --------------------- ROS HANDLER ---------------------
 
@@ -1183,49 +1149,70 @@ double ManipulatorMenu::angular_distance(const geometry_msgs::msg::Quaternion& q
 
     return angle;
 }
+
 /*
     ================================================================
     ===================== PRIVATE FUNCTIONS  =======================
     ================================================================
 */
 
-// --------------------- GRIPPERS ---------------------
-
-bool ManipulatorMenu::gripperMoveRobotiq(const bool close)
+void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr &joints_state)
 {
-    std_srvs::srv::SetBool::Request::SharedPtr request = std::make_shared<std_srvs::srv::SetBool::Request>();
-    request->data = close;
 
-    // Wait for the service to be available
-    while (!gripperMove_client_->wait_for_service(std::chrono::seconds(1)))
+    // Map to store couples joint name - joint values
+    static std::unordered_map<std::string, double>::iterator it;
+    uint counter_group = 0;
+
+    for (uint i = 0; i < joints_state->name.size(); i++)
     {
-        if (!rclcpp::ok()) {
-            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
-            return false;
+        // Look for joints group names within joints current state
+        it = joints_map_group_.find(joints_state->name[i]);
+        // Exclude last link (gripper) from the search
+        if (it != joints_map_group_.end())
+        {
+            // At the second position of the iteration, insert current joint position and velocity
+            it->second = joints_state->position[i];
+
+            // Increment the number of joints received from the joints state subscriber
+            counter_group++;
+
+            // If we have reached the last joint of the group
+            if (counter_group == params_.joint_names.size())
+            {
+                // Iterate over the joints
+                for (unsigned long k = 0; k < params_.joint_names.size(); k++)
+                {
+                    // Store the joints values from the joints map
+                    joints_values_group_[k] = joints_map_group_[params_.joint_names[k]];
+                }
+
+                // Log gripper planning group
+                RCLCPP_INFO_ONCE(node_->get_logger(), "%s joints values received by the menu interface.", params_.manipulator_name.c_str());
+            }
         }
-        RCLCPP_INFO(node_->get_logger(), "gripperMove service not available, waiting again...");
     }
 
-    // Send the request asynchronously and get the response
-    auto response_future = gripperMove_client_->async_send_request(request);
+    // Store the value into the global (public) class variable
+    current_joint_pose_.position = joints_values_group_;
+}
 
-    // Wait until the future is completed
-    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
+void ManipulatorMenu::trajectoryCallback(const manipulator_interfaces::msg::TrajectoryResult::SharedPtr& msg)
+{
+    //std::lock_guard<std::mutex> lock(traj_mtx_);
+    if(msg->success)
     {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call gripperMove service");
-        return false;
+        RCLCPP_INFO(node_->get_logger(), "Trajectory planned successfully.");
+        traj_error_ = false;
+        planned_trajectory_ = msg->trajectory;
+    }
+    else
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Trajectory planning failed, error code: %d, error msg: %s", msg->error_code, msg->message.c_str());
+        traj_error_ = true;
     }
 
-    // If we reached this point, the response is valid, so process it
-    auto response = response_future.get();
-
-    return response->success;
+    traj_received_ = true;
 }
-
-bool ManipulatorMenu::gripperMoveSirio(const bool close){
-    return close;
-}
-
 
 
 /*
@@ -1650,7 +1637,7 @@ void ManipulatorMenu::userGripperMove()
     bool close;
     std::cout << "Enter 1 to close the gripper, 0 to open: \n";
     std::cin >> close;
-    gripperMove(close);
+    gripperMoveClient(close);
 }
 
 void ManipulatorMenu::userRunTest(){
@@ -1671,7 +1658,7 @@ void ManipulatorMenu::userRunTest(){
         RCLCPP_ERROR(node_->get_logger(), "Failed to execute trajectory");
     }
 
-    gripperMoveRobotiq(true); // Grab obj
+    gripperMoveClient(true); // Grab obj
 
     rclcpp::sleep_for(std::chrono::seconds(2));
 
@@ -1691,7 +1678,7 @@ void ManipulatorMenu::userRunTest(){
         RCLCPP_ERROR(node_->get_logger(), "Failed to execute trajectory");
     }
 
-    gripperMoveRobotiq(false); // Release obj
+    gripperMoveClient(false); // Release obj
 }
 
 // --------------------- MENU INITIALIZER ------------------------

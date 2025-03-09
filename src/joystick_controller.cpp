@@ -78,9 +78,9 @@ void JoystickController::joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy
     }
 
     if(joy->buttons[ButtonsMap::DPAD_UP]){
-        manipulator_menu_->gripperMove(false);
+        manipulator_menu_->gripperMoveClient(false);
     } else if(joy->buttons[ButtonsMap::DPAD_DOWN]){
-        manipulator_menu_->gripperMove(true);
+        manipulator_menu_->gripperMoveClient(true);
     }
 }
 
