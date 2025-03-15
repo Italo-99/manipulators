@@ -27,9 +27,8 @@ template <typename SuperClass>
 class MenuUserInterface
 {
 public:
-    MenuUserInterface() = default;
 
-    MenuUserInterface(std::shared_ptr<SuperClass> super)
+    MenuUserInterface(SuperClass *super)
         : super_(super) {}
 
     void printMenu();                   //Print a list of every choice divided in the appropriate sections
@@ -49,7 +48,7 @@ public:
 private:
     std::vector<std::tuple<int, std::string, void (SuperClass::*)(void)>> choices_;
     std::vector<std::tuple<std::string, int, int>> sections_;
-    std::shared_ptr<SuperClass> super_;
+    SuperClass *super_;
 
     std::tuple<int, std::string, void (SuperClass::*)(void)> getChoice(int id); //Get choice by id
     std::string applyPadding(std::string title); //Returs a string with "=" as padding to center the title

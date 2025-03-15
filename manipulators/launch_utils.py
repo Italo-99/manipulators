@@ -11,8 +11,7 @@ def get_ur_moveit_launch_params(context,
                                 moveit_config_package_: LaunchConfiguration | None = None,
                                 moveit_joint_limits_file_: LaunchConfiguration | None = None,
                                 moveit_kinematics_file_: LaunchConfiguration | None = None,
-                                description_semantic_path_: LaunchConfiguration | None = None,
-                                prefix_: LaunchConfiguration | None = None):
+                                description_semantic_path_: LaunchConfiguration | None = None):
     """
         This function returns a list of dictionaries with all the parameters needed to launch move_group node for UR robots.
         A launch context must be provided by using OpaqueFunction, see manipulators/launch/planning_context.launch.py or 
@@ -29,7 +28,6 @@ def get_ur_moveit_launch_params(context,
             moveit_joint_limits_file:  Name of the file containing the joint limits configuration.
             moveit_kinematics_file:    Name of the file containing the kinematics configuration.
             description_semantic_path: Full path for the file containing the semantic description.
-            prefix:                    Prefix for the joint names, useful for multi-robot setup.
     """
 
     ur_type                   = ur_type_ if ur_type_ else                                     LaunchConfiguration("ur_type")
@@ -40,7 +38,6 @@ def get_ur_moveit_launch_params(context,
     moveit_joint_limits_file  = moveit_joint_limits_file_ if moveit_joint_limits_file_ else   LaunchConfiguration("moveit_joint_limits_file")
     moveit_kinematics_file    = moveit_kinematics_file_ if moveit_kinematics_file_ else       LaunchConfiguration("moveit_kinematics_file")
     description_semantic_path = description_semantic_path_ if description_semantic_path_ else LaunchConfiguration("description_semantic_path")
-    prefix                    = prefix_ if prefix_ else                                       LaunchConfiguration("prefix")
 
     joint_limit_params = PathJoinSubstitution(
         [FindPackageShare(description_package), "config", ur_type, moveit_joint_limits_file]

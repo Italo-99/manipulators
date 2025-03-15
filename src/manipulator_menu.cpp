@@ -68,6 +68,11 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
 
 }
 
+ManipulatorMenu::~ManipulatorMenu()
+{
+    delete menu_;
+}
+
 /*
     ================================================================
     ====================== PUBLIC FUNCTIONS ========================
@@ -292,10 +297,10 @@ void ManipulatorMenu::spinnerMenu()
     while (rclcpp::ok())
     {
         // Display the user menu and process user choices
-        menu_.printMenu();
-        int choice = menu_.getUserChoice();
+        menu_->printMenu();
+        int choice = menu_->getUserChoice();
         RCLCPP_INFO(node_->get_logger(), "User choice: %d", choice);
-        menu_.processChoice(choice);
+        menu_->processChoice(choice);
 
         // Wait for next loop time
         r.sleep();
@@ -1684,71 +1689,71 @@ void ManipulatorMenu::userRunTest(){
 // --------------------- MENU INITIALIZER ------------------------
 
 void ManipulatorMenu::initializeMenu(){
-    menu_ = MenuUserInterface<ManipulatorMenu>(std::shared_ptr<ManipulatorMenu>(this));
+    menu_ = new MenuUserInterface<ManipulatorMenu>(this);
 
     int section_start = 0; //Temporary variable to hold the last section start point
 
     //Joint/TCP Goals
-    menu_.addChoice("Plan and execute joint goal", &ManipulatorMenu::userJointGoal);
-    menu_.addChoice("Plan and execute one joint move", &ManipulatorMenu::userOneJointMove_user);
-    menu_.addChoice("Plan and execute TCP goal", &ManipulatorMenu::userTcpGoal);
-    menu_.addSection("Joint/TCP Goals", section_start, menu_.last_);
-    section_start = menu_.last_ + 1;
+    menu_->addChoice("Plan and execute joint goal", &ManipulatorMenu::userJointGoal);
+    menu_->addChoice("Plan and execute one joint move", &ManipulatorMenu::userOneJointMove_user);
+    menu_->addChoice("Plan and execute TCP goal", &ManipulatorMenu::userTcpGoal);
+    menu_->addSection("Joint/TCP Goals", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
 
     //Linear movements
-    menu_.addChoice("Move along X axis", &ManipulatorMenu::userMoveAlongX);
-    menu_.addChoice("Move along Y axis", &ManipulatorMenu::userMoveAlongY);
-    menu_.addChoice("Move along Z axis", &ManipulatorMenu::userMoveAlongZ);
-    menu_.addSection("Linear movements", section_start, menu_.last_);
-    section_start = menu_.last_ + 1;
+    menu_->addChoice("Move along X axis", &ManipulatorMenu::userMoveAlongX);
+    menu_->addChoice("Move along Y axis", &ManipulatorMenu::userMoveAlongY);
+    menu_->addChoice("Move along Z axis", &ManipulatorMenu::userMoveAlongZ);
+    menu_->addSection("Linear movements", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
 
     //Rotations
-    menu_.addChoice("Make TCP rotation", &ManipulatorMenu::userMakeTcpRot);
-    menu_.addChoice("Rotate around X axis", &ManipulatorMenu::userRotateAroundX);
-    menu_.addChoice("Rotate around Y axis", &ManipulatorMenu::userRotateAroundY);
-    menu_.addChoice("Rotate around Z axis", &ManipulatorMenu::userRotateAroundZ);
-    menu_.addSection("Rotations", section_start, menu_.last_);
-    section_start = menu_.last_ + 1;
+    menu_->addChoice("Make TCP rotation", &ManipulatorMenu::userMakeTcpRot);
+    menu_->addChoice("Rotate around X axis", &ManipulatorMenu::userRotateAroundX);
+    menu_->addChoice("Rotate around Y axis", &ManipulatorMenu::userRotateAroundY);
+    menu_->addChoice("Rotate around Z axis", &ManipulatorMenu::userRotateAroundZ);
+    menu_->addSection("Rotations", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
 
     //Known positions
-    menu_.addChoice("Go to home position with gripper facing down", &ManipulatorMenu::userGoHomeDown);
-    menu_.addChoice("Go to home position with gripper facing front", &ManipulatorMenu::userGoHomeFront);
-    menu_.addSection("Known positions", section_start, menu_.last_);
-    section_start = menu_.last_ + 1;
+    menu_->addChoice("Go to home position with gripper facing down", &ManipulatorMenu::userGoHomeDown);
+    menu_->addChoice("Go to home position with gripper facing front", &ManipulatorMenu::userGoHomeFront);
+    menu_->addSection("Known positions", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
 
     //Visualization
-    menu_.addChoice("Visualize current joint state", &ManipulatorMenu::userJointStateVisualizer);
-    menu_.addChoice("Visualize current EE pose", &ManipulatorMenu::userEEPoseVisualizer);
-    menu_.addSection("Visualization", section_start, menu_.last_);
-    section_start = menu_.last_ + 1;
+    menu_->addChoice("Visualize current joint state", &ManipulatorMenu::userJointStateVisualizer);
+    menu_->addChoice("Visualize current EE pose", &ManipulatorMenu::userEEPoseVisualizer);
+    menu_->addSection("Visualization", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
 
     //Collision objects
-    menu_.addChoice("Add a collision object", &ManipulatorMenu::userAddCollObj);
-    menu_.addChoice("Add an attached object", &ManipulatorMenu::userAddAttachedObj);
-    menu_.addChoice("Delete a collision object", &ManipulatorMenu::userDeleteCollObj);
-    menu_.addSection("Collision objects", section_start, menu_.last_);
-    section_start = menu_.last_ + 1;
+    menu_->addChoice("Add a collision object", &ManipulatorMenu::userAddCollObj);
+    menu_->addChoice("Add an attached object", &ManipulatorMenu::userAddAttachedObj);
+    menu_->addChoice("Delete a collision object", &ManipulatorMenu::userDeleteCollObj);
+    menu_->addSection("Collision objects", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
 
     //Kinematics queries
-    menu_.addChoice("Get inverse kinematics of a given pose", &ManipulatorMenu::userGetInvKine);
-    menu_.addChoice("Get current Jacobian", &ManipulatorMenu::userGetJacobian);
-    menu_.addChoice("Get current pseudo-inverse Jacobian", &ManipulatorMenu::userGetPseudoInv);
-    menu_.addSection("Kinematics queries", section_start, menu_.last_);
-    section_start = menu_.last_ + 1;
+    menu_->addChoice("Get inverse kinematics of a given pose", &ManipulatorMenu::userGetInvKine);
+    menu_->addChoice("Get current Jacobian", &ManipulatorMenu::userGetJacobian);
+    menu_->addChoice("Get current pseudo-inverse Jacobian", &ManipulatorMenu::userGetPseudoInv);
+    menu_->addSection("Kinematics queries", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
 
     //Setters
-    menu_.addChoice("Set Jacobian speed control", &ManipulatorMenu::userSetJacobianSpeedControl);
-    menu_.addChoice("Set joints real time control", &ManipulatorMenu::userSetRealTimeControl);
-    menu_.addChoice("Set new planner parameters", &ManipulatorMenu::userSetPlannerParams);
-    menu_.addSection("Setters", section_start, menu_.last_);
-    section_start = menu_.last_ + 1;
+    menu_->addChoice("Set Jacobian speed control", &ManipulatorMenu::userSetJacobianSpeedControl);
+    menu_->addChoice("Set joints real time control", &ManipulatorMenu::userSetRealTimeControl);
+    menu_->addChoice("Set new planner parameters", &ManipulatorMenu::userSetPlannerParams);
+    menu_->addSection("Setters", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
 
     //Gripper
-    menu_.addChoice("Move gripper", &ManipulatorMenu::userGripperMove);
-    menu_.addSection("Gripper", section_start, menu_.last_);
-    section_start = menu_.last_ + 1;
+    menu_->addChoice("Move gripper", &ManipulatorMenu::userGripperMove);
+    menu_->addSection("Gripper", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
 
-    menu_.addChoice("Example routine", &ManipulatorMenu::userRunTest);
-    menu_.addSection("Routines", section_start, menu_.last_);
-    section_start = menu_.last_ + 1;
+    menu_->addChoice("Example routine", &ManipulatorMenu::userRunTest);
+    menu_->addSection("Routines", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
 }

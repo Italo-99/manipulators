@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.8)
 cmake_policy(SET CMP0048 NEW)
 project(manipulators)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)

@@ -182,8 +182,6 @@ void ManipulatorPlannerNode::spinner() {
         executor_.spin();
     });
 
-    auto time = std::chrono::high_resolution_clock::now();
-
     //This is the spinner for the main node of the manipulator_planner
     while (rclcpp::ok()) {
         auto start_time = std::chrono::high_resolution_clock::now();
@@ -219,6 +217,8 @@ void ManipulatorPlannerNode::spinner() {
     }
 
     RCLCPP_INFO(this->get_logger(), "Spinner mean time: %f ms", spinner_mean_);
+
+    rclcpp::shutdown();
 }
 
 // ------------------------------------- PRIVATE METHODS -------------------------------------
