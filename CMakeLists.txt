@@ -29,6 +29,7 @@ find_package(moveit_visual_tools REQUIRED)
 find_package(manipulator_interfaces REQUIRED)
 find_package(motors_trajectory REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(eigen_stl_containers REQUIRED)
 
 # ---------------- VARIABLES -----------------
 
