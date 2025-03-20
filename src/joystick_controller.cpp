@@ -90,9 +90,9 @@ void JoystickController::spinner(){
 
     rclcpp::Rate rate(params_.ros_freq);
 
-    std::thread menu_thread = std::thread([this] {
-        manipulator_menu_->spinner();
-    });
+    // std::thread menu_thread = std::thread([this] {
+    //     manipulator_menu_->spinner();
+    // });
 
     while(rclcpp::ok()){
         rclcpp::spin_some(this->shared_from_this());

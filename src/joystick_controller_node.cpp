@@ -21,7 +21,5 @@ int main(int argc, char* argv[]) {
     auto controller = std::make_shared<JoystickController>(params.manipulator_name + "_joystick_controller", params);
     controller->spinner();
 
-    rclcpp::shutdown();
-
     return 0;
 }

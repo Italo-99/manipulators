@@ -79,7 +79,7 @@ void DriverTrajectoryConverter::shutdown_handler()
     
     velocity_publisher_->publish(zero_vel);
 
-    for(size_t i = 0; i < 20; ++i)
+    for(size_t i = 0; i < 2; ++i)
     {
         rclcpp::spin_some(shared_from_this());
         rclcpp::sleep_for(std::chrono::milliseconds(100));
@@ -166,7 +166,7 @@ void DriverTrajectoryConverter::computeVel()
         }
 
         // Set the velocity message
-        vel_msg_.data[i] = 1.0; //real_vel_[i];
+        vel_msg_.data[i] = real_vel_[i];
     }
 
     // Publish velocity command to the robot
