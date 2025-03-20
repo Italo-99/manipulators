@@ -4,7 +4,9 @@
 // IMPORT LIBRARIES
 #include <iostream>
 #include <cmath>
+#include <Eigen/Geometry>
 #include <unordered_map>
+
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
@@ -13,7 +15,6 @@
 
 #include "moveit_msgs/msg/collision_object.hpp"
 #include "moveit_msgs/msg/display_robot_state.hpp"
-#include "moveit/robot_state/conversions.h"
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
