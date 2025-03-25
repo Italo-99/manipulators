@@ -55,6 +55,10 @@ Do the same with this package and use only the robotiq_85_description package:
     + goal_bias: 0.05
     ```
 
+## Other
+
+1) [Install drivers for xbox one controller](https://fostips.com/install-driver-xbox-one-controller-headset-ubuntu/)
+
 # Use
 
 ### The manipulator planner node

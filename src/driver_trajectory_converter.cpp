@@ -9,19 +9,24 @@ DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, cons
 {
     declareParameters();
 
+    joints_names_group_ = get_parameter("joints_names_group").as_string_array();
+    velocity_topic_ = get_parameter("velocity_topic").as_string();
+    kp_ = get_parameter("kp").as_double();
+    min_motor_speed_ = get_parameter("min_motor_speed").as_double();
+    spinner_rate_ = get_parameter("spinner_rate").as_int();
+
     // Load joint names group (from launch file)
-    std::vector<std::string> joints_names_group = this->get_parameter("joints_names_group").as_string_array();
-    if (joints_names_group.size() == 0)
+    if (joints_names_group_.size() == 0)
     {
         RCLCPP_ERROR(get_logger(), "joint_names_group parameter must be provided. Shutting down...");
         rclcpp::shutdown();
     }
 
     // Setup the joint name to index map
-    for (size_t i = 0; i < joints_names_group.size(); ++i)
+    for (size_t i = 0; i < joints_names_group_.size(); ++i)
     {
-        joint_name_to_index_[joints_names_group[i]] = i;
-        std::cout << "Found joint ready for the driver: " << joints_names_group[i] << std::endl;
+        joint_name_to_index_[joints_names_group_[i]] = i;
+        std::cout << "Found joint ready for the driver: " << joints_names_group_[i] << std::endl;
     }
 
     // Setup subscriber and publisher
@@ -38,7 +43,7 @@ DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, cons
         }
     );
 
-    velocity_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(get_parameter("velocity_topic").as_string(), 1);
+    velocity_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(velocity_topic_, 1);
 
     // Initialize Eigen matrices to zero
     joints_values_.setZero();
@@ -116,7 +121,7 @@ void DriverTrajectoryConverter::jointStateCallback(const sensor_msgs::msg::Joint
     }
 
     // If all joints have been updated, mark as initialized
-    if (counter_group >= get_parameter("joints_names_group").as_string_array().size())
+    if (counter_group >= joints_names_group_.size())
     {
         joint_map_initialized_ = true;
     }
@@ -144,7 +149,7 @@ void DriverTrajectoryConverter::jointCmdCallback(const sensor_msgs::msg::JointSt
     }
 
     // If all joints have been updated, mark as initialized
-    if (counter_group >= get_parameter("joints_names_group").as_string_array().size())
+    if (counter_group >= joints_names_group_.size())
     {
         cmd_map_initialized_ = true;
     }
@@ -154,13 +159,13 @@ void DriverTrajectoryConverter::jointCmdCallback(const sensor_msgs::msg::JointSt
 void DriverTrajectoryConverter::computeVel()
 {
     // Compute the velocity output: real_vel_ = dq_cmd_ + kp_ * (qd_cmd_ - joints_values_)
-    real_vel_ = dq_cmd_ + get_parameter("kp").as_double() * (qd_cmd_ - joints_values_);
+    real_vel_ = dq_cmd_ + kp_ * (qd_cmd_ - joints_values_);
 
     // Apply minimum velocity threshold and prepare velocity message
     for (size_t i = 0; i < 6; ++i)
     {
         // Apply minimum velocity threshold
-        if (std::abs(real_vel_[i]) < get_parameter("min_motor_speed").as_double())
+        if (std::abs(real_vel_[i]) < min_motor_speed_)
         {
             real_vel_[i] = 0.0;
         }
@@ -180,7 +185,7 @@ void DriverTrajectoryConverter::spinner()
     unsigned long long int k = 0;
     instance__ = this;
     signal(SIGINT, DriverTrajectoryConverter::static_shutdown_handler);
-    rclcpp::Rate rate(get_parameter("spinner_rate").as_int());
+    rclcpp::Rate rate(spinner_rate_);
 
     while (rclcpp::ok())
     {

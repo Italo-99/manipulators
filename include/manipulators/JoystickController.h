@@ -2,7 +2,8 @@
 #include "sensor_msgs/msg/joy.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "geometry_msgs/msg/twist.hpp"
-#include "manipulators/ManipulatorMenu.h"
+#include "std_srvs/srv/set_bool.hpp"
+#include <signal.h>
 
 enum AxesMap {
     LEFTX = 0,
@@ -34,17 +35,25 @@ enum ButtonsMap {
 class JoystickController : public rclcpp::Node
 {
     public:
-        JoystickController(const std::string& node_name, ManipulatorMenuParams& params);
+        JoystickController(const std::string& node_name);
 
         void spinner();
 
-    private:
-        void joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy);
+    protected:
+        virtual void joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy); //Callback for joystick commands
+        void declareParameters(); 
+    
+        //Shutdown handler
+        static JoystickController* instance__;
+        static void static_shutdown_handler(int sig);
+        void shutdown_handler();
+    
 
-        void publishCmd();
-
-        std::shared_ptr<ManipulatorMenu> manipulator_menu_;
-        ManipulatorMenuParams params_;
+        //Commands
+        void publishCmd();                          //Publish velocity commands to manipulator
+        void setJacobianSpeedControl(const bool value);   //Set jacobian control
+        void setJsRealTimeControl(const bool value);      //Set joints real time control
+        void moveGripper(const bool closed);              //Move gripper
 
         rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;                    //Receive commands from joystick
 
@@ -54,6 +63,17 @@ class JoystickController : public rclcpp::Node
         sensor_msgs::msg::JointState js_cmd_vel_;
         geometry_msgs::msg::Twist arm_cmd_vel_;
 
-        double vel_step, rot_step, js_step;
+        int ros_freq_;
+        std::vector<std::string> joint_names_;
+        std::string manipulator_name_;
+        double vel_step_, rot_step_, js_step_;
+        std::string gripper_group_;
+
         bool jacobian_control_, real_time_control_;
+
+        int clients_wait_timeout_ = 5; 
+
+        rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControl_client_;
+        rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJsRealTimeControl_client_;
+        rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr moveGripper_client_;
 };

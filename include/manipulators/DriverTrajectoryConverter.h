@@ -51,6 +51,13 @@ private:
     bool cmd_map_initialized_;    // Flag to check if the command state map is initialized
     
     double mean_; // Average value for the duration of the driver control computation
+
+    // Parameters
+    std::vector<std::string> joints_names_group_;
+    std::string velocity_topic_;
+    double kp_;
+    double min_motor_speed_;
+    int spinner_rate_;
 };
 
 #endif // DRIVERTRAJECTORYCONVERTER_H

@@ -32,6 +32,8 @@ find_package(Eigen3 REQUIRED)
 
 # ---------------- VARIABLES -----------------
 
+# Dependencies for libraries
+
 set(MANIPULATOR_MENU_DEPENDS
     rclcpp
     geometry_msgs
@@ -43,6 +45,13 @@ set(MANIPULATOR_MENU_DEPENDS
     moveit_msgs
     manipulator_interfaces
     motors_trajectory
+)
+
+set(JOYSTICK_CONTROLLER_DEPENDS
+    rclcpp
+    geometry_msgs
+    sensor_msgs
+    std_srvs
 )
 
 if(BUILD_TESTING)
@@ -206,10 +215,10 @@ install(
 
 # ---------------- JOYSTICK CONTROLLER -----------------
 
-add_executable(joystick_controller_node src/joystick_controller.cpp src/joystick_controller_node.cpp src/manipulator_menu.cpp)
+add_executable(joystick_controller_node src/joystick_controller.cpp src/joystick_controller_node.cpp)
 
 ament_target_dependencies(joystick_controller_node
-    ${MANIPULATOR_MENU_DEPENDS}
+    ${JOYSTICK_CONTROLLER_DEPENDS}
 )
 
 install(
@@ -218,7 +227,7 @@ install(
 )
 
 #Export library
-add_library(joystick_controller SHARED src/joystick_controller.cpp src/manipulator_menu.cpp)
+add_library(joystick_controller SHARED src/joystick_controller.cpp)
 ament_export_targets(joystick_controller)
 
 install(
@@ -231,7 +240,7 @@ install(
 )
 
 ament_target_dependencies(joystick_controller
-    ${MANIPULATOR_MENU_DEPENDS}
+    ${JOYSTICK_CONTROLLER_DEPENDS}
 )
 
 # ------------------------------------------------------------

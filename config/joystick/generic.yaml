@@ -1,0 +1,13 @@
+manipulator_name: manipulator
+
+joint_names:      [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint]
+
+ros_freq:         500
+
+gripper_group:    robotiq_85_gripper
+
+vel_step:         0.4
+
+rot_step:         0.4
+
+js_step:          1.0
