@@ -61,16 +61,15 @@ DriverTrajectoryConverter::~DriverTrajectoryConverter()
 void DriverTrajectoryConverter::declareParameters(){
     this->declare_parameter("joints_names_group", std::vector<std::string>());
     this->declare_parameter("velocity_topic", "/ur_rtde/controllers/joint_velocity_controller/command");
-    this->declare_parameter("kp", 4.0);
+    this->declare_parameter("kp", 1.0);
     this->declare_parameter("min_motor_speed", 0.001);
     this->declare_parameter("spinner_rate", 500);
 }
 
 void DriverTrajectoryConverter::static_shutdown_handler(int sig)
 {
-    //Very unelegant way to call a non-static shutdown handler before the context is destroyed, but it works
-    sig++; //Suppress unused var warning
-    instance__->shutdown_handler();
+    sig++;                          //Suppress unused var warning
+    instance__->shutdown_handler(); 
 }
 
 // Shutdown handler
@@ -78,15 +77,15 @@ void DriverTrajectoryConverter::shutdown_handler()
 {
     // Show the result of the jacobian control mean duration
     RCLCPP_INFO(get_logger(), "Mean duration of real driver control computations: %f seconds", mean_);
+    
     // Publish zero velocities when shutting down
     std_msgs::msg::Float64MultiArray zero_vel;
-    zero_vel.data.resize(6, 0.0);
-    
+    zero_vel.data.resize(6, 0.0);    
     velocity_publisher_->publish(zero_vel);
 
+    // Double attempt to send stop msg
     for(size_t i = 0; i < 2; ++i)
     {
-        rclcpp::spin_some(shared_from_this());
         rclcpp::sleep_for(std::chrono::milliseconds(100));
     }
 
@@ -137,8 +136,6 @@ void DriverTrajectoryConverter::jointCmdCallback(const sensor_msgs::msg::JointSt
     {        
         const std::string& joint_name = cmd_state->name[i];
         auto it = joint_name_to_index_.find(joint_name);
-        // std::cout << "Iterator 1: " << it->first << std::endl;  // Joint name
-        // std::cout << "Iterator 2: " << it->second << std::endl; // Joint position in the map
         if (it != joint_name_to_index_.end())
         {
             size_t index = it->second;
@@ -181,27 +178,33 @@ void DriverTrajectoryConverter::computeVel()
 // Spinner to continuously call callbacks and compute velocity
 void DriverTrajectoryConverter::spinner()
 {
-    // Number of samples for mean computation
-    unsigned long long int k = 0;
+    // Setup the closing handler function
     instance__ = this;
     signal(SIGINT, DriverTrajectoryConverter::static_shutdown_handler);
-    rclcpp::Rate rate(spinner_rate_);
 
-    while (rclcpp::ok())
-    {
-        rclcpp::spin_some(shared_from_this());                    // Process callbacks
-        auto start_time = std::chrono::high_resolution_clock::now(); // Start time for mean computation
-        computeVel();                       // Compute velocity after every callback cycle
+    // Create a single-threaded executor
+    executor.add_node(shared_from_this());
 
-        // Update mean computation
-        auto end_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;
-        
-        // Calculate the mean time for each iteration of the spinner
-        mean_ = (mean_ * static_cast<double>(k) + elapsed_time.count()) / static_cast<double>(k + 1);
-        k++;
+    // Use ROS2 clock
+    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
 
-        // Sleep according to the defined spinner rate
-        rate.sleep();
-    }
+    // Timer callback to replace the main loop
+    timer_ = this->create_wall_timer(
+        std::chrono::milliseconds(1000 / spinner_rate_),  // Period based on spinner rate
+        [this, &steady_clock]()
+        {
+            // Start time for mean computation
+            auto start_time = steady_clock.now();
+
+            // Compute velocity after every callback cycle
+            computeVel();
+
+            // Update mean computation
+            double elapsed_time = (steady_clock.now() - start_time).seconds();
+            mean_ = (mean_ * static_cast<double>(k) + elapsed_time) / static_cast<double>(k + 1);
+            k++;
+        });
+
+    // Run executor
+    executor.spin();
 }
