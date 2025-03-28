@@ -172,7 +172,7 @@ void DriverTrajectoryConverter::computeVel()
     }
 
     // Publish velocity command to the robot
-    velocity_publisher_->publish(vel_msg_);
+    if (isReady()) {velocity_publisher_->publish(vel_msg_);}
 }
 
 // Spinner to continuously call callbacks and compute velocity
