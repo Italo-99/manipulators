@@ -2,10 +2,11 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
     <name>manipulators</name>
-    <version>0.0.0</version>
-    <description>TODO: Package description</description>
-    <maintainer email="italo.almirante@unimore.it">italo</maintainer>
-    <license>TODO: License declaration</license>
+    <version>1.0.0</version>
+    <description>High-level control for easy use of manipulators.</description>
+    <author email="italo.almirante@unimore.it">italo</author>
+    <maintainer email="3xxxxx@studenti.unimore.it">matteo</maintainer>
+    <license>Apache License</license>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
     <buildtool_depend>ament_cmake_python</buildtool_depend>
@@ -24,7 +25,6 @@
 
     <depend>ur_description</depend>
     <depend>ur_moveit_config</depend>
-    <depend>robotiq_85_description</depend>
 
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>

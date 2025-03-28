@@ -9,9 +9,6 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-#Set include dir
-include_directories(include)
-
 # Find dependencies
 find_package(moveit_common REQUIRED)
 find_package(ament_cmake REQUIRED)
@@ -66,69 +63,25 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-# Add the "time test" executable and link libraries and dependencies
-# add_executable(time_uniform_sampling_test src/time_uniform_sampling_test.cpp)
-# ament_target_dependencies(time_uniform_sampling_test
-#   rclcpp
-#   geometry_msgs
-#   sensor_msgs
-#   std_msgs
-#   trajectory_msgs
-#   moveit_core
-#   moveit_msgs
-#   moveit_ros_planning
-#   moveit_ros_planning_interface
-#   moveit_visual_tools
-# )
-
-# install(TARGETS time_uniform_sampling_test
-#   DESTINATION lib/${PROJECT_NAME}
-# )
-
-
 #Add directories to be installed
 install(DIRECTORY
-  launch
   config
+  launch
   models
   DESTINATION share/${PROJECT_NAME}
 )
 
-#Install include directory
+##Install include directory
 install(
     DIRECTORY include/
     DESTINATION include
 )
 
-#Export include for use of in other packages
+#Set include dir
+include_directories(include)
+
+# Export include for use of in other packages
 ament_export_include_directories(include)
-
-# add_library(dynamic_planner SHARED src/dynamic_planner.cpp)
-# ament_export_targets(dynamic_planner)
-
-# ament_target_dependencies(dynamic_planner
-#     moveit_core
-#     moveit_msgs
-#     moveit_ros_planning
-#     moveit_ros_planning_interface
-#     moveit_visual_tools
-#     geometry_msgs
-#     trajectory_msgs
-#     rclcpp
-# )
-
-# install(
-#     TARGETS dynamic_planner
-#     EXPORT dynamic_planner
-#     LIBRARY DESTINATION lib
-#     ARCHIVE DESTINATION lib
-#     RUNTIME DESTINATION bin
-#     INCLUDES DESTINATION include
-# )
-
-# install(TARGETS manipulator_planner
-#   DESTINATION lib/${PROJECT_NAME}
-# )
 
 # ---------------- LAUNCH UTILS -----------------
 
