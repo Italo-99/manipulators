@@ -164,6 +164,7 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
         result_msg.trajectory = trajectory;
         result_msg.error_code = error.val;
 
+        setTrajectory(trajectory);
         trajectory_pub_->publish(result_msg);
         return;
     }
@@ -177,6 +178,7 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
         result_msg.message = "Time optimal trajectory generation failed";
         result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
         result_msg.trajectory = trajectory;
+        setTrajectory(moveit_msgs::msg::RobotTrajectory());
         trajectory_pub_->publish(result_msg);
         return;
     }
@@ -222,6 +224,7 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
         result_msg.trajectory = trajectory;
         result_msg.error_code = error.val;
 
+        setTrajectory(trajectory);
         trajectory_pub_->publish(result_msg);
         return;
     }
@@ -235,6 +238,8 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
         result_msg.message = "Time optimal trajectory generation failed";
         result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
         result_msg.trajectory = trajectory;
+        
+        setTrajectory(moveit_msgs::msg::RobotTrajectory());
         trajectory_pub_->publish(result_msg);
         return;
     }

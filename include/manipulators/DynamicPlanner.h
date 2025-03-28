@@ -44,16 +44,9 @@ struct DynamicPlannerParams
     DynamicPlannerParams() {}
 
     // V2: passing args as initializers
-    DynamicPlannerParams(const std::string& planner_id, const int attempts,
-                         const double time, const double v_factor, const double a_factor,
-                         const double time_step, const double max_vel)
-        : planner_id(planner_id), 
-          num_attempts(attempts), 
-          planning_time(time), 
-          vel_factor(v_factor),
-          acc_factor(a_factor),
-          sample_time(time_step),
-          max_velocity(max_vel)
+    DynamicPlannerParams(const double v_factor, const double a_factor)
+        : vel_factor(v_factor),
+          acc_factor(a_factor)
     {}
 };
 

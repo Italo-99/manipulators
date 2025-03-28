@@ -41,10 +41,13 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
+    # ---------------------- GRIPPER NODES ----------------------
+
     nodes_to_start.append(
         Node(
             package="motors_trajectory",
             executable="motor_mover_node",
+            condition=IfCondition(LaunchConfiguration("gripper")),
         )
     )
 
@@ -55,6 +58,8 @@ def launch_setup(context, *args, **kwargs):
             condition=IfCondition(LaunchConfiguration("gripper")),
         )
     )
+
+    # -----------------------------------------------------------
 
     nodes_to_start.append(
         IncludeLaunchDescription(
@@ -163,6 +168,7 @@ def generate_launch_description():
             description="RViz config file (absolute path) to use when launching rviz.",
         )
     )
+    
     declared_arguments.append(
         DeclareLaunchArgument(
             "tf_prefix",

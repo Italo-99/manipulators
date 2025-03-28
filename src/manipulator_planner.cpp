@@ -17,7 +17,6 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     max_spd_jnts_ = this->get_parameter("max_spd_jnts").as_double();
     max_acc_jnts_ = this->get_parameter("max_acc_jnts").as_double();
     gripper_links_ = this->get_parameter("gripper_links").as_string_array();
-    base_link_ = this->get_parameter("base_link").as_string();
     world_frame_ = this->get_parameter("world_frame").as_string();
 
     //Initialize velocity variables
@@ -600,7 +599,10 @@ void ManipulatorPlannerNode::collisionObject_callback(const moveit_msgs::msg::Co
 {
     // Add the collision object to the planning scene
     RCLCPP_INFO(this->get_logger(), "Received collision object: %s, operation: %d", collision_object->id.c_str(), collision_object->operation);
-    dynamic_planner_->getPlanningScene()->applyCollisionObjects({*collision_object.get()});
+    moveit_msgs::msg::CollisionObject object = *collision_object.get();
+    object.header.frame_id = world_frame_; // Set the frame id to the world frame
+    
+    dynamic_planner_->getPlanningScene()->applyCollisionObjects({object});
 }
 
 void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs::msg::AttachedCollisionObject::SharedPtr collision_object) 
@@ -879,7 +881,6 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("planning_group", std::string());
     this->declare_parameter("joint_names", std::vector<std::string>());
     this->declare_parameter("ee_name", "tool_0");
-    this->declare_parameter("base_link", "base_link");
     this->declare_parameter("world_frame", "base_link");
     this->declare_parameter("ros_freq", 500);
     this->declare_parameter("max_speed_ee", 1.0);
@@ -888,6 +889,7 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("max_acc_jnts", 1.0);
     this->declare_parameter("gripper_links", std::vector<std::string>()); //This is used to disable collision with the fingers when attaching objects
     
+    //Dynamic planner params
     this->declare_parameter("planner_id", "geometric::RRTConnect");
     this->declare_parameter("vel_factor", 0.1); //MUTABLE
     this->declare_parameter("acc_factor", 0.1); //MUTABLE
@@ -909,6 +911,8 @@ void ManipulatorPlannerNode::initializePlanner() {
     params.planner_id = this->get_parameter("planner_id").as_string();
     params.sample_time = this->get_parameter("sample_time").as_double();
     params.max_velocity = max_speed_ee_;
+    params.world_frame = world_frame_;
+    params.end_effector_link = ee_name_;
     
     auto sub_node = rclcpp::Node::make_shared("dynamic_planner_node");
     executor_.add_node(sub_node);

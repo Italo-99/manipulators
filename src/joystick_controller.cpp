@@ -160,6 +160,11 @@ void JoystickController::setJacobianSpeedControl(const bool set)
 
     // Send the request asynchronously
     auto response_future = setJacobianControl_client_->async_send_request(request);
+
+    // std::future_status status = response_future.wait_for(std::chrono::seconds(clients_wait_timeout_));
+    // if(status != std::future_status::ready){
+    //     RCLCPP_ERROR(this->get_logger(), "Service call failed. status: %d", status);
+    // }
 }
 
 // Set Joints real time speed control
@@ -180,6 +185,11 @@ void JoystickController::setJsRealTimeControl(const bool set)
 
     // Send the request asynchronously
     auto response_future = setJsRealTimeControl_client_->async_send_request(request);
+
+    // std::future_status status = response_future.wait_for(std::chrono::seconds(clients_wait_timeout_));
+    // if(status != std::future_status::ready){
+    //     RCLCPP_ERROR(this->get_logger(), "Service call failed. status: %d", status);
+    // }
 }
 
 void JoystickController::moveGripper(const bool close){
