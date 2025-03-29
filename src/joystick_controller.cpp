@@ -136,10 +136,10 @@ void JoystickController::shutdown_handler()
 }
 
 // COMMANDS
-
-void JoystickController::publishCmd(){
-    velJacSetpoint_pub_->publish(arm_cmd_vel_);
-    velJsRtSetpoint_pub_->publish(js_cmd_vel_);
+void JoystickController::publishCmd()
+{
+    if      (jacobian_control_)  {velJacSetpoint_pub_->publish(arm_cmd_vel_);}
+    else if (real_time_control_) {velJsRtSetpoint_pub_->publish(js_cmd_vel_);}
 }
 
 // Set Jacobian-based speed control
