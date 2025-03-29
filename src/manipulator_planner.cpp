@@ -37,13 +37,19 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     arm_msg_new_.resize(3, 1);
     arm_msg_new_.setZero();
 
+    auto cb_group = this->create_callback_group(
+        rclcpp::CallbackGroupType::MutuallyExclusive
+    );
+
     // Initialize service servers
     fkine_service_ = this->create_service<manipulator_interfaces::srv::FKine>(
         manipulator_name_ + "/get_fkine", 
         [this](const std::shared_ptr<manipulator_interfaces::srv::FKine::Request> request,
                std::shared_ptr<manipulator_interfaces::srv::FKine::Response> response) {
             this->getFKine_callback(request, response);
-        }
+        },
+        rmw_qos_profile_services_default,
+        cb_group
     );
 
     invkine_service_ = this->create_service<manipulator_interfaces::srv::InvKine>(
@@ -51,7 +57,9 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         [this](const std::shared_ptr<manipulator_interfaces::srv::InvKine::Request> request,
                std::shared_ptr<manipulator_interfaces::srv::InvKine::Response> response) {
             this->getInvKine_callback(request, response);
-        }
+        },
+        rmw_qos_profile_services_default,
+        cb_group
     );
 
     jacobian_service_ = this->create_service<manipulator_interfaces::srv::Jacobian>(
@@ -59,7 +67,9 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         [this](const std::shared_ptr<manipulator_interfaces::srv::Jacobian::Request> request,
                std::shared_ptr<manipulator_interfaces::srv::Jacobian::Response> response) {
             this->getJacobian_callback(request, response);
-        }
+        },
+        rmw_qos_profile_services_default,
+        cb_group
     );
 
     pseudoInverse_service_ = this->create_service<manipulator_interfaces::srv::PseudoInverse>(
@@ -67,7 +77,9 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         [this](const std::shared_ptr<manipulator_interfaces::srv::PseudoInverse::Request> request,
                std::shared_ptr<manipulator_interfaces::srv::PseudoInverse::Response> response) {
             this->getPseudoInverseJacobian_callback(request, response);
-        }
+        },
+        rmw_qos_profile_services_default,
+        cb_group
     );
 
     changePlannerParams_service_ = this->create_service<manipulator_interfaces::srv::ChangePlannerParameters>(
@@ -75,7 +87,9 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         [this](const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerParameters::Request> request,
                std::shared_ptr<manipulator_interfaces::srv::ChangePlannerParameters::Response> response) {
             this->changePlannerParams_callback(request, response);
-        }
+        },
+        rmw_qos_profile_services_default,
+        cb_group
     );
 
     jointsRealTimeSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
@@ -83,7 +97,9 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         [this](const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
             this->jointsRealTimeSetter_callback(request, response);
-        }
+        },
+        rmw_qos_profile_services_default,
+        cb_group
     );
 
     jacobianControlSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
@@ -91,64 +107,77 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         [this](const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
             this->jacobianControlSetter_callback(request, response);
-        }
+        },
+        rmw_qos_profile_services_default,
+        cb_group
     );
+
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.callback_group = cb_group;
 
     // Initialize subscribers
     tcpGoal_sub_ = this->create_subscription<manipulator_interfaces::msg::TcpGoal>(
         manipulator_name_ + "/tcp_goal", 1, 
         [this](const manipulator_interfaces::msg::TcpGoal::SharedPtr msg) {
             this->tcpGoal_callback(msg);
-        }
+        },
+        sub_options
     );
 
     jointGoal_sub_ = this->create_subscription<manipulator_interfaces::msg::JointGoal>(
         manipulator_name_ + "/joint_goal", 1, 
         [this](const manipulator_interfaces::msg::JointGoal::SharedPtr msg) {
             this->jointGoal_callback(msg);
-        }
+        },
+        sub_options
     );
 
     execution_ctrl_sub_ = this->create_subscription<std_msgs::msg::Bool>(
         planning_group_ + "/execution_control", 1, 
         [this](const std_msgs::msg::Bool::SharedPtr msg) {
             this->executionControl_callback(msg);
-        }
+        },
+        sub_options
     );
 
     collisionObject_sub_ = this->create_subscription<moveit_msgs::msg::CollisionObject>(
         manipulator_name_ + "/collision_object", 1, 
         [this](const moveit_msgs::msg::CollisionObject::SharedPtr msg) {
             this->collisionObject_callback(msg);
-        }
+        },
+        sub_options
     );
 
     attachedcollisionObject_sub_ = this->create_subscription<moveit_msgs::msg::AttachedCollisionObject>(
         manipulator_name_ + "/attached_collision_object", 1, 
         [this](const moveit_msgs::msg::AttachedCollisionObject::SharedPtr msg) {
             this->attachedCollisionObject_callback(msg);
-        }
+        },
+        sub_options
     );
 
     cartesianPlan_sub_ = this->create_subscription<geometry_msgs::msg::PoseArray>(
         manipulator_name_ + "/desired_cartesian_move", 1, 
         [this](const geometry_msgs::msg::PoseArray::SharedPtr msg) {
             this->cartesianPlan_callback(msg);
-        }
+        },
+        sub_options
     );
 
     velJacSetpoint_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
         manipulator_name_ + "/cmd_vel", 1, 
         [this](const geometry_msgs::msg::Twist::SharedPtr msg) {
             this->velJacSetpoint_callback(msg);
-        }
+        },
+        sub_options
     );
 
     realTimeSetpoint_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
         manipulator_name_ + "/js_cmd_vel", 1, 
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->realTimeSetpoint_callback(msg);
-        }
+        },
+        sub_options
     );
 
     // Initialize publishers
@@ -165,6 +194,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
 
 ManipulatorPlannerNode::~ManipulatorPlannerNode() {
     // Stop the spinner thread
+    delete dynamic_planner_.get();
     executor_.cancel();
 }
 
@@ -175,45 +205,44 @@ void ManipulatorPlannerNode::spinner() {
 
     initializePlanner(); //Initialize dynamic_planner_
 
-    //This creates a different thread for the executor 
-    //It's necessary because the node which hosts the move group interface must be always spinning
-    std::thread executor_thread = std::thread([this] {
-        executor_.spin();
-    });
+    executor_.add_node(this->get_node_base_interface()); //Add the dynamic planner node to the executor
 
-    //This is the spinner for the main node of the manipulator_planner
-    while (rclcpp::ok()) {
-        auto start_time = std::chrono::high_resolution_clock::now();
+    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
 
-        // Jacobian speed control
-        if (jac_control_) {
-            // Publish tcp pose
-            tcpPose_pub_->publish(getFKine());
-            // Publish tcp speed
-            tcpVel_pub_->publish(getTcpVel());
-            // Update vel cmd
-            jacobianControl();    
+    mainloop_timer_ = this->create_wall_timer(
+        std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
+        [&, this]() {
+            // This is the main loop for the node
+            auto start_time = steady_clock.now();
+
+            // Jacobian speed control
+            if (jac_control_) {
+                // Publish tcp pose
+                tcpPose_pub_->publish(getFKine());
+                // Publish tcp speed
+                tcpVel_pub_->publish(getTcpVel());
+                // Update vel cmd
+                jacobianControl();    
+            }
+            else if (js_rt_control_) {
+                // Publish tcp pose
+                tcpPose_pub_->publish(getFKine());
+                // Publish tcp speed
+                tcpVel_pub_->publish(getTcpVel());
+                // Update joints vel command
+                jointsRealTimeControl();
+            }
+            
+            // Calculate the mean time for each iteration of the spinner
+            double elapsed_time = (steady_clock.now() - start_time).nanoseconds() / 1e6; // Convert to milliseconds
+            spinner_mean_ = (spinner_mean_ * static_cast<double>(num_samples) + elapsed_time) / static_cast<double>(num_samples + 1);
+            num_samples++;
+
+            rate.sleep();
         }
-        else if (js_rt_control_) {
-            // Publish tcp pose
-            tcpPose_pub_->publish(getFKine());
-            // Publish tcp speed
-            tcpVel_pub_->publish(getTcpVel());
-            // Update joints vel command
-            jointsRealTimeControl();
-        }
+    );
 
-        rclcpp::spin_some(this->shared_from_this());
-
-        auto end_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;
-        
-        // Calculate the mean time for each iteration of the spinner
-        spinner_mean_ = (spinner_mean_ * static_cast<double>(num_samples) + elapsed_time.count()) / static_cast<double>(num_samples + 1);
-        num_samples++;
-
-        rate.sleep();
-    }
+    executor_.spin(); // Start the executor
 
     RCLCPP_INFO(this->get_logger(), "Spinner mean time: %f ms", spinner_mean_);
 
@@ -511,8 +540,8 @@ void ManipulatorPlannerNode::changePlannerParams_callback(
     dynamic_planner_->setParams(params);
 
     //Also apply changes to the actual parameters of the node
-    rclcpp::Parameter new_acc("max_acc_ee", params.acc_factor);
-    rclcpp::Parameter new_vel("max_speed_ee", params.vel_factor);
+    rclcpp::Parameter new_acc("acc_factor", params.acc_factor);
+    rclcpp::Parameter new_vel("vel_factor", params.vel_factor);
     this->set_parameter(new_acc);
     this->set_parameter(new_vel);
 
@@ -895,7 +924,6 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("acc_factor", 0.1); //MUTABLE
     this->declare_parameter("max_planning_time", 2.0);
     this->declare_parameter("max_planning_attempts", 2);
-    this->declare_parameter("sample_time", 0.002);
     this->declare_parameter("goal_tolerance", 0.01);
 }
  
@@ -909,13 +937,13 @@ void ManipulatorPlannerNode::initializePlanner() {
     params.num_attempts = this->get_parameter("max_planning_attempts").as_int();
     params.tolerance = this->get_parameter("goal_tolerance").as_double();
     params.planner_id = this->get_parameter("planner_id").as_string();
-    params.sample_time = this->get_parameter("sample_time").as_double();
+    params.sample_time = 1 / ros_freq_;
     params.max_velocity = max_speed_ee_;
     params.world_frame = world_frame_;
     params.end_effector_link = ee_name_;
     
     auto sub_node = rclcpp::Node::make_shared("dynamic_planner_node");
-    executor_.add_node(sub_node);
+    executor_.add_node(sub_node->get_node_base_interface());
     dynamic_planner_ = std::make_shared<DynamicPlanner>(sub_node,
                                                         planning_group_,
                                                         params,
