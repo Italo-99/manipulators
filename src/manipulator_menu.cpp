@@ -1009,7 +1009,7 @@ geometry_msgs::msg::Quaternion ManipulatorMenu::quaternion_from_euler(double rol
 
     // Conversion from euler rotation to pose quaternion
     tf2::Quaternion quat;
-    quat.setRPY(roll * M_PI / 180, pitch * M_PI / 180, yaw * M_PI / 180);
+    quat.setRPY(roll * M_PI / 180., pitch * M_PI / 180., yaw * M_PI / 180.);
     quat.normalize();
     quaternion.x = quat.getX();
     quaternion.y = quat.getY();

@@ -211,9 +211,17 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
     move_group_->setPoseReferenceFrame(frame);
     move_group_->setPoseTarget(goal_pose, ee_link);
 
+    RCLCPP_INFO(node_->get_logger(), "Planning to pose: %f, %f, %f", goal_pose.position.x, goal_pose.position.y, goal_pose.position.z);
+    RCLCPP_INFO(node_->get_logger(), "Planning to pose: %f, %f, %f, %f", goal_pose.orientation.x, goal_pose.orientation.y, goal_pose.orientation.z, goal_pose.orientation.w);
+
     //Create the plan and execute
     moveit::planning_interface::MoveGroupInterface::Plan plan;
     moveit::core::MoveItErrorCode error = move_group_->plan(plan);
+    move_group_->setGoalPositionTolerance(0.005);
+    move_group_->setGoalOrientationTolerance(0.01);
+
+    // Clear pose target
+    move_group_->clearPoseTarget(ee_link);
 
     if (error != moveit::core::MoveItErrorCode::SUCCESS)
     {
