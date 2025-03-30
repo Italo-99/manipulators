@@ -103,6 +103,7 @@ The manipulator planner node is used to elaborate trajectories, execute real tim
  - `max_spd_jnts`: Max speed joints can move during real time joint control.
  - `max_acc_jnts`: Max acceleration joints can reach during real time joint control.
  - `gripper_links`: Links of the gripper to disable their collision with objects attached to the end effector.
+<br/>
 
  - `robot_description` : Parsed urdf description of the robot.
  - `robot_description_semantic`: Parsed srdf description of the robot.
