@@ -6,7 +6,7 @@ import os
 def get_ur_moveit_launch_params(context,
                                 ur_type_: LaunchConfiguration | None = None,
                                 description_path_: LaunchConfiguration | None = None,
-                                tf_prefix_: LaunchConfiguration | None = None,
+                                prefix_: LaunchConfiguration | None = None,
                                 description_package_: LaunchConfiguration | None = None,
                                 moveit_config_package_: LaunchConfiguration | None = None,
                                 joint_limits_file_: LaunchConfiguration | None = None,
@@ -22,7 +22,7 @@ def get_ur_moveit_launch_params(context,
         Args:
             ur_type:                   Type/series of used UR robot.
             description_path:          Full path to the URDF/XACRO description file.
-            tf_prefix:                 Prefix for tf, useful for multi-robot setup.
+            prefix:                 Prefix for tf, useful for multi-robot setup.
             description_package:       Name of the package containing the robot description.
             moveit_config_package:     Name of the package containing the MoveIt configuration.
             joint_limits_file:  Name of the file containing the joint limits configuration.
@@ -32,7 +32,7 @@ def get_ur_moveit_launch_params(context,
 
     ur_type                   = ur_type_ if ur_type_ else                                     LaunchConfiguration("ur_type")
     description_path          = description_path_ if description_path_ else                   LaunchConfiguration("description_path")
-    tf_prefix                 = tf_prefix_ if tf_prefix_ else                                 LaunchConfiguration("tf_prefix")
+    prefix                 = prefix_ if prefix_ else                                 LaunchConfiguration("prefix")
     description_package       = description_package_ if description_package_ else             LaunchConfiguration("description_package")
     moveit_config_package     = moveit_config_package_ if moveit_config_package_ else         LaunchConfiguration("moveit_config_package")
     joint_limits_file         = joint_limits_file_ if joint_limits_file_ else                 LaunchConfiguration("joint_limits_file")
@@ -57,8 +57,8 @@ def get_ur_moveit_launch_params(context,
             "ur_type:=",
             ur_type,
             " ",
-            "tf_prefix:=",
-            tf_prefix,
+            "prefix:=",
+            prefix,
             " ",
             "joint_limit_params:=",
             joint_limit_params,
@@ -82,7 +82,7 @@ def get_ur_moveit_launch_params(context,
             # configs has to be updated!
             " ",
             "prefix:=",
-            tf_prefix,
+            prefix,
             " ",
         ]
     )

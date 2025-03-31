@@ -71,9 +71,9 @@ def launch_setup(context, *args, **kwargs):
                 ("description_package", LaunchConfiguration("description_package")),
                 ("description_semantic_path", LaunchConfiguration("description_semantic_path")),
                 ("description_path", LaunchConfiguration("description_path")),
-                ("tf_prefix", LaunchConfiguration("tf_prefix")),
-                ("joint_limits_file", LaunchConfiguration("moveit_joint_limits_file")),
-                ("kinematics_file", LaunchConfiguration("moveit_kinematics_file")),
+                ("prefix", LaunchConfiguration("prefix")),
+                ("joint_limits_file", LaunchConfiguration("joint_limits_file")),
+                ("kinematics_file", LaunchConfiguration("kinematics_file")),
                 ("moveit_config_package", LaunchConfiguration("moveit_config_package")),
                 ("publish_joint_states", LaunchConfiguration("publish_joint_states")),
             ]
@@ -169,7 +169,7 @@ def generate_launch_description():
     
     declared_arguments.append(
         DeclareLaunchArgument(
-            "tf_prefix",
+            "prefix",
             default_value='""',
             description="Prefix of the joint names, useful for "
             "multi-robot setup. If changed than also joint names in the controllers' configuration "
