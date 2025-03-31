@@ -205,60 +205,72 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
             space: Planning space (joint or operative)
     */
 
-    manipulator_interfaces::msg::TrajectoryResult result_msg;
+    RCLCPP_INFO(node_->get_logger(), "Planning to position: %f, %f, %f", goal_pose.position.x, goal_pose.position.y, goal_pose.position.z);
+    RCLCPP_INFO(node_->get_logger(), "Planning to orientation: %f, %f, %f, %f", goal_pose.orientation.x, goal_pose.orientation.y, goal_pose.orientation.z, goal_pose.orientation.w);
 
-    //Sets the target pose
-    move_group_->setPoseReferenceFrame(frame);
-    move_group_->setPoseTarget(goal_pose, ee_link);
+    move_group_->clearPathConstraints();
+    move_group_->setGoalJointTolerance(0.01);
+    std::vector<double> joints_goal = invKine(goal_pose);
+    plan(joints_goal);
 
-    RCLCPP_INFO(node_->get_logger(), "Planning to pose: %f, %f, %f", goal_pose.position.x, goal_pose.position.y, goal_pose.position.z);
-    RCLCPP_INFO(node_->get_logger(), "Planning to pose: %f, %f, %f, %f", goal_pose.orientation.x, goal_pose.orientation.y, goal_pose.orientation.z, goal_pose.orientation.w);
 
-    //Create the plan and execute
-    moveit::planning_interface::MoveGroupInterface::Plan plan;
-    moveit::core::MoveItErrorCode error = move_group_->plan(plan);
-    move_group_->setGoalPositionTolerance(0.005);
-    move_group_->setGoalOrientationTolerance(0.01);
+    // COMMENTED HERE BELOW FOR TESTING PURPOSES
 
-    // Clear pose target
-    move_group_->clearPoseTarget(ee_link);
+    // manipulator_interfaces::msg::TrajectoryResult result_msg;
 
-    if (error != moveit::core::MoveItErrorCode::SUCCESS)
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Planning failed with error code: %d", error.val);
-        moveit_msgs::msg::RobotTrajectory trajectory;
-        result_msg.success = false;
-        result_msg.message = "Planning failed";
-        result_msg.trajectory = trajectory;
-        result_msg.error_code = error.val;
+    // //Sets the target pose
+    // move_group_->setPoseReferenceFrame(frame);
+    // move_group_->setPoseTarget(goal_pose, ee_link);
+    // move_group_->clearPathConstraints();
+    // move_group_->setGoalPositionTolerance(0.005);
+    // move_group_->setGoalOrientationTolerance(0.01);
 
-        setTrajectory(trajectory);
-        trajectory_pub_->publish(result_msg);
-        return;
-    }
+    // RCLCPP_INFO(node_->get_logger(), "Planning to pose: %f, %f, %f", goal_pose.position.x, goal_pose.position.y, goal_pose.position.z);
+    // RCLCPP_INFO(node_->get_logger(), "Planning to pose: %f, %f, %f, %f", goal_pose.orientation.x, goal_pose.orientation.y, goal_pose.orientation.z, goal_pose.orientation.w);
 
-    moveit_msgs::msg::RobotTrajectory trajectory = plan.trajectory_;
+    // //Create the plan and execute
+    // moveit::planning_interface::MoveGroupInterface::Plan plan;
+    // moveit::core::MoveItErrorCode error = move_group_->plan(plan);
 
-    bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
+    // // Clear pose target
+    // move_group_->clearPoseTarget(ee_link);
 
-    if (!totg_success){
-        result_msg.success = false;
-        result_msg.message = "Time optimal trajectory generation failed";
-        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
-        result_msg.trajectory = trajectory;
+    // if (error != moveit::core::MoveItErrorCode::SUCCESS)
+    // {
+    //     RCLCPP_ERROR(node_->get_logger(), "Planning failed with error code: %d", error.val);
+    //     moveit_msgs::msg::RobotTrajectory trajectory;
+    //     result_msg.success = false;
+    //     result_msg.message = "Planning failed";
+    //     result_msg.trajectory = trajectory;
+    //     result_msg.error_code = error.val;
+
+    //     setTrajectory(trajectory);
+    //     trajectory_pub_->publish(result_msg);
+    //     return;
+    // }
+
+    // moveit_msgs::msg::RobotTrajectory trajectory = plan.trajectory_;
+
+    // bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
+
+    // if (!totg_success){
+    //     result_msg.success = false;
+    //     result_msg.message = "Time optimal trajectory generation failed";
+    //     result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
+    //     result_msg.trajectory = trajectory;
         
-        setTrajectory(moveit_msgs::msg::RobotTrajectory());
-        trajectory_pub_->publish(result_msg);
-        return;
-    }
+    //     setTrajectory(moveit_msgs::msg::RobotTrajectory());
+    //     trajectory_pub_->publish(result_msg);
+    //     return;
+    // }
 
-    setTrajectory(trajectory);
+    // setTrajectory(trajectory);
 
-    result_msg.success = true;
-    result_msg.message = "Trajectory planned successfully";
-    result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
-    result_msg.trajectory = trajectory;
-    trajectory_pub_->publish(result_msg);
+    // result_msg.success = true;
+    // result_msg.message = "Trajectory planned successfully";
+    // result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
+    // result_msg.trajectory = trajectory;
+    // trajectory_pub_->publish(result_msg);
 }
 
 void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link)
