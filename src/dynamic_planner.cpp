@@ -75,6 +75,8 @@ DynamicPlanner::~DynamicPlanner()
     planning_scene_interface_.reset();
     planning_scene_.reset();
     robot_model_loader_.reset();
+    visual_tools_.reset();
+    node_.reset();
 }
 
 void DynamicPlanner::initialize()

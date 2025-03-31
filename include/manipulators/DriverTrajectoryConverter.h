@@ -13,7 +13,7 @@ class DriverTrajectoryConverter : public rclcpp::Node
 {
 public:
     DriverTrajectoryConverter(std::string node_name, const rclcpp::NodeOptions &options);
-    ~DriverTrajectoryConverter();
+
     void spinner();
     bool isReady();
 
@@ -25,9 +25,7 @@ private:
 
     void declareParameters();
 
-    // Computation of the average computation time
-    static DriverTrajectoryConverter* instance__;
-    static void static_shutdown_handler(int sig);
+    // Shutdown handler
     void shutdown_handler();
 
     // ROS callbacks

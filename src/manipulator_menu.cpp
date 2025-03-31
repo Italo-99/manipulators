@@ -66,6 +66,10 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
         gripperMove_client_ = node_->create_client<std_srvs::srv::SetBool>(params_.gripper_group+"/move_gripper");
     }
 
+    rclcpp::contexts::get_global_default_context()->add_pre_shutdown_callback(
+        std::bind(&ManipulatorMenu::shutdown_handler, this) // Register shutdown handler
+    );
+
 }
 
 ManipulatorMenu::~ManipulatorMenu()
@@ -303,7 +307,7 @@ void ManipulatorMenu::spinnerMenu()
         menu_->processChoice(choice);
 
         // Wait for next loop time
-        r.sleep();
+        rclcpp::sleep_for(std::chrono::milliseconds(100));
     }
 
     // Shutdown ROS if Ctrl+C or Ctrl+D are pressed
@@ -421,11 +425,15 @@ moveit_msgs::msg::RobotTrajectory ManipulatorMenu::planAndWait(const sensor_msgs
     
     // Publish the joint goal
     publishJointGoal(joint_goal, start_state, false);
-    auto start_time = std::chrono::high_resolution_clock::now();
+    
+    //Set a start time to check for timeout
+    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
+    auto start_time = steady_clock.now();
+
     rclcpp::Rate rate(params_.ros_freq);
 
     while (rclcpp::ok()){
-        if((std::chrono::high_resolution_clock::now() - start_time) > std::chrono::seconds(timeout)){
+        if((steady_clock.now() - start_time).seconds() > timeout){
             RCLCPP_ERROR(node_->get_logger(), "Timeout reached while waiting for planned trajectory.");
             break;
         }
@@ -449,12 +457,16 @@ moveit_msgs::msg::RobotTrajectory ManipulatorMenu::planAndWait(const geometry_ms
     
     // Publish the tcp goal
     publishTcpGoal(tcp_goal, start_state, false);
-    auto start_time = std::chrono::high_resolution_clock::now();
+
+    //Set a start time to check for timeout
+    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
+    auto start_time = steady_clock.now();
+
     rclcpp::Rate rate(params_.ros_freq);
 
     while (rclcpp::ok()){
 
-        if((std::chrono::high_resolution_clock::now() - start_time) > std::chrono::seconds(timeout)){
+        if((steady_clock.now() - start_time).seconds() > timeout){
             RCLCPP_ERROR(node_->get_logger(), "Timeout reached while waiting for planned trajectory.");
             break;
         }
@@ -482,7 +494,9 @@ bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajector
 
     double tolerance = getManipulatorParameter<double>("goal_tolerance");
 
-    auto start_time = std::chrono::high_resolution_clock::now();
+    //Set a start time to check for timeout
+    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
+    auto start_time = steady_clock.now();
 
     //Tell the planner to start the execution
     std_msgs::msg::Bool ctrl_msg;
@@ -491,7 +505,7 @@ bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajector
     executionControl_pub_->publish(ctrl_msg);
 
     while(rclcpp::ok()){
-        if((std::chrono::high_resolution_clock::now() - start_time) > std::chrono::seconds(timeout)){
+        if((steady_clock.now() - start_time).seconds() > timeout){
             RCLCPP_ERROR(node_->get_logger(), "Timeout reached while waiting for trajectory execution.");
             break;
         }
@@ -1160,6 +1174,11 @@ double ManipulatorMenu::angular_distance(const geometry_msgs::msg::Quaternion& q
     ===================== PRIVATE FUNCTIONS  =======================
     ================================================================
 */
+
+void ManipulatorMenu::shutdown_handler()
+{
+    RCLCPP_INFO(node_->get_logger(), "Shutting down manipulator menu.");
+}
 
 void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr &joints_state)
 {

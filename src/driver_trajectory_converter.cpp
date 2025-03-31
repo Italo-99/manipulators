@@ -1,8 +1,6 @@
 // Import libraries
 #include "manipulators/DriverTrajectoryConverter.h"
 
-DriverTrajectoryConverter* DriverTrajectoryConverter::instance__ = nullptr;
-
 // Constructor
 DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, const rclcpp::NodeOptions &options)
     : rclcpp::Node(node_name, options), joint_map_initialized_(false), cmd_map_initialized_(false), mean_(0.0)
@@ -51,11 +49,10 @@ DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, cons
     qd_cmd_.setZero();
     real_vel_.setZero();
     vel_msg_.data.resize(6);
-}
 
-DriverTrajectoryConverter::~DriverTrajectoryConverter()
-{
-    instance__ = nullptr;
+    rclcpp::contexts::get_global_default_context()->add_pre_shutdown_callback(
+        std::bind(&DriverTrajectoryConverter::shutdown_handler, this) // Register shutdown handler
+    );
 }
 
 void DriverTrajectoryConverter::declareParameters(){
@@ -64,12 +61,6 @@ void DriverTrajectoryConverter::declareParameters(){
     this->declare_parameter("kp", 1.0);
     this->declare_parameter("min_motor_speed", 0.001);
     this->declare_parameter("spinner_rate", 500);
-}
-
-void DriverTrajectoryConverter::static_shutdown_handler(int sig)
-{
-    sig++;                          //Suppress unused var warning
-    instance__->shutdown_handler(); 
 }
 
 // Shutdown handler
@@ -82,15 +73,6 @@ void DriverTrajectoryConverter::shutdown_handler()
     std_msgs::msg::Float64MultiArray zero_vel;
     zero_vel.data.resize(6, 0.0);    
     velocity_publisher_->publish(zero_vel);
-
-    // Double attempt to send stop msg
-    for(size_t i = 0; i < 2; ++i)
-    {
-        rclcpp::sleep_for(std::chrono::milliseconds(100));
-    }
-
-    // Shutdown ROS
-    rclcpp::shutdown();
 }
 
 // Check if both joint state and command maps are initialized
@@ -178,10 +160,6 @@ void DriverTrajectoryConverter::computeVel()
 // Spinner to continuously call callbacks and compute velocity
 void DriverTrajectoryConverter::spinner()
 {
-    // Setup the closing handler function
-    instance__ = this;
-    signal(SIGINT, DriverTrajectoryConverter::static_shutdown_handler);
-
     // Create a single-threaded executor
     executor.add_node(shared_from_this());
 
@@ -207,4 +185,6 @@ void DriverTrajectoryConverter::spinner()
 
     // Run executor
     executor.spin();
+
+    rclcpp::shutdown();
 }

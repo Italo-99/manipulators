@@ -190,12 +190,20 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
 
     tcpPose_pub_ = this->create_publisher<geometry_msgs::msg::Pose>(manipulator_name_ + "/tcp_pose", 1);
     tcpVel_pub_  = this->create_publisher<geometry_msgs::msg::Twist>(manipulator_name_ + "/tcp_vel", 1);
+
+    rclcpp::contexts::get_global_default_context()->add_pre_shutdown_callback(
+        std::bind(&ManipulatorPlannerNode::shutdown_handler, this) // Register shutdown handler
+    );
 }
 
 ManipulatorPlannerNode::~ManipulatorPlannerNode() {
     // Stop the spinner thread
-    delete dynamic_planner_.get();
+    if (mainloop_timer_) {
+        mainloop_timer_->cancel();
+    }
+    executor_.spin_some();
     executor_.cancel();
+    dynamic_planner_.reset(); // Reset the dynamic planner
 }
 
 void ManipulatorPlannerNode::spinner() {
@@ -244,12 +252,15 @@ void ManipulatorPlannerNode::spinner() {
 
     executor_.spin(); // Start the executor
 
-    RCLCPP_INFO(this->get_logger(), "Spinner mean time: %f ms", spinner_mean_);
-
     rclcpp::shutdown();
 }
 
 // ------------------------------------- PRIVATE METHODS -------------------------------------
+
+void ManipulatorPlannerNode::shutdown_handler(){
+    dynamic_planner_->stop(); // Stop the robot
+    RCLCPP_INFO(get_logger(), "Spinner mean time: %f ms", spinner_mean_);
+}
 
 //COLLISION OBJECTS
 

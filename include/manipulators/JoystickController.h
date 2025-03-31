@@ -44,8 +44,6 @@ class JoystickController : public rclcpp::Node
         void declareParameters(); 
     
         //Shutdown handler
-        static JoystickController* instance__;
-        static void static_shutdown_handler(int sig);
         void shutdown_handler();
     
 
@@ -76,4 +74,7 @@ class JoystickController : public rclcpp::Node
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControl_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJsRealTimeControl_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr moveGripper_client_;
+
+        rclcpp::executors::MultiThreadedExecutor executor_;
+        rclcpp::TimerBase::SharedPtr mainloop_timer_;
 };

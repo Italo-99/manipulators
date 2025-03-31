@@ -1,8 +1,5 @@
 #include "manipulators/JoystickController.h"
 
-
-JoystickController* JoystickController::instance__ = nullptr;
-
 JoystickController::JoystickController(const std::string& node_name)
     : rclcpp::Node(node_name), jacobian_control_(false), real_time_control_(false)
 {
@@ -25,7 +22,7 @@ JoystickController::JoystickController(const std::string& node_name)
     js_cmd_vel_.name = joint_names_;
     js_cmd_vel_.velocity = std::vector<double>(joint_names_.size(), 0);
 
-    auto joy_sub_cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    auto joy_sub_cb_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
     rclcpp::SubscriptionOptions joy_sub_options;
     joy_sub_options.callback_group = joy_sub_cb_group;
 
@@ -40,7 +37,7 @@ JoystickController::JoystickController(const std::string& node_name)
     velJacSetpoint_pub_  = this->create_publisher<geometry_msgs::msg::Twist>(manipulator_name_ + "/cmd_vel", 1);
     velJsRtSetpoint_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(manipulator_name_ + "/js_cmd_vel", 1);
 
-    auto clients_cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    auto clients_cb_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 
     setJacobianControl_client_ = this->create_client<std_srvs::srv::SetBool>(manipulator_name_ + "/jacobian_control_setter", rmw_qos_profile_services_default, clients_cb_group);
     setJsRealTimeControl_client_ = this->create_client<std_srvs::srv::SetBool>(manipulator_name_ + "/joints_real_time_setter", rmw_qos_profile_services_default, clients_cb_group);
@@ -48,6 +45,9 @@ JoystickController::JoystickController(const std::string& node_name)
     if (!gripper_group_.empty()){
         moveGripper_client_ = this->create_client<std_srvs::srv::SetBool>(manipulator_name_ + "/move_gripper", rmw_qos_profile_services_default, clients_cb_group);
     }
+    rclcpp::contexts::get_global_default_context()->add_pre_shutdown_callback(
+        std::bind(&JoystickController::shutdown_handler, this) // Register shutdown handler
+    );
 }
 
 void JoystickController::joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy){
@@ -116,23 +116,11 @@ void JoystickController::declareParameters(){
     declare_parameter("gripper_group", std::string()); //Leave empty if no gripper
 }
 
-// SHUTDOWN HANDLER
-
-void JoystickController::static_shutdown_handler(int sig)
-{
-    //Very unelegant way to call a non-static shutdown handler before the context is destroyed, but it works
-    sig++; //Suppress unused var warning
-    instance__->shutdown_handler();
-}
-
 // Shutdown handler
 void JoystickController::shutdown_handler()
 {
     // Show the result of the jacobian control mean duration
     RCLCPP_INFO(get_logger(), "Shutting down joystick controller node...");
-    
-    // Shutdown ROS
-    rclcpp::shutdown();
 }
 
 // COMMANDS
@@ -158,13 +146,16 @@ void JoystickController::setJacobianSpeedControl(const bool set)
         RCLCPP_INFO(this->get_logger(), "jacobian_control_setter service not available, waiting again...");
     }
 
-    // Send the request asynchronously
-    auto response_future = setJacobianControl_client_->async_send_request(request);
+    // auto cb = [this](rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture response) {
+    //     if (response.get()->success) {
+    //         RCLCPP_INFO(this->get_logger(), "Jacobian control set to %s", response.get()->message.c_str());
+    //     } else {
+    //         RCLCPP_ERROR(this->get_logger(), "Failed to set jacobian control: %s", response.get()->message.c_str());
+    //     }
+    // };
 
-    // std::future_status status = response_future.wait_for(std::chrono::seconds(clients_wait_timeout_));
-    // if(status != std::future_status::ready){
-    //     RCLCPP_ERROR(this->get_logger(), "Service call failed. status: %d", status);
-    // }
+    // Send the request asynchronously
+    auto response_future = setJacobianControl_client_->async_send_request(request);    
 }
 
 // Set Joints real time speed control
@@ -213,19 +204,27 @@ void JoystickController::moveGripper(const bool close){
 
     // Send the request asynchronously and get the response
     auto response_future = moveGripper_client_->async_send_request(request);
+
+    // std::future_status status = response_future.wait_for(std::chrono::seconds(clients_wait_timeout_));
+    // if(status != std::future_status::ready){
+    //     RCLCPP_ERROR(this->get_logger(), "Service call failed. status: %d", status);
+    // }
 }
 
 void JoystickController::spinner(){
     rclcpp::Rate rate(ros_freq_);
 
-    rclcpp::executors::MultiThreadedExecutor executor;
-    executor.add_node(this->shared_from_this());
+    executor_.add_node(this->get_node_base_interface());
 
-    signal(SIGINT, JoystickController::static_shutdown_handler);
+    mainloop_timer_ = this->create_wall_timer(
+        std::chrono::milliseconds(1000 / ros_freq_),
+        [this]() -> void {
+            publishCmd();
+        }
+    );
 
-    while(rclcpp::ok()){
-        publishCmd();
-        executor.spin_some();
-        rate.sleep();
-    }
+    executor_.spin();
+
+    // Shutdown ROS
+    rclcpp::shutdown();
 }

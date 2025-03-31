@@ -199,6 +199,8 @@ class ManipulatorMenu
 
     private:
 
+        void shutdown_handler(); // Shutdown handler for the node
+
         // --------------------- PRIVATE PUBS/SUBS ---------------------
 
         void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr& msg);

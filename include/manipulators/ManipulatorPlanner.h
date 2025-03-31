@@ -31,6 +31,9 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         void spinner(); //Spins the main node and executor_ in a different thread
 
     private:
+
+        void shutdown_handler(); 
+
         // --------------- COLLISION OBJECTS ---------------
 
         enum ShapeType {        //Shape type for shape_msgs::msg::SolidPrimitive
