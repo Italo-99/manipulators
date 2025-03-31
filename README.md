@@ -55,9 +55,10 @@ Do the same with this package and use only the robotiq_85_description package:
     + goal_bias: 0.05
     ```
 
-## Other
+## Useful packages
 
 1) [Install drivers for xbox one controller](https://fostips.com/install-driver-xbox-one-controller-headset-ubuntu/)
+2) [ARS Control ur drivers](https://github.com/ARSControl/ur_rtde_controller/tree/humble)
 
 # Use
 
@@ -87,6 +88,8 @@ To launch the planner with robotiq_85_gripper attached as end effector:
  - `gripper`: Wether to enable gripper or not (supported gripper is robotiq_85_gripper).
  - `joint_limits_file`: Name of the joint limits file. IMPORTANT: This is NOT the joint_limits.yaml file in the moveit config package and should not be mistaken with it.
  - `kinematics_file`: Name of the kinematics file. IMPORTANT: This is NOT the kinematics.yaml file in the moveit_config package and should not be mistaken with it.
+
+**NOTE**: Always use capital letters for `True` and `False` argument.
 
 ### The manipulator planner node
 
@@ -162,6 +165,29 @@ Can be edited at `/config/joystick/generic.yaml`:
  - `vel_step`: How fast a movement in the joystick axis will make the end effector move during jacobian control.
  - `rot_step`: How fast a movement in the joystick axis will make the end effector rotate during jacobian control.
  - `js_step`: How fast a movement in the joystick axis will make the joints move during real time joints control.
+
+### Real robot operation
+
+To operate on a real robot first launch the appropriate driver.
+In the case of [Ars control ur drivers](https://github.com/ARSControl/ur_rtde_controller/tree/humble) use:
+
+    ros2 launch ur_rtde_controller rtde_controller.launch.py ROBOT_IP:=192.168.xx.xx enable_gripper:=true/false
+
+Then you can launch the planner without joint state publisher as joint state feedback will be provided by real hardware:
+
+    ros2 launch manipulators planner.launch.py publish_joint_states:=False ur_type:=<ur_type> gripper:=True/False
+
+Finally launch the real_control_driver node:
+
+    ros2 launch manipulators real_control_driver.launch.py ur_type:=<ur_type>
+
+The real control driver parameters for each ur type can be found in `config/drivers/`, the parameters are:
+
+ - `velocity_topic`: Where the velocities for joints will be published, depends on the driver used.
+ - `joints_names_group`: List of joint names.
+ - `kp`: Proportionality constant for acceleration.
+ - `spinner_rate`: Frequency for control.
+ - `min_motor_speed`: If required velocity is under this value motor will stop.
 
 # Custom implementations
 
