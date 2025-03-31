@@ -18,8 +18,6 @@ ros_freq:         500         # ROS loop frequency (update rate of callbacks)
 
 inst_kine:        true        # True if the motors instantaneously reach the goal after an invKine computation
 
-sample_time:      0.002       # Time distance between two consecutive points of the cartesian trajectory computed
-
 max_speed_ee:     0.5       # Maximum velocity     of the end-effector in [m/s]  in cartesian planning/jacobian real time control
 
 max_accel_ee:     0.5       # Maximum acceleration of the end-effector in [m/s2] in cartesian planning/jacobian real time control

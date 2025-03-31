@@ -6,11 +6,11 @@ import os
 def get_ur_moveit_launch_params(context,
                                 ur_type_: LaunchConfiguration | None = None,
                                 description_path_: LaunchConfiguration | None = None,
-                                tf_prefix_: LaunchConfiguration | None = None,
+                                prefix_: LaunchConfiguration | None = None,
                                 description_package_: LaunchConfiguration | None = None,
                                 moveit_config_package_: LaunchConfiguration | None = None,
-                                moveit_joint_limits_file_: LaunchConfiguration | None = None,
-                                moveit_kinematics_file_: LaunchConfiguration | None = None,
+                                joint_limits_file_: LaunchConfiguration | None = None,
+                                kinematics_file_: LaunchConfiguration | None = None,
                                 description_semantic_path_: LaunchConfiguration | None = None):
     """
         This function returns a list of dictionaries with all the parameters needed to launch move_group node for UR robots.
@@ -22,28 +22,28 @@ def get_ur_moveit_launch_params(context,
         Args:
             ur_type:                   Type/series of used UR robot.
             description_path:          Full path to the URDF/XACRO description file.
-            tf_prefix:                 Prefix for tf, useful for multi-robot setup.
+            prefix:                 Prefix for tf, useful for multi-robot setup.
             description_package:       Name of the package containing the robot description.
             moveit_config_package:     Name of the package containing the MoveIt configuration.
-            moveit_joint_limits_file:  Name of the file containing the joint limits configuration.
-            moveit_kinematics_file:    Name of the file containing the kinematics configuration.
+            joint_limits_file:  Name of the file containing the joint limits configuration.
+            kinematics_file:    Name of the file containing the kinematics configuration.
             description_semantic_path: Full path for the file containing the semantic description.
     """
 
     ur_type                   = ur_type_ if ur_type_ else                                     LaunchConfiguration("ur_type")
     description_path          = description_path_ if description_path_ else                   LaunchConfiguration("description_path")
-    tf_prefix                 = tf_prefix_ if tf_prefix_ else                                 LaunchConfiguration("tf_prefix")
+    prefix                 = prefix_ if prefix_ else                                 LaunchConfiguration("prefix")
     description_package       = description_package_ if description_package_ else             LaunchConfiguration("description_package")
     moveit_config_package     = moveit_config_package_ if moveit_config_package_ else         LaunchConfiguration("moveit_config_package")
-    moveit_joint_limits_file  = moveit_joint_limits_file_ if moveit_joint_limits_file_ else   LaunchConfiguration("moveit_joint_limits_file")
-    moveit_kinematics_file    = moveit_kinematics_file_ if moveit_kinematics_file_ else       LaunchConfiguration("moveit_kinematics_file")
+    joint_limits_file         = joint_limits_file_ if joint_limits_file_ else                 LaunchConfiguration("joint_limits_file")
+    kinematics_file           = kinematics_file_ if kinematics_file_ else                     LaunchConfiguration("kinematics_file")
     description_semantic_path = description_semantic_path_ if description_semantic_path_ else LaunchConfiguration("description_semantic_path")
 
     joint_limit_params = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", ur_type, moveit_joint_limits_file]
+        [FindPackageShare(description_package), "config", ur_type, joint_limits_file]
     )
     kinematics_params = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", ur_type, moveit_kinematics_file]
+        [FindPackageShare(description_package), "config", ur_type, kinematics_file]
     )
 
     robot_description_content = Command(
@@ -57,8 +57,8 @@ def get_ur_moveit_launch_params(context,
             "ur_type:=",
             ur_type,
             " ",
-            "tf_prefix:=",
-            tf_prefix,
+            "prefix:=",
+            prefix,
             " ",
             "joint_limit_params:=",
             joint_limit_params,
@@ -82,7 +82,7 @@ def get_ur_moveit_launch_params(context,
             # configs has to be updated!
             " ",
             "prefix:=",
-            tf_prefix,
+            prefix,
             " ",
         ]
     )

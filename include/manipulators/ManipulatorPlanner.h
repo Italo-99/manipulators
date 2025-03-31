@@ -196,9 +196,12 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr tcpPose_pub_;    // Publisher to end effector pose
         rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr tcpVel_pub_;    // Publisher to end effector velocity
 
+        //Execution
         std::shared_ptr<DynamicPlanner> dynamic_planner_;       //Dynamic planner object
-        rclcpp::TimerBase::SharedPtr dynamic_planner_timer_;    //Timer for dynamic planner initialization
-        rclcpp::executors::SingleThreadedExecutor executor_;    //Executor for accessory nodes (e.g. dynamic planner)
+        
+        rclcpp::executors::MultiThreadedExecutor executor_;     //Executor for accessory nodes (e.g. dynamic planner)
+        double spinner_mean_ = 0.0;                             //Mean value for the time taken for each iteration of the spinner
+        rclcpp::TimerBase::SharedPtr mainloop_timer_;           //Timer for the main loop
 
         //Real time control variables
         bool   jac_control_ = false;            // True if the speed control through inverse Jacobian has been enabled
@@ -207,8 +210,6 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         Eigen::VectorXd  js_vel_cmd_;           // Command of speed to the joints
         Eigen::VectorXd arm_msg_new_;           // New command of speed to the ee
         Eigen::VectorXd js_msg_new_;            // New command of joints speed
-
-        double spinner_mean_ = 0.0; //Mean value for the time taken for each iteration of the spinner
 };
 
 #endif

@@ -32,7 +32,7 @@ def launch_setup_ur(context, *args, **kwargs):
         name="joint_state_publisher_gui",
         output="screen",
         parameters=[{"rate": rate,}], 
-        condition=IfCondition(LaunchConfiguration("gui"))
+        condition=IfCondition(PythonExpression([LaunchConfiguration("gui"), " and ", LaunchConfiguration("publish_joint_states")]))
     )
 
     joint_state_publisher_node = Node(
@@ -42,7 +42,7 @@ def launch_setup_ur(context, *args, **kwargs):
         output="screen",        
         parameters=[{"source_list": ['/move_group/fake_controller_joint_states'],
                       "rate": rate,}],
-        condition=IfCondition(PythonExpression([LaunchConfiguration("gui"), " == False"]))    
+        condition=IfCondition(PythonExpression([LaunchConfiguration("gui"), " == False", " and ", LaunchConfiguration("publish_joint_states")]))    
     )
 
     rviz_node = Node(
@@ -105,6 +105,14 @@ def generate_launch_description():
         )
     )
 
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "publish_joint_states",
+            default_value="True",
+            choices=["True", "False"],
+            description="Whether to run joint state publisher node or not (Disable for real control).",
+        )
+    )
 
     declared_arguments.append(
         DeclareLaunchArgument(
@@ -139,15 +147,6 @@ def generate_launch_description():
             description="MoveIt SRDF/XACRO description file with the robot (full path).",
         )
     )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "prefix",
-            default_value='""',
-            description="Prefix of the joint names, useful for "
-            "multi-robot setup. If changed than also joint names in the controllers' configuration "
-            "have to be updated.",
-        )
-    )
 
     declared_arguments.append(
         DeclareLaunchArgument(
@@ -170,7 +169,7 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
-            "tf_prefix",
+            "prefix",
             default_value='""',
             description="Prefix of the joint names, useful for "
             "multi-robot setup. If changed than also joint names in the controllers' configuration "
@@ -180,7 +179,7 @@ def generate_launch_description():
 
     declared_arguments.append(
         DeclareLaunchArgument(
-            "moveit_joint_limits_file",
+            "joint_limits_file",
             default_value="joint_limits.yaml",
             description="MoveIt joint limits filename, only needed for UR robots",
         )
@@ -188,7 +187,7 @@ def generate_launch_description():
 
     declared_arguments.append(
         DeclareLaunchArgument(
-            "moveit_kinematics_file",
+            "kinematics_file",
             default_value="default_kinematics.yaml",
             description="MoveIt kinematics filename, only needed for UR robots",
         )

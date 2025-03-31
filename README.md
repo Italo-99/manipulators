@@ -55,11 +55,41 @@ Do the same with this package and use only the robotiq_85_description package:
     + goal_bias: 0.05
     ```
 
-## Other
+## Useful packages
 
 1) [Install drivers for xbox one controller](https://fostips.com/install-driver-xbox-one-controller-headset-ubuntu/)
+2) [ARS Control ur drivers](https://github.com/ARSControl/ur_rtde_controller/tree/humble)
 
 # Use
+
+### Planner Launch
+
+To start the planner use the planner.launch.py launch file:
+
+    ros2 launch manipulators planner.launch.py
+
+To launch the planner with robotiq_85_gripper attached as end effector:
+
+    ros2 launch manipulators planner.launch.py description_path:="<workspace_path>/install/manipulators/share/manipulators/models/urdf/ur_robotiq_85_gripper.urdf.xacro" description_semantic_path:="<workspace_path>/install/manipulators/share/manipulators/models/srdf/ur_robotiq_85_gripper.srdf.xacro" gripper:=True
+
+### Planner parameters
+
+ - `rate`: Rate for the joint_state_publisher node (Hz).
+ - `gui`: Whether to run joint_state_publisher with gui or not.
+ - `publish_joint_states`: Whether to run joint_state_publisher node.
+ - `rviz`: Whether to run rviz or not.
+ - `ur_type`: Type of used UR robot (check list below).
+ - `tf_prefix`: Prefix for each link and joint of the robot (not applied to joint states passed to manipulator_planner).
+ - `rviz_config_path`: Absolute path to rviz config file.
+ - `description_package`: Description package with robot URDF/XACRO files.
+ - `description_path`: Absolute path to the URDF/XACRO description file of the robot.
+ - `description_semantic_path`: Absolute path to the SRDF description file of the robot.
+ - `moveit_config_package`: Name of the moveit config package for the robot.
+ - `gripper`: Wether to enable gripper or not (supported gripper is robotiq_85_gripper).
+ - `joint_limits_file`: Name of the joint limits file. IMPORTANT: This is NOT the joint_limits.yaml file in the moveit config package and should not be mistaken with it.
+ - `kinematics_file`: Name of the kinematics file. IMPORTANT: This is NOT the kinematics.yaml file in the moveit_config package and should not be mistaken with it.
+
+**NOTE**: Always use capital letters for `True` and `False` argument.
 
 ### The manipulator planner node
 
@@ -69,7 +99,6 @@ The manipulator planner node is used to elaborate trajectories, execute real tim
  - `planning_group`: The planning group (specified in srdf).
  - `joint_names`: List of joint names of the planning group.
  - `ee_name`: Name of the end effector link.
- - `base_link`: Name of the base link of the robot.
  - `world_frame`: Cartesian point of reference.
  - `ros_freq`: Frequency at which the planner will operate.
  - `max_speed_ee`: Max speed the end effector can move during jacobian control.
@@ -77,21 +106,15 @@ The manipulator planner node is used to elaborate trajectories, execute real tim
  - `max_spd_jnts`: Max speed joints can move during real time joint control.
  - `max_acc_jnts`: Max acceleration joints can reach during real time joint control.
  - `gripper_links`: Links of the gripper to disable their collision with objects attached to the end effector.
+<br/>
+
  - `robot_description` : Parsed urdf description of the robot.
  - `robot_description_semantic`: Parsed srdf description of the robot.
  - `robot_description_kinematics`: Path to the kinematics.yaml file (from robot moveit config package).
  - `robot_description_planning`: Path to joint_limits.yaml file (from robot moveit config package).
  - `ompl_planning_pipeline_config`: Path to the ompl_planning.yaml file (from robot moveit config package).
 
-To get the last 5 arguments which all refer either to the description or the moveit config packages you can use the method `get_ur_moveit_launch_params` from `manipulators/launch_utils.py`.
-
-To start the planner use the planner.launch.py launch file:
-
-    ros2 launch manipulators planner.launch.py
-
-To launch with the robotiq85 gripper attached to the manipulator use:
-
-    ros2 launch manipulators planner.launch.py description_path:="<workspace_path>/install/manipulators/share/manipulators/models/urdf/ur_robotiq_85_gripper.urdf.xacro" description_semantic_path:="<workspace_path>/install/manipulators/share/manipulators/models/srdf/ur_robotiq_85_gripper.srdf.xacro" gripper:=True
+The launch file `planner.launch.py` will automatically retrieve all these parameters. The first group of parameters (until `gripper_links`) is only used by the manipulator planner node, they can be found inside the `config/` directory as .yaml file, one for each `ur_type`. The last five parameters are more like "global" parameters, in the sense they are used by many nodes other than the dynamic planner, they are retrieved by the `get_ur_moveit_config` function inside `manipulators/launch_utils.py` and passed to the appropriate nodes.
 
 ### The manipulator menu node
 
@@ -100,6 +123,21 @@ The manipulator menu node can be used to perform different actions with the mani
 To run the manipulator menu:
 
     ros2 run manipulators manipulator_menu_user
+
+### Manipulator menu params
+
+Can be edited in `src/manipulator_menu_node_user.cpp` and  `src/manipulator_menu_node_nouser.cpp`:
+
+ - `node_name`: Name for the manipulator menu node.
+ - `ros_freq`: Frequency for the spinner.
+ - `manipulator_name`: Name of the manipulator.
+ - `planning_group`: Planning group specified in SRDF.
+ - `gripper`: Wether to initialize clients for the robotiq_85_gripper.
+ - `gripper_group`: Joint group name of the gripper.
+ - `joint_names`: List of joint names in the planning_group.
+ - `base_link_name`: Name of the base link to use as reference frame.
+
+These parameters must match with the ones passed to manipulator_planner node.
 
 ### The joystick control node
 
@@ -114,7 +152,42 @@ To run the joystick control node run the following two nodes:
 
 and
 
-    ros2 run manipulators joystick_controler_node
+    ros2 launch manipulators joystick_controller.launch.py
+
+### Joystick control parameters
+
+Can be edited at `/config/joystick/generic.yaml`:
+
+ - `manipulator_name`: Name of the manipulator.
+ - `joint_names`: List of joints to be moved by the joystick.
+ - `ros_freq`: Frequency for the spinner.
+ - `gripper_group`: Joint group name of the gripper.
+ - `vel_step`: How fast a movement in the joystick axis will make the end effector move during jacobian control.
+ - `rot_step`: How fast a movement in the joystick axis will make the end effector rotate during jacobian control.
+ - `js_step`: How fast a movement in the joystick axis will make the joints move during real time joints control.
+
+### Real robot operation
+
+To operate on a real robot first launch the appropriate driver.
+In the case of [Ars control ur drivers](https://github.com/ARSControl/ur_rtde_controller/tree/humble) use:
+
+    ros2 launch ur_rtde_controller rtde_controller.launch.py ROBOT_IP:=192.168.xx.xx enable_gripper:=true/false
+
+Then you can launch the planner without joint state publisher as joint state feedback will be provided by real hardware:
+
+    ros2 launch manipulators planner.launch.py publish_joint_states:=False ur_type:=<ur_type> gripper:=True/False
+
+Finally launch the real_control_driver node:
+
+    ros2 launch manipulators real_control_driver.launch.py ur_type:=<ur_type>
+
+The real control driver parameters for each ur type can be found in `config/drivers/`, the parameters are:
+
+ - `velocity_topic`: Where the velocities for joints will be published, depends on the driver used.
+ - `joints_names_group`: List of joint names.
+ - `kp`: Proportionality constant for acceleration.
+ - `spinner_rate`: Frequency for control.
+ - `min_motor_speed`: If required velocity is under this value motor will stop.
 
 # Custom implementations
 
@@ -198,7 +271,6 @@ int main(int argc, char* argv[]) {
 }
 ```
 
-To implement a custom joystick control node you can simply copy-paste the 'vanilla' JoystickController class and joystick_control_node.cpp, then change the ManipulatorMenu instance with your custom menu.
-To remap the control scheme edit the joyCallback method (use the two enums ButtonsMap and AxesMap and [Joy docs](https://index.ros.org/p/joy/) for more informations on how joystick controls are mapped).
+To implement a custom joystick control node you can simply copy-paste the 'vanilla' JoystickController class and joystick_control_node.cpp, then remap the control scheme by editing the joyCallback method (refer to the two enums `ButtonsMap`, `AxesMap` and [Joy docs](https://index.ros.org/p/joy/) for more informations).
 
 
