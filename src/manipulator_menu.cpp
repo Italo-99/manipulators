@@ -492,7 +492,7 @@ bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajector
     trajectory_msgs::msg::JointTrajectoryPoint last_traj_pt = trajectory.joint_trajectory.points.back();
     goal_state.position = last_traj_pt.positions;
 
-    double tolerance = getManipulatorParameter<double>("goal_tolerance");
+    double joint_tolerance = getManipulatorParameter<double>("joint_tolerance");
 
     //Set a start time to check for timeout
     rclcpp::Clock steady_clock(RCL_STEADY_TIME);
@@ -511,7 +511,7 @@ bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajector
         }
         //Repeatedly check joint states to see if the goal has been reached
         for (size_t i {0}; i < goal_state.position.size(); i++){
-            if (std::abs(goal_state.position[i] - current_joint_pose_.position[i]) > tolerance){
+            if (std::abs(goal_state.position[i] - current_joint_pose_.position[i]) > joint_tolerance){
                 break; //At least one joint is not in the goal position
             }
             return true;

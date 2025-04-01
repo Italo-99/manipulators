@@ -33,7 +33,7 @@ Do the same with this package and use only the robotiq_85_description package:
 
 ### 4. Fix known issues
 
-1) The URDF files in the ur_description package have some links that are rotated 180 degrees which will make the manipulator work in unexpected ways, to fix this issues go to ur_description/urdf/ur_macro.xacro and make the following changes:
+1) The URDF files in the ur_description package have some links that are rotated 180 degrees which will make the manipulator work in unexpected ways, to fix this issues go to `ur_description/urdf/ur_macro.xacro` and make the following changes:
 
     At lines 153, 159, 343:
 
@@ -43,7 +43,7 @@ Do the same with this package and use only the robotiq_85_description package:
     + <origin xyz="0 0 0" rpy="0 0 0"/>
     ```
 
-2) The default values for the RRTConnect planner are not optimized and make the manipulator move in very unoptimized paths, to fix the issue go to ur_moveit_config/config/ompl_planning.yaml and make the following changes:
+2) The default values for the RRTConnect planner are not optimized and make the manipulator move in very strange paths, to fix the issue go to `ur_moveit_config/config/ompl_planning.yaml` and make the following changes:
 
     At line 33:
 
@@ -54,6 +54,41 @@ Do the same with this package and use only the robotiq_85_description package:
     + max_num_iterations: 1000
     + goal_bias: 0.05
     ```
+
+3) Further optimization for planning can be done by using a different kinematic solver and changing joint limits:
+
+    In `ur_moveit_config/config/kinematics.yaml`:
+
+    ```yaml
+    /**:
+    ros__parameters:
+        robot_description_kinematics:
+        ur_manipulator:
+            kinematics_solver: pick_ik/PickIkPlugin
+            kinematics_solver_timeout: 0.05
+            kinematics_solver_attempts: 3
+            mode: global
+            position_scale: 1.0
+            rotation_scale: 0.5
+            position_threshold: 0.001
+            orientation_threshold: 0.01
+            cost_threshold: 0.001
+            minimal_displacement_weight: 0.0
+            gd_step_size: 0.0001
+    ```
+
+    In `ur_moveit_config/config/joint_limits.yaml` add the following limits to each joint:
+
+    ```yaml
+    min_position: -3.14
+    max_position: 3.14
+    ```
+
+    Then intall pick_ik solver via apt:
+
+        sudo apt install ros-humble-pick-ik
+
+    More information can be found at [Pick ik kinematics solver](https://moveit.picknik.ai/main/doc/how_to_guides/pick_ik/pick_ik_tutorial.html)
 
 ## Useful packages
 
@@ -106,6 +141,9 @@ The manipulator planner node is used to elaborate trajectories, execute real tim
  - `max_spd_jnts`: Max speed joints can move during real time joint control.
  - `max_acc_jnts`: Max acceleration joints can reach during real time joint control.
  - `gripper_links`: Links of the gripper to disable their collision with objects attached to the end effector.
+ - `position_tolerance`: Tolerance for tcp position.
+ - `orientation_tolerance`: Tolerance for tcp orientation.
+ - `joint_tolerance`: Tolerance for joint positions.
 <br/>
 
  - `robot_description` : Parsed urdf description of the robot.

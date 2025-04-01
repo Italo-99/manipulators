@@ -935,7 +935,9 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("acc_factor", 0.1); //MUTABLE
     this->declare_parameter("max_planning_time", 2.0);
     this->declare_parameter("max_planning_attempts", 2);
-    this->declare_parameter("goal_tolerance", 0.01);
+    this->declare_parameter("position_tolerance", 0.01);
+    this->declare_parameter("orientation_tolerance", 0.01);
+    this->declare_parameter("joint_tolerance", 0.01);
 }
  
 void ManipulatorPlannerNode::initializePlanner() {
@@ -946,7 +948,9 @@ void ManipulatorPlannerNode::initializePlanner() {
     params.acc_factor = this->get_parameter("acc_factor").as_double();
     params.planning_time = this->get_parameter("max_planning_time").as_double();
     params.num_attempts = this->get_parameter("max_planning_attempts").as_int();
-    params.tolerance = this->get_parameter("goal_tolerance").as_double();
+    params.position_tolerance = this->get_parameter("position_tolerance").as_double();
+    params.orientation_tolerance = this->get_parameter("orientation_tolerance").as_double();
+    params.joint_tolerance = this->get_parameter("joint_tolerance").as_double();
     params.planner_id = this->get_parameter("planner_id").as_string();
     params.sample_time = 1 / ros_freq_;
     params.max_velocity = max_speed_ee_;

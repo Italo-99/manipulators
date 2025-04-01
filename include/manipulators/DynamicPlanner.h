@@ -29,16 +29,18 @@
 // Struct definition of the parameters of the Dynamic Planner
 struct DynamicPlannerParams
 {
-    std::string planner_id = "geometric::RRTConnect";   // name of the planner method (look up from list in ompl_planning.yaml)
-    int num_attempts       = 2;                         // max number of attempts to find a trajectory
-    double planning_time   = 2;                         // maximum planning time in seconds (0: no limit)
-    double vel_factor      = 1.;                        // velocity factor
-    double acc_factor      = 1.;                        // acceleration factor
-    double sample_time     = 0.002;                     // sample time for cartesian planner (seconds)
-    double max_velocity    = 0.5;                       // maximum ee velocity for cartesian planner
-    double tolerance       = 0.01;                      // tolerance for goal position
-    std::string world_frame = "base_link";              // world frame
-    std::string end_effector_link = "tool0";            // end effector link
+    std::string planner_id          = "geometric::RRTConnect";   // name of the planner method (look up from list in ompl_planning.yaml)
+    int num_attempts                = 2;                         // max number of attempts to find a trajectory
+    double planning_time            = 2;                         // maximum planning time in seconds (0: no limit)
+    double vel_factor               = 1.;                        // velocity factor
+    double acc_factor               = 1.;                        // acceleration factor
+    double sample_time              = 0.002;                     // sample time for cartesian planner (seconds)
+    double max_velocity             = 0.5;                       // maximum ee velocity for cartesian planner
+    double position_tolerance       = 0.01;                      // tolerance for tcp position
+    double orientation_tolerance    = 0.01;                      // tolerance for tcp orientation
+    double joint_tolerance          = 0.01;                      // tolerance for joint positions
+    std::string world_frame         = "base_link";               // world frame
+    std::string end_effector_link   = "tool0";                   // end effector link
 
     // V1: empty struct
     DynamicPlannerParams() {}
