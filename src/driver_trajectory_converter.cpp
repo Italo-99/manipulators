@@ -154,7 +154,7 @@ void DriverTrajectoryConverter::computeVel()
     }
 
     // Publish velocity command to the robot
-    if (isReady()) {velocity_publisher_->publish(vel_msg_);}
+    velocity_publisher_->publish(vel_msg_);
 }
 
 // Spinner to continuously call callbacks and compute velocity
@@ -163,25 +163,37 @@ void DriverTrajectoryConverter::spinner()
     // Create a single-threaded executor
     executor.add_node(shared_from_this());
 
-    // Use ROS2 clock
     rclcpp::Clock steady_clock(RCL_STEADY_TIME);
 
-    // Timer callback to replace the main loop
-    timer_ = this->create_wall_timer(
-        std::chrono::milliseconds(1000 / spinner_rate_),  // Period based on spinner rate
-        [this, &steady_clock]()
+    //This will create a timer which will wait for the driver to be ready, then it will start the main loop and cancel itself
+    while(rclcpp::ok()){
+        if (isReady())
         {
-            // Start time for mean computation
-            auto start_time = steady_clock.now();
+            // Start the main loop
+            timer_ = this->create_wall_timer(
+                std::chrono::milliseconds(1000 / spinner_rate_),  // Period based on spinner rate
+                [this, &steady_clock]()
+                {
+                    // Start time for mean computation
+                    auto start_time = steady_clock.now();
+        
+                    // Compute velocity after every callback cycle
+                    computeVel();
+        
+                    // Update mean computation
+                    double elapsed_time = (steady_clock.now() - start_time).seconds();
+                    mean_ = (mean_ * static_cast<double>(k) + elapsed_time) / static_cast<double>(k + 1);
+                    k++;
+                }
+            );
 
-            // Compute velocity after every callback cycle
-            computeVel();
+            RCLCPP_INFO(get_logger(), "Driver is ready.");
+            break;
+        }
 
-            // Update mean computation
-            double elapsed_time = (steady_clock.now() - start_time).seconds();
-            mean_ = (mean_ * static_cast<double>(k) + elapsed_time) / static_cast<double>(k + 1);
-            k++;
-        });
+        executor.spin_some();
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
 
     // Run executor
     executor.spin();
