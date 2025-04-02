@@ -38,14 +38,15 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     );
 
     // --------------------- Kinematics client init ---------------------
-    invKine_client_              = node_->create_client<manipulator_interfaces::srv::InvKine>(params_.manipulator_name+"/get_invkine");
-    pseudoInverse_client_        = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(params_.manipulator_name+"/get_pseudo_inverse");
-    fKine_client_                 = node_->create_client<manipulator_interfaces::srv::FKine>(params_.manipulator_name+"/get_fkine");
-    jacobian_client_             = node_->create_client<manipulator_interfaces::srv::Jacobian>(params_.manipulator_name+"/get_jacobian");
+    invKine_client_                      = node_->create_client<manipulator_interfaces::srv::InvKine>(params_.manipulator_name+"/get_invkine");
+    pseudoInverse_client_                = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(params_.manipulator_name+"/get_pseudo_inverse");
+    fKine_client_                        = node_->create_client<manipulator_interfaces::srv::FKine>(params_.manipulator_name+"/get_fkine");
+    jacobian_client_                     = node_->create_client<manipulator_interfaces::srv::Jacobian>(params_.manipulator_name+"/get_jacobian");
 
-    setJacobianControl_client_   = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/jacobian_control_setter");
-    setRealTimeControl_client_   = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
-    changePlannerParams_client_  = node_->create_client<manipulator_interfaces::srv::ChangePlannerParameters>(params_.manipulator_name+"/change_planner_params");
+    setJacobianControl_client_           = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/jacobian_control_setter");
+    setRealTimeControl_client_           = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
+    changePlannerScalingFactors_client_  = node_->create_client<manipulator_interfaces::srv::ChangePlannerScalingFactors>(params_.manipulator_name+"/change_planner_scaling_factors");
+    changePlannerTolerances_client_      = node_->create_client<manipulator_interfaces::srv::ChangePlannerTolerances>(params_.manipulator_name+"/change_planner_tolerances");
 
     getManipulatorParams_client_ = std::make_shared<rclcpp::SyncParametersClient>(node_, "/manipulator_planner");
 
@@ -912,14 +913,14 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
 
 
 // Set new dynamic planners vel/acc params
-void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
+void ManipulatorMenu::setPlannerScalingFactors(float new_vel, float new_acc)
 {
-    auto request = std::make_shared<manipulator_interfaces::srv::ChangePlannerParameters::Request>();
+    auto request = std::make_shared<manipulator_interfaces::srv::ChangePlannerScalingFactors::Request>();
     request->acc_factor = new_acc;
     request->vel_factor = new_vel;
 
     // Wait for the service to be available
-    while (!changePlannerParams_client_->wait_for_service(std::chrono::seconds(1)))
+    while (!changePlannerScalingFactors_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if (!rclcpp::ok()){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
@@ -929,7 +930,7 @@ void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
     }
 
     // Send the request asynchronously
-    auto response_future = changePlannerParams_client_->async_send_request(request);
+    auto response_future = changePlannerScalingFactors_client_->async_send_request(request);
 
     // Wait until the future is completed
     if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
@@ -943,6 +944,46 @@ void ManipulatorMenu::setNewPlannerParams(float new_vel, float new_acc)
     if (response->success)
     {
         RCLCPP_INFO(node_->get_logger(), "Planner params changed: acc_factor = %f, vel_factor = %f", new_acc, new_vel);
+    }
+    else
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to set planner params");
+    }
+}
+
+// Set new dynamic planners vel/acc params
+void ManipulatorMenu::setPlannerTolerances(float position, float orientation, float joint)
+{
+    auto request = std::make_shared<manipulator_interfaces::srv::ChangePlannerTolerances::Request>();
+    request->position_tolerance = position;
+    request->orientation_tolerance = orientation;
+    request->joint_tolerance = joint;
+
+    // Wait for the service to be available
+    while (!changePlannerTolerances_client_->wait_for_service(std::chrono::seconds(1)))
+    {
+        if (!rclcpp::ok()){
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
+            return;
+        }
+        RCLCPP_INFO(node_->get_logger(), "change_planner_params service not available, waiting again...");
+    }
+
+    // Send the request asynchronously
+    auto response_future = changePlannerTolerances_client_->async_send_request(request);
+
+    // Wait until the future is completed
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call service change_planner_params");
+        return;
+    }
+
+    // If the service call was successful, process the response
+    auto response = response_future.get();
+    if (response->success)
+    {
+        RCLCPP_INFO(node_->get_logger(), "Planner params changed: position_tolerance = %f, orientation_tolerance = %f, joint_tolerance = %f", position, orientation, joint);
     }
     else
     {
@@ -1644,15 +1685,28 @@ void ManipulatorMenu::userSetRealTimeControl()
     setJsRealTimeControl(set);
 }
 
-void ManipulatorMenu::userSetPlannerParams()
+void ManipulatorMenu::userSetPlannerScalingFactors()
 {
     float new_vel, new_acc;
     std::cout << "Enter the new velocity factor: \n";
     std::cin >> new_vel;
     std::cout << "Enter the new acceleration factor: \n";
     std::cin >> new_acc;
-    setNewPlannerParams(new_vel, new_acc);
+    setPlannerScalingFactors(new_vel, new_acc);
 }
+
+void ManipulatorMenu::userSetPlannerTolerances()
+{
+    float positon, orientation, joint;
+    std::cout << "Enter the new position tolerance: \n";
+    std::cin >> positon;
+    std::cout << "Enter the new orientation tolerance: \n";
+    std::cin >> orientation;
+    std::cout << "Enter the new joint tolerance: \n";
+    std::cin >> joint;
+    setPlannerTolerances(positon, orientation, joint);
+}
+
 
 // --------------------- GRIPPER HANDLERS ------------------------
 
@@ -1763,7 +1817,8 @@ void ManipulatorMenu::initializeMenu(){
     //Setters
     menu_->addChoice("Set Jacobian speed control", &ManipulatorMenu::userSetJacobianSpeedControl);
     menu_->addChoice("Set joints real time control", &ManipulatorMenu::userSetRealTimeControl);
-    menu_->addChoice("Set new planner parameters", &ManipulatorMenu::userSetPlannerParams);
+    menu_->addChoice("Set new planner velocity and acceleration factors", &ManipulatorMenu::userSetPlannerScalingFactors);
+    menu_->addChoice("Set new planner tolerances", &ManipulatorMenu::userSetPlannerTolerances);
     menu_->addSection("Setters", section_start, menu_->last_);
     section_start = menu_->last_ + 1;
 

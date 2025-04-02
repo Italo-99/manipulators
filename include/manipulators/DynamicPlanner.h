@@ -63,7 +63,6 @@ class DynamicPlanner
         ~DynamicPlanner();
 
         void initialize(); //Initialize the dynamic planner (vars, subscribers, publishers, ...)
-        void spinner(); 
 
         // Current joints values 
         std::vector<double> joints_values_group_;

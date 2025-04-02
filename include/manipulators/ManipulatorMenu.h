@@ -36,7 +36,8 @@
 #include "manipulator_interfaces/srv/pseudo_inverse.hpp"
 #include "manipulator_interfaces/srv/f_kine.hpp"
 #include "manipulator_interfaces/srv/jacobian.hpp"
-#include "manipulator_interfaces/srv/change_planner_parameters.hpp"
+#include "manipulator_interfaces/srv/change_planner_tolerances.hpp"
+#include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
 #include "manipulator_interfaces/msg/trajectory_result.hpp"
@@ -194,8 +195,9 @@ class ManipulatorMenu
 
         // Kinematics params setters
         void setJacobianSpeedControl(bool);
-        void setNewPlannerParams(float,float);
         void setJsRealTimeControl(bool);
+        void setPlannerScalingFactors(float,float);
+        void setPlannerTolerances(float,float,float);
 
     private:
 
@@ -241,7 +243,8 @@ class ManipulatorMenu
         void userGetJacobian(void);          // Get the jacobian of the manipulator
 
         // Planner params
-        void userSetPlannerParams(void);            // Set the planner parameters
+        void userSetPlannerScalingFactors(void);    // Set the planner velocity and acceleration factors
+        void userSetPlannerTolerances(void);        // Set the planner tolerances
         void userSetJacobianSpeedControl(void);     // Set the jacobian speed control
         void userSetRealTimeControl(void);          // Set the real time control of the joints
 
@@ -273,7 +276,8 @@ class ManipulatorMenu
 
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointState_sub_;
 
-        rclcpp::Client<manipulator_interfaces::srv::ChangePlannerParameters>::SharedPtr changePlannerParams_client_;
+        rclcpp::Client<manipulator_interfaces::srv::ChangePlannerScalingFactors>::SharedPtr changePlannerScalingFactors_client_;
+        rclcpp::Client<manipulator_interfaces::srv::ChangePlannerTolerances>::SharedPtr changePlannerTolerances_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControl_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setRealTimeControl_client_;
         

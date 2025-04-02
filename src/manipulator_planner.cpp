@@ -82,11 +82,21 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         cb_group
     );
 
-    changePlannerParams_service_ = this->create_service<manipulator_interfaces::srv::ChangePlannerParameters>(
-        manipulator_name_ + "/change_planner_params",
-        [this](const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerParameters::Request> request,
-               std::shared_ptr<manipulator_interfaces::srv::ChangePlannerParameters::Response> response) {
-            this->changePlannerParams_callback(request, response);
+    changePlannerScalingFactors_service_ = this->create_service<manipulator_interfaces::srv::ChangePlannerScalingFactors>(
+        manipulator_name_ + "/change_planner_scaling_factors",
+        [this](const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerScalingFactors::Request> request,
+               std::shared_ptr<manipulator_interfaces::srv::ChangePlannerScalingFactors::Response> response) {
+            this->changePlannerScalingFactors_callback(request, response);
+        },
+        rmw_qos_profile_services_default,
+        cb_group
+    );
+
+    changePlannerTolerances_service_ = this->create_service<manipulator_interfaces::srv::ChangePlannerTolerances>(
+        manipulator_name_ + "/change_planner_tolerances",
+        [this](const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerTolerances::Request> request,
+               std::shared_ptr<manipulator_interfaces::srv::ChangePlannerTolerances::Response> response) {
+            this->changePlannerTolerances_callback(request, response);
         },
         rmw_qos_profile_services_default,
         cb_group
@@ -531,9 +541,9 @@ void ManipulatorPlannerNode::getPseudoInverseJacobian_callback(
     response->matrix_values = pseudo_inv_values;
 }
 
-void ManipulatorPlannerNode::changePlannerParams_callback(
-    const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerParameters::Request> request,
-    std::shared_ptr<manipulator_interfaces::srv::ChangePlannerParameters::Response> response
+void ManipulatorPlannerNode::changePlannerScalingFactors_callback(
+    const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerScalingFactors::Request> request,
+    std::shared_ptr<manipulator_interfaces::srv::ChangePlannerScalingFactors::Response> response
 ) {
     /*
     Callback function for the change planner parameters service
@@ -559,6 +569,42 @@ void ManipulatorPlannerNode::changePlannerParams_callback(
     response->success = true;
     RCLCPP_INFO(this->get_logger(), "Planner parameters changed successfully (vel_factor: %f, acc_factor: %f)", params.vel_factor, params.acc_factor);
 }
+
+void ManipulatorPlannerNode::changePlannerTolerances_callback(
+    const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerTolerances::Request> request,
+    std::shared_ptr<manipulator_interfaces::srv::ChangePlannerTolerances::Response> response
+) {
+    /*
+    Callback function for the change planner parameters service
+    Interface:
+        request: 
+            position_tolerance      (float64): Tolerance for tcp position
+            orientation_tolerance   (float64): Tolerance for tcp orientation
+            joint_tolerance         (float64): Tolerance for joint positions
+        response: 
+            success                    (bool): True if the parameters were changed successfully
+    */
+
+    DynamicPlannerParams params = dynamic_planner_->getParams();
+    params.position_tolerance = request->position_tolerance;
+    params.orientation_tolerance = request->orientation_tolerance;
+    params.joint_tolerance = request->joint_tolerance;
+    dynamic_planner_->setParams(params);
+
+    //Also apply changes to the actual parameters of the node
+    rclcpp::Parameter new_position("position_tolerance", params.position_tolerance);
+    rclcpp::Parameter new_orientation("orientation_tolerance", params.orientation_tolerance);
+    rclcpp::Parameter new_joint("joint_tolerance", params.joint_tolerance);
+
+    this->set_parameter(new_position);
+    this->set_parameter(new_orientation);
+    this->set_parameter(new_joint);
+
+    response->success = true;
+    RCLCPP_INFO(this->get_logger(), "Planner parameters changed successfully (position_tolerance: %f, orientation_tolerance: %f, joint_tolerance: %f)", 
+                params.position_tolerance, params.orientation_tolerance, params.joint_tolerance);
+}
+
 
 void ManipulatorPlannerNode::tcpGoal_callback(const manipulator_interfaces::msg::TcpGoal::SharedPtr msg) 
 {

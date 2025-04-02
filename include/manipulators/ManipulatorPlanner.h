@@ -16,7 +16,8 @@
 #include "manipulator_interfaces/srv/f_kine.hpp"
 #include "manipulator_interfaces/srv/inv_kine.hpp"
 #include "manipulator_interfaces/srv/jacobian.hpp"
-#include "manipulator_interfaces/srv/change_planner_parameters.hpp"
+#include "manipulator_interfaces/srv/change_planner_tolerances.hpp"
+#include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
 #include "manipulator_interfaces/srv/pseudo_inverse.hpp"
 
 class ManipulatorPlannerNode : public rclcpp::Node {
@@ -109,9 +110,14 @@ class ManipulatorPlannerNode : public rclcpp::Node {
             manipulator_interfaces::srv::PseudoInverse::Response::SharedPtr response
         );
 
-        void changePlannerParams_callback(
-            const manipulator_interfaces::srv::ChangePlannerParameters::Request::SharedPtr request,
-            manipulator_interfaces::srv::ChangePlannerParameters::Response::SharedPtr response
+        void changePlannerScalingFactors_callback(
+            const manipulator_interfaces::srv::ChangePlannerScalingFactors::Request::SharedPtr request,
+            manipulator_interfaces::srv::ChangePlannerScalingFactors::Response::SharedPtr response
+        );
+
+        void changePlannerTolerances_callback(
+            const manipulator_interfaces::srv::ChangePlannerTolerances::Request::SharedPtr request,
+            manipulator_interfaces::srv::ChangePlannerTolerances::Response::SharedPtr response
         );
 
         void jointsRealTimeSetter_callback( // Set the real time joints speed based control
@@ -175,9 +181,10 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Service<manipulator_interfaces::srv::InvKine>::SharedPtr invkine_service_;
         rclcpp::Service<manipulator_interfaces::srv::Jacobian>::SharedPtr jacobian_service_;
         rclcpp::Service<manipulator_interfaces::srv::PseudoInverse>::SharedPtr pseudoInverse_service_;
-        rclcpp::Service<manipulator_interfaces::srv::ChangePlannerParameters>::SharedPtr changePlannerParams_service_;
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jointsRealTimeSetter_service_;
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jacobianControlSetter_service_;
+        rclcpp::Service<manipulator_interfaces::srv::ChangePlannerTolerances>::SharedPtr changePlannerTolerances_service_;
+        rclcpp::Service<manipulator_interfaces::srv::ChangePlannerScalingFactors>::SharedPtr changePlannerScalingFactors_service_;
 
         //Subscribers
         rclcpp::Subscription<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpGoal_sub_;                         //Subscriber for TCP goal (cartesian space goals) requests
