@@ -319,15 +319,9 @@ void ManipulatorMenu::spinnerMenu()
 void ManipulatorMenu::spinner()
 {
     // Setup a rate for ROS loop execution
-    rclcpp::Rate r(params_.ros_freq);
-
-    // ROS loop
-    while (rclcpp::ok())
-    {
-        // ROS spinner
-        rclcpp::spin_some(node_->get_node_base_interface());
-        r.sleep();
-    }
+    rclcpp::executors::SingleThreadedExecutor executor;
+    executor.add_node(node_);
+    executor.spin();
 
     // Shutdown ROS if Ctrl+C or Ctrl+D are pressed
     rclcpp::shutdown();
