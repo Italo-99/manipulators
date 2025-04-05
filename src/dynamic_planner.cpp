@@ -541,7 +541,7 @@ std::vector<double> DynamicPlanner::invKine(const geometry_msgs::msg::Pose &targ
     moveit::core::RobotStatePtr kinematic_state = getRobotState();
     const moveit::core::JointModelGroup *joint_model_group = kinematic_state->getJointModelGroup(planning_group_);
 
-    std::vector<double> joint_values;getGlobalLinkTransform
+    std::vector<double> joint_values;
 
     bool success = kinematic_state->setFromIK(
         joint_model_group,
