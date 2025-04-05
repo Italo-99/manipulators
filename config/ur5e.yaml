@@ -14,7 +14,7 @@ vel_factor:             0.2
 
 acc_factor:             0.2
 
-ros_freq:               500       # ROS loop frequency (update rate of callbacks)
+ros_freq:               500        # ROS loop frequency (update rate of callbacks)
 
 inst_kine:              true      # True if the motors instantaneously reach the goal after an invKine computation
 

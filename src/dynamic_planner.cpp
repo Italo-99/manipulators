@@ -523,7 +523,8 @@ geometry_msgs::msg::PoseStamped DynamicPlanner::getFKine(const std::vector<doubl
 geometry_msgs::msg::PoseStamped DynamicPlanner::getFKine(const std::string &end_effector_link)
 {
     return getFKine(
-        move_group_->getCurrentJointValues(),
+        // move_group_->getCurrentJointValues(),
+        joints_values_group_,
         end_effector_link
     );
 }
@@ -540,7 +541,7 @@ std::vector<double> DynamicPlanner::invKine(const geometry_msgs::msg::Pose &targ
     moveit::core::RobotStatePtr kinematic_state = getRobotState();
     const moveit::core::JointModelGroup *joint_model_group = kinematic_state->getJointModelGroup(planning_group_);
 
-    std::vector<double> joint_values;
+    std::vector<double> joint_values;getGlobalLinkTransform
 
     bool success = kinematic_state->setFromIK(
         joint_model_group,

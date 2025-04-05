@@ -212,6 +212,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::executors::MultiThreadedExecutor executor_;     //Executor for accessory nodes (e.g. dynamic planner)
         double spinner_mean_ = 0.0;                             //Mean value for the time taken for each iteration of the spinner
         rclcpp::TimerBase::SharedPtr mainloop_timer_;           //Timer for the main loop
+        rclcpp::TimerBase::SharedPtr tcpPose_timer_;            //Timer for publishing tcp pose
+        rclcpp::TimerBase::SharedPtr tcpVel_timer_;             //Timer for publishing tcp velocity
 
         //Real time control variables
         bool   jac_control_ = false;            // True if the speed control through inverse Jacobian has been enabled

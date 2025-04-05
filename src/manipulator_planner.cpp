@@ -227,36 +227,48 @@ void ManipulatorPlannerNode::spinner() {
 
     rclcpp::Clock steady_clock(RCL_STEADY_TIME);
 
+
     mainloop_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
         [&, this]() {
             // This is the main loop for the node
             auto start_time = steady_clock.now();
 
-            // Jacobian speed control
             if (jac_control_) {
-                // Publish tcp pose
-                tcpPose_pub_->publish(getFKine());
-                // Publish tcp speed
-                tcpVel_pub_->publish(getTcpVel());
-                // Update vel cmd
+                // Jacobian control
                 jacobianControl();    
             }
             else if (js_rt_control_) {
-                // Publish tcp pose
-                tcpPose_pub_->publish(getFKine());
-                // Publish tcp speed
-                tcpVel_pub_->publish(getTcpVel());
-                // Update joints vel command
+                // Real-time joint speed control
                 jointsRealTimeControl();
             }
             
             // Calculate the mean time for each iteration of the spinner
-            double elapsed_time = (steady_clock.now() - start_time).nanoseconds() / 1e6; // Convert to milliseconds
+            double elapsed_time = (steady_clock.now() - start_time).seconds();
             spinner_mean_ = (spinner_mean_ * static_cast<double>(num_samples) + elapsed_time) / static_cast<double>(num_samples + 1);
             num_samples++;
 
             rate.sleep();
+        }
+    );
+    
+    tcpPose_timer_ = this->create_wall_timer(
+        std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
+        [&, this]() {
+            if(jac_control_ || js_rt_control_) {
+                // Publish tcp pose
+                tcpPose_pub_->publish(getFKine());
+            }
+        }
+    );
+
+    tcpVel_timer_ = this->create_wall_timer(
+        std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
+        [&, this]() {
+            if(jac_control_ || js_rt_control_) {
+                // Publish tcp vel
+                tcpVel_pub_->publish(getTcpVel());
+            }
         }
     );
 
@@ -269,7 +281,7 @@ void ManipulatorPlannerNode::spinner() {
 
 void ManipulatorPlannerNode::shutdown_handler(){
     dynamic_planner_->stop(); // Stop the robot
-    RCLCPP_INFO(get_logger(), "Spinner mean time: %f ms", spinner_mean_);
+    RCLCPP_INFO(get_logger(), "Spinner mean time: %f s", spinner_mean_);
 }
 
 //COLLISION OBJECTS
