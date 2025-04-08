@@ -1,13 +1,14 @@
 <?xml version="1.0"?>
 <robot name="$(arg name)" xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <xacro:include filename="$(find manipulators)/models/urdf/ur_robotiq_85_gripper_macro.xacro"/>
+    <xacro:include filename="$(find manipulators)/models/urdf/ur_robotiq_85_gripper_macro.xacro"/>
 
     <xacro:arg name="name" default="ur"/>
     <xacro:arg name="ur_type" default="ur5e"/>
     <xacro:arg name="tf_prefix" default=""/>
     <xacro:arg name="joint_limits_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
     <xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/default_kinematics.yaml"/>
+    <xacro:arg name="camera" default="true" />
 
     <link name="world" />
 
@@ -20,5 +21,23 @@
         kinematics_parameters_file="$(arg kinematics_parameters_file)"
     >
     </xacro:ur_robotiq_85_gripper>
+
+    <xacro:property name="camera" value="$(arg camera)"/>
+
+    <xacro:if value="${camera}">
+        <xacro:include filename="$(find realsense2_description)/urdf/_d435i.urdf.xacro"/>
+        <link name="d435i_base_link" />
+        <joint name="tool0-d4351_base_link" type="fixed">
+            <parent link="tool0"/>
+            <child link="d435i_base_link"/>
+            <origin xyz="0 -0.09 0" rpy="0 -1.57 1.57"/>
+        </joint>
+
+        <xacro:sensor_d435i parent="d435i_base_link" name="camera">
+            <origin xyz="0 0 0" rpy="0 0 0" />
+        </xacro:sensor_d435i>
+
+    </xacro:if>
+
 
 </robot>

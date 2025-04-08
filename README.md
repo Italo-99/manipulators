@@ -3,7 +3,7 @@
 ### 1. Pre-requisites
  - Ubuntu 22.04 (LTS)
  - Ros 2 Humble
- - Moveit2 installed [(Guide)](https://moveit.picknik.ai/main/doc/tutorials/getting_started/getting_started.html)
+ - Moveit2 installed [(Guide)](https://moveit.ai/install-moveit2/source/)
 
 ### 2. Creating the workspace
 
@@ -30,6 +30,10 @@ Do the same with this package and use only the robotiq_85_description package:
 
     git clone https://github.com/PickNikRobotics/robotiq_85_gripper.git
     mv robotiq_85_gripper/robotiq_85_description <WORKSPACE_PATH>/src/robotiq_85_description
+
+Install the realsense package:
+
+    sudo apt install ros-humble-realsense2-*
 
 ### 4. Fix known issues
 
