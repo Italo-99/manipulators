@@ -48,7 +48,7 @@ class JoystickController : public rclcpp::Node
     
 
         //Commands
-        void publishCmd();                          //Publish velocity commands to manipulator
+        virtual void publishCmd();                        //Publish velocity commands to manipulator
         void setJacobianSpeedControl(const bool value);   //Set jacobian control
         void setJsRealTimeControl(const bool value);      //Set joints real time control
         void moveGripper(const bool closed);              //Move gripper
