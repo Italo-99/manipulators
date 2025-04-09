@@ -21,6 +21,7 @@
         kinematics_parameters_file="$(arg kinematics_parameters_file)"
     >
     </xacro:ur_robotiq_85_gripper>
+    
 
     <xacro:property name="camera" value="$(arg camera)"/>
 
@@ -30,7 +31,7 @@
         <joint name="tool0-d4351_base_link" type="fixed">
             <parent link="tool0"/>
             <child link="d435i_base_link"/>
-            <origin xyz="0 -0.09 0" rpy="0 -1.57 1.57"/>
+            <origin xyz="0 -0.0775 0.024" rpy="0 -1.57 1.57"/>
         </joint>
 
         <xacro:sensor_d435i parent="d435i_base_link" name="camera">

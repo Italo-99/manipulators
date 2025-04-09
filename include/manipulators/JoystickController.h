@@ -3,6 +3,7 @@
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "std_srvs/srv/set_bool.hpp"
+#include "manipulator_interfaces/msg/joint_goal.hpp"
 #include <signal.h>
 
 enum AxesMap {
@@ -45,13 +46,13 @@ class JoystickController : public rclcpp::Node
     
         //Shutdown handler
         void shutdown_handler();
-    
 
         //Commands
         virtual void publishCmd();                        //Publish velocity commands to manipulator
         void setJacobianSpeedControl(const bool value);   //Set jacobian control
         void setJsRealTimeControl(const bool value);      //Set joints real time control
         void moveGripper(const bool closed);              //Move gripper
+        void jointGoal(const std::vector<double>& goal);  //Move manipulator to a joint goal (angles in degrees)
 
         rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;                    //Receive commands from joystick
 
@@ -74,6 +75,7 @@ class JoystickController : public rclcpp::Node
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControl_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJsRealTimeControl_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr moveGripper_client_;
+        rclcpp::Publisher<manipulator_interfaces::msg::JointGoal>::SharedPtr jointGoal_pub_;
 
         rclcpp::executors::MultiThreadedExecutor executor_;
         rclcpp::TimerBase::SharedPtr mainloop_timer_;

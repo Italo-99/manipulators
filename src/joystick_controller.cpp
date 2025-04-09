@@ -211,6 +211,20 @@ void JoystickController::moveGripper(const bool close){
     // }
 }
 
+void JoystickController::jointGoal(const std::vector<double>& goal){
+    manipulator_interfaces::msg::JointGoal msg;
+    sensor_msgs::msg::JointState js_goal;
+    js_goal.name = joint_names_;
+    for (size_t i = 0; i < joint_names_.size(); ++i){
+        js_goal.position.push_back(goal[i] / 180.0 * M_PI);
+    }
+
+    msg.joint_goal = js_goal;
+    msg.execute = true;
+    
+    jointGoal_pub_->publish(msg);
+}
+
 void JoystickController::spinner(){
     rclcpp::Rate rate(ros_freq_);
 

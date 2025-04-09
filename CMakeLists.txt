@@ -49,6 +49,7 @@ set(JOYSTICK_CONTROLLER_DEPENDS
     geometry_msgs
     sensor_msgs
     std_srvs
+    manipulator_interfaces
 )
 
 if(BUILD_TESTING)
