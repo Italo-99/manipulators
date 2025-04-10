@@ -25,6 +25,7 @@ find_package(moveit_msgs REQUIRED)
 find_package(moveit_visual_tools REQUIRED)
 find_package(manipulator_interfaces REQUIRED)
 find_package(motors_trajectory REQUIRED)
+find_package(rviz_visual_tools REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 # ---------------- VARIABLES -----------------
@@ -104,6 +105,7 @@ ament_target_dependencies(manipulator_planner
     moveit_ros_planning
     moveit_ros_planning_interface
     moveit_visual_tools
+    rviz_visual_tools
     manipulator_interfaces
 )
 

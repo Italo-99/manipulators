@@ -106,6 +106,8 @@ class ManipulatorMenu
             const geometry_msgs::msg::Pose tcpPoseMsg, 
             const std::vector<double> start_state = std::vector<double>(), 
             const bool execute=true);
+
+        void publishCartesianGoal(const std::vector<geometry_msgs::msg::Pose> waypoints);
             
         sensor_msgs::msg::JointState oneJointMove(const int num, const double joint_rot); // to execute rotation of a single joint
         sensor_msgs::msg::JointState goHome(const bool);                                  // to setup home position
@@ -269,6 +271,7 @@ class ManipulatorMenu
         // Ros
         rclcpp::Publisher<manipulator_interfaces::msg::JointGoal>::SharedPtr jointGoal_pub_;   
         rclcpp::Publisher<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpGoal_pub_;
+        rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr cartesianPlan_pub_;
 
         rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr displayGoal_pub_;
         rclcpp::Publisher<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObject_pub_;

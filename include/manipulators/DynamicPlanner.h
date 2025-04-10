@@ -13,18 +13,20 @@
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/u_int32.hpp>
 #include <tf2/convert.h>
+#include "rviz_visual_tools/rviz_visual_tools.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
+#include "visualization_msgs/msg/marker.hpp"
+#include "manipulator_interfaces/msg/joint_goal.hpp"
+#include "manipulator_interfaces/msg/tcp_goal.hpp"
+#include "manipulator_interfaces/msg/trajectory_result.hpp"
 
 //MoveIt2 Imports
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
-#include <moveit_msgs/msg/robot_trajectory.hpp>
-#include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
-#include "manipulator_interfaces/msg/joint_goal.hpp"
-#include "manipulator_interfaces/msg/tcp_goal.hpp"
-#include "manipulator_interfaces/msg/trajectory_result.hpp"
+#include <moveit_msgs/msg/robot_trajectory.hpp>
 
 // Struct definition of the parameters of the Dynamic Planner
 struct DynamicPlannerParams
@@ -36,9 +38,9 @@ struct DynamicPlannerParams
     double acc_factor               = 1.;                        // acceleration factor
     double sample_time              = 0.002;                     // sample time for cartesian planner (seconds)
     double max_velocity             = 0.5;                       // maximum ee velocity for cartesian planner
-    double position_tolerance       = 0.01;                      // tolerance for tcp position
-    double orientation_tolerance    = 0.01;                      // tolerance for tcp orientation
-    double joint_tolerance          = 0.01;                      // tolerance for joint positions
+    double position_tolerance       = 0.01;                      // tolerance for tcp position (m)
+    double orientation_tolerance    = 0.01;                      // tolerance for tcp orientation (rad)
+    double joint_tolerance          = 0.01;                      // tolerance for joint positions (rad)
     std::string world_frame         = "base_link";               // world frame
     std::string end_effector_link   = "tool0";                   // end effector link
 
@@ -198,6 +200,12 @@ class DynamicPlanner
         void updatePlannerParams();                                     //Update the planner parameters with values stored in params_
         geometry_msgs::msg::PoseStamped toPoseStamped(const Eigen::Isometry3d& pose, const std::string &frame_id=""); //Converts an Eigen pose to a PoseStamped message
 
+        // --------------- VISUALIZATION ----------------
+        //Visualize a primitive
+        void visualizePrimitive(const shape_msgs::msg::SolidPrimitive &primitive, 
+                                const geometry_msgs::msg::Pose &pose, 
+                                const std::vector<double> rgba_color = {0.0, 0.0, 0.0, 0.1}); 
+
         //ROS Node
         //NOTE: It's critical for this node to be always spinning!
         rclcpp::Node::SharedPtr node_;
@@ -216,7 +224,8 @@ class DynamicPlanner
         std::shared_ptr<moveit::planning_interface::MoveGroupInterface> move_group_;
         std::shared_ptr<moveit::planning_interface::PlanningSceneInterface> planning_scene_interface_;
         std::shared_ptr<planning_scene::PlanningScene> planning_scene_;
-        std::shared_ptr<moveit_visual_tools::MoveItVisualTools> visual_tools_;
+        std::shared_ptr<moveit_visual_tools::MoveItVisualTools> moveit_visual_tools_;
+        rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;
 
         //Robot model
         robot_model_loader::RobotModelLoaderPtr robot_model_loader_;

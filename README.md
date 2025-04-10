@@ -35,6 +35,10 @@ Install the realsense package:
 
     sudo apt install ros-humble-realsense2-*
 
+Install rviz visual tools:
+
+    sudo apt install ros-humble-rviz-visual-tools
+
 ### 4. Fix known issues
 
 1) The URDF files in the ur_description package have some links that are rotated 180 degrees which will make the manipulator work in unexpected ways, to fix this issues go to `ur_description/urdf/ur_macro.xacro` and make the following changes:
@@ -59,7 +63,17 @@ Install the realsense package:
     + goal_bias: 0.05
     ```
 
-3) Further optimization for planning can be done by using a different kinematic solver and changing joint limits:
+3) Make RRTConnect default planner and enable constraints in `ur_moveit_config/config/ompl_planning.yaml`:
+
+    At line 70, under `ur_manipulator`:
+
+    ```diff
+    + projection_evaluator: joints(shoulder_pan_joint,shoulder_lift_joint)
+    + enforce_constrained_state_space: true
+    + default_planner:: RRTConnect
+    ```
+
+4) Further optimization for planning can be done by using a different kinematic solver and changing joint limits:
 
     In `ur_moveit_config/config/kinematics.yaml`:
 

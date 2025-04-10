@@ -49,11 +49,15 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
     planning_scene_ = std::make_shared<planning_scene::PlanningScene>(robot_model_);
 
     //Initialize visual tools
-    namespace rvt = rviz_visual_tools;
-    visual_tools_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(node_,
-                                                                             "base_link", 
-                                                                             "/moveit_visual_markers", 
-                                                                             move_group_->getRobotModel());
+    //Moveit
+    // namespace rvt = rviz_visual_tools;
+    // moveit_visual_tools_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(node_,
+    //                                                                          "base_link", 
+    //                                                                          "/moveit_visual_markers", 
+    //                                                                          move_group_->getRobotModel());
+
+    //Rviz
+    rviz_visual_tools_.reset(new rviz_visual_tools::RvizVisualTools(world_frame_, "/moveit_visual_markers", node_));
 
     //Initialize time optimal trajectory generation
     time_optimal_traj_gen = std::make_shared<trajectory_processing::TimeOptimalTrajectoryGeneration>(
@@ -75,7 +79,7 @@ DynamicPlanner::~DynamicPlanner()
     planning_scene_interface_.reset();
     planning_scene_.reset();
     robot_model_loader_.reset();
-    visual_tools_.reset();
+    //moveit_visual_tools_.reset();
     node_.reset();
 }
 
@@ -276,6 +280,7 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
     double fraction = 0.0;
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
+    manipulator_interfaces::msg::TrajectoryResult result_msg;
     moveit_msgs::msg::RobotTrajectory trajectory;
 
     for (int k = 0; k < params_.num_attempts; k++)
@@ -290,10 +295,18 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
         if (fraction > 0.0) {break;}
     }
     // Resample trajectory time
-    for (unsigned int k = 0; k < trajectory.joint_trajectory.points.size(); k++)
-    {
-        trajectory.joint_trajectory.points[k].time_from_start = rclcpp::Duration::from_seconds((double)((k)*params_.sample_time));
-    }  
+    bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
+
+    if (!totg_success){
+        result_msg.success = false;
+        result_msg.message = "Time optimal trajectory generation failed";
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
+        result_msg.trajectory = trajectory;
+        
+        setTrajectory(moveit_msgs::msg::RobotTrajectory());
+        trajectory_pub_->publish(result_msg);
+        return -1.0;
+    }
 
     // Display results
     RCLCPP_INFO(node_->get_logger(), 
@@ -301,12 +314,14 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
                 fraction * 100.0,
                 std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start).count());
   
-    // Display and send trajectory
-    //trajectoryVisualizer(trajectory_);
-    // For the robot driver
+    
     setTrajectory(trajectory);
-    // For simulated robot
-    if (fraction > 0.0) {moveRobot();}
+
+    result_msg.success = true;
+    result_msg.message = "Trajectory planned successfully";
+    result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
+    result_msg.trajectory = trajectory;
+    trajectory_pub_->publish(result_msg);
 
     return fraction;
 }
@@ -408,11 +423,6 @@ std::shared_ptr<moveit::planning_interface::PlanningSceneInterface> DynamicPlann
     return planning_scene_interface_;
 }
 
-std::shared_ptr<moveit_visual_tools::MoveItVisualTools> DynamicPlanner::getVisualTools() const
-{
-    return visual_tools_;
-}
-
 DynamicPlannerParams DynamicPlanner::getParams() const
 {
     return params_;
@@ -486,6 +496,20 @@ std::vector<double> DynamicPlanner::getNamedTarget(const std::string &target_nam
 void DynamicPlanner::setPathConstraints(const moveit_msgs::msg::Constraints &constraints)
 {
     move_group_->setPathConstraints(constraints);
+
+    rviz_visual_tools_->deleteAllMarkers();
+
+    for (const auto &constraint : constraints.position_constraints)
+    {
+        for(size_t i {0}; i < constraint.constraint_region.primitives.size(); i++)
+        {
+            const auto &primitive = constraint.constraint_region.primitives[i];
+            const auto &pose = constraint.constraint_region.primitive_poses[i];
+
+            // Visualize the primitive
+            visualizePrimitive(primitive, pose);
+        }
+    }
 }
 
 moveit_msgs::msg::Constraints DynamicPlanner::getPathConstraints() const
@@ -496,6 +520,7 @@ moveit_msgs::msg::Constraints DynamicPlanner::getPathConstraints() const
 void DynamicPlanner::clearPathConstraints()
 {
     move_group_->clearPathConstraints();
+    rviz_visual_tools_->deleteAllMarkers();
 }
 
 // ------------------------------------- FORWARD KINEMATICS ------------------------------------
@@ -884,4 +909,83 @@ geometry_msgs::msg::PoseStamped DynamicPlanner::toPoseStamped(const Eigen::Isome
     pose_stamped.pose.orientation.w = quat.w();
 
     return pose_stamped;
+}
+
+// ------------------------------------- VISUALIZATION METHODS -------------------------------------
+
+void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &primitive, 
+                                        const geometry_msgs::msg::Pose &primitive_pose,
+                                        const std::vector<double> rgba_color)
+{
+    /*
+    Visualizes the primitive
+    Args:
+        primitive: The primitive to visualize
+        primitive_pose: The pose of the primitive
+        rgba_color: Color in rgba format
+    */
+    if (rviz_visual_tools_ == nullptr)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Rviz visual tools not initialized");
+        return;
+    }
+
+    //Create a color message
+    std_msgs::msg::ColorRGBA color;
+    color.r = rgba_color[0];
+    color.g = rgba_color[1];
+    color.b = rgba_color[2];
+    color.a = rgba_color[3];
+
+    //Iterate over each primitive and add publish the shape through rviz visual tools
+
+    switch(primitive.type)
+    {
+        case shape_msgs::msg::SolidPrimitive::BOX:
+        {
+            rviz_visual_tools_->publishCuboid(
+                primitive_pose,
+                primitive.dimensions[0],
+                primitive.dimensions[1],
+                primitive.dimensions[2],
+                color
+            );
+            break;
+        }
+        case shape_msgs::msg::SolidPrimitive::SPHERE:
+        {
+            geometry_msgs::msg::Vector3 scale;
+            scale.x = primitive.dimensions[0];
+            scale.y = primitive.dimensions[0];
+            scale.z = primitive.dimensions[0];
+
+            rviz_visual_tools_->publishSphere(
+                primitive_pose,
+                color,
+                scale
+            );
+            break;
+        }
+        case shape_msgs::msg::SolidPrimitive::CYLINDER:
+        {
+            rviz_visual_tools_->publishCylinder(
+                primitive_pose,
+                color,
+                primitive.dimensions[0],
+                primitive.dimensions[1]
+            );
+            break;
+        }
+        case shape_msgs::msg::SolidPrimitive::CONE:
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Cones are not supported yet");
+            break;
+        }
+        default:
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Unknown primitive type");
+            break;
+        }
+    }
+    
 }

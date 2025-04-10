@@ -26,6 +26,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
     jointGoal_pub_               = node_->create_publisher<manipulator_interfaces::msg::JointGoal>(params_.manipulator_name+"/joint_goal", 1);
     tcpGoal_pub_                 = node_->create_publisher<manipulator_interfaces::msg::TcpGoal>(params_.manipulator_name+"/tcp_goal", 1);
+    cartesianPlan_pub_           = node_->create_publisher<geometry_msgs::msg::PoseArray>(params_.manipulator_name+"/cartesian_plan", 1);
     displayGoal_pub_             = node_->create_publisher<geometry_msgs::msg::PoseStamped>(params_.manipulator_name+"/display_robot_goal", 1);
     collisionObject_pub_         = node_->create_publisher<moveit_msgs::msg::CollisionObject>(params_.manipulator_name+"/collision_object", 1);
     attachedCollisionObject_pub_ = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(params_.manipulator_name+"/attached_collision_object", 1);
@@ -371,11 +372,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(const geometry_msgs::ms
     return tcp_pose;
 }
 
-// Move a single joint, joint rotation must be in deg
 sensor_msgs::msg::JointState ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 {
-    // Read from subscribers the current joints state
-    rclcpp::spin_some(node_->get_node_base_interface());
     // Fill current joints pose as target
     std::vector<double> joint_target;
     for (unsigned long k = 0; k < params_.joint_names.size(); k++)
@@ -385,6 +383,20 @@ sensor_msgs::msg::JointState ManipulatorMenu::oneJointMove(const int num, const 
     // Change the joint target position
     joint_target[num] = joint_target[num] + joint_rot;
     return publishJointGoal(joint_target);
+}
+
+void ManipulatorMenu::publishCartesianGoal(const std::vector<geometry_msgs::msg::Pose> waypoints)
+{
+    geometry_msgs::msg::PoseArray waypoints_msg;
+    waypoints_msg.header.frame_id = params_.base_link_name;
+    waypoints_msg.header.stamp = node_->now();
+
+    for (const auto& waypoint : waypoints)
+    {
+        waypoints_msg.poses.push_back(waypoint);
+    }
+
+    cartesianPlan_pub_->publish(waypoints_msg);
 }
 
 // Go to pre configured home position
@@ -590,13 +602,14 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
 geometry_msgs::msg::Pose ManipulatorMenu::move_along_x(const double x_step, bool linear)
 {
     // Get current EE pose
-    std::vector<double> goal_pose = getEEpos_rpy();
+    geometry_msgs::msg::Pose goal_pose = getEEpose();
     // Update position along X
-    goal_pose[0] = goal_pose[0] + x_step;
+    goal_pose.position.x += x_step;
+
     if (linear)
     {
-        //TODO: implement linear movement using constraints
-        return geometry_msgs::msg::Pose();
+        publishCartesianGoal({goal_pose});
+        return goal_pose;
     }
     else
     {
@@ -605,16 +618,17 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_x(const double x_step, bool
 }
 
 // Set a carthesian move along x axis in metres
-geometry_msgs::msg::Pose ManipulatorMenu::move_along_y(const double y_step, bool cartesian)
+geometry_msgs::msg::Pose ManipulatorMenu::move_along_y(const double y_step, bool linear)
 {
     // Get current EE pose
-    std::vector<double> goal_pose = getEEpos_rpy();
+    geometry_msgs::msg::Pose goal_pose = getEEpose();
     // Update position along Y
-    goal_pose[1] = goal_pose[1] + y_step;
-    if (cartesian)
+    goal_pose.position.y += y_step;
+
+    if (linear)
     {
-        //TODO: implement linear movement using constraints
-        return geometry_msgs::msg::Pose();
+        publishCartesianGoal({goal_pose});
+        return goal_pose;
     }
     else
     {
@@ -623,16 +637,17 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_y(const double y_step, bool
 }
 
 // Set a carthesian move along x axis in metres
-geometry_msgs::msg::Pose ManipulatorMenu::move_along_z(const double z_step, bool cartesian)
+geometry_msgs::msg::Pose ManipulatorMenu::move_along_z(const double z_step, bool linear)
 {
     // Get current EE pose
-    std::vector<double> goal_pose = getEEpos_rpy();
-    goal_pose[2] = goal_pose[2] + z_step;
+    geometry_msgs::msg::Pose goal_pose = getEEpose();
     // Update position along Z
-    if (cartesian)
+    goal_pose.position.z += z_step;
+
+    if (linear)
     {
-        //TODO: implement linear movement using constraints
-        return geometry_msgs::msg::Pose();
+        publishCartesianGoal({goal_pose});
+        return goal_pose;
     }
     else
     {
@@ -1358,7 +1373,7 @@ void ManipulatorMenu::userMoveAlongX()
     double x_step = 0.0;
     std::cout << "Enter the step along X axis in meters: \n";
     std::cin >> x_step;
-    move_along_x(x_step, false); 
+    move_along_x(x_step, true); 
 }
 
 void ManipulatorMenu::userMoveAlongY()
@@ -1366,7 +1381,7 @@ void ManipulatorMenu::userMoveAlongY()
     double y_step = 0.0;
     std::cout << "Enter the step along Y axis in meters: \n";
     std::cin >> y_step;
-    move_along_y(y_step, false);
+    move_along_y(y_step, true);
 }
 
 void ManipulatorMenu::userMoveAlongZ()
@@ -1374,7 +1389,7 @@ void ManipulatorMenu::userMoveAlongZ()
     double z_step = 0.0;
     std::cout << "Enter the step along Z axis in meters: \n";
     std::cin >> z_step;
-    move_along_z(z_step, false);
+    move_along_z(z_step, true);
 }
 
 // --------------------- ROTATIONS HANDLER ---------------------

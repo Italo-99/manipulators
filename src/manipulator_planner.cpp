@@ -167,7 +167,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     cartesianPlan_sub_ = this->create_subscription<geometry_msgs::msg::PoseArray>(
-        manipulator_name_ + "/desired_cartesian_move", 1, 
+        manipulator_name_ + "/cartesian_plan", 1, 
         [this](const geometry_msgs::msg::PoseArray::SharedPtr msg) {
             this->cartesianPlan_callback(msg);
         },
@@ -726,15 +726,16 @@ void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs:
 // Joint positions are computed through InvKine of inputs
 void ManipulatorPlannerNode::cartesianPlan_callback(const geometry_msgs::msg::PoseArray::SharedPtr p_seq)
 {
-  std::vector<geometry_msgs::msg::Pose> waypoints;
-  for (geometry_msgs::msg::Pose point : p_seq->poses)
-  {
-    waypoints.push_back(point);
-  }
+    std::vector<geometry_msgs::msg::Pose> waypoints;
+    for (geometry_msgs::msg::Pose point : p_seq->poses)
+    {
+        waypoints.push_back(point);
+    }
 
-  // Send to joint goal dynamic planner V4
-  double fraction = dynamic_planner_->cartesianPlan(waypoints);
-  if (fraction < 0.01) {RCLCPP_WARN(get_logger(), "Cartesian trajectory unfeasible");}
+    // Send to joint goal dynamic planner V4
+    double fraction = dynamic_planner_->cartesianPlan(waypoints);
+    if (fraction < 0.01) {RCLCPP_WARN(get_logger(), "Cartesian trajectory unfeasible");}
+    else { dynamic_planner_->moveRobot(); }
 }
 
 // Set the jacobian speed based control
