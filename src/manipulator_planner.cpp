@@ -228,6 +228,10 @@ void ManipulatorPlannerNode::spinner() {
     rclcpp::Clock steady_clock(RCL_STEADY_TIME);
 
 
+    auto main_cb_group = this->create_callback_group(
+        rclcpp::CallbackGroupType::Reentrant
+    );
+
     mainloop_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
         [&, this]() {
@@ -249,27 +253,38 @@ void ManipulatorPlannerNode::spinner() {
             num_samples++;
 
             rate.sleep();
-        }
+        },
+        main_cb_group
+    );
+
+    auto tcp_pose_cb_group = this->create_callback_group(
+        rclcpp::CallbackGroupType::MutuallyExclusive
     );
     
     tcpPose_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
         [&, this]() {
-            if(jac_control_ || js_rt_control_) {
+            if(jac_control_ || js_rt_control_ || true) {
                 // Publish tcp pose
                 tcpPose_pub_->publish(getFKine());
             }
-        }
+        },
+        tcp_pose_cb_group
+    );
+
+    auto tcp_vel_cb_group = this->create_callback_group(
+        rclcpp::CallbackGroupType::MutuallyExclusive
     );
 
     tcpVel_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
         [&, this]() {
-            if(jac_control_ || js_rt_control_) {
+            if(jac_control_ || js_rt_control_ || true) {
                 // Publish tcp vel
                 tcpVel_pub_->publish(getTcpVel());
             }
-        }
+        },
+        tcp_vel_cb_group
     );
 
     executor_.spin(); // Start the executor

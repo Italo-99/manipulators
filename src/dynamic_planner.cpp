@@ -340,6 +340,8 @@ void DynamicPlanner::moveRobot(const trajectory_msgs::msg::JointTrajectoryPoint&
     // Fill the name of the joints
     joint_state.name = joint_names_;
     joint_state.position = traj_pt.positions;
+    joint_state.velocity = traj_pt.velocities;
+    joint_state.effort = traj_pt.effort;
     moveRobot(joint_state);
 }
 
