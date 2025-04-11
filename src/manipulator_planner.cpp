@@ -190,6 +190,39 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         sub_options
     );
 
+    jointConstraint_sub_ = this->create_subscription<moveit_msgs::msg::JointConstraint>(
+        manipulator_name_ + "/joint_constraint", 1, 
+        [this](const moveit_msgs::msg::JointConstraint::SharedPtr msg) {
+            this->jointConstraint_callback(msg);
+        },
+        sub_options
+    );
+
+    positionConstraint_sub_ = this->create_subscription<moveit_msgs::msg::PositionConstraint>(
+        manipulator_name_ + "/position_constraint", 1, 
+        [this](const moveit_msgs::msg::PositionConstraint::SharedPtr msg) {
+            this->positionConstraint_callback(msg);
+        },
+        sub_options
+    );
+    
+    orientationConstraint_sub_ = this->create_subscription<moveit_msgs::msg::OrientationConstraint>(
+        manipulator_name_ + "/orientation_constraint", 1, 
+        [this](const moveit_msgs::msg::OrientationConstraint::SharedPtr msg) {
+            this->orientationConstraint_callback(msg);
+        },
+        sub_options
+    );
+
+    clearConstraints_sub_ = this->create_subscription<std_msgs::msg::Empty>(
+        manipulator_name_ + "/clear_constraints", 1, 
+        [this](const std_msgs::msg::Empty::SharedPtr msg) {
+            msg.get();
+            dynamic_planner_->clearPathConstraints();
+        },
+        sub_options
+    );
+
     // Initialize publishers
     j0_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[0] + "/motor_control", 1);
     j1_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[1] + "/motor_control", 1);
@@ -264,7 +297,7 @@ void ManipulatorPlannerNode::spinner() {
     tcpPose_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
         [&, this]() {
-            if(jac_control_ || js_rt_control_ || true) {
+            if(jac_control_ || js_rt_control_) {
                 // Publish tcp pose
                 tcpPose_pub_->publish(getFKine());
             }
@@ -279,7 +312,7 @@ void ManipulatorPlannerNode::spinner() {
     tcpVel_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
         [&, this]() {
-            if(jac_control_ || js_rt_control_ || true) {
+            if(jac_control_ || js_rt_control_) {
                 // Publish tcp vel
                 tcpVel_pub_->publish(getTcpVel());
             }
@@ -827,6 +860,33 @@ void ManipulatorPlannerNode::velJacSetpoint_callback(const geometry_msgs::msg::T
     if (norm_vel > max_speed_ee_) {arm_msg_new_ *= (max_speed_ee_/norm_vel);}
     // double norm_vel = arm_vel_cmd_.head<3>().norm();
     // if (norm_vel > max_speed_ee_) {arm_vel_cmd_ *= (max_speed_ee_/norm_vel);}
+}
+
+void ManipulatorPlannerNode::jointConstraint_callback(const moveit_msgs::msg::JointConstraint::SharedPtr msg)
+{
+    // Add the joint constraint to the planning scene
+    RCLCPP_INFO(this->get_logger(), "Received joint constraint");
+    moveit_msgs::msg::Constraints current_constraints = dynamic_planner_->getPathConstraints();
+    current_constraints.joint_constraints.push_back(*msg.get());
+    dynamic_planner_->setPathConstraints(current_constraints);
+}
+
+void ManipulatorPlannerNode::positionConstraint_callback(const moveit_msgs::msg::PositionConstraint::SharedPtr msg)
+{
+    // Add the position constraint to the planning scene
+    RCLCPP_INFO(this->get_logger(), "Received position constraint");
+    moveit_msgs::msg::Constraints current_constraints = dynamic_planner_->getPathConstraints();
+    current_constraints.position_constraints.push_back(*msg.get());
+    dynamic_planner_->setPathConstraints(current_constraints);
+}
+
+void ManipulatorPlannerNode::orientationConstraint_callback(const moveit_msgs::msg::OrientationConstraint::SharedPtr msg)
+{
+    // Add the orientation constraint to the planning scene
+    RCLCPP_INFO(this->get_logger(), "Received orientation constraint");
+    moveit_msgs::msg::Constraints current_constraints = dynamic_planner_->getPathConstraints();
+    current_constraints.orientation_constraints.push_back(*msg.get());
+    dynamic_planner_->setPathConstraints(current_constraints);
 }
 
 //CONTROL FUNCTIONS

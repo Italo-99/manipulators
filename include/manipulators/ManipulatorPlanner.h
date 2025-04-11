@@ -12,6 +12,7 @@
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 #include "std_msgs/msg/float64.hpp"
+#include "std_msgs/msg/empty.hpp"
 
 #include "manipulator_interfaces/srv/f_kine.hpp"
 #include "manipulator_interfaces/srv/inv_kine.hpp"
@@ -139,6 +140,9 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         void cartesianPlan_callback(const geometry_msgs::msg::PoseArray::SharedPtr waypoints);
         void velJacSetpoint_callback(const geometry_msgs::msg::Twist::SharedPtr &msg); // Update the velocity setpoint of the arm for the jacobian speed based control
         void realTimeSetpoint_callback(const sensor_msgs::msg::JointState::SharedPtr &msg); // Update speed setpoint of the arm for the real time joints speed based control
+        void jointConstraint_callback(const moveit_msgs::msg::JointConstraint::SharedPtr joint_constraint); // Update joint constraints
+        void positionConstraint_callback(const moveit_msgs::msg::PositionConstraint::SharedPtr position_constraint); // Update position constraints
+        void orientationConstraint_callback(const moveit_msgs::msg::OrientationConstraint::SharedPtr orientation_constraint); // Update orientation constraints
 
         // --------------- CONTROL FUNCTIONS ---------------
 
@@ -195,6 +199,10 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr velJacSetpoint_sub_;                             //Subscriber for the velocity setpoint for the jacobian speed based control
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr realTimeSetpoint_sub_;                        //Subscriber for the speed setpoint for the real time joints speed based control
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr execution_ctrl_sub_;                                   //Subscriber for moving and stopping the robot
+        rclcpp::Subscription<moveit_msgs::msg::PositionConstraint>::SharedPtr positionConstraint_sub_;              //Subscriber for position constraints
+        rclcpp::Subscription<moveit_msgs::msg::OrientationConstraint>::SharedPtr orientationConstraint_sub_;        //Subscriber for orientation constraints
+        rclcpp::Subscription<moveit_msgs::msg::JointConstraint>::SharedPtr jointConstraint_sub_;                    //Subscriber for joint constraints
+        rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr clearConstraints_sub_;                                //Subscriber for clearing constraints
 
         //Publishers
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j0_pub_;           // Publisher to j0 motor controller

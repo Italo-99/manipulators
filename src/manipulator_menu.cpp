@@ -30,6 +30,10 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     displayGoal_pub_             = node_->create_publisher<geometry_msgs::msg::PoseStamped>(params_.manipulator_name+"/display_robot_goal", 1);
     collisionObject_pub_         = node_->create_publisher<moveit_msgs::msg::CollisionObject>(params_.manipulator_name+"/collision_object", 1);
     attachedCollisionObject_pub_ = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(params_.manipulator_name+"/attached_collision_object", 1);
+    jointConstraints_pub_        = node_->create_publisher<moveit_msgs::msg::JointConstraint>(params_.manipulator_name+"/joint_constraint", 1);
+    positionConstraints_pub_     = node_->create_publisher<moveit_msgs::msg::PositionConstraint>(params_.manipulator_name+"/position_constraint", 1);
+    orientationConstraints_pub_  = node_->create_publisher<moveit_msgs::msg::OrientationConstraint>(params_.manipulator_name+"/orientation_constraint", 1);
+    clearConstraints_pub_        = node_->create_publisher<std_msgs::msg::Empty>(params_.manipulator_name+"/clear_constraints", 1);
 
     jointState_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
         "/joint_states", 1, 
@@ -50,6 +54,10 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     changePlannerTolerances_client_      = node_->create_client<manipulator_interfaces::srv::ChangePlannerTolerances>(params_.manipulator_name+"/change_planner_tolerances");
 
     getManipulatorParams_client_ = std::make_shared<rclcpp::SyncParametersClient>(node_, "/manipulator_planner");
+
+    tcp_position_tolerance_ = getManipulatorParameter<double>("position_tolerance");
+    tcp_orientation_tolerance_ = getManipulatorParameter<double>("orientation_tolerance");
+    joint_tolerance_ = getManipulatorParameter<double>("joint_tolerance");
 
     // ---------------------- Planning ----------------------
     plannedTrajectory_sub_ = node_->create_subscription<manipulator_interfaces::msg::TrajectoryResult>(
@@ -499,8 +507,6 @@ bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajector
     trajectory_msgs::msg::JointTrajectoryPoint last_traj_pt = trajectory.joint_trajectory.points.back();
     goal_state.position = last_traj_pt.positions;
 
-    double joint_tolerance = getManipulatorParameter<double>("joint_tolerance");
-
     //Set a start time to check for timeout
     rclcpp::Clock steady_clock(RCL_STEADY_TIME);
     auto start_time = steady_clock.now();
@@ -518,7 +524,7 @@ bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajector
         }
         //Repeatedly check joint states to see if the goal has been reached
         for (size_t i {0}; i < goal_state.position.size(); i++){
-            if (std::abs(goal_state.position[i] - current_joint_pose_.position[i]) > joint_tolerance){
+            if (std::abs(goal_state.position[i] - current_joint_pose_.position[i]) > joint_tolerance_){
                 break; //At least one joint is not in the goal position
             }
             return true;
@@ -880,6 +886,74 @@ void ManipulatorMenu::publishAttachedCollisionObject(const moveit_msgs::msg::Att
     attachedCollisionObject_pub_->publish(collisionAttachedObjectMsg);
 }
 
+// ------------------- CONSTRAINTS ---------------------
+
+void ManipulatorMenu::publishJointConstraint(const uint &joint_index,
+                                             const double &position,
+                                             const double &tolerance_below,
+                                             const double &tolerance_above,
+                                             const double &weight)
+{
+    // Create a joint constraint
+    moveit_msgs::msg::JointConstraint constraint;
+    constraint.joint_name = params_.joint_names[joint_index];
+    constraint.position = position / 180.0 * M_PI; // Convert to radians
+    constraint.tolerance_above = tolerance_above / 180.0 * M_PI;
+    constraint.tolerance_below = tolerance_below / 180.0 * M_PI;
+    constraint.weight = weight;
+
+    RCLCPP_INFO(node_->get_logger(), "Joint constraint for joint: %s˚, position: %f˚, tolerance_above: %f˚, tolerance_below: %f˚", constraint.joint_name.c_str(), position, tolerance_above, tolerance_below);
+    
+    jointConstraints_pub_->publish(constraint);
+}
+
+void ManipulatorMenu::publishPositionConstraint(const std::string& link_name, 
+                                                const geometry_msgs::msg::Pose& shape_pose, 
+                                                const uint &shape_type, 
+                                                const std::vector<double>& shape_dims, 
+                                                const double &weight)
+{
+    shape_msgs::msg::SolidPrimitive shape;
+    shape.type = shape_type;
+    for (size_t i = 0; i < shape_dims.size(); ++i)
+    {
+        shape.dimensions.push_back(shape_dims[i]);
+    }
+
+    moveit_msgs::msg::PositionConstraint position_constraint;
+    position_constraint.header.frame_id = params_.base_link_name;
+    position_constraint.link_name = link_name;
+    position_constraint.constraint_region.primitives.push_back(shape);
+    position_constraint.constraint_region.primitive_poses.push_back(shape_pose);
+    position_constraint.weight = weight;
+
+    RCLCPP_INFO(node_->get_logger(), "Position constraint for link: %s, shape type: %d, position: (%fm, %fm, %fm)", link_name.c_str(), shape_type, shape_pose.position.x, shape_pose.position.y, shape_pose.position.z);
+
+    positionConstraints_pub_->publish(position_constraint);
+}
+
+void ManipulatorMenu::publishOrientationConstraint(const std::string& link_name, 
+                                                   const geometry_msgs::msg::Quaternion& orientation, 
+                                                   const std::vector<double> &tolerances,
+                                                   const double &weight)
+{
+    moveit_msgs::msg::OrientationConstraint orientation_constraint;
+    orientation_constraint.header.frame_id = params_.base_link_name;
+    orientation_constraint.link_name = link_name;
+    orientation_constraint.orientation = orientation;
+    orientation_constraint.absolute_x_axis_tolerance = tolerances[0];
+    orientation_constraint.absolute_y_axis_tolerance = tolerances[1];
+    orientation_constraint.absolute_z_axis_tolerance = tolerances[2];
+    orientation_constraint.weight = weight;
+
+
+    std::vector<double> pos_rpy = euler_from_quaternion(orientation);
+    RCLCPP_INFO(node_->get_logger(), "Orientation constraint for link: %s, position: (%f˚, %f˚, %f˚)", link_name.c_str(), pos_rpy[0], pos_rpy[1], pos_rpy[2]);
+
+    orientationConstraints_pub_->publish(orientation_constraint);
+}
+
+
 // ------------------- KINEMATICS PARAMS SETTERS ---------------------- //
 
 // Set Jacobian-based speed control
@@ -967,6 +1041,11 @@ void ManipulatorMenu::setPlannerTolerances(float position, float orientation, fl
     request->position_tolerance = position;
     request->orientation_tolerance = orientation;
     request->joint_tolerance = joint;
+
+    // Update tolerances
+    joint_tolerance_ = joint; 
+    tcp_position_tolerance_ = position; 
+    tcp_orientation_tolerance_ = orientation; 
 
     // Wait for the service to be available
     while (!changePlannerTolerances_client_->wait_for_service(std::chrono::seconds(1)))
@@ -1448,7 +1527,6 @@ void ManipulatorMenu::userGoHomeFront()
 
 void ManipulatorMenu::userJointStateVisualizer()
 {
-    rclcpp::spin_some(node_->get_node_base_interface());
     for (unsigned long k = 0; k < params_.joint_names.size(); k++)
     {
         std::cout << "Joint " << k << " : " << current_joint_pose_.position[k] * 180 / M_PI << std::endl;
@@ -1480,11 +1558,7 @@ void ManipulatorMenu::userAddCollObj()
     // If box chosen
     if (obj_type == 1)
     {
-        obj_dims = {
-            0.,
-            0.,
-            0.,
-        };
+        obj_dims.resize(3, 0.0);
         std::cout << "X dim: ";
         std::cin >> obj_dims[0];
         std::cout << "Y dim: ";
@@ -1495,18 +1569,21 @@ void ManipulatorMenu::userAddCollObj()
     // If sphere chosen
     else if (obj_type == 2)
     {
-        obj_dims = {0.};
-        std::cout << "X dim: ";
+        obj_dims.resize(1, 0.0);
+        std::cout << "Radius: ";
         std::cin >> obj_dims[0];
     }
     // Else
-    else
+    else if (obj_type == 3 || obj_type == 4)
     {
-        obj_dims = {0., 0.};
-        std::cout << "X dim: ";
+        obj_dims.resize(2, 0.0);
+        std::cout << "Height: ";
         std::cin >> obj_dims[0];
-        std::cout << "Y dim: ";
+        std::cout << "Radius: ";
         std::cin >> obj_dims[1];
+    } else {
+        RCLCPP_ERROR(node_->get_logger(), "Invalid object type. Please choose 1, 2, 3 or 4.");
+        return;
     }
 
     std::cout << "Insert position\n";
@@ -1618,6 +1695,128 @@ void ManipulatorMenu::userAddAttachedObj()
     double rot_pos_quat[4] = {rot_quat.x, rot_quat.y, rot_quat.z, rot_quat.w};
 
     addAttachedObj(name, obj_type, obj_dims, obj_pos, rot_pos_quat, 0);
+}
+
+// --------------------- CONSTRAINTS HANDLERS ---------------------
+
+void ManipulatorMenu::userAddJointConstraint(){
+
+    uint joint_index = 0;
+    double position = 0.0;
+    double tolerance_above = 0.0;
+    double tolerance_below = 0.0;
+    double weight = 0.0;
+
+    std::cout << "Enter the joint index: ";
+    std::cin >> joint_index;
+    std::cout << "Enter the joint position: ";
+    std::cin >> position;
+    std::cout << "Enter the tolerance above: ";
+    std::cin >> tolerance_above;
+    std::cout << "Enter the tolerance below: ";
+    std::cin >> tolerance_below;
+    std::cout << "Enter the weight: ";
+    std::cin >> weight;
+
+    publishJointConstraint(joint_index, position, tolerance_above, tolerance_below, weight);
+}
+
+void ManipulatorMenu::userAddPositionConstraint(){
+    std::string link_name;
+    uint shape_type;
+    geometry_msgs::msg::Pose position;
+    std::vector<double> dimensions;
+    std::vector<double> rotation_euler(3, 0.0);
+    double weight = 0.0;
+
+    std::cout << "Enter the link name: ";
+    std::cin >> link_name;
+    std::cout << "Shape type type: 1 for BOX, 2 for SPHERE, 3 for CYLINDER, 4 for CONE.\n";
+    std::cin >> shape_type;
+
+    if (shape_type == 1)
+    {
+        dimensions.resize(3, 0.0);
+        std::cout << "X dim: ";
+        std::cin >> dimensions[0];
+        std::cout << "Y dim: ";
+        std::cin >> dimensions[1];
+        std::cout << "Z dim: ";
+        std::cin >> dimensions[2];
+    }
+    // If sphere chosen
+    else if (shape_type == 2)
+    {
+        dimensions.resize(1, 0.0);
+        std::cout << "Radius: ";
+        std::cin >> dimensions[0];
+    }
+    // Else
+    else if (shape_type == 3 || shape_type == 4)
+    {
+        dimensions.resize(2, 0.0);
+        std::cout << "Height: ";
+        std::cin >> dimensions[0];
+        std::cout << "Radius: ";
+        std::cin >> dimensions[1];
+    } else {
+        RCLCPP_ERROR(node_->get_logger(), "Invalid object type. Please choose 1, 2, 3 or 4.");
+        return;
+    }
+
+    std::cout << "Insert position\n";
+    std::cout << "X position: ";
+    std::cin >> position.position.x;
+    std::cout << "Y position: ";
+    std::cin >> position.position.y;
+    std::cout << "Z position: ";
+    std::cin >> position.position.z;
+    std::cout << "Insert orientation\n";
+    std::cout << "RX rotation: ";
+    std::cin >> rotation_euler[0];
+    std::cout << "RY rotation: ";
+    std::cin >> rotation_euler[1];
+    std::cout << "RZ rotation: ";
+    std::cin >> rotation_euler[2];
+
+    position.orientation = quaternion_from_euler(rotation_euler[0], rotation_euler[1], rotation_euler[2]);
+
+    std::cout << "Enter the weight: ";
+    std::cin >> weight;
+
+    publishPositionConstraint(link_name, position, shape_type, dimensions, weight);
+}
+
+void ManipulatorMenu::userAddOrientationConstraint(){
+    std::string link_name;
+    std::vector<double> rotation_euler(3, 0.0);
+    std::vector<double> tolerances(3, 0.0);
+    double weight = 0.0;
+
+    std::cout << "Enter the link name: ";
+    std::cin >> link_name;
+    std::cout << "Insert orientation\n";
+    std::cout << "RX rotation: ";
+    std::cin >> rotation_euler[0];
+    std::cout << "RY rotation: ";
+    std::cin >> rotation_euler[1];
+    std::cout << "RZ rotation: ";
+    std::cin >> rotation_euler[2];
+
+    std::cout << "Insert tolerances\n";
+    std::cout << "RX tolerance ";
+    std::cin >> tolerances[0];
+    std::cout << "RY tolerance ";
+    std::cin >> tolerances[1];
+    std::cout << "RZ tolerance ";
+    std::cin >> tolerances[2];
+
+    geometry_msgs::msg::Quaternion quaternion = quaternion_from_euler(rotation_euler[0], rotation_euler[1], rotation_euler[2]);
+
+    std::cout << "Enter the weight: ";
+    std::cin >> weight;
+
+    publishOrientationConstraint(link_name, quaternion, tolerances, weight);
 }
 
 // --------------------- KINEMATICS QUERIES HANDLERS ---------------------
@@ -1732,6 +1931,8 @@ void ManipulatorMenu::userRunTest(){
     std::vector<double> position = {0.5, 0.0, 0.2, 180., 0., 90.};
     moveit_msgs::msg::RobotTrajectory traj = planAndWait(pose_from_vector(position));
 
+    RCLCPP_INFO(node_->get_logger(), "Trajectory planned, executing...");
+
     if (traj.joint_trajectory.points.size() == 0)
     {
         RCLCPP_ERROR(node_->get_logger(), "Failed to plan trajectory");
@@ -1814,6 +2015,13 @@ void ManipulatorMenu::initializeMenu(){
     menu_->addChoice("Add an attached object", &ManipulatorMenu::userAddAttachedObj);
     menu_->addChoice("Delete a collision object", &ManipulatorMenu::userDeleteCollObj);
     menu_->addSection("Collision objects", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
+
+    //Constraints
+    menu_->addChoice("Add joint constraint", &ManipulatorMenu::userAddJointConstraint);
+    menu_->addChoice("Add position constraint", &ManipulatorMenu::userAddPositionConstraint);
+    menu_->addChoice("Add orientation constraint", &ManipulatorMenu::userAddOrientationConstraint);
+    menu_->addSection("Constraints", section_start, menu_->last_);
     section_start = menu_->last_ + 1;
 
     //Kinematics queries

@@ -15,13 +15,17 @@
 #include "geometry_msgs/msg/quaternion.hpp"
 
 #include "moveit_msgs/msg/collision_object.hpp"
-#include "moveit_msgs/msg/display_robot_state.hpp"
+#include "moveit_msgs/msg/attached_collision_object.hpp"
+#include "moveit_msgs/msg/position_constraint.hpp"
+#include "moveit_msgs/msg/joint_constraint.hpp"
+#include "moveit_msgs/msg/orientation_constraint.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "std_msgs/msg/bool.hpp"
+#include "std_msgs/msg/empty.hpp"
 
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
@@ -160,6 +164,29 @@ class ManipulatorMenu
                             uint                operation);
         
 
+        // Path constraints
+
+        // Publish joint constraint, the specified joint will be constrained to [position - tolerance_below, position + tolerance_above]
+        void publishJointConstraint(const uint &joint_num, 
+                                    const double &position, 
+                                    const double &tolerance_above, 
+                                    const double &tolerance_below, 
+                                    const double &weight  = 1.0);
+
+
+        //Publish a primitive as a position constraint, the specified link will stay inside that primitive
+        void publishPositionConstraint(const std::string& link_name, 
+                                       const geometry_msgs::msg::Pose& shape_pose, 
+                                       const uint &shape_type, 
+                                       const std::vector<double>& shape_dims, 
+                                       const double &weight = 1.0);
+
+        //Publish an orientation constraint, the specified link will maintain that orientation +- the specified tolerances
+        void publishOrientationConstraint(const std::string& link_name, 
+                                          const geometry_msgs::msg::Quaternion& orientation, 
+                                          const std::vector<double> &tolerances = {0.01, 0.01, 0.01}, //Along x,y,z axis 
+                                          const double &weight = 1.0);
+
         // Matrix utils
         void printMatrix(const Eigen::MatrixXd& matrix);
         void listToMatrix(const std::vector<double> &list, Eigen::MatrixXd &matrix);
@@ -239,6 +266,11 @@ class ManipulatorMenu
         void userDeleteCollObj(void);       // Delete a given collision object from the user menu
         void userAddAttachedObj(void);  // Add an attached collision object by the user
 
+        // Constraints
+        void userAddJointConstraint(void);       // Add a joint constraint
+        void userAddPositionConstraint(void);   // Add a position constraint
+        void userAddOrientationConstraint(void); // Add an orientation constraint
+
         // Kinematics queries
         void userGetInvKine(void);           // Get the inverse kinematics of a given pose
         void userGetPseudoInv(void);         // Get the pseudo inverse of the manipulator
@@ -262,6 +294,10 @@ class ManipulatorMenu
 
         ManipulatorMenuParams params_;
 
+        double joint_tolerance_;
+        double tcp_position_tolerance_;
+        double tcp_orientation_tolerance_;
+
         rclcpp::Node::SharedPtr node_;
 
         MenuUserInterface<ManipulatorMenu> *menu_;
@@ -273,9 +309,14 @@ class ManipulatorMenu
         rclcpp::Publisher<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpGoal_pub_;
         rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr cartesianPlan_pub_;
 
+        rclcpp::Publisher<moveit_msgs::msg::JointConstraint>::SharedPtr jointConstraints_pub_;
+        rclcpp::Publisher<moveit_msgs::msg::PositionConstraint>::SharedPtr positionConstraints_pub_;
+        rclcpp::Publisher<moveit_msgs::msg::OrientationConstraint>::SharedPtr orientationConstraints_pub_;
+
         rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr displayGoal_pub_;
         rclcpp::Publisher<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObject_pub_;
         rclcpp::Publisher<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr attachedCollisionObject_pub_;
+        rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr clearConstraints_pub_;
 
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointState_sub_;
 

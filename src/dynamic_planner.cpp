@@ -50,11 +50,10 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
 
     //Initialize visual tools
     //Moveit
-    // namespace rvt = rviz_visual_tools;
-    // moveit_visual_tools_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(node_,
-    //                                                                          "base_link", 
-    //                                                                          "/moveit_visual_markers", 
-    //                                                                          move_group_->getRobotModel());
+    moveit_visual_tools_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(node_,
+                                                                                    world_frame_, 
+                                                                                    "/moveit_visual_markers", 
+                                                                                    move_group_->getRobotModel());
 
     //Rviz
     rviz_visual_tools_.reset(new rviz_visual_tools::RvizVisualTools(world_frame_, "/moveit_visual_markers", node_));
@@ -79,7 +78,7 @@ DynamicPlanner::~DynamicPlanner()
     planning_scene_interface_.reset();
     planning_scene_.reset();
     robot_model_loader_.reset();
-    //moveit_visual_tools_.reset();
+    moveit_visual_tools_.reset();
     node_.reset();
 }
 
@@ -191,6 +190,12 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
 
     setTrajectory(trajectory);
 
+    //Visualize trajectory line
+    auto robot_model = move_group_->getRobotModel();
+    moveit_visual_tools_->publishTrajectoryLine(trajectory, 
+                                                robot_model->getLinkModel(end_effector_link_),
+                                                robot_model->getJointModelGroup(planning_group_));
+
     result_msg.success = true;
     result_msg.message = "Trajectory planned successfully";
     result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
@@ -255,6 +260,12 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
 
     setTrajectory(trajectory);
 
+    //Visualize trajectory line
+    auto robot_model = move_group_->getRobotModel();
+    moveit_visual_tools_->publishTrajectoryLine(trajectory, 
+                                                robot_model->getLinkModel(ee_link),
+                                                robot_model->getJointModelGroup(planning_group_));
+
     result_msg.success = true;
     result_msg.message = "Trajectory planned successfully";
     result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
@@ -316,6 +327,12 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
   
     
     setTrajectory(trajectory);
+
+    //Visualize trajectory line
+    auto robot_model = move_group_->getRobotModel();
+    moveit_visual_tools_->publishTrajectoryLine(trajectory, 
+                                                robot_model->getLinkModel(end_effector_link_),
+                                                robot_model->getJointModelGroup(planning_group_));
 
     result_msg.success = true;
     result_msg.message = "Trajectory planned successfully";
@@ -503,6 +520,7 @@ void DynamicPlanner::setPathConstraints(const moveit_msgs::msg::Constraints &con
 
     for (const auto &constraint : constraints.position_constraints)
     {
+        RCLCPP_INFO(node_->get_logger(), "Visualizing position constraint for link: %s", constraint.link_name.c_str());
         for(size_t i {0}; i < constraint.constraint_region.primitives.size(); i++)
         {
             const auto &primitive = constraint.constraint_region.primitives[i];
