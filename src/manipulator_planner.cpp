@@ -244,7 +244,12 @@ ManipulatorPlannerNode::~ManipulatorPlannerNode() {
     if (mainloop_timer_) {
         mainloop_timer_->cancel();
     }
-    executor_.spin_some();
+    if(tcpPose_timer_) {
+        tcpPose_timer_->cancel();
+    }
+    if(tcpVel_timer_) {
+        tcpVel_timer_->cancel();
+    }
     executor_.cancel();
     dynamic_planner_.reset(); // Reset the dynamic planner
 }

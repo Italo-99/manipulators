@@ -227,10 +227,6 @@ class DynamicPlanner
         std::shared_ptr<moveit_visual_tools::MoveItVisualTools> moveit_visual_tools_;
         rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;
 
-        //Robot model
-        robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
-        moveit::core::RobotModelPtr robot_model_;
-
         //Dynamic planner variables
         std::string planning_group_;
         std::vector<std::string> joint_names_;

@@ -37,16 +37,13 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
     }
 
     //Fetch robot state
-    robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>(node_);
-    robot_model_ = robot_model_loader_->getModel();
-
     joint_names_ = move_group_->getJointNames();
 
     RCLCPP_INFO(node_->get_logger(), "MoveGroupInterface initialized");
 
     planning_scene_interface_ = std::make_shared<moveit::planning_interface::PlanningSceneInterface>();
 
-    planning_scene_ = std::make_shared<planning_scene::PlanningScene>(robot_model_);
+    planning_scene_ = std::make_shared<planning_scene::PlanningScene>(move_group_->getRobotModel());
 
     //Initialize visual tools
     //Moveit
@@ -77,8 +74,8 @@ DynamicPlanner::~DynamicPlanner()
     move_group_.reset();
     planning_scene_interface_.reset();
     planning_scene_.reset();
-    robot_model_loader_.reset();
     moveit_visual_tools_.reset();
+    rviz_visual_tools_.reset();
     node_.reset();
 }
 
