@@ -265,7 +265,6 @@ void ManipulatorPlannerNode::spinner() {
 
     rclcpp::Clock steady_clock(RCL_STEADY_TIME);
 
-
     auto main_cb_group = this->create_callback_group(
         rclcpp::CallbackGroupType::Reentrant
     );
@@ -1059,7 +1058,7 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("manipulator_name", std::string());
     this->declare_parameter("planning_group", std::string());
     this->declare_parameter("joint_names", std::vector<std::string>());
-    this->declare_parameter("ee_name", "tool_0");
+    this->declare_parameter("ee_name", std::string());
     this->declare_parameter("world_frame", "base_link");
     this->declare_parameter("ros_freq", 500);
     this->declare_parameter("max_speed_ee", 1.0);

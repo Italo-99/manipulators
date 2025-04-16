@@ -72,8 +72,10 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
 
     // ---------------------- Gripper ----------------------
 
-    if(params_.gripper){
+    if(params_.gripper == "robotiq_85"){
         gripperMove_client_ = node_->create_client<std_srvs::srv::SetBool>(params_.gripper_group+"/move_gripper");
+    } else if (params_.gripper == "real_gripper"){
+        digitalIO_pub_ = node_->create_publisher<std_msgs::msg::Int8>("/ur_rtde/digitalIO/command", 1);
     }
 
     rclcpp::contexts::get_global_default_context()->add_pre_shutdown_callback(
@@ -237,8 +239,8 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
 
 bool ManipulatorMenu::gripperMoveClient(const bool close){
 
-    if(!params_.gripper){
-        RCLCPP_ERROR(node_->get_logger(), "Gripper is not available in this manipulator.");
+    if(params_.gripper != "robotiq_85"){
+        RCLCPP_ERROR(node_->get_logger(), "robotiq_85 gripper is not available in this manipulator.");
         return false;
     }
 
@@ -715,6 +717,21 @@ geometry_msgs::msg::Pose ManipulatorMenu::rotate_around_z(const double z_rot_ste
     // Update tcp orient goal
     goal_pose[5] = goal_pose[5] + z_rot_step;
     return publishTcpGoal(goal_pose);
+}
+
+// --------------------- GRIPPER ---------------------
+
+void ManipulatorMenu::moveGripper(const bool close)
+{
+    if(params_.gripper == "robotiq_85"){
+        gripperMoveClient(close);
+    } else if (params_.gripper == "real_gripper"){
+        std_msgs::msg::Int8 msg;
+        msg.data = params_.gripper_IO_cmds[0] ? close : params_.gripper_IO_cmds[1];
+        digitalIO_pub_->publish(msg);
+    } else {
+        RCLCPP_ERROR(node_->get_logger(), "Gripper is not enabled.");
+    }
 }
 
 // --------------------- COLLISION OBJECTS HANDLER ---------------------
@@ -1923,7 +1940,7 @@ void ManipulatorMenu::userGripperMove()
     bool close;
     std::cout << "Enter 1 to close the gripper, 0 to open: \n";
     std::cin >> close;
-    gripperMoveClient(close);
+    moveGripper(close);
 }
 
 void ManipulatorMenu::userRunTest(){

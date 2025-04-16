@@ -40,5 +40,27 @@
 
     </xacro:if>
 
+    <link name="floor">
+        <visual>
+            <geometry>
+                <box size="10 10 0.01"/>
+            </geometry>
+            <material name="">
+                <color rgba="0.8 0.1 0.1 0.4"/>
+            </material>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="10 10 0.01"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="world_floor" type="fixed">
+        <parent link="world"/>
+        <child link="floor"/>
+        <origin xyz="0 0 -0.005" rpy="0 0 0"/>
+    </joint>
+
 
 </robot>

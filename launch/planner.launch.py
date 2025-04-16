@@ -21,8 +21,6 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
-    mp_params["ee_name"] = "tool0" #HARDCODED FOR NOW 
-
     moveit_params = get_ur_moveit_launch_params(context)
 
     # ---------------------------------------- NODES ----------------------------------------

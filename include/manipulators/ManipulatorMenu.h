@@ -26,6 +26,7 @@
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/empty.hpp"
+#include "std_msgs/msg/int8.hpp"
 
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
@@ -51,17 +52,18 @@
 
 struct ManipulatorMenuParams
 {
-    std::string node_name         = "manipulator_menu_node";
-    double ros_freq               = 500;
-    std::string manipulator_name  = "manipulator";
-    std::string planning_group    = "ur_manipulator";
+    std::string node_name                = "manipulator_menu_node";
+    double ros_freq                      = 500;
+    std::string manipulator_name         = "manipulator";
+    std::string planning_group           = "ur_manipulator";
 
-    bool gripper                  = false;
-    std::string gripper_group     = "robotiq_85_gripper";
+    std::string gripper                  = "no_gripper";           //Gripper type, can be one of "no_gripper", "robotiq_85" or "real_gripper"
+    std::string gripper_group            = "robotiq_85_gripper";   //For gripper type "robotiq_85", gripper group specified in srdf
+    std::vector<int8_t> gripper_IO_cmds  = {0, 0};                 //For gripper type "real_gripper", IO commands to close/open the gripper
 
     std::vector<std::string> joint_names = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
                                             "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
-    std::string base_link_name    = "base_link";
+    std::string base_link_name           = "base_link";
 };
 
 class ManipulatorMenu
@@ -144,6 +146,8 @@ class ManipulatorMenu
         geometry_msgs::msg::Pose rotate_around_y(const double y_rot_step);
         geometry_msgs::msg::Pose rotate_around_z(const double z_rot_step);
         geometry_msgs::msg::Pose change_tcp_orient(const std::vector<double> rot_vec);
+
+        void moveGripper(const bool close);
 
         // Add collision objects
         void publishCollisionObject(const moveit_msgs::msg::CollisionObject collisionObjectMsg);
@@ -327,6 +331,8 @@ class ManipulatorMenu
         
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripperGrab_client_; //Not implemented for now
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripperMove_client_;
+
+        rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr digitalIO_pub_;
 
         rclcpp::SyncParametersClient::SharedPtr getManipulatorParams_client_; //gets the parameter from the manipulator planner node
 

@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<robot name="$(arg name)" xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:include filename="$(find manipulators)/models/urdf/ur_floor_macro.xacro"/>
+
+    <xacro:arg name="name" default="ur"/>
+    <xacro:arg name="ur_type" default="ur5e"/>
+    <xacro:arg name="tf_prefix" default=""/>
+    <xacro:arg name="joint_limits_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
+    <xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/default_kinematics.yaml"/>
+    <xacro:arg name="camera" default="true" />
+
+    <link name="world" />
+
+    <!--This will create the scene where the robot is located in-->
+    <xacro:ur_floor
+        tf_prefix="$(arg tf_prefix)"
+        robot_name="$(arg name)"
+        ur_type="$(arg ur_type)"
+        joint_limits_parameters_file="$(arg joint_limits_parameters_file)"
+        kinematics_parameters_file="$(arg kinematics_parameters_file)"
+    >
+    </xacro:ur_floor>
+</robot>
