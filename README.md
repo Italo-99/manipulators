@@ -63,17 +63,7 @@ Install rviz visual tools:
     + goal_bias: 0.05
     ```
 
-3) Make RRTConnect default planner and enable constraints in `ur_moveit_config/config/ompl_planning.yaml`:
-
-    At line 70, under `ur_manipulator`:
-
-    ```diff
-    + projection_evaluator: joints(shoulder_pan_joint,shoulder_lift_joint)
-    + enforce_constrained_state_space: true
-    + default_planner:: RRTConnect
-    ```
-
-4) Further optimization for planning can be done by using a different kinematic solver and changing joint limits:
+3) Further optimization for planning can be done by using a different kinematic solver and changing joint limits:
 
     In `ur_moveit_config/config/kinematics.yaml`:
 

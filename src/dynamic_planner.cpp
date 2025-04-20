@@ -125,6 +125,10 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
     bool is_within_bounds = move_group_->setJointValueTarget(joint_positions);
     manipulator_interfaces::msg::TrajectoryResult result_msg;
 
+    // PRE PLANNING CHECKS
+    // 1. joint_positions are not too close to the current position
+    // 2. joint_positions are within the joint limits
+
     if (checkJointDiff(joint_positions)){
         RCLCPP_ERROR(node_->get_logger(), "Joint positions are too close to current position");
         moveit_msgs::msg::RobotTrajectory trajectory;
@@ -152,10 +156,16 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
         return;
     }
 
-    //Create the plan and execute
+    //Create the plan
     
     moveit::planning_interface::MoveGroupInterface::Plan plan;
     moveit::core::MoveItErrorCode error = move_group_->plan(plan);
+
+    // PAST PLANNING CHECKS
+    // 1. Planning succeded
+    // 2. Trajectory end point matches with the target joint positions
+    // 3. Time optimal trajectory generation succeded
+    // 4. Trajectory respects the path constraints
 
     if (error != moveit::core::MoveItErrorCode::SUCCESS)
     {
@@ -173,13 +183,38 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
 
     moveit_msgs::msg::RobotTrajectory trajectory = plan.trajectory_;
 
+    trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
+    if(!checkJointDiff(last_point.positions, joint_positions)){
+        RCLCPP_ERROR(node_->get_logger(), "Trajectory end point does not match with the target joint positions");
+        moveit_msgs::msg::RobotTrajectory trajectory;
+        result_msg.success = false;
+        result_msg.message = "Trajectory end point does not match with the target joint positions";
+        result_msg.trajectory = trajectory;
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::END_POINT_MISMATCH;
+
+        setTrajectory(trajectory);
+        trajectory_pub_->publish(result_msg);
+        return;
+    }
+
     bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
 
-    if (!totg_success){
+    if (!totg_success){ //Check time opetimal trajectory generation success
         result_msg.success = false;
         result_msg.message = "Time optimal trajectory generation failed";
         result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
         result_msg.trajectory = trajectory;
+        setTrajectory(moveit_msgs::msg::RobotTrajectory());
+        trajectory_pub_->publish(result_msg);
+        return;
+    }
+
+    if (!checkTrajectoryConstraints(trajectory)){ //Check that the trajectory respects the path constraints
+        result_msg.success = false;
+        result_msg.message = "Trajectory violates path constraints";
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::CONSTRAINTS_VIOLATED;
+        result_msg.trajectory = trajectory;
+
         setTrajectory(moveit_msgs::msg::RobotTrajectory());
         trajectory_pub_->publish(result_msg);
         return;
@@ -226,6 +261,12 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
     // Clear pose target
     move_group_->clearPoseTarget(ee_link);
 
+    // PAST PLANNING CHECKS
+    // 1. Planning succeded
+    // 2. Trajectory end point matches with the target pose
+    // 3. Time optimal trajectory generation succeded
+    // 4. Trajectory respects the path constraints
+
     if (error != moveit::core::MoveItErrorCode::SUCCESS)
     {
         RCLCPP_ERROR(node_->get_logger(), "Planning failed with error code: %d", error.val);
@@ -242,9 +283,23 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
 
     moveit_msgs::msg::RobotTrajectory trajectory = plan.trajectory_;
 
+    trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
+    if(!checkPoseDiff(getFKine(last_point.positions, ee_link).pose, goal_pose)){
+        RCLCPP_ERROR(node_->get_logger(), "Trajectory end point does not match with the target pose");
+        moveit_msgs::msg::RobotTrajectory trajectory;
+        result_msg.success = false;
+        result_msg.message = "Trajectory end point does not match with the target pose";
+        result_msg.trajectory = trajectory;
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::END_POINT_MISMATCH;
+
+        setTrajectory(trajectory);
+        trajectory_pub_->publish(result_msg);
+        return;
+    }
+
     bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
 
-    if (!totg_success){
+    if (!totg_success){ //Check time opetimal trajectory generation success
         result_msg.success = false;
         result_msg.message = "Time optimal trajectory generation failed";
         result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
@@ -255,6 +310,19 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
         return;
     }
 
+    if (!checkTrajectoryConstraints(trajectory)){ //Check that the trajectory respects the path constraints
+        result_msg.success = false;
+        result_msg.message = "Trajectory violates path constraints";
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::CONSTRAINTS_VIOLATED;
+        result_msg.trajectory = trajectory;
+
+        setTrajectory(moveit_msgs::msg::RobotTrajectory());
+        trajectory_pub_->publish(result_msg);
+        return;
+    }
+
+
+    //Trajectory meets all the requirements
     setTrajectory(trajectory);
 
     //Visualize trajectory line
@@ -311,6 +379,17 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
         result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
         result_msg.trajectory = trajectory;
         
+        setTrajectory(moveit_msgs::msg::RobotTrajectory());
+        trajectory_pub_->publish(result_msg);
+        return -1.0;
+    }
+
+    if (!checkTrajectoryConstraints(trajectory)){ //Check that the trajectory respects the path constraints
+        result_msg.success = false;
+        result_msg.message = "Trajectory violates path constraints";
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::CONSTRAINTS_VIOLATED;
+        result_msg.trajectory = trajectory;
+
         setTrajectory(moveit_msgs::msg::RobotTrajectory());
         trajectory_pub_->publish(result_msg);
         return -1.0;
@@ -513,20 +592,20 @@ void DynamicPlanner::setPathConstraints(const moveit_msgs::msg::Constraints &con
 {
     move_group_->setPathConstraints(constraints);
 
-    rviz_visual_tools_->deleteAllMarkers();
+    // rviz_visual_tools_->deleteAllMarkers();
 
-    for (const auto &constraint : constraints.position_constraints)
-    {
-        RCLCPP_INFO(node_->get_logger(), "Visualizing position constraint for link: %s", constraint.link_name.c_str());
-        for(size_t i {0}; i < constraint.constraint_region.primitives.size(); i++)
-        {
-            const auto &primitive = constraint.constraint_region.primitives[i];
-            const auto &pose = constraint.constraint_region.primitive_poses[i];
+    // for (const auto &constraint : constraints.position_constraints)
+    // {
+    //     RCLCPP_INFO(node_->get_logger(), "Visualizing position constraint for link: %s", constraint.link_name.c_str());
+    //     for(size_t i {0}; i < constraint.constraint_region.primitives.size(); i++)
+    //     {
+    //         const auto &primitive = constraint.constraint_region.primitives[i];
+    //         const auto &pose = constraint.constraint_region.primitive_poses[i];
 
-            // Visualize the primitive
-            visualizePrimitive(primitive, pose);
-        }
-    }
+    //         // Visualize the primitive
+    //         visualizePrimitive(primitive, pose);
+    //     }
+    // }
 }
 
 moveit_msgs::msg::Constraints DynamicPlanner::getPathConstraints() const
@@ -845,40 +924,94 @@ void DynamicPlanner::mergeTrajectory(moveit_msgs::msg::RobotTrajectory &new_traj
     }
 }
 
+bool DynamicPlanner::checkTrajectoryConstraints(const moveit_msgs::msg::RobotTrajectory &trajectory)
+{
+    /*
+    Check if the trajectory is within the constraints
+    Args:
+        trajectory: The trajectory to check
+    Returns:
+        True if the trajectory is within the constraints, false otherwise
+    */
+
+    // Check if the trajectory is within the constraints
+
+    moveit::core::RobotState robot_state = *getRobotState();
+    moveit_msgs::msg::Constraints constraints = getPathConstraints();
+
+    for (const auto &point : trajectory.joint_trajectory.points)
+    {
+        robot_state.setJointGroupPositions(planning_group_, point.positions);
+        robot_state.update();
+
+        // Check if the trajectory is within the constraints
+        if (!planning_scene_->isStateConstrained(robot_state, constraints))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 // ------------------------------------- HELPER METHODS -------------------------------------
 
-bool DynamicPlanner::checkJointDiff(const std::vector<double>& final_position)
+bool DynamicPlanner::checkJointDiff(const std::vector<double>& joint_positions)
 {
-    // Set a reasonable threshold 
-    double th = 0.0001;
-    // Counter check: it's increased by 1 if two joint positions are similar
-    unsigned long counter_check = 0;
-    // Iterate above all joints
-
     if (!isReady()){
         RCLCPP_ERROR(node_->get_logger(), "Unable to check joint difference: joints group not received.");
         return false;
     }
+
+    return checkJointDiff(joint_positions, joints_values_group_);
+}
+
+bool DynamicPlanner::checkJointDiff(const std::vector<double>& val_a, const std::vector<double>& val_b)
+{
+    // Set a reasonable threshold 
+    double th = params_.joint_tolerance;
+    // Counter check: it's increased by 1 if two joint positions are similar
+    unsigned long counter_check = 0;
+    // Iterate above all joints
+
+    if(val_a.size() != val_b.size())
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Joint positions vectors are not the same size");
+        return false;
+    }
     
-    for(unsigned long k = 0; k < final_position.size(); k++)
+    for(unsigned long k = 0; k < val_a.size(); k++)
     {
         // If current and goal single joint position are similar
-        if ((joints_values_group_[k] - final_position[k] < +th) && 
-            (joints_values_group_[k] - final_position[k] > -th))
+        if ((val_b[k] - val_a[k] < +th) && 
+            (val_b[k] - val_a[k] > -th))
         {
             counter_check++;  // Increment counter check
         }    
     }
-    if (counter_check == joints_values_group_.size())
-    {
-        RCLCPP_WARN(node_->get_logger(), "User input error: sent goal state is near or equal to current joint pose.");
-        RCLCPP_WARN(node_->get_logger(), "Checked %ld out of %ld joints equal to current position.",counter_check,final_position.size());
-        return true;
-    }
-    else
-    {
-        return false;
-    }  
+    return (counter_check == val_a.size());
+}
+
+bool DynamicPlanner::checkPoseDiff(const geometry_msgs::msg::Pose& pose, const std::string& end_effector_link)
+{
+    // Check if the pose is too close to the current pose
+    return checkPoseDiff(pose, getFKine(end_effector_link).pose);
+}
+
+bool DynamicPlanner::checkPoseDiff(const geometry_msgs::msg::Pose& pose_a, const geometry_msgs::msg::Pose& pose_b)
+{
+    //For now orientation is not considered
+    // Set a reasonable threshold 
+    double pos_th = params_.position_tolerance;
+    //double rot_th = params_.orientation_tolerance;
+
+    bool check = true;
+
+    check = ((abs(pose_a.position.x - pose_b.position.x) < pos_th) && check);
+    check = ((abs(pose_a.position.y - pose_b.position.y) < pos_th) && check);
+    check = ((abs(pose_a.position.z - pose_b.position.z) < pos_th) && check);
+
+    return check;
 }
 
 void DynamicPlanner::updatePlannerParams()

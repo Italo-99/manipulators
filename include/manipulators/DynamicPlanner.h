@@ -9,10 +9,13 @@
 //ROS Imports
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/quaternion.hpp>
 #include <trajectory_msgs/msg/joint_trajectory.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/u_int32.hpp>
 #include <tf2/convert.h>
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "rviz_visual_tools/rviz_visual_tools.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "visualization_msgs/msg/marker.hpp"
@@ -195,8 +198,15 @@ class DynamicPlanner
 
         void mergeTrajectory(moveit_msgs::msg::RobotTrajectory &new_traj, size_t start_index); //Merge the old trajectory with the new one from start_index onwards
 
+        bool checkTrajectoryConstraints(const moveit_msgs::msg::RobotTrajectory &trajectory); //Check if the trajectory respects the path constraints
+
         // --------------- HELPER METHODS ----------------
-        bool checkJointDiff(const std::vector<double> &joint_values);   //Check if the difference between joint_values and current pose is negligible
+        bool checkJointDiff(const std::vector<double> &joint_values);                             //Check if the difference between joint_values and current pose is negligible
+        bool checkJointDiff(const std::vector<double> &val_a, const std::vector<double> &val_b);  //Check if the difference between val_a and val_b is negligible
+
+        bool checkPoseDiff(const geometry_msgs::msg::Pose &pose, const std::string& ee_link);               //Check if the difference between pose and current pose of ee_link is negligible
+        bool checkPoseDiff(const geometry_msgs::msg::Pose &pose_a, const geometry_msgs::msg::Pose &pose_b); //Check if the difference between pose_a and pose_b is negligible
+
         void updatePlannerParams();                                     //Update the planner parameters with values stored in params_
         geometry_msgs::msg::PoseStamped toPoseStamped(const Eigen::Isometry3d& pose, const std::string &frame_id=""); //Converts an Eigen pose to a PoseStamped message
 
