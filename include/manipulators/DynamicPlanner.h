@@ -214,7 +214,8 @@ class DynamicPlanner
         //Visualize a primitive
         void visualizePrimitive(const shape_msgs::msg::SolidPrimitive &primitive, 
                                 const geometry_msgs::msg::Pose &pose, 
-                                const std::vector<double> rgba_color = {0.0, 0.0, 0.0, 0.1}); 
+                                const std::vector<double> rgba_color = {0.0, 0.0, 0.0, 0.1},
+                                const std::string &ns = "rviz"); 
 
         //ROS Node
         //NOTE: It's critical for this node to be always spinning!

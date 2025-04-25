@@ -191,6 +191,8 @@ class ManipulatorMenu
                                           const std::vector<double> &tolerances = {0.01, 0.01, 0.01}, //Along x,y,z axis 
                                           const double &weight = 1.0);
 
+        void publishClearConstraints(void); //Clear all constraints
+
         // Matrix utils
         void printMatrix(const Eigen::MatrixXd& matrix);
         void listToMatrix(const std::vector<double> &list, Eigen::MatrixXd &matrix);
@@ -274,6 +276,7 @@ class ManipulatorMenu
         void userAddJointConstraint(void);       // Add a joint constraint
         void userAddPositionConstraint(void);   // Add a position constraint
         void userAddOrientationConstraint(void); // Add an orientation constraint
+        void userClearConstraints(void);         // Clear all constraints
 
         // Kinematics queries
         void userGetInvKine(void);           // Get the inverse kinematics of a given pose

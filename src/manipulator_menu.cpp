@@ -970,6 +970,12 @@ void ManipulatorMenu::publishOrientationConstraint(const std::string& link_name,
     orientationConstraints_pub_->publish(orientation_constraint);
 }
 
+void ManipulatorMenu::publishClearConstraints()
+{
+    std_msgs::msg::Empty empty_msg;
+    clearConstraints_pub_->publish(empty_msg);
+}
+
 
 // ------------------- KINEMATICS PARAMS SETTERS ---------------------- //
 
@@ -1416,7 +1422,30 @@ void ManipulatorMenu::userJointGoal()
         joints.push_back(new_joint_value);
     }
 
-    publishJointGoal(joints);
+    moveit_msgs::msg::RobotTrajectory traj = planAndWait(joint_state_from_vector(joints));
+    if(!traj_error_)
+    {
+        int execute = 0;
+        std::cout << "Trajectory planned successfully." << std::endl;
+        std::cout << "Trajectory points count: " << traj.joint_trajectory.points.size() << std::endl;
+        std::cout << "Trajectory duration: " << traj.joint_trajectory.points.back().time_from_start.sec << "s" << std::endl;
+        std::cout << "Do you want to execute the trajectory? 1 for yes: ";
+        std::cin >> execute;
+
+        if (execute == 1)
+        {
+            std::cout << "Executing trajectory..." << std::endl;
+            bool success = executeAndWait(traj);
+            if (success)
+            {
+                std::cout << "Trajectory executed successfully." << std::endl;
+            }
+            else
+            {
+                std::cout << "Trajectory execution failed." << std::endl;
+            }
+        }
+    }
 }
 
 void ManipulatorMenu::userOneJointMove_user()
@@ -1458,7 +1487,36 @@ void ManipulatorMenu::userTcpGoal()
     std::cout << "Rz: ";
     std::cin >> position[5];
 
-    publishTcpGoal(position);
+    geometry_msgs::msg::Pose goal;
+    goal.position.x = position[0];
+    goal.position.y = position[1];
+    goal.position.z = position[2];
+    goal.orientation = quaternion_from_euler(position[3], position[4], position[5]);
+
+    moveit_msgs::msg::RobotTrajectory traj = planAndWait(goal);
+    if(!traj_error_)
+    {
+        int execute = 0;
+        std::cout << "Trajectory planned successfully." << std::endl;
+        std::cout << "Trajectory points count: " << traj.joint_trajectory.points.size() << std::endl;
+        std::cout << "Trajectory duration: " << traj.joint_trajectory.points.back().time_from_start.sec << "s" << std::endl;
+        std::cout << "Do you want to execute the trajectory? 1 for yes: ";
+        std::cin >> execute;
+
+        if (execute == 1)
+        {
+            std::cout << "Executing trajectory..." << std::endl;
+            bool success = executeAndWait(traj);
+            if (success)
+            {
+                std::cout << "Trajectory executed successfully." << std::endl;
+            }
+            else
+            {
+                std::cout << "Trajectory execution failed." << std::endl;
+            }
+        }
+    }
 }
 
 // --------------------- LINEAR MOVEMENTS HANDLER ---------------------
@@ -1836,6 +1894,12 @@ void ManipulatorMenu::userAddOrientationConstraint(){
     publishOrientationConstraint(link_name, quaternion, tolerances, weight);
 }
 
+void ManipulatorMenu::userClearConstraints()
+{
+    publishClearConstraints();
+    RCLCPP_INFO(node_->get_logger(), "All constraints cleared.");
+}
+
 // --------------------- KINEMATICS QUERIES HANDLERS ---------------------
 
 void ManipulatorMenu::userGetInvKine()
@@ -2038,6 +2102,7 @@ void ManipulatorMenu::initializeMenu(){
     menu_->addChoice("Add joint constraint", &ManipulatorMenu::userAddJointConstraint);
     menu_->addChoice("Add position constraint", &ManipulatorMenu::userAddPositionConstraint);
     menu_->addChoice("Add orientation constraint", &ManipulatorMenu::userAddOrientationConstraint);
+    menu_->addChoice("Remove all constraints", &ManipulatorMenu::userClearConstraints);
     menu_->addSection("Constraints", section_start, menu_->last_);
     section_start = menu_->last_ + 1;
 

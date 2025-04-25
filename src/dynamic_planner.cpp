@@ -456,6 +456,11 @@ void DynamicPlanner::moveRobot()
 
     rclcpp::Rate traj_exec_rate(1/(points_time));
 
+    if(!checkJointDiff(robot_trajectory_.joint_trajectory.points[0].positions)){
+        RCLCPP_ERROR(node_->get_logger(), "Trajectory doesn't start from the current position");
+        return;
+    }
+
     for (auto traj_pt : robot_trajectory_.joint_trajectory.points)
     {
         if (is_moving == false){
@@ -592,7 +597,7 @@ void DynamicPlanner::setPathConstraints(const moveit_msgs::msg::Constraints &con
 {
     move_group_->setPathConstraints(constraints);
 
-    rviz_visual_tools_->deleteAllMarkers();
+    rviz_visual_tools_->deleteAllMarkers("pos_constraints");
 
     for (const auto &constraint : constraints.position_constraints)
     {
@@ -600,7 +605,7 @@ void DynamicPlanner::setPathConstraints(const moveit_msgs::msg::Constraints &con
         {
             const auto &primitive = constraint.constraint_region.primitives[i];
             const auto &pose = constraint.constraint_region.primitive_poses[i];
-            visualizePrimitive(primitive, pose);
+            visualizePrimitive(primitive, pose, {0.0, 0.9, 0.1, 0.3}, "pos_constraints");
         }
     }
 
@@ -615,7 +620,8 @@ moveit_msgs::msg::Constraints DynamicPlanner::getPathConstraints() const
 void DynamicPlanner::clearPathConstraints()
 {
     move_group_->clearPathConstraints();
-    rviz_visual_tools_->deleteAllMarkers();
+    rviz_visual_tools_->deleteAllMarkers("pos_constraints");
+    rviz_visual_tools_->trigger();
 }
 
 // ------------------------------------- FORWARD KINEMATICS ------------------------------------
@@ -1064,7 +1070,8 @@ geometry_msgs::msg::PoseStamped DynamicPlanner::toPoseStamped(const Eigen::Isome
 
 void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &primitive, 
                                         const geometry_msgs::msg::Pose &primitive_pose,
-                                        const std::vector<double> rgba_color)
+                                        const std::vector<double> rgba_color,
+                                        const std::string &ns)
 {
     /*
     Visualizes the primitive
@@ -1072,6 +1079,9 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
         primitive: The primitive to visualize
         primitive_pose: The pose of the primitive
         rgba_color: Color in rgba format
+        ns: Namespace for the marker
+
+    NOTE: Remember to use rviz_visual_tools_->trigger() to publish the marker
     */
     if (rviz_visual_tools_ == nullptr)
     {
@@ -1088,46 +1098,44 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
 
     //Iterate over each primitive and add publish the shape through rviz visual tools
 
+    visualization_msgs::msg::Marker marker;
+    marker.header.frame_id = world_frame_;
+    marker.header.stamp = node_->now();
+    marker.action = visualization_msgs::msg::Marker::ADD;
+    marker.ns = ns;
+    marker.pose = primitive_pose;
+    marker.color = color;
+    marker.id = int32_t(node_->now().seconds());
+
     switch(primitive.type)
     {
         case shape_msgs::msg::SolidPrimitive::BOX:
         {
-            rviz_visual_tools_->publishCuboid(
-                primitive_pose,
-                primitive.dimensions[0],
-                primitive.dimensions[1],
-                primitive.dimensions[2],
-                color
-            );
+            marker.type = visualization_msgs::msg::Marker::CUBE;
+            marker.scale.x = primitive.dimensions[0];
+            marker.scale.y = primitive.dimensions[1];
+            marker.scale.z = primitive.dimensions[2];
             break;
         }
         case shape_msgs::msg::SolidPrimitive::SPHERE:
         {
-            geometry_msgs::msg::Vector3 scale;
-            scale.x = primitive.dimensions[0];
-            scale.y = primitive.dimensions[0];
-            scale.z = primitive.dimensions[0];
-
-            rviz_visual_tools_->publishSphere(
-                primitive_pose,
-                color,
-                scale
-            );
+            marker.type = visualization_msgs::msg::Marker::SPHERE;
+            marker.scale.x = primitive.dimensions[0];
+            marker.scale.y = primitive.dimensions[0];
+            marker.scale.z = primitive.dimensions[0];
             break;
         }
         case shape_msgs::msg::SolidPrimitive::CYLINDER:
         {
-            rviz_visual_tools_->publishCylinder(
-                primitive_pose,
-                color,
-                primitive.dimensions[0],
-                primitive.dimensions[1]
-            );
+            marker.type = visualization_msgs::msg::Marker::CYLINDER;
+            marker.scale.x = primitive.dimensions[0];
+            marker.scale.y = primitive.dimensions[0];
+            marker.scale.z = primitive.dimensions[1];
             break;
         }
         case shape_msgs::msg::SolidPrimitive::CONE:
         {
-            RCLCPP_ERROR(node_->get_logger(), "Cones are not supported yet");
+            RCLCPP_ERROR(node_->get_logger(), "Cones are not supported for visualization yet.");
             break;
         }
         default:
@@ -1136,5 +1144,6 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
             break;
         }
     }
-    
+
+    rviz_visual_tools_->publishMarker(marker);    
 }
