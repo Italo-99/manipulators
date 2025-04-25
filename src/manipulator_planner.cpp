@@ -880,7 +880,20 @@ void ManipulatorPlannerNode::positionConstraint_callback(const moveit_msgs::msg:
     // Add the position constraint to the planning scene
     RCLCPP_INFO(this->get_logger(), "Received position constraint");
     moveit_msgs::msg::Constraints current_constraints = dynamic_planner_->getPathConstraints();
-    current_constraints.position_constraints.push_back(*msg.get());
+
+    moveit_msgs::msg::PositionConstraint position_constraint = *msg.get();
+    position_constraint.header.frame_id = world_frame_; // Set the frame id to the world frame
+
+    // Validate that primitive_poses match primitives in size
+    if (position_constraint.constraint_region.primitives.size() != 
+        position_constraint.constraint_region.primitive_poses.size()) {
+        RCLCPP_ERROR(get_logger(), "Error: Number of primitives (%zu) doesn't match number of poses (%zu)",
+            position_constraint.constraint_region.primitives.size(),
+            position_constraint.constraint_region.primitive_poses.size());
+        return;
+    }
+
+    current_constraints.position_constraints.push_back(position_constraint);
     dynamic_planner_->setPathConstraints(current_constraints);
 }
 

@@ -49,11 +49,11 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
     //Moveit
     moveit_visual_tools_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(node_,
                                                                                     world_frame_, 
-                                                                                    "/moveit_visual_markers", 
+                                                                                    "moveit_visual_markers", 
                                                                                     move_group_->getRobotModel());
 
     //Rviz
-    rviz_visual_tools_.reset(new rviz_visual_tools::RvizVisualTools(world_frame_, "/moveit_visual_markers", node_));
+    rviz_visual_tools_.reset(new rviz_visual_tools::RvizVisualTools(world_frame_, "moveit_visual_markers", node_));
 
     //Initialize time optimal trajectory generation
     time_optimal_traj_gen = std::make_shared<trajectory_processing::TimeOptimalTrajectoryGeneration>(
@@ -592,20 +592,19 @@ void DynamicPlanner::setPathConstraints(const moveit_msgs::msg::Constraints &con
 {
     move_group_->setPathConstraints(constraints);
 
-    // rviz_visual_tools_->deleteAllMarkers();
+    rviz_visual_tools_->deleteAllMarkers();
 
-    // for (const auto &constraint : constraints.position_constraints)
-    // {
-    //     RCLCPP_INFO(node_->get_logger(), "Visualizing position constraint for link: %s", constraint.link_name.c_str());
-    //     for(size_t i {0}; i < constraint.constraint_region.primitives.size(); i++)
-    //     {
-    //         const auto &primitive = constraint.constraint_region.primitives[i];
-    //         const auto &pose = constraint.constraint_region.primitive_poses[i];
+    for (const auto &constraint : constraints.position_constraints)
+    {
+        for(size_t i {0}; i < constraint.constraint_region.primitives.size(); i++)
+        {
+            const auto &primitive = constraint.constraint_region.primitives[i];
+            const auto &pose = constraint.constraint_region.primitive_poses[i];
+            visualizePrimitive(primitive, pose);
+        }
+    }
 
-    //         // Visualize the primitive
-    //         visualizePrimitive(primitive, pose);
-    //     }
-    // }
+    rviz_visual_tools_->trigger();
 }
 
 moveit_msgs::msg::Constraints DynamicPlanner::getPathConstraints() const
