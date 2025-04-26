@@ -159,7 +159,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "rviz_config_path",
             default_value=PathJoinSubstitution(
-                [FindPackageShare("ur_description"), "rviz", "view_robot.rviz"]
+                [FindPackageShare("manipulators"), "config", "rviz", "planner.rviz"]
             ),
             description="RViz config file (absolute path) to use when launching rviz.",
         )

@@ -330,9 +330,8 @@ void ManipulatorMenu::spinnerMenu()
 void ManipulatorMenu::spinner()
 {
     // Setup a rate for ROS loop execution
-    rclcpp::executors::SingleThreadedExecutor executor;
-    executor.add_node(node_);
-    executor.spin();
+    executor_.add_node(node_);
+    executor_.spin();
 
     // Shutdown ROS if Ctrl+C or Ctrl+D are pressed
     rclcpp::shutdown();
@@ -1336,8 +1335,10 @@ void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::Sha
 {
 
     // Map to store couples joint name - joint values
-    static std::unordered_map<std::string, double>::iterator it;
+    std::unordered_map<std::string, double>::iterator it;
     uint counter_group = 0;
+
+    RCLCPP_INFO_ONCE(node_->get_logger(), "Listening to joints states.");
 
     for (uint i = 0; i < joints_state->name.size(); i++)
     {

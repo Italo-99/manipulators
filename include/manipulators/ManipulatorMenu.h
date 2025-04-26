@@ -234,7 +234,7 @@ class ManipulatorMenu
         void setPlannerScalingFactors(float,float);
         void setPlannerTolerances(float,float,float);
 
-    private:
+    protected:
 
         void shutdown_handler(); // Shutdown handler for the node
 
@@ -305,6 +305,7 @@ class ManipulatorMenu
         double tcp_position_tolerance_;
         double tcp_orientation_tolerance_;
 
+        rclcpp::executors::SingleThreadedExecutor executor_;
         rclcpp::Node::SharedPtr node_;
 
         MenuUserInterface<ManipulatorMenu> *menu_;
