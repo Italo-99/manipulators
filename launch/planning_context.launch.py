@@ -4,7 +4,7 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Pyth
 from launch.conditions import IfCondition
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from manipulators.launch_utils import get_ur_moveit_launch_params
+from manipulators.launch_utils import get_ur_moveit_launch_params, get_namespace
 
 def launch_setup_ur(context, *args, **kwargs):
 
@@ -19,6 +19,7 @@ def launch_setup_ur(context, *args, **kwargs):
         executable="robot_state_publisher",
         name="robot_state_publisher",
         output="both",
+        namespace=get_namespace(context),
         parameters=[
             moveit_params[0]
             #robot description
@@ -32,16 +33,24 @@ def launch_setup_ur(context, *args, **kwargs):
         name="joint_state_publisher_gui",
         output="screen",
         parameters=[{"rate": rate,}], 
+        namespace=get_namespace(context),
         condition=IfCondition(PythonExpression([LaunchConfiguration("gui"), " and ", LaunchConfiguration("publish_joint_states")]))
     )
+
+    def get_fake_joint_states_topic():
+        if (get_namespace(context) == ""):
+            return "/move_group/fake_controller_joint_states"
+        else:
+            return "/" + get_namespace(context) + "/move_group/fake_controller_joint_states"
 
     joint_state_publisher_node = Node(
         package="joint_state_publisher",
         executable="joint_state_publisher",
         name="joint_state_publisher",
         output="screen",        
-        parameters=[{"source_list": ['/move_group/fake_controller_joint_states'],
+        parameters=[{"source_list": [get_fake_joint_states_topic()],
                       "rate": rate,}],
+        namespace=get_namespace(context),
         condition=IfCondition(PythonExpression([LaunchConfiguration("gui"), " == False", " and ", LaunchConfiguration("publish_joint_states")]))    
     )
 
@@ -58,13 +67,15 @@ def launch_setup_ur(context, *args, **kwargs):
             # robot_description_kinematics,
             # robot_description_planning,
             # ompl_planning_pipeline_config,
-        condition=IfCondition(LaunchConfiguration("rviz"))
+        condition=IfCondition(LaunchConfiguration("rviz")),
+        namespace=get_namespace(context),
     )
 
     move_group_node = Node(
         package="moveit_ros_move_group",
         executable="move_group",
         output="screen",
+        namespace=get_namespace(context),
         parameters=moveit_params
             # robot_description,
             # robot_description_semantic,
@@ -170,7 +181,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "prefix",
-            default_value='""',
+            default_value='',
             description="Prefix of the joint names, useful for "
             "multi-robot setup. If changed than also joint names in the controllers' configuration "
             "have to be updated.",

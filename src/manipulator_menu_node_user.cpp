@@ -1,29 +1,34 @@
 #include "manipulators/ManipulatorMenu.h"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {    
+    const std::string prefix = "";
+    const std::string ns = "";
 
-    
     ManipulatorMenuParams params;
     params.node_name          = "manipulator_menu_node_user";
     params.ros_freq           = 50;
     params.manipulator_name   = "manipulator";
-    params.planning_group     = "ur_manipulator";
+    params.planning_group     = prefix + "ur_manipulator";
 
     params.gripper            = "robotiq_85";
-    params.gripper_group      = "robotiq_85_gripper";
-    params.gripper_IO_cmds    = {0, 1}; // For gripper type "real_gripper", IO commands to close/open the gripper
+    params.gripper_group      = prefix + "robotiq_85_gripper";
+    params.gripper_IO_cmds    = {1, 2}; // For gripper type "real_gripper", IO commands to close/open the gripper
 
-    params.joint_names        = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
-        "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
-    params.base_link_name     = "base_link";
+    params.joint_names        = {prefix + "", 
+                                 prefix + "", 
+                                 prefix + "",
+                                 prefix + "", 
+                                 prefix + "", 
+                                 prefix + ""};
 
-    
+    params.base_link_name     = prefix + "base_link";
+
     rclcpp::init(argc, argv);
 
     rclcpp::NodeOptions options;
-    rclcpp::Node::SharedPtr node = std::make_shared<rclcpp::Node>(params.node_name, options);
+    rclcpp::Node::SharedPtr node = std::make_shared<rclcpp::Node>(params.node_name, ns, options);
 
-    auto menu = std::make_shared<ManipulatorMenu>(params, node);
+    auto menu = std::make_shared<ManipulatorMenu>(params, node, true);
     menu->spinnerMenu();
 
     rclcpp::shutdown();

@@ -64,6 +64,22 @@ struct ManipulatorMenuParams
     std::vector<std::string> joint_names = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
                                             "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
     std::string base_link_name           = "base_link";
+
+    double tcp_position_tolerance        = 0.01; //Tolerance for the position of the end effector
+    double tcp_orientation_tolerance     = 0.01; //Tolerance for the orientation of the end effector
+    double joint_tolerance               = 0.01; //Tolerance for the position of the joints
+
+    void log(const rclcpp::Logger& logger) const
+    {
+        RCLCPP_INFO(logger, "Manipulator name: %s", manipulator_name.c_str());
+        RCLCPP_INFO(logger, "Planning group: %s", planning_group.c_str());
+        RCLCPP_INFO(logger, "Gripper type: %s", gripper.c_str());
+        RCLCPP_INFO(logger, "Joint names: %s", joint_names[0].c_str());
+        RCLCPP_INFO(logger, "Base link name: %s", base_link_name.c_str());
+        RCLCPP_INFO(logger, "TCP position tolerance: %f", tcp_position_tolerance);
+        RCLCPP_INFO(logger, "TCP orientation tolerance: %f", tcp_orientation_tolerance);
+        RCLCPP_INFO(logger, "Joint tolerance: %f", joint_tolerance);
+    }
 };
 
 class ManipulatorMenu
@@ -74,9 +90,18 @@ class ManipulatorMenu
     //      and z coordinates in meters while the last 3 elements will be the roll, pitch and yaw in degrees.
     public:
         // ---------------------  PUBLIC CONSTRUCTOR ---------------------
+        /*
+            Constructor for the ManipulatorMenu class. It initializes the menu and the node.
+            params: Parameters for the manipulator menu (must match the ones passed to the manipulator planner)
+            node: Pointer to the node that will host the menu
+            sync_parameters: If true, the parameters will be synchronized with the manipulator planner automatically 
+                             (may cause some delay or issues, if the menu blocks when started disable this option and 
+                              manually set the parameters in src/manipulator_menu_user.cpp)
+        */
         ManipulatorMenu(
             ManipulatorMenuParams &params,
-            const rclcpp::Node::SharedPtr& node
+            const rclcpp::Node::SharedPtr& node,
+            const bool sync_parameters = true
         );
 
         ~ManipulatorMenu();
@@ -236,6 +261,8 @@ class ManipulatorMenu
 
     protected:
 
+        void waitManipulatorParameters();
+
         void shutdown_handler(); // Shutdown handler for the node
 
         // --------------------- PRIVATE PUBS/SUBS ---------------------
@@ -300,10 +327,6 @@ class ManipulatorMenu
         // --------------------- PRIVATE VARIABLES ---------------------
 
         ManipulatorMenuParams params_;
-
-        double joint_tolerance_;
-        double tcp_position_tolerance_;
-        double tcp_orientation_tolerance_;
 
         rclcpp::executors::SingleThreadedExecutor executor_;
         rclcpp::Node::SharedPtr node_;

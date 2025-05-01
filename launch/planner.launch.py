@@ -6,7 +6,7 @@ from launch.conditions import IfCondition
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from ur_moveit_config.launch_common import load_yaml
-from manipulators.launch_utils import get_ur_moveit_launch_params
+from manipulators.launch_utils import get_ur_moveit_launch_params, get_namespace
 import os
 
 def launch_setup(context, *args, **kwargs):
@@ -25,7 +25,6 @@ def launch_setup(context, *args, **kwargs):
 
     # ---------------------------------------- NODES ----------------------------------------
 
-
     nodes_to_start = []
 
     nodes_to_start.append(
@@ -33,9 +32,12 @@ def launch_setup(context, *args, **kwargs):
             package="manipulators",
             executable="manipulator_planner",
             output="both",
+            namespace=get_namespace(context),
             parameters=[
                 mp_params
-            ] + moveit_params,
+            ] + moveit_params + [
+                {"prefix" : LaunchConfiguration("prefix")},
+            ],
         )
     )
 
@@ -45,6 +47,7 @@ def launch_setup(context, *args, **kwargs):
         Node(
             package="motors_trajectory",
             executable="motor_mover_node",
+            namespace=get_namespace(context),
             condition=IfCondition(LaunchConfiguration("gripper")),
         )
     )
@@ -53,6 +56,7 @@ def launch_setup(context, *args, **kwargs):
         Node(
             package="motors_trajectory",
             executable="robotiq_85_gripper_node",
+            namespace=get_namespace(context),
             condition=IfCondition(LaunchConfiguration("gripper")),
         )
     )
@@ -168,7 +172,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "prefix",
-            default_value='""',
+            default_value='',
             description="Prefix of the joint names, useful for "
             "multi-robot setup. If changed than also joint names in the controllers' configuration "
             "have to be updated.",

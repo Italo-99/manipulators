@@ -3,6 +3,12 @@ from launch_ros.substitutions import FindPackageShare
 from ur_moveit_config.launch_common import load_yaml
 import os
 
+def get_namespace(context):
+    pre = LaunchConfiguration("prefix").perform(context)
+    while(pre.endswith("_")):
+        pre = pre[:-1]
+    return pre
+
 def get_ur_moveit_launch_params(context,
                                 ur_type_: LaunchConfiguration | None = None,
                                 description_path_: LaunchConfiguration | None = None,
@@ -57,7 +63,7 @@ def get_ur_moveit_launch_params(context,
             "ur_type:=",
             ur_type,
             " ",
-            "prefix:=",
+            "tf_prefix:=",
             prefix,
             " ",
             "joint_limit_params:=",

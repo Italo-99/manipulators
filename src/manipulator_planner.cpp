@@ -7,17 +7,22 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
 
     declareParameters();
 
+    std::string prefix = this->get_parameter("prefix").as_string();    
+
     manipulator_name_ = this->get_parameter("manipulator_name").as_string();
-    planning_group_ = this->get_parameter("planning_group").as_string();
+    planning_group_ = prefix + this->get_parameter("planning_group").as_string();
     joint_names_ = this->get_parameter("joint_names").as_string_array();
-    ee_name_ = this->get_parameter("ee_name").as_string();
+    ee_name_ = prefix + this->get_parameter("ee_name").as_string();
     ros_freq_ = this->get_parameter("ros_freq").as_int();
     max_speed_ee_ = this->get_parameter("max_speed_ee").as_double();
     max_accel_ee_ = this->get_parameter("max_accel_ee").as_double();
     max_spd_jnts_ = this->get_parameter("max_spd_jnts").as_double();
     max_acc_jnts_ = this->get_parameter("max_acc_jnts").as_double();
     gripper_links_ = this->get_parameter("gripper_links").as_string_array();
-    world_frame_ = this->get_parameter("world_frame").as_string();
+    world_frame_ = prefix + this->get_parameter("world_frame").as_string();
+
+    addPrefix(prefix, joint_names_);
+    addPrefix(prefix, gripper_links_);
 
     //Initialize velocity variables
     const size_t NUM_JOINTS = joint_names_.size();
@@ -1067,6 +1072,19 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
 }
 
 //HELPER FUNCTIONS
+
+void ManipulatorPlannerNode::addPrefix(const std::string &prefix, std::vector<std::string> &names) const {
+    /*
+    Adds a prefix to each name in the vector
+    Args:
+        prefix: Prefix to add
+        names: Vector of names to modify
+    */
+    for (auto &name : names) {
+        name = prefix + name;
+    }
+}
+
 void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("manipulator_name", std::string());
     this->declare_parameter("planning_group", std::string());
@@ -1079,7 +1097,8 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("max_spd_jnts", 1.0);
     this->declare_parameter("max_acc_jnts", 1.0);
     this->declare_parameter("gripper_links", std::vector<std::string>()); //This is used to disable collision with the fingers when attaching objects
-    
+    this->declare_parameter("prefix", std::string()); //Prefix for the joint and link names
+
     //Dynamic planner params
     this->declare_parameter("planner_id", "geometric::RRTConnect");
     this->declare_parameter("vel_factor", 0.1); //MUTABLE

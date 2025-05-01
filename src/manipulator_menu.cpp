@@ -3,12 +3,21 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::Node::SharedPtr& node) 
+ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::Node::SharedPtr& node, const bool sync_parameters) 
     : params_(params), node_(node), planned_trajectory_(), traj_received_(false), traj_error_(false)
 {
     // Display Manipulator
     RCLCPP_INFO(node_->get_logger(), "Manipulator menu initialized with the following setup:");
     RCLCPP_INFO(node_->get_logger(), "Manipulator name: %s", params_.manipulator_name.c_str());
+
+    // ---------------------- Params sync ----------------------
+
+    getManipulatorParams_client_ = std::make_shared<rclcpp::SyncParametersClient>(node_, "/manipulator_planner");
+
+    if (sync_parameters){
+        waitManipulatorParameters();
+        RCLCPP_INFO(node_->get_logger(), "Manipulator parameters synchronized automatically with planning group: %s", params_.planning_group.c_str());
+    }
 
     for (unsigned long k = 0; k < params_.joint_names.size(); k++)
     {
@@ -52,12 +61,6 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     setRealTimeControl_client_           = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
     changePlannerScalingFactors_client_  = node_->create_client<manipulator_interfaces::srv::ChangePlannerScalingFactors>(params_.manipulator_name+"/change_planner_scaling_factors");
     changePlannerTolerances_client_      = node_->create_client<manipulator_interfaces::srv::ChangePlannerTolerances>(params_.manipulator_name+"/change_planner_tolerances");
-
-    getManipulatorParams_client_ = std::make_shared<rclcpp::SyncParametersClient>(node_, "/manipulator_planner");
-
-    tcp_position_tolerance_ = getManipulatorParameter<double>("position_tolerance");
-    tcp_orientation_tolerance_ = getManipulatorParameter<double>("orientation_tolerance");
-    joint_tolerance_ = getManipulatorParameter<double>("joint_tolerance");
 
     // ---------------------- Planning ----------------------
     plannedTrajectory_sub_ = node_->create_subscription<manipulator_interfaces::msg::TrajectoryResult>(
@@ -525,7 +528,7 @@ bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajector
         }
         //Repeatedly check joint states to see if the goal has been reached
         for (size_t i {0}; i < goal_state.position.size(); i++){
-            if (std::abs(goal_state.position[i] - current_joint_pose_.position[i]) > joint_tolerance_){
+            if (std::abs(goal_state.position[i] - current_joint_pose_.position[i]) > params_.joint_tolerance){
                 break; //At least one joint is not in the goal position
             }
             return true;
@@ -1065,9 +1068,9 @@ void ManipulatorMenu::setPlannerTolerances(float position, float orientation, fl
     request->joint_tolerance = joint;
 
     // Update tolerances
-    joint_tolerance_ = joint; 
-    tcp_position_tolerance_ = position; 
-    tcp_orientation_tolerance_ = orientation; 
+    params_.joint_tolerance = joint; 
+    params_.tcp_position_tolerance = position; 
+    params_.tcp_orientation_tolerance = orientation; 
 
     // Wait for the service to be available
     while (!changePlannerTolerances_client_->wait_for_service(std::chrono::seconds(1)))
@@ -1325,6 +1328,16 @@ double ManipulatorMenu::angular_distance(const geometry_msgs::msg::Quaternion& q
     ===================== PRIVATE FUNCTIONS  =======================
     ================================================================
 */
+
+void ManipulatorMenu::waitManipulatorParameters(){    
+    params_.tcp_position_tolerance = getManipulatorParameter<double>("position_tolerance");
+    params_.tcp_orientation_tolerance = getManipulatorParameter<double>("orientation_tolerance");
+    params_.joint_tolerance = getManipulatorParameter<double>("joint_tolerance");
+    params_.joint_names = getManipulatorParameter<std::vector<std::string>>("joint_names");
+    params_.manipulator_name = getManipulatorParameter<std::string>("manipulator_name");
+    params_.base_link_name = getManipulatorParameter<std::string>("world_frame");
+    params_.planning_group = getManipulatorParameter<std::string>("planning_group");
+}
 
 void ManipulatorMenu::shutdown_handler()
 {

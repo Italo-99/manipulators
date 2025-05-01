@@ -12,12 +12,22 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
 {
     RCLCPP_INFO(node_->get_logger(), "Initializing DynamicPlanner...");
 
+    RCLCPP_INFO(node_->get_logger(), "Planning group: %s", planning_group_.c_str());
+    RCLCPP_INFO(node_->get_logger(), "Dynamic behavior: %s", dynamic_behavior_ ? "true" : "false");
+    RCLCPP_INFO(node_->get_logger(), "Velocity factor: %f", params_.vel_factor);
+    RCLCPP_INFO(node_->get_logger(), "Acceleration factor: %f", params_.acc_factor);
+    RCLCPP_INFO(node_->get_logger(), "Position tolerance: %f", params_.position_tolerance);
+    RCLCPP_INFO(node_->get_logger(), "Orientation tolerance: %f", params_.orientation_tolerance);
+    RCLCPP_INFO(node_->get_logger(), "Joint tolerance: %f", params_.joint_tolerance);
+    RCLCPP_INFO(node_->get_logger(), "World frame: %s", params_.world_frame.c_str());
+    RCLCPP_INFO(node_->get_logger(), "End effector link: %s", params_.end_effector_link.c_str());
+    
     move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
         node_, 
         moveit::planning_interface::MoveGroupInterface::Options(
             planning_group,
             "robot_description",
-            ""
+            node_->get_namespace()
         )
     );
 
@@ -81,8 +91,13 @@ DynamicPlanner::~DynamicPlanner()
 
 void DynamicPlanner::initialize()
 {
+    std::string ns = node_->get_namespace();
+    ns = ns == "/" ? "" : ns; // Remove leading slash if namespace is empty
+
+    RCLCPP_INFO(node_->get_logger(), "Node namespace: %s", ns.c_str());
+
     // Publishers
-    joint_state_pub_ = node_->create_publisher<sensor_msgs::msg::JointState>("/move_group/fake_controller_joint_states", 1);
+    joint_state_pub_ = node_->create_publisher<sensor_msgs::msg::JointState>(ns + "/move_group/fake_controller_joint_states", 1);
     trajectory_pub_ = node_->create_publisher<manipulator_interfaces::msg::TrajectoryResult>(planning_group_ + "/planned_trajectory", 1);
     
     // Subscribers
@@ -94,7 +109,7 @@ void DynamicPlanner::initialize()
     );
 
     joints_state_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
-        "/joint_states", 1,
+        ns + "/joint_states", 1,
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->jointsState_callback(msg);
         }

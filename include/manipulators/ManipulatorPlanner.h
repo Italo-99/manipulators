@@ -157,6 +157,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
 
         // --------------- HELPER FUNCTIONS ---------------
 
+        void addPrefix(const std::string& prefix, std::vector<std::string>& vector) const; //Add a prefix to all elements of a vector
+        
         void initializePlanner(); //Creates a node for the DynamicPlanner, adds it to the executor and initializes the planner_ object
         void declareParameters(); //Declare the parameters for the node
         void setPrimitiveDimensions(const ShapeType object_type, const std::vector<double> &object_dims, shape_msgs::msg::SolidPrimitive &primitive); //Set the dimensions of the primitive object
