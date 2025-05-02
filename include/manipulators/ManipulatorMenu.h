@@ -218,13 +218,15 @@ class ManipulatorMenu
 
         void publishClearConstraints(void); //Clear all constraints
 
+        void publishToolIOCmd(const size_t id, const bool value); //Publish a command to the tool digital IO
+
         // Matrix utils
         void printMatrix(const Eigen::MatrixXd& matrix);
         void listToMatrix(const std::vector<double> &list, Eigen::MatrixXd &matrix);
 
-        // Quaternions utils
+        // Quaternions utils (rpy in degrees)
         geometry_msgs::msg::Quaternion quaternion_from_euler(double roll, double pitch, double yaw);
-        std::vector<double> euler_from_quaternion(const geometry_msgs::msg::Quaternion quat);
+        std::vector<double> euler_from_quaternion(const geometry_msgs::msg::Quaternion quat); 
 
         // Degrees and radians conversions
         std::vector<double> deg_from_rad(const std::vector<double>);
@@ -359,7 +361,7 @@ class ManipulatorMenu
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripperGrab_client_; //Not implemented for now
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripperMove_client_;
 
-        rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr digitalIO_pub_;
+        rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr toolDigitalIO_pub_;
 
         rclcpp::SyncParametersClient::SharedPtr getManipulatorParams_client_; //gets the parameter from the manipulator planner node
 

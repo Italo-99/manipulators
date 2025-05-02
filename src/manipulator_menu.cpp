@@ -78,7 +78,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
     if(params_.gripper == "robotiq_85"){
         gripperMove_client_ = node_->create_client<std_srvs::srv::SetBool>(params_.gripper_group+"/move_gripper");
     } else if (params_.gripper == "real_gripper"){
-        digitalIO_pub_ = node_->create_publisher<std_msgs::msg::Int8>("/ur_rtde/digitalIO/command", 1);
+        toolDigitalIO_pub_ = node_->create_publisher<std_msgs::msg::Int8>("/ur_rtde/tool_digitalIO/command", 1);
     }
 
     rclcpp::contexts::get_global_default_context()->add_pre_shutdown_callback(
@@ -728,9 +728,15 @@ void ManipulatorMenu::moveGripper(const bool close)
     if(params_.gripper == "robotiq_85"){
         gripperMoveClient(close);
     } else if (params_.gripper == "real_gripper"){
-        std_msgs::msg::Int8 msg;
-        msg.data = params_.gripper_IO_cmds[0] ? close : params_.gripper_IO_cmds[1];
-        digitalIO_pub_->publish(msg);
+        if (close){
+            publishToolIOCmd(params_.gripper_IO_cmds[1], false);
+            rclcpp::sleep_for(std::chrono::milliseconds(100));
+            publishToolIOCmd(params_.gripper_IO_cmds[0], true);
+        } else {
+            publishToolIOCmd(params_.gripper_IO_cmds[0], false);
+            rclcpp::sleep_for(std::chrono::milliseconds(100));
+            publishToolIOCmd(params_.gripper_IO_cmds[1], true);
+        }
     } else {
         RCLCPP_ERROR(node_->get_logger(), "Gripper is not enabled.");
     }
@@ -897,6 +903,18 @@ void ManipulatorMenu::addAttachedObj(const std::string &name,
     moveit_msgs::msg::AttachedCollisionObject attachedObj;
     attachedObj.object = obj;
     publishAttachedCollisionObject(attachedObj);
+}
+
+void ManipulatorMenu::publishToolIOCmd(const size_t id, const bool value)
+{
+    std_msgs::msg::Int8 msg;
+    msg.data = id + 1;
+
+    if (!value){
+        msg.data = -msg.data;
+    }
+
+    toolDigitalIO_pub_->publish(msg);
 }
 
 // Collision Attached object publisher
