@@ -22,6 +22,7 @@
     <depend>moveit_ros_planning_interface</depend>
     <depend>manipulator_interfaces</depend>
     <depend>motors_trajectory</depend>
+    <depend>yaml-cpp</depend>
 
     <depend>ur_description</depend>
     <depend>ur_moveit_config</depend>

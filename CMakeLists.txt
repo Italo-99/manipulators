@@ -27,6 +27,7 @@ find_package(manipulator_interfaces REQUIRED)
 find_package(motors_trajectory REQUIRED)
 find_package(rviz_visual_tools REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(yaml_cpp_vendor REQUIRED)
 
 # ---------------- VARIABLES -----------------
 
@@ -43,6 +44,7 @@ set(MANIPULATOR_MENU_DEPENDS
     moveit_msgs
     manipulator_interfaces
     motors_trajectory
+    yaml_cpp_vendor
 )
 
 set(JOYSTICK_CONTROLLER_DEPENDS
@@ -151,6 +153,15 @@ install(
 ament_target_dependencies(manipulator_menu
     ${MANIPULATOR_MENU_DEPENDS}
 )
+
+# target_link_libraries(manipulator_menu
+#   ${rclcpp_LIBRARIES}
+#   ${moveit_msgs_LIBRARIES}
+#   ${std_msgs_LIBRARIES}
+#   ${tf2_ros_LIBRARIES}
+#   ${tf2_LIBRARIES}
+#   yaml-cpp
+# )
 
 # ---------------- DRIVER TRAJECTORY CONVERTER -----------------
 

@@ -3,7 +3,7 @@
 
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
-ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::Node::SharedPtr& node, const bool sync_parameters) 
+ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Node::SharedPtr& node, const bool sync_parameters) 
     : params_(params), node_(node), planned_trajectory_(), traj_received_(false), traj_error_(false)
 {
     // Display Manipulator
@@ -79,6 +79,10 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams &params, const rclcpp::No
         gripperMove_client_ = node_->create_client<std_srvs::srv::SetBool>(params_.gripper_group+"/move_gripper");
     } else if (params_.gripper == "real_gripper"){
         toolDigitalIO_pub_ = node_->create_publisher<std_msgs::msg::Int8>("/ur_rtde/tool_digitalIO/command", 1);
+    }
+
+    if(!params_.known_poses_path.empty()){
+        loadKnownPoses();
     }
 
     rclcpp::contexts::get_global_default_context()->add_pre_shutdown_callback(
@@ -411,28 +415,19 @@ void ManipulatorMenu::publishCartesianGoal(const std::vector<geometry_msgs::msg:
     cartesianPlan_pub_->publish(waypoints_msg);
 }
 
-// Go to pre configured home position
-sensor_msgs::msg::JointState ManipulatorMenu::goHome(const bool ee_orient)
+std::vector<double> ManipulatorMenu::getKnownPose(const std::string& pose_name)
 {
-    std::vector<double> start_joint_pose = {0., 0., 0., 0., 0., 0};
-    if (!ee_orient) // gripper down
+    // Check if the pose exists in the map
+    auto it = known_poses_.find(pose_name);
+    if (it != known_poses_.end())
     {
-        start_joint_pose = {0., -90., -90., -90., +90., 0.};
+        return it->second;
     }
-    else // gripper at the front
+    else
     {
-        start_joint_pose = {0., -90., -90., 0., +90., 0.};
+        RCLCPP_ERROR(node_->get_logger(), "Pose %s not found in known poses.", pose_name.c_str());
+        return std::vector<double>();
     }
-    if (params_.joint_names.size() != 6)
-    {
-        for (unsigned long k = 0; k < params_.joint_names.size() - 6; k++)
-        {
-            start_joint_pose.push_back(0.);
-        }
-    }
-
-    // Publish home joint goal
-    return publishJointGoal(start_joint_pose);
 }
 
 // -------------------- PLANNING --------------------
@@ -1347,6 +1342,31 @@ double ManipulatorMenu::angular_distance(const geometry_msgs::msg::Quaternion& q
     ================================================================
 */
 
+void ManipulatorMenu::loadKnownPoses(){
+
+    std::string path = params_.known_poses_path;
+    try {
+        // Check file exists by trying to open it.
+
+        std::ifstream fh(path.c_str());
+        if (!fh.good()) {
+            RCLCPP_ERROR(node_->get_logger(), "Known poses file not found: %s", path.c_str());
+        }
+        fh.close();
+
+        YAML::Node config = YAML::LoadFile(path);
+        RCLCPP_INFO(node_->get_logger(), "Knwon poses file loaded successfully.");
+        for (const auto& pose : config) {
+            std::string name = pose.first.as<std::string>();
+            std::vector<double> position = pose.second.as<std::vector<double>>();
+            known_poses_[name] = position;
+            RCLCPP_INFO(node_->get_logger(), "Pose %s loaded: (%f, %f, %f, %f, %f, %f)", name.c_str(), position[0], position[1], position[2], position[3], position[4], position[5]);
+        }
+    } catch (const YAML::Exception & e) {
+        RCLCPP_ERROR(node_->get_logger(), "Error parsing YAML file %s: %s", path.c_str(), e.what());
+    }
+}
+
 void ManipulatorMenu::waitManipulatorParameters(){    
     params_.tcp_position_tolerance = getManipulatorParameter<double>("position_tolerance");
     params_.tcp_orientation_tolerance = getManipulatorParameter<double>("orientation_tolerance");
@@ -1622,12 +1642,12 @@ void ManipulatorMenu::userRotateAroundZ()
 
 void ManipulatorMenu::userGoHomeDown()
 {
-    goHome(false);
+    publishJointGoal(getKnownPose("home_gripper_down"));
 }
 
 void ManipulatorMenu::userGoHomeFront()
 {
-    goHome(true);
+    publishJointGoal(getKnownPose("home_gripper_front"));
 }
 
 // --------------------- VISUALIZATION HANDLERS ---------------------

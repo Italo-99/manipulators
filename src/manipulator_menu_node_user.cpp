@@ -23,6 +23,8 @@ int main(int argc, char* argv[]) {
 
     params.base_link_name     = prefix + "base_link";
 
+    params.known_poses_path = "/home/matteo/projectred_ws/src/manipulators/config/known_poses.yaml";
+
     rclcpp::init(argc, argv);
 
     rclcpp::NodeOptions options;

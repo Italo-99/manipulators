@@ -7,6 +7,8 @@
 #include <Eigen/Geometry>
 #include <unordered_map>
 #include <Eigen/Geometry>
+#include <yaml-cpp/yaml.h>
+#include <fstream>
 
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
@@ -69,17 +71,8 @@ struct ManipulatorMenuParams
     double tcp_orientation_tolerance     = 0.01; //Tolerance for the orientation of the end effector
     double joint_tolerance               = 0.01; //Tolerance for the position of the joints
 
-    void log(const rclcpp::Logger& logger) const
-    {
-        RCLCPP_INFO(logger, "Manipulator name: %s", manipulator_name.c_str());
-        RCLCPP_INFO(logger, "Planning group: %s", planning_group.c_str());
-        RCLCPP_INFO(logger, "Gripper type: %s", gripper.c_str());
-        RCLCPP_INFO(logger, "Joint names: %s", joint_names[0].c_str());
-        RCLCPP_INFO(logger, "Base link name: %s", base_link_name.c_str());
-        RCLCPP_INFO(logger, "TCP position tolerance: %f", tcp_position_tolerance);
-        RCLCPP_INFO(logger, "TCP orientation tolerance: %f", tcp_orientation_tolerance);
-        RCLCPP_INFO(logger, "Joint tolerance: %f", joint_tolerance);
-    }
+    std::string known_poses_path          = ""; //Full path to the yaml file with the known poses (leave empty if not used)
+                                                //Known poses are defined as a vector of joint angles in degrees eg: home: [0, 0, 0, 0, 0, 0]
 };
 
 class ManipulatorMenu
@@ -99,7 +92,7 @@ class ManipulatorMenu
                               manually set the parameters in src/manipulator_menu_user.cpp)
         */
         ManipulatorMenu(
-            ManipulatorMenuParams &params,
+            ManipulatorMenuParams params,
             const rclcpp::Node::SharedPtr& node,
             const bool sync_parameters = true
         );
@@ -142,6 +135,8 @@ class ManipulatorMenu
             
         sensor_msgs::msg::JointState oneJointMove(const int num, const double joint_rot); // to execute rotation of a single joint
         sensor_msgs::msg::JointState goHome(const bool);                                  // to setup home position
+
+        std::vector<double> getKnownPose(const std::string& pose_name); //Get a known pose from the yaml file
 
         // Planning 
 
@@ -263,6 +258,8 @@ class ManipulatorMenu
 
     protected:
 
+        void loadKnownPoses();
+
         void waitManipulatorParameters();
 
         void shutdown_handler(); // Shutdown handler for the node
@@ -329,6 +326,7 @@ class ManipulatorMenu
         // --------------------- PRIVATE VARIABLES ---------------------
 
         ManipulatorMenuParams params_;
+        std::map<std::string, std::vector<double>> known_poses_; //Map of known poses
 
         rclcpp::executors::SingleThreadedExecutor executor_;
         rclcpp::Node::SharedPtr node_;
