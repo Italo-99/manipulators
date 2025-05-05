@@ -306,10 +306,8 @@ void ManipulatorPlannerNode::spinner() {
     tcpPose_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
         [&, this]() {
-            if(jac_control_ || js_rt_control_) {
-                // Publish tcp pose
-                tcpPose_pub_->publish(getFKine());
-            }
+            // Publish tcp pose
+            tcpPose_pub_->publish(getFKine());
         },
         tcp_pose_cb_group
     );
@@ -321,10 +319,8 @@ void ManipulatorPlannerNode::spinner() {
     tcpVel_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
         [&, this]() {
-            if(jac_control_ || js_rt_control_) {
-                // Publish tcp vel
-                tcpVel_pub_->publish(getTcpVel());
-            }
+            // Publish tcp vel
+            tcpVel_pub_->publish(getTcpVel());
         },
         tcp_vel_cb_group
     );
