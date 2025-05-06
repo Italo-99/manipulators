@@ -20,6 +20,10 @@
 #include "manipulator_interfaces/srv/change_planner_tolerances.hpp"
 #include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
 #include "manipulator_interfaces/srv/pseudo_inverse.hpp"
+#include "manipulator_interfaces/msg/joint_goal.hpp"
+#include "manipulator_interfaces/msg/tcp_goal.hpp"
+#include "manipulator_interfaces/msg/cartesian_goal.hpp"
+
 
 class ManipulatorPlannerNode : public rclcpp::Node {
     public:
@@ -134,10 +138,10 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         //SUBSCRIBERS
         void tcpGoal_callback(const manipulator_interfaces::msg::TcpGoal::SharedPtr goal_pose);
         void jointGoal_callback(const manipulator_interfaces::msg::JointGoal::SharedPtr goal_joints);
+        void cartesianPlan_callback(const manipulator_interfaces::msg::CartesianGoal::SharedPtr waypoints);
         void executionControl_callback(const std_msgs::msg::Bool::SharedPtr msg);
         void collisionObject_callback(const moveit_msgs::msg::CollisionObject::SharedPtr collision_object);
         void attachedCollisionObject_callback(const moveit_msgs::msg::AttachedCollisionObject::SharedPtr attached_collision_object);
-        void cartesianPlan_callback(const geometry_msgs::msg::PoseArray::SharedPtr waypoints);
         void velJacSetpoint_callback(const geometry_msgs::msg::Twist::SharedPtr &msg); // Update the velocity setpoint of the arm for the jacobian speed based control
         void realTimeSetpoint_callback(const sensor_msgs::msg::JointState::SharedPtr &msg); // Update speed setpoint of the arm for the real time joints speed based control
         void jointConstraint_callback(const moveit_msgs::msg::JointConstraint::SharedPtr joint_constraint); // Update joint constraints
@@ -195,9 +199,9 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         //Subscribers
         rclcpp::Subscription<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpGoal_sub_;                         //Subscriber for TCP goal (cartesian space goals) requests
         rclcpp::Subscription<manipulator_interfaces::msg::JointGoal>::SharedPtr jointGoal_sub_;                     //Subscriber for joint space goal requests
+        rclcpp::Subscription<manipulator_interfaces::msg::CartesianGoal>::SharedPtr cartesianPlan_sub_;             //Subscriber for cartesian space waypoints
         rclcpp::Subscription<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObject_sub_;                    //Subscriber for addition and update of collision objects
         rclcpp::Subscription<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr attachedcollisionObject_sub_;    //Subscriber for addition and update of collision objects
-        rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr cartesianPlan_sub_;                          //Subscriber for cartesian space waypoints
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr velJacSetpoint_sub_;                             //Subscriber for the velocity setpoint for the jacobian speed based control
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr realTimeSetpoint_sub_;                        //Subscriber for the speed setpoint for the real time joints speed based control
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr execution_ctrl_sub_;                                   //Subscriber for moving and stopping the robot

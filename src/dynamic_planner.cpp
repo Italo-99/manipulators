@@ -351,6 +351,8 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
     result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
     result_msg.trajectory = trajectory;
     trajectory_pub_->publish(result_msg);
+
+    updatePlannerParams(); //Reset the planner parameters with values stored in params_
 }
 
 void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link)
@@ -363,8 +365,22 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose)
     plan(goal_pose, params_.end_effector_link, world_frame_);
 }
 
-double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints)
+double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints, const std::string& ee_link, const std::string& frame)
 {
+    /*
+    Plan: cartesian goal
+        Args:
+            waypoints: Array of target positions to follow
+            ee_link: End effector link
+            frame: Reference frame
+        Returns:
+            fraction: Fraction of the trajectory that was planned
+    */
+
+    //Sets the target pose
+    move_group_->setPoseReferenceFrame(frame);
+    move_group_->setEndEffectorLink(ee_link);
+
     // Setup cartesian planner
     double jump_treshold = 0.0;
     double eef_step = params_.max_velocity*params_.sample_time; // Ideal distance step
@@ -429,9 +445,22 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
     result_msg.message = "Trajectory planned successfully";
     result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
     result_msg.trajectory = trajectory;
+    result_msg.fraction = fraction;
     trajectory_pub_->publish(result_msg);
 
+    updatePlannerParams(); //Reset the planner parameters with values stored in params_
+
     return fraction;
+}
+
+double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints, const std::string& ee_link)
+{
+    return cartesianPlan(waypoints, ee_link, world_frame_);
+}
+
+double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints)
+{
+    return cartesianPlan(waypoints, params_.end_effector_link, world_frame_);
 }
 
 void DynamicPlanner::moveRobot(const sensor_msgs::msg::JointState& joint_state)

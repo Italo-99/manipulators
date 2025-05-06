@@ -4,7 +4,7 @@
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
 ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Node::SharedPtr& node, const bool sync_parameters) 
-    : params_(params), node_(node), planned_trajectory_(), traj_received_(false), traj_error_(false)
+    : params_(params), node_(node), traj_result_(), traj_received_(false)
 {
     // Display Manipulator
     RCLCPP_INFO(node_->get_logger(), "Manipulator menu initialized with the following setup:");
@@ -35,7 +35,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
     jointGoal_pub_               = node_->create_publisher<manipulator_interfaces::msg::JointGoal>(params_.manipulator_name+"/joint_goal", 1);
     tcpGoal_pub_                 = node_->create_publisher<manipulator_interfaces::msg::TcpGoal>(params_.manipulator_name+"/tcp_goal", 1);
-    cartesianPlan_pub_           = node_->create_publisher<geometry_msgs::msg::PoseArray>(params_.manipulator_name+"/cartesian_plan", 1);
+    cartesianPlan_pub_           = node_->create_publisher<manipulator_interfaces::msg::CartesianGoal>(params_.manipulator_name+"/cartesian_plan", 1);
     displayGoal_pub_             = node_->create_publisher<geometry_msgs::msg::PoseStamped>(params_.manipulator_name+"/display_robot_goal", 1);
     collisionObject_pub_         = node_->create_publisher<moveit_msgs::msg::CollisionObject>(params_.manipulator_name+"/collision_object", 1);
     attachedCollisionObject_pub_ = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(params_.manipulator_name+"/attached_collision_object", 1);
@@ -367,21 +367,39 @@ sensor_msgs::msg::JointState ManipulatorMenu::publishJointGoal(const sensor_msgs
 }
 
 // Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
-geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(const std::vector<double> position, const std::vector<double> start_state, const bool execute)
+geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(
+    const std::vector<double> position, 
+    const std::vector<double> start_state, 
+    const std::string& frame, 
+    const bool execute)
 {
     geometry_msgs::msg::Pose tcp_pose = pose_from_vector(position);
 
-    return publishTcpGoal(tcp_pose, start_state, execute);
+    return publishTcpGoal(tcp_pose, start_state, frame, execute);
 }
 
 // Publish a Tcp goal by passing a geometry_msgs::msg::Pose
-geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(const geometry_msgs::msg::Pose tcp_pose, const std::vector<double> start_state, const bool execute)
+geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(
+    const geometry_msgs::msg::Pose tcp_pose, 
+    const std::vector<double> start_state,
+    const std::string& frame, 
+    const bool execute)
 {
     manipulator_interfaces::msg::TcpGoal tcp_goal_msg;
     tcp_goal_msg.target_pose = tcp_pose;
     tcp_goal_msg.start_state =  joint_state_from_vector(start_state);
     tcp_goal_msg.execute = execute;
     tcp_goal_msg.end_effector = manipulator_interfaces::msg::TcpGoal::DEFAULT;
+
+    if (!frame.empty())
+    {
+        tcp_goal_msg.frame = frame;
+    }
+    else
+    {
+        tcp_goal_msg.frame = manipulator_interfaces::msg::TcpGoal::DEFAULT;
+    }
+
     tcp_goal_msg.frame = manipulator_interfaces::msg::TcpGoal::DEFAULT;
 
     tcpGoal_pub_->publish(tcp_goal_msg);
@@ -401,18 +419,33 @@ sensor_msgs::msg::JointState ManipulatorMenu::oneJointMove(const int num, const 
     return publishJointGoal(joint_target);
 }
 
-void ManipulatorMenu::publishCartesianGoal(const std::vector<geometry_msgs::msg::Pose> waypoints)
+void ManipulatorMenu::publishCartesianGoal(
+    const std::vector<geometry_msgs::msg::Pose> waypoints,
+    const std::vector<double> start_state,
+    const std::string& frame,
+    const bool execute)
 {
-    geometry_msgs::msg::PoseArray waypoints_msg;
-    waypoints_msg.header.frame_id = params_.base_link_name;
-    waypoints_msg.header.stamp = node_->now();
+    manipulator_interfaces::msg::CartesianGoal cartesian_goal_msg;
 
     for (const auto& waypoint : waypoints)
     {
-        waypoints_msg.poses.push_back(waypoint);
+        cartesian_goal_msg.waypoints.poses.push_back(waypoint);
     }
 
-    cartesianPlan_pub_->publish(waypoints_msg);
+    cartesian_goal_msg.execute = execute;
+    cartesian_goal_msg.start_state = joint_state_from_vector(start_state);
+
+    if (frame.empty())
+    {
+        cartesian_goal_msg.frame = frame;
+    }
+    else
+    {
+        cartesian_goal_msg.frame = manipulator_interfaces::msg::TcpGoal::DEFAULT;
+    }
+
+    // Publish the Cartesian goal message
+    cartesianPlan_pub_->publish(cartesian_goal_msg);
 }
 
 std::vector<double> ManipulatorMenu::getKnownPose(const std::string& pose_name)
@@ -432,10 +465,10 @@ std::vector<double> ManipulatorMenu::getKnownPose(const std::string& pose_name)
 
 // -------------------- PLANNING --------------------
 
-moveit_msgs::msg::RobotTrajectory ManipulatorMenu::planAndWait(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state, uint timeout)
+manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::planAndWait(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state, uint timeout)
 {
     traj_received_ = false;
-    traj_error_ = false;
+    traj_result_ = manipulator_interfaces::msg::TrajectoryResult();
     
     // Publish the joint goal
     publishJointGoal(joint_goal, start_state, false);
@@ -452,25 +485,27 @@ moveit_msgs::msg::RobotTrajectory ManipulatorMenu::planAndWait(const sensor_msgs
             break;
         }
 
-        if(traj_received_ && !traj_error_){
-            return planned_trajectory_;
-        } else if(traj_received_ && traj_error_){
+        if(traj_received_){
             break;
         }
 
         rate.sleep();
     }
 
-    return moveit_msgs::msg::RobotTrajectory();
+    return traj_result_;
 }
 
-moveit_msgs::msg::RobotTrajectory ManipulatorMenu::planAndWait(const geometry_msgs::msg::Pose tcp_goal, const std::vector<double> start_state, uint timeout)
+manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::planAndWait(
+    const geometry_msgs::msg::Pose tcp_goal, 
+    const std::vector<double> start_state, 
+    const std::string& frame,
+    uint timeout)
 {
     traj_received_ = false;
-    traj_error_ = false;
+    traj_result_ = manipulator_interfaces::msg::TrajectoryResult();
     
     // Publish the tcp goal
-    publishTcpGoal(tcp_goal, start_state, false);
+    publishTcpGoal(tcp_goal, start_state, frame, false);
 
     //Set a start time to check for timeout
     rclcpp::Clock steady_clock(RCL_STEADY_TIME);
@@ -485,16 +520,49 @@ moveit_msgs::msg::RobotTrajectory ManipulatorMenu::planAndWait(const geometry_ms
             break;
         }
 
-        if(traj_received_ && !traj_error_){
-            return planned_trajectory_;
-        } else if(traj_received_ && traj_error_){
+        if(traj_received_){
             break;
         }
 
         rate.sleep();
     }
 
-    return moveit_msgs::msg::RobotTrajectory();
+    return traj_result_;
+}
+
+manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::cartesianPlanAndWait(
+    const std::vector<geometry_msgs::msg::Pose> waypoints, 
+    const std::vector<double> start_state, 
+    const std::string& frame,
+    uint timeout)
+{
+    traj_received_ = false;
+    traj_result_ = manipulator_interfaces::msg::TrajectoryResult();
+    
+    // Publish the tcp goal
+    publishCartesianGoal(waypoints, start_state, frame, false);
+
+    //Set a start time to check for timeout
+    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
+    auto start_time = steady_clock.now();
+
+    rclcpp::Rate rate(params_.ros_freq);
+
+    while (rclcpp::ok()){
+
+        if((steady_clock.now() - start_time).seconds() > timeout){
+            RCLCPP_ERROR(node_->get_logger(), "Timeout reached while waiting for planned trajectory.");
+            break;
+        }
+
+        if(traj_received_){
+            break;
+        }
+
+        rate.sleep();
+    }
+
+    return traj_result_;
 }
 
 bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajectory, uint timeout)
@@ -1430,15 +1498,13 @@ void ManipulatorMenu::trajectoryCallback(const manipulator_interfaces::msg::Traj
     if(msg->success)
     {
         RCLCPP_INFO(node_->get_logger(), "Trajectory planned successfully.");
-        traj_error_ = false;
-        planned_trajectory_ = msg->trajectory;
     }
     else
     {
         RCLCPP_ERROR(node_->get_logger(), "Trajectory planning failed, error code: %d, error msg: %s", msg->error_code, msg->message.c_str());
-        traj_error_ = true;
     }
 
+    traj_result_ = *msg.get();
     traj_received_ = true;
 }
 
@@ -1474,20 +1540,20 @@ void ManipulatorMenu::userJointGoal()
         joints.push_back(new_joint_value);
     }
 
-    moveit_msgs::msg::RobotTrajectory traj = planAndWait(joint_state_from_vector(joints));
-    if(!traj_error_)
+    manipulator_interfaces::msg::TrajectoryResult traj = planAndWait(joint_state_from_vector(joints));
+    if(traj.success)
     {
         int execute = 0;
         std::cout << "Trajectory planned successfully." << std::endl;
-        std::cout << "Trajectory points count: " << traj.joint_trajectory.points.size() << std::endl;
-        std::cout << "Trajectory duration: " << traj.joint_trajectory.points.back().time_from_start.sec << "s" << std::endl;
+        std::cout << "Trajectory points count: " << traj.trajectory.joint_trajectory.points.size() << std::endl;
+        std::cout << "Trajectory duration: " << traj.trajectory.joint_trajectory.points.back().time_from_start.sec << "s" << std::endl;
         std::cout << "Do you want to execute the trajectory? 1 for yes: ";
         std::cin >> execute;
 
         if (execute == 1)
         {
             std::cout << "Executing trajectory..." << std::endl;
-            bool success = executeAndWait(traj);
+            bool success = executeAndWait(traj.trajectory);
             if (success)
             {
                 std::cout << "Trajectory executed successfully." << std::endl;
@@ -1545,20 +1611,20 @@ void ManipulatorMenu::userTcpGoal()
     goal.position.z = position[2];
     goal.orientation = quaternion_from_euler(position[3], position[4], position[5]);
 
-    moveit_msgs::msg::RobotTrajectory traj = planAndWait(goal);
-    if(!traj_error_)
+    manipulator_interfaces::msg::TrajectoryResult traj = planAndWait(goal);
+    if(traj.success)
     {
         int execute = 0;
         std::cout << "Trajectory planned successfully." << std::endl;
-        std::cout << "Trajectory points count: " << traj.joint_trajectory.points.size() << std::endl;
-        std::cout << "Trajectory duration: " << traj.joint_trajectory.points.back().time_from_start.sec << "s" << std::endl;
+        std::cout << "Trajectory points count: " << traj.trajectory.joint_trajectory.points.size() << std::endl;
+        std::cout << "Trajectory duration: " << traj.trajectory.joint_trajectory.points.back().time_from_start.sec << "s" << std::endl;
         std::cout << "Do you want to execute the trajectory? 1 for yes: ";
         std::cin >> execute;
 
         if (execute == 1)
         {
             std::cout << "Executing trajectory..." << std::endl;
-            bool success = executeAndWait(traj);
+            bool success = executeAndWait(traj.trajectory);
             if (success)
             {
                 std::cout << "Trajectory executed successfully." << std::endl;
@@ -2062,7 +2128,7 @@ void ManipulatorMenu::userGripperMove()
 void ManipulatorMenu::userRunTest(){
     // Test the planner
     std::vector<double> position = {0.5, 0.0, 0.2, 180., 0., 90.};
-    moveit_msgs::msg::RobotTrajectory traj = planAndWait(pose_from_vector(position));
+    moveit_msgs::msg::RobotTrajectory traj = planAndWait(pose_from_vector(position)).trajectory;
 
     RCLCPP_INFO(node_->get_logger(), "Trajectory planned, executing...");
 
@@ -2084,7 +2150,7 @@ void ManipulatorMenu::userRunTest(){
     rclcpp::sleep_for(std::chrono::seconds(2));
 
     position = {0.0, 0.5, 0.4, 180., 0., 0.};
-    traj = planAndWait(pose_from_vector(position));
+    traj = planAndWait(pose_from_vector(position)).trajectory;
 
     if (traj.joint_trajectory.points.size() == 0)
     {

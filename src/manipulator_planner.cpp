@@ -171,9 +171,9 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         sub_options
     );
 
-    cartesianPlan_sub_ = this->create_subscription<geometry_msgs::msg::PoseArray>(
+    cartesianPlan_sub_ = this->create_subscription<manipulator_interfaces::msg::CartesianGoal>(
         manipulator_name_ + "/cartesian_plan", 1, 
-        [this](const geometry_msgs::msg::PoseArray::SharedPtr msg) {
+        [this](const manipulator_interfaces::msg::CartesianGoal::SharedPtr msg) {
             this->cartesianPlan_callback(msg);
         },
         sub_options
@@ -777,18 +777,43 @@ void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs:
 
 // Callback function for goals in the 3D cartesian space for the robot TCP
 // Joint positions are computed through InvKine of inputs
-void ManipulatorPlannerNode::cartesianPlan_callback(const geometry_msgs::msg::PoseArray::SharedPtr p_seq)
+void ManipulatorPlannerNode::cartesianPlan_callback(const manipulator_interfaces::msg::CartesianGoal::SharedPtr msg)
 {
     std::vector<geometry_msgs::msg::Pose> waypoints;
-    for (geometry_msgs::msg::Pose point : p_seq->poses)
+    std::string ee_link_name;
+    std::string ref_frame;
+
+    for (geometry_msgs::msg::Pose point : msg->waypoints.poses)
     {
         waypoints.push_back(point);
     }
 
-    // Send to joint goal dynamic planner V4
-    double fraction = dynamic_planner_->cartesianPlan(waypoints);
-    if (fraction < 0.01) {RCLCPP_WARN(get_logger(), "Cartesian trajectory unfeasible");}
-    else { dynamic_planner_->moveRobot(); }
+    if(msg->end_effector == manipulator_interfaces::msg::TcpGoal::DEFAULT){
+        ee_link_name = ee_name_;
+    } else {
+        ee_link_name = msg->end_effector;
+    }
+
+    if(msg->frame == manipulator_interfaces::msg::TcpGoal::DEFAULT){
+        ref_frame = world_frame_;
+    } else {
+        ref_frame = msg->frame;
+    }
+
+    if(!msg->start_state.position.empty()){ //If a start state is provided set the robot to that state
+        moveit::core::RobotStatePtr robot_state = dynamic_planner_->getRobotState();
+        robot_state->setJointGroupPositions(planning_group_, msg->start_state.position);
+    }
+
+    double fraction = dynamic_planner_->cartesianPlan(waypoints, ee_link_name, ref_frame);
+    if (fraction < 0.01) 
+    {
+        RCLCPP_WARN(get_logger(), "Cartesian trajectory unfeasible");
+    }
+    else if (msg->execute)
+    {
+        dynamic_planner_->moveRobot();
+    }
 }
 
 // Set the jacobian speed based control

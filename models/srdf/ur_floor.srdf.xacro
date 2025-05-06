@@ -11,4 +11,8 @@
 
     <!-- Disable collisions for Robotiq 85 gripper -->
     <disable_collisions link1="ee_collision_box" link2="wrist_3_link" reason="Adjacent" />
+
+    <!-- Disable collisions for camera -->
+    <disable_collisions link1="ee_collision_box" link2="camera_link" reason="Never" />
+
 </robot>

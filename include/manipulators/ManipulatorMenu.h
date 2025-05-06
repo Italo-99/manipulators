@@ -47,6 +47,7 @@
 #include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
+#include "manipulator_interfaces/msg/cartesian_goal.hpp"
 #include "manipulator_interfaces/msg/trajectory_result.hpp"
 #include "trajectory_msgs/msg/joint_trajectory.hpp"
 
@@ -123,15 +124,22 @@ class ManipulatorMenu
         // publish a tcp goal to the manipulator planner
         geometry_msgs::msg::Pose publishTcpGoal(
             const std::vector<double> position, 
-            const std::vector<double> start_state = std::vector<double>(), 
-            const bool execute=true);  
+            const std::vector<double> start_state = std::vector<double>(),
+            const std::string& frame = "", //Leave empty for default frame
+            const bool execute=true);
 
         geometry_msgs::msg::Pose publishTcpGoal(
             const geometry_msgs::msg::Pose tcpPoseMsg, 
-            const std::vector<double> start_state = std::vector<double>(), 
+            const std::vector<double> start_state = std::vector<double>(),
+            const std::string& frame = "", //Leave empty for default frame
             const bool execute=true);
 
-        void publishCartesianGoal(const std::vector<geometry_msgs::msg::Pose> waypoints);
+        void publishCartesianGoal(
+            const std::vector<geometry_msgs::msg::Pose> waypoints,
+            const std::vector<double> start_state = std::vector<double>(),
+            const std::string& frame = "", //Leave empty for default frame
+            const bool execute=true
+        );
             
         sensor_msgs::msg::JointState oneJointMove(const int num, const double joint_rot); // to execute rotation of a single joint
         sensor_msgs::msg::JointState goHome(const bool);                                  // to setup home position
@@ -142,8 +150,22 @@ class ManipulatorMenu
 
         //The following functions will plan a trajectory and return it (if timeout or error return an empty trajectory)
         //timeout arg is in seconds
-        moveit_msgs::msg::RobotTrajectory planAndWait(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state = std::vector<double>(), uint timeout=2);
-        moveit_msgs::msg::RobotTrajectory planAndWait(const geometry_msgs::msg::Pose tcp_goal, const std::vector<double> start_state = std::vector<double>(), uint timeout=2);
+        manipulator_interfaces::msg::TrajectoryResult planAndWait(
+            const sensor_msgs::msg::JointState joint_goal, 
+            const std::vector<double> start_state = std::vector<double>(),
+            uint timeout=2);
+            
+        manipulator_interfaces::msg::TrajectoryResult planAndWait(
+            const geometry_msgs::msg::Pose tcp_goal, 
+            const std::vector<double> start_state = std::vector<double>(), 
+            const std::string& frame = "", //Leave empty for default frame
+            uint timeout=2);
+
+        manipulator_interfaces::msg::TrajectoryResult cartesianPlanAndWait(
+            const std::vector<geometry_msgs::msg::Pose> waypoints, 
+            const std::vector<double> start_state = std::vector<double>(), 
+            const std::string& frame = "", //Leave empty for default frame
+            uint timeout=2);
 
         //The following functions will execute a trajectory and return once it's finished
         bool executeAndWait(const moveit_msgs::msg::RobotTrajectory joint_trajectory, uint timeout=20);
@@ -338,7 +360,7 @@ class ManipulatorMenu
         // Ros
         rclcpp::Publisher<manipulator_interfaces::msg::JointGoal>::SharedPtr jointGoal_pub_;   
         rclcpp::Publisher<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpGoal_pub_;
-        rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr cartesianPlan_pub_;
+        rclcpp::Publisher<manipulator_interfaces::msg::CartesianGoal>::SharedPtr cartesianPlan_pub_;
 
         rclcpp::Publisher<moveit_msgs::msg::JointConstraint>::SharedPtr jointConstraints_pub_;
         rclcpp::Publisher<moveit_msgs::msg::PositionConstraint>::SharedPtr positionConstraints_pub_;
@@ -377,9 +399,8 @@ class ManipulatorMenu
         rclcpp::Publisher<moveit_msgs::msg::RobotTrajectory>::SharedPtr trajectory_pub_;                            // Publishes the trajectory to be executed
         rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr executionControl_pub_;                                    // Moves or stops the robot
 
-        moveit_msgs::msg::RobotTrajectory planned_trajectory_;
-        bool traj_received_;
-        bool traj_error_;
+        manipulator_interfaces::msg::TrajectoryResult traj_result_; // Planned trajectory
+        bool traj_received_ = false; 
 
         // Robot state
         geometry_msgs::msg::PoseStamped current_tcp_pose_;

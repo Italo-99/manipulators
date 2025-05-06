@@ -154,15 +154,6 @@ ament_target_dependencies(manipulator_menu
     ${MANIPULATOR_MENU_DEPENDS}
 )
 
-# target_link_libraries(manipulator_menu
-#   ${rclcpp_LIBRARIES}
-#   ${moveit_msgs_LIBRARIES}
-#   ${std_msgs_LIBRARIES}
-#   ${tf2_ros_LIBRARIES}
-#   ${tf2_LIBRARIES}
-#   yaml-cpp
-# )
-
 # ---------------- DRIVER TRAJECTORY CONVERTER -----------------
 
 add_executable(driver_trajectory_converter src/driver_trajectory_converter.cpp src/driver_trajectory_converter_node.cpp)
@@ -179,6 +170,18 @@ install(
     TARGETS driver_trajectory_converter
     DESTINATION lib/${PROJECT_NAME}
 )
+
+#---------------- ROUTINES -----------------
+
+add_executable(manipulator_routines src/manipulator_routines.cpp src/manipulator_routines_node.cpp src/manipulator_menu.cpp)
+ament_target_dependencies(manipulator_routines
+    ${MANIPULATOR_MENU_DEPENDS}
+)
+install(
+    TARGETS manipulator_routines
+    DESTINATION lib/${PROJECT_NAME}
+)
+
 
 # ---------------- JOYSTICK CONTROLLER -----------------
 

@@ -21,4 +21,23 @@
         kinematics_parameters_file="$(arg kinematics_parameters_file)"
     >
     </xacro:ur_floor>
+
+    <xacro:include filename="$(find realsense2_description)/urdf/_d435i.urdf.xacro"/>
+    <link name="d435i_base_link" />
+    <joint name="tool0-d4351_base_link" type="fixed">
+        <parent link="tool0"/>
+        <child link="d435i_base_link"/>
+        <origin xyz="0 -0.0775 0.024" rpy="0 -1.57 1.57"/>
+    </joint>
+
+    <link name="camera_detection_link" />
+    <joint name="camera_link-camera_detection_link" type="fixed">
+        <parent link="camera_link"/>
+        <child link="camera_detection_link"/>
+        <origin xyz="0 0 0" rpy="0 1.57 0"/>
+    </joint>
+
+    <xacro:sensor_d435i parent="d435i_base_link" name="camera">
+        <origin xyz="0 0 0" rpy="0 0 0" />
+    </xacro:sensor_d435i>
 </robot>

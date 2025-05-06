@@ -19,8 +19,6 @@
 #include "rviz_visual_tools/rviz_visual_tools.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "visualization_msgs/msg/marker.hpp"
-#include "manipulator_interfaces/msg/joint_goal.hpp"
-#include "manipulator_interfaces/msg/tcp_goal.hpp"
 #include "manipulator_interfaces/msg/trajectory_result.hpp"
 
 //MoveIt2 Imports
@@ -105,7 +103,18 @@ class DynamicPlanner
         /*plan: cartesian goal
             Args:
                 waypoints: Array of target positions to follow
+                ee_link: End effector link
+                frame: Reference frame
+            Returns:
+                fraction: Fraction of the trajectory that was planned
         */
+        double cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints,
+                             const std::string& ee_link,
+                             const std::string& frame);
+
+        double cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints,
+                             const std::string& ee_link);
+
         double cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints);
 
         void moveRobot(const sensor_msgs::msg::JointState &joint_state); //Single trajectory point
