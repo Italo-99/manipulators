@@ -738,9 +738,11 @@ std::vector<double> DynamicPlanner::invKine(const geometry_msgs::msg::Pose &targ
 
 // ------------------------------------- JACOBIAN -------------------------------------
 
-const Eigen::MatrixXd DynamicPlanner::getJacobian(const std::string &end_effector_link)
+const Eigen::MatrixXd DynamicPlanner::getJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link)
 {
     moveit::core::RobotStatePtr kinematic_state = getRobotState();
+    kinematic_state->setJointGroupPositions(move_group_->getName(), joint_positions);
+    kinematic_state->update();
 
     Eigen::MatrixXd jacobian;
     Eigen::Vector3d reference_point {0.0, 0.0, 0.0};
@@ -760,14 +762,30 @@ const Eigen::MatrixXd DynamicPlanner::getJacobian(const std::string &end_effecto
     return jacobian;
 }
 
+const Eigen::MatrixXd DynamicPlanner::getJacobian(const std::string &end_effector_link)
+{
+    return getJacobian(
+        joints_values_group_,
+        end_effector_link
+    );
+}
+
 const Eigen::MatrixXd DynamicPlanner::getJacobian()
 {
     return getJacobian(params_.end_effector_link);
 }
 
+const Eigen::MatrixXd DynamicPlanner::getPseudoInverseJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link)
+{
+    return getJacobian(joint_positions, end_effector_link).completeOrthogonalDecomposition().pseudoInverse();
+}
+
 const Eigen::MatrixXd DynamicPlanner::getPseudoInverseJacobian(const std::string &end_effector_link)
 {
-    return getJacobian(end_effector_link).completeOrthogonalDecomposition().pseudoInverse();
+    return getPseudoInverseJacobian(
+        joints_values_group_,
+        end_effector_link
+    );
 }
 
 const Eigen::MatrixXd DynamicPlanner::getPseudoInverseJacobian()

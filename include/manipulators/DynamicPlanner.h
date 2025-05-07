@@ -180,10 +180,12 @@ class DynamicPlanner
         // --------------- JACOBIAN ---------------
 
         //Get the Jacobian matrix of the manipulator
+        const Eigen::MatrixXd getJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link);
         const Eigen::MatrixXd getJacobian(const std::string &end_effector_link);
         const Eigen::MatrixXd getJacobian(); //end_effector_link_ is used as default
 
         //Get the pseudo-inverse of the Jacobian matrix
+        const Eigen::MatrixXd getPseudoInverseJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link);
         const Eigen::MatrixXd getPseudoInverseJacobian(const std::string &end_effector_link);
         const Eigen::MatrixXd getPseudoInverseJacobian(); //end_effector_link_ is used as default
 

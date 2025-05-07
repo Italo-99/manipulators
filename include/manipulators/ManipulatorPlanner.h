@@ -86,9 +86,11 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         const geometry_msgs::msg::Pose getFKine();
         const geometry_msgs::msg::Twist getTcpVel();
 
+        const Eigen::MatrixXd getJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link);
         const Eigen::MatrixXd getJacobian(const std::string &end_effector_link);
         const Eigen::MatrixXd getJacobian();
         
+        const Eigen::MatrixXd getPseudoInverseJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link);
         const Eigen::MatrixXd getPseudoInverseJacobian(const std::string &end_effector_link);
         const Eigen::MatrixXd getPseudoInverseJacobian();
 
@@ -185,6 +187,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         double max_spd_jnts_;
         double max_acc_jnts_;
         std::vector<std::string> gripper_links_;
+        double min_jacobian_determinant_;
 
         //Services
         rclcpp::Service<manipulator_interfaces::srv::FKine>::SharedPtr fkine_service_;

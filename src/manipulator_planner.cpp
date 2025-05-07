@@ -20,6 +20,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     max_acc_jnts_ = this->get_parameter("max_acc_jnts").as_double();
     gripper_links_ = this->get_parameter("gripper_links").as_string_array();
     world_frame_ = prefix + this->get_parameter("world_frame").as_string();
+    min_jacobian_determinant_ = this->get_parameter("min_jacobian_determinant").as_double();
 
     addPrefix(prefix, joint_names_);
     addPrefix(prefix, gripper_links_);
@@ -491,6 +492,16 @@ const geometry_msgs::msg::Twist ManipulatorPlannerNode::getTcpVel()
     return tcp_twist;
 }
 
+const Eigen::MatrixXd ManipulatorPlannerNode::getJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link) {
+    /*
+    Computes the jacobian matrix
+    Args:
+        joint_positions: Joint positions to compute the jacobian
+        end_effector_link: Name of the end effector link to which the jacobian is referred
+    */
+    return dynamic_planner_->getJacobian(joint_positions, end_effector_link);
+}
+
 const Eigen::MatrixXd ManipulatorPlannerNode::getJacobian(const std::string &end_effector_link) {
     /*
     Computes the jacobian matrix
@@ -508,9 +519,19 @@ const Eigen::MatrixXd ManipulatorPlannerNode::getJacobian() {
     return getJacobian(ee_name_);
 }
 
+const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link) {
+    /*
+    Computes the pseudo-inverse of the jacobian matrix
+    Args:
+        joint_positions: Joint positions to compute the jacobian
+        end_effector_link: Name of the end effector link to which the jacobian is referred
+    */
+    return dynamic_planner_->getPseudoInverseJacobian(joint_positions, end_effector_link);
+}
+
 const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian(const std::string &end_effector_link) {
     /*
-    Computes the Moore-Penrose pseudo-inverse of the jacobian matrix
+    Computes the pseudo-inverse of the jacobian matrix
     Args:
         end_effector_link: Name of the end effector link to which the jacobian is referred
     */
@@ -519,7 +540,7 @@ const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian(const std
 
 const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian() {
     /*
-    Computes the Moore-Penrose pseudo-inverse of the jacobian matrix
+    Computes the pseudo-inverse of the jacobian matrix
     "ee_name" parameter is used as the end effector link
     */
     return getPseudoInverseJacobian(ee_name_);
@@ -1043,6 +1064,11 @@ void ManipulatorPlannerNode::jacobianControl()
         js.position[k] = qd[k];
         js.velocity[k] = dq[k];
     }
+
+    Eigen::MatrixXd jacobian = getJacobian(js.position, ee_name_); // Compute the jacobian matrix
+    if (abs(jacobian.determinant()) < min_jacobian_determinant_){
+        return; // Approaching singularity, don't execute
+    }
     
     // Send the goal to the move it fake controller as trajectory point
     dynamic_planner_->moveRobot(js);
@@ -1119,6 +1145,7 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("max_acc_jnts", 1.0);
     this->declare_parameter("gripper_links", std::vector<std::string>()); //This is used to disable collision with the fingers when attaching objects
     this->declare_parameter("prefix", std::string()); //Prefix for the joint and link names
+    this->declare_parameter("min_jacobian_determinant", 0.01); //Minimum determinant for the inverse jacobian
 
     //Dynamic planner params
     this->declare_parameter("planner_id", "geometric::RRTConnect");
