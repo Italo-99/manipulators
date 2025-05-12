@@ -69,8 +69,8 @@ Install rviz visual tools:
 
     ```yaml
     /**:
-    ros__parameters:
-        robot_description_kinematics:
+      ros__parameters:
+       robot_description_kinematics:
         ur_manipulator:
             kinematics_solver: pick_ik/PickIkPlugin
             kinematics_solver_timeout: 0.05
