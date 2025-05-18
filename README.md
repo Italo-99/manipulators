@@ -1,9 +1,22 @@
+# Introduction
+
+[[Ars Control Lab page]](https://www.arscontrol.unimore.it/)
+[[Italo Almirante]](https://www.arscontrol.unimore.it/italo-almirante/)
+[[Andrea Pupa]](https://www.arscontrol.unimore.it/andrea-pupa/)
+[[Matteo Bicchi]](https://github.com/M4tt3)
+
+This repository is a universal package to plan and execute trajectory or move commands for all manipulators. It handles universal robots manipulators by default, but its aim is to provide a way to easily implement custom robots.
+
+It is conceived for beginners who wants to include robots in their projects, without a deep knowledge of manipulator kinematics and dynamics.
+
+This document explains how to use this pkg for simulations and for the real hardware.
+
 # Installation
 
 ### 1. Pre-requisites
  - Ubuntu 22.04 (LTS)
  - Ros 2 Humble
- - Moveit2 installed [(Guide)](https://moveit.ai/install-moveit2/source/)
+ - Moveit2 installed [(Guide)](https://moveit.ai/install-moveit2/binary/)
 
 ### 2. Creating the workspace
 
@@ -152,6 +165,7 @@ The manipulator planner node is used to elaborate trajectories, execute real tim
  - `position_tolerance`: Tolerance for tcp position.
  - `orientation_tolerance`: Tolerance for tcp orientation.
  - `joint_tolerance`: Tolerance for joint positions.
+ - `min_jacobian_determinant`: Minimum absolute value for the determinant of the jacobian matrix during jacobian control. A determinant close to 0 means the position is approaching a singularity point, this will ensure safer control of the arm.
 <br/>
 
  - `robot_description` : Parsed urdf description of the robot.
@@ -237,9 +251,83 @@ The real control driver parameters for each ur type can be found in `config/driv
 
 # Custom implementations
 
+## Planner
+
 To implement the planner on a custom robot creating a custom launch file is advised, most of the setup will remain the same, what changes is mostly how different files (such as rdf descriptions and moveit configurations) will be retrieved, so you can create a function similar to `get_ur_moveit_params` from `manipulators/launch_utils.py` and maintain the rest of the launch file mostly unchanged.
 
-To implement a custom manipulator menu you can create a node with this structure:
+## Menu
+
+### Implementation with inheritance
+
+This should be the preferable way of implementation for most of the applications, it involves inheriting from the `ManipulatorMenu` class to add your own methods and entries in the menu cli interface.
+
+```c++
+class MyManipulatorMenu : public ManipulatorMenu{
+    public:
+        MyManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Node::SharedPtr& node, const bool sync_parameters=false)
+        : ManipulatorMenu(params, node, sync_parameters) {
+            //Your constructor...
+        }
+
+        ~SirioManipulatorMenu() = default;
+
+        void mySpinnerMenu(){
+            //Implementation of your custom menu interface
+            customInitializeMenu();
+
+            std::thread spinner_thread = std::thread([this] {
+                spinner(); //Spinner from parent class
+            });
+
+            //BOILERPLATE SPINNER FOR THE MENU
+
+            rclcpp::Rate r(params_.ros_freq);
+            while (rclcpp::ok())
+            {
+                // Display the user menu and process user choices
+                menu_->printMenu();
+                int choice = menu_->getUserChoice();
+                RCLCPP_INFO(node_->get_logger(), "User choice: %d", choice);
+                menu_->processChoice(choice);
+
+                r.sleep();
+            }
+
+            rclcpp::shutdown();
+        }
+                
+        //Custom methods...
+
+        void myUserAction(){
+            //...
+        }
+    
+    private:
+
+        void customInitializeMenu(){
+            menu_ = new MenuUserInterface<MyManipulatorMenu>(this);
+
+            int section_start = 0; //Temporary variable to hold the last section start point
+
+            menu_->addChoice("Plan and execute joint goal", &MyManipulatorMenu::userJointGoal);  //You can use methods from the parent class
+            menu_->addChoice("Execute custom action", &MyManipulatorMenu::myUserAction);         //Or create custom user actions
+            menu_->addSection("Section", section_start, menu_->last_);
+            section_start = menu_->last_ + 1;
+
+            //Add custom entries...
+        }
+
+        //Create an instance for the interface of your implementation
+        MenuUserInterface<MyManipulatorMenu> *menu_; 
+};
+
+//Remember this line to build the template class of the interface
+template class MenuUserInterface<MyManipulatorMenu>;
+```
+
+### Implementation as member variable
+
+Another way to create a custom implementation is the following, which involves creating a member class of type `ManipulatorMenu` inside a wrapper class.
 
 ```c++
 class MyManipulatorMenu {
@@ -296,8 +384,13 @@ class MyManipulatorMenu {
         ManipulatorMenuParams params_;
 
         std::shared_ptr<ManipulatorMenu> manipulator_menu_;
-        MenuUserInterface *menu_interface_;
+
+        //Create an instance for the interface of your implementation
+        MenuUserInterface<MyManipulatorMenu> *menu_interface_;
 }
+
+//Remember this line to build the template class of the interface
+template class MenuUserInterface<MyManipulatorMenu>;
 
 int main(int argc, char* argv[]) {
     ManipulatorMenuParams params;
@@ -315,8 +408,9 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+
 ```
 
+## Joystick
+
 To implement a custom joystick control node you can simply copy-paste the 'vanilla' JoystickController class and joystick_control_node.cpp, then remap the control scheme by editing the joyCallback method (refer to the two enums `ButtonsMap`, `AxesMap` and [Joy docs](https://index.ros.org/p/joy/) for more informations).
-
-
