@@ -33,6 +33,8 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         return;
     }
 
+    RCLCPP_INFO(this->get_logger(), "Joints number: %d", NUM_JOINTS);
+
     //Initialize the velocity command vectors
     js_vel_cmd_.resize(NUM_JOINTS, 1);
     js_vel_cmd_.setZero();

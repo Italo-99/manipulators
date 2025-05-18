@@ -60,20 +60,30 @@ struct ManipulatorMenuParams
     std::string manipulator_name         = "manipulator";
     std::string planning_group           = "ur_manipulator";
 
-    std::string gripper                  = "no_gripper";           //Gripper type, can be one of "no_gripper", "robotiq_85" or "real_gripper"
-    std::string gripper_group            = "robotiq_85_gripper";   //For gripper type "robotiq_85", gripper group specified in srdf
-    std::vector<int8_t> gripper_IO_cmds  = {0, 0};                 //For gripper type "real_gripper", IO commands to close/open the gripper
-
+    
     std::vector<std::string> joint_names = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
-                                            "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
+        "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
     std::string base_link_name           = "base_link";
-
+    
     double tcp_position_tolerance        = 0.01; //Tolerance for the position of the end effector
     double tcp_orientation_tolerance     = 0.01; //Tolerance for the orientation of the end effector
     double joint_tolerance               = 0.01; //Tolerance for the position of the joints
-
+    
     std::string known_poses_path          = ""; //Full path to the yaml file with the known poses (leave empty if not used)
                                                 //Known poses are defined as a vector of joint angles in degrees eg: home: [0, 0, 0, 0, 0, 0]
+
+    /* AVAILABLE GRIPPERS:
+        - no_gripper
+        - robotiq_85: Robotiq 85 gripper, actuated through a service
+        - toolIO: Generic gripper actuated through the tool IO of the robot
+    */
+                                                
+    std::string gripper                  = "no_gripper"; //Must be in list of available grippers
+
+    //Robotiq 85 gripper parameters
+    std::string gripper_group            = "robotiq_85_gripper";
+    //toolIO gripper parameters
+    std::vector<int8_t> gripper_IO_cmds  = {0, 0};
 };
 
 class ManipulatorMenu

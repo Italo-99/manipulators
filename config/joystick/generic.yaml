@@ -4,7 +4,7 @@ joint_names:      [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1
 
 ros_freq:         10
 
-gripper_group:    robotiq_85_gripper
+gripper_group:    ""
 
 vel_step:         0.4
 

@@ -9,7 +9,7 @@ int main(int argc, char* argv[]) {
     params.manipulator_name   = "manipulator";
     params.planning_group     = "ur_manipulator";
 
-    params.gripper            = "real_gripper";
+    params.gripper            = "toolIO";
     params.gripper_IO_cmds    = {1, 0}; // For gripper type "real_gripper", IO commands to close/open the gripper
 
     params.joint_names        = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",

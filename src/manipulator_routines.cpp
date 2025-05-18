@@ -132,7 +132,15 @@ bool ManipulatorRoutines::pickUpRoutine(geometry_msgs::msg::Pose obj_pose, std::
 
     geometry_msgs::msg::Pose pick_pose_offset = obj_pose;
     pick_pose_offset.position.z += pick_z_offset_;
-    pick_pose_offset.orientation = quaternion_from_euler(180, 0, 90);
+    
+    std::vector<double> euler_rot = euler_from_quaternion(obj_pose.orientation);
+
+    euler_rot[2] += 25.0;
+
+    pick_pose_offset.orientation = quaternion_from_euler(180, 0, euler_rot[2]);
+
+    RCLCPP_INFO(node_->get_logger(), "Pick probe offset pose: x: %f, y: %f, z: %f", pick_pose_offset.position.x, pick_pose_offset.position.y, pick_pose_offset.position.z);
+    RCLCPP_INFO(node_->get_logger(), "Pick probe offset euler: x: %f, y: %f, z: %f", euler_rot[0], euler_rot[1], euler_rot[2]);
 
     manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(pick_pose_offset, std::vector<double>(), "", 4U);
 
@@ -150,11 +158,15 @@ bool ManipulatorRoutines::pickUpRoutine(geometry_msgs::msg::Pose obj_pose, std::
             return false;
         }
         moveGripper(false);
-        //stocazzo
-        move_along_z(-pick_z_offset_ + 0.1, true);
-        rclcpp::sleep_for(std::chrono::milliseconds(800));
+        move_along_z(-pick_z_offset_, true);
+        rclcpp::sleep_for(std::chrono::milliseconds(1200));
         moveGripper(true);
         rclcpp::sleep_for(std::chrono::milliseconds(300));
+        publishJointGoal(getKnownPose("home_gripper_down"), std::vector<double>(), true);
+        rclcpp::sleep_for(std::chrono::milliseconds(3000));
+        move_along_z(-0.3, true);
+        rclcpp::sleep_for(std::chrono::milliseconds(5000));
+        moveGripper(false);
         publishJointGoal(getKnownPose("home_gripper_down"), std::vector<double>(), true);
     }
     else

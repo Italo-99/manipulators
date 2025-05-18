@@ -10,9 +10,8 @@ int main(int argc, char* argv[]) {
     params.manipulator_name   = "manipulator";
     params.planning_group     = prefix + "ur_manipulator";
 
-    params.gripper            = "real_gripper";
-    params.gripper_group      = prefix + "robotiq_85_gripper";
-    params.gripper_IO_cmds    = {1, 0}; // For gripper type "real_gripper", IO commands to close/open the gripper
+    params.gripper = "toolIO";
+    params.gripper_IO_cmds = {1, 0}; // For gripper type "real_gripper", IO commands to close/open the gripper
 
     params.joint_names        = {prefix + "shoulder_pan_joint", 
                                  prefix + "shoulder_lift_joint", 

@@ -77,7 +77,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
 
     if(params_.gripper == "robotiq_85"){
         gripperMove_client_ = node_->create_client<std_srvs::srv::SetBool>(params_.gripper_group+"/move_gripper");
-    } else if (params_.gripper == "real_gripper"){
+    } else if (params_.gripper == "toolIO"){
         toolDigitalIO_pub_ = node_->create_publisher<std_msgs::msg::Int8>("/ur_rtde/tool_digitalIO/command", 1);
     }
 
@@ -790,7 +790,7 @@ void ManipulatorMenu::moveGripper(const bool close)
 {
     if(params_.gripper == "robotiq_85"){
         gripperMoveClient(close);
-    } else if (params_.gripper == "real_gripper"){
+    } else if (params_.gripper == "toolIO"){
         if (close){
             publishToolIOCmd(params_.gripper_IO_cmds[1], false);
             rclcpp::sleep_for(std::chrono::milliseconds(100));
