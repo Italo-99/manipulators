@@ -24,7 +24,6 @@
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
 #include "manipulator_interfaces/msg/cartesian_goal.hpp"
 
-
 class ManipulatorPlannerNode : public rclcpp::Node {
     public:
         ManipulatorPlannerNode(
@@ -157,6 +156,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
 
         // Execute the jacobian based control
         void jacobianControl();
+        void updateJacobianSpeedCmd(); //Fit ee_vel_cmd_ to the acceleration limits for the end effector and assign the value to current_ee_vel_
 
         // Execute the real time joints speed based control
         void jointsRealTimeControl();
@@ -184,6 +184,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         double ros_freq_;
         double max_speed_ee_;
         double max_accel_ee_;
+        double max_rot_speed_ee_;
+        double max_rot_accel_ee_;
         double max_spd_jnts_;
         double max_acc_jnts_;
         std::vector<std::string> gripper_links_;
@@ -235,10 +237,10 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         //Real time control variables
         bool   jac_control_ = false;            // True if the speed control through inverse Jacobian has been enabled
         bool js_rt_control_ = false;            // True if the speed control through direct real time joints cmd has been enabled
-        Eigen::VectorXd arm_vel_cmd_;           // Command of speed to the end_effector
-        Eigen::VectorXd  js_vel_cmd_;           // Command of speed to the joints
-        Eigen::VectorXd arm_msg_new_;           // New command of speed to the ee
-        Eigen::VectorXd js_msg_new_;            // New command of joints speed
+        Eigen::VectorXd current_ee_vel_;           // Command of speed to the end_effector
+        Eigen::VectorXd  current_js_vel_;           // Command of speed to the joints
+        Eigen::VectorXd ee_vel_cmd_;           // New command of speed to the ee
+        Eigen::VectorXd js_vel_cmd_;            // New command of joints speed
 };
 
 #endif

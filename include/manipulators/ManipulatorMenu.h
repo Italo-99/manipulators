@@ -152,7 +152,6 @@ class ManipulatorMenu
         );
             
         sensor_msgs::msg::JointState oneJointMove(const int num, const double joint_rot); // to execute rotation of a single joint
-        sensor_msgs::msg::JointState goHome(const bool);                                  // to setup home position
 
         std::vector<double> getKnownPose(const std::string& pose_name); //Get a known pose from the yaml file
 
@@ -272,21 +271,24 @@ class ManipulatorMenu
         double euclidean_distance(const geometry_msgs::msg::Point& a, const geometry_msgs::msg::Point& b);
         double angular_distance(const geometry_msgs::msg::Quaternion& q1, const geometry_msgs::msg::Quaternion& q2);
 
-        // Kinematics params getters
+        // Kinematics clients
+        // These clients will block execution until a response is received or timeout is reached
         geometry_msgs::msg::Pose  getFKineClient(const sensor_msgs::msg::JointState joint_state = sensor_msgs::msg::JointState()); // Get the forward kinematics of the pose, if empty uses the current joint state
         Eigen::MatrixXd           pseudoInverseClient(void);
         std::vector<double>       invKineClient(const geometry_msgs::msg::Pose pose);
         Eigen::MatrixXd           getJacobianClient(void);
         bool                      gripperMoveClient(const bool close);
 
-        template <typename T>
-        T getManipulatorParameter(const std::string& param_name);
-
-        // Kinematics params setters
+        //Setter clients
+        //These clients don't expect actual results from the server, the response will only evaluate the success of the query and will be logged
         void setJacobianSpeedControl(bool);
         void setJsRealTimeControl(bool);
         void setPlannerScalingFactors(float,float);
         void setPlannerTolerances(float,float,float);
+
+        //Get parameter from manipulator_planner node
+        template <typename T>
+        T getManipulatorParameter(const std::string& param_name);
 
     protected:
 
@@ -367,32 +369,39 @@ class ManipulatorMenu
 
         uint clients_wait_timeout_ {10}; //Seconds
 
-        // Ros
+        //Planner goals publishers
         rclcpp::Publisher<manipulator_interfaces::msg::JointGoal>::SharedPtr jointGoal_pub_;   
         rclcpp::Publisher<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpGoal_pub_;
         rclcpp::Publisher<manipulator_interfaces::msg::CartesianGoal>::SharedPtr cartesianPlan_pub_;
 
+        //Constraints publishers
         rclcpp::Publisher<moveit_msgs::msg::JointConstraint>::SharedPtr jointConstraints_pub_;
         rclcpp::Publisher<moveit_msgs::msg::PositionConstraint>::SharedPtr positionConstraints_pub_;
         rclcpp::Publisher<moveit_msgs::msg::OrientationConstraint>::SharedPtr orientationConstraints_pub_;
-
-        rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr displayGoal_pub_;
-        rclcpp::Publisher<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObject_pub_;
-        rclcpp::Publisher<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr attachedCollisionObject_pub_;
         rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr clearConstraints_pub_;
 
+        //Collision objects publishers
+        rclcpp::Publisher<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObject_pub_;
+        rclcpp::Publisher<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr attachedCollisionObject_pub_;
+
+        //Publisher to /ur_rtde/tool_digitalIO/command to send dital IO commands to end effector
+        //This is used by gripper type toolIO and needs the correct middleware to communicate with the robot IO (eg: ars control lab ur_rtde_controller lib)
+        rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr toolDigitalIO_pub_;
+
+        //Subscriber to /joint_states topic
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointState_sub_;
 
+        //Setter clients
         rclcpp::Client<manipulator_interfaces::srv::ChangePlannerScalingFactors>::SharedPtr changePlannerScalingFactors_client_;
         rclcpp::Client<manipulator_interfaces::srv::ChangePlannerTolerances>::SharedPtr changePlannerTolerances_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControl_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setRealTimeControl_client_;
         
+        //Gripper clients for robotiq85 gripper
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripperGrab_client_; //Not implemented for now
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripperMove_client_;
 
-        rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr toolDigitalIO_pub_;
-
+        //Client to retrieve parameters from the manipulator_planner node automatically
         rclcpp::SyncParametersClient::SharedPtr getManipulatorParams_client_; //gets the parameter from the manipulator planner node
 
         // Kinematics clients

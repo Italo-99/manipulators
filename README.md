@@ -157,8 +157,10 @@ The manipulator planner node is used to elaborate trajectories, execute real tim
  - `ee_name`: Name of the end effector link.
  - `world_frame`: Cartesian point of reference.
  - `ros_freq`: Frequency at which the planner will operate.
- - `max_speed_ee`: Max speed the end effector can move during jacobian control.
+ - `max_speed_ee`: Max speed the end effector can reach during jacobian control.
  - `max_accel_ee`: Max acceleration the end effector can reach during jacobian control.
+ - `max_rot_speed_ee`: Max angular speed the end effector can reach during jacobian control.
+ - `max_rot_accel_ee`: Max angular acceleration the end effector can reach during jacobian control.
  - `max_spd_jnts`: Max speed joints can move during real time joint control.
  - `max_acc_jnts`: Max acceleration joints can reach during real time joint control.
  - `gripper_links`: Links of the gripper to disable their collision with objects attached to the end effector.

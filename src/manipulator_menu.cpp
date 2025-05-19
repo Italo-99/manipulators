@@ -36,7 +36,6 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     jointGoal_pub_               = node_->create_publisher<manipulator_interfaces::msg::JointGoal>(params_.manipulator_name+"/joint_goal", 1);
     tcpGoal_pub_                 = node_->create_publisher<manipulator_interfaces::msg::TcpGoal>(params_.manipulator_name+"/tcp_goal", 1);
     cartesianPlan_pub_           = node_->create_publisher<manipulator_interfaces::msg::CartesianGoal>(params_.manipulator_name+"/cartesian_plan", 1);
-    displayGoal_pub_             = node_->create_publisher<geometry_msgs::msg::PoseStamped>(params_.manipulator_name+"/display_robot_goal", 1);
     collisionObject_pub_         = node_->create_publisher<moveit_msgs::msg::CollisionObject>(params_.manipulator_name+"/collision_object", 1);
     attachedCollisionObject_pub_ = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(params_.manipulator_name+"/attached_collision_object", 1);
     jointConstraints_pub_        = node_->create_publisher<moveit_msgs::msg::JointConstraint>(params_.manipulator_name+"/joint_constraint", 1);
@@ -56,6 +55,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     pseudoInverse_client_                = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(params_.manipulator_name+"/get_pseudo_inverse");
     fKine_client_                        = node_->create_client<manipulator_interfaces::srv::FKine>(params_.manipulator_name+"/get_fkine");
     jacobian_client_                     = node_->create_client<manipulator_interfaces::srv::Jacobian>(params_.manipulator_name+"/get_jacobian");
+
 
     setJacobianControl_client_           = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/jacobian_control_setter");
     setRealTimeControl_client_           = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
@@ -111,8 +111,15 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
     request->target_pose = pose;
 
     // Wait for the service to be available
+    size_t num_tries {0};
     while (!invKine_client_->wait_for_service(std::chrono::seconds(1)))
     {
+        if(num_tries > clients_wait_timeout_) {
+            RCLCPP_INFO(node_->get_logger(), "Unable to connect to invKine service");
+            return {};
+        }
+        num_tries++;
+
         if (!rclcpp::ok()){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return joint_values;
@@ -147,8 +154,15 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
     auto request = std::make_shared<manipulator_interfaces::srv::PseudoInverse::Request>();
 
     // Wait for the service to be available
+    size_t num_tries {0};
     while (!pseudoInverse_client_->wait_for_service(std::chrono::seconds(1)))
     {
+        if(num_tries > clients_wait_timeout_) {
+            RCLCPP_INFO(node_->get_logger(), "Unable to connect to pseudoInverse service");
+            return {};
+        }
+        num_tries++;
+
         if (!rclcpp::ok()){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return matrix;
@@ -181,8 +195,15 @@ geometry_msgs::msg::Pose ManipulatorMenu::getFKineClient(const sensor_msgs::msg:
     request->joint_state = joint_positions;
 
     // Wait for the service to be available
+    size_t num_tries {0};
     while (!fKine_client_->wait_for_service(std::chrono::seconds(1)))
     {
+        if(num_tries > clients_wait_timeout_) {
+            RCLCPP_INFO(node_->get_logger(), "Unable to connect to fKine service");
+            return geometry_msgs::msg::Pose();
+        }
+        num_tries++;
+
         if (!rclcpp::ok()){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return pose;
@@ -214,8 +235,15 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
     auto request = std::make_shared<manipulator_interfaces::srv::Jacobian::Request>();
 
     // Wait for the service to be available
+    size_t num_tries {0};
     while (!jacobian_client_->wait_for_service(std::chrono::seconds(1)))
     {
+        if(num_tries > clients_wait_timeout_) {
+            RCLCPP_INFO(node_->get_logger(), "Unable to connect to jacobian service");
+            return {};
+        }
+        num_tries++;
+
         if (!rclcpp::ok()) {
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return matrix;
@@ -255,8 +283,15 @@ bool ManipulatorMenu::gripperMoveClient(const bool close){
     request->data = close;
 
     // Wait for the service to be available
+    size_t num_tries {0};
     while (!gripperMove_client_->wait_for_service(std::chrono::seconds(1)))
     {
+        if(num_tries > clients_wait_timeout_) {
+            RCLCPP_INFO(node_->get_logger(), "Unable to connect to gripper service");
+            return {};
+        }
+        num_tries++;
+
         if (!rclcpp::ok()) {
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return false;
@@ -1068,38 +1103,57 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
     auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
     request->data = set;
 
-    // Wait for the service to be available
-    while (!setJacobianControl_client_->wait_for_service(std::chrono::seconds(1)))
+    // Check if service is available
+    if (!setJacobianControl_client_->wait_for_service(std::chrono::milliseconds(100)))
     {
-        if (!rclcpp::ok()){
-            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
-            return;
-        }
-        RCLCPP_INFO(node_->get_logger(), "jacobian_control_setter service not available, waiting again...");
-    }
-
-    // Send the request asynchronously
-    auto response_future = setJacobianControl_client_->async_send_request(request);
-
-    // Wait until the future is completed
-    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service jacobian_control_setter");
+        RCLCPP_INFO(node_->get_logger(), "Unable to connect to jacobian_control_setter service");
         return;
     }
 
-    // If the service call was successful, process the response
-    auto response = response_future.get();
-    if (response->success)
-    {
-        RCLCPP_INFO(node_->get_logger(), "Jacobian control set to %d", set);
-    }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to set Jacobian control");
-    }
+    auto cb = [&, this](rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture future){
+        auto result = future.get();
+        if (result->success)
+        {
+            RCLCPP_INFO(node_->get_logger(), "Jacobian control set to %d", set);
+        }
+        else
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to set Jacobian control: %s", result->message.c_str());
+        }
+    };
+
+    // Send the request asynchronously
+    setJacobianControl_client_->async_send_request(request, cb);
 }
 
+// Set Joints real time speed control
+void ManipulatorMenu::setJsRealTimeControl(bool set)
+{
+    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
+    request->data = set;
+
+    // Check if service is available
+    if (!setRealTimeControl_client_->wait_for_service(std::chrono::milliseconds(100)))
+    {
+        RCLCPP_INFO(node_->get_logger(), "Unable to connect to set_real_time_control service");
+        return;
+    }
+
+    auto cb = [&, this](rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture future){
+        auto result = future.get();
+        if (result->success)
+        {
+            RCLCPP_INFO(node_->get_logger(), "Real time joints control set to %d", set);
+        }
+        else
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to set real time joints control: %s", result->message.c_str());
+        }
+    };
+
+    // Send the request asynchronously
+    setRealTimeControl_client_->async_send_request(request, cb);
+}
 
 // Set new dynamic planners vel/acc params
 void ManipulatorMenu::setPlannerScalingFactors(float new_vel, float new_acc)
@@ -1108,36 +1162,27 @@ void ManipulatorMenu::setPlannerScalingFactors(float new_vel, float new_acc)
     request->acc_factor = new_acc;
     request->vel_factor = new_vel;
 
-    // Wait for the service to be available
-    while (!changePlannerScalingFactors_client_->wait_for_service(std::chrono::seconds(1)))
+    // Check if service is available
+    if (!changePlannerScalingFactors_client_->wait_for_service(std::chrono::milliseconds(100)))
     {
-        if (!rclcpp::ok()){
-            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
-            return;
-        }
-        RCLCPP_INFO(node_->get_logger(), "change_planner_params service not available, waiting again...");
-    }
-
-    // Send the request asynchronously
-    auto response_future = changePlannerScalingFactors_client_->async_send_request(request);
-
-    // Wait until the future is completed
-    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service change_planner_params");
+        RCLCPP_INFO(node_->get_logger(), "Unable to connect to set_planner_scaling_factors service");
         return;
     }
 
-    // If the service call was successful, process the response
-    auto response = response_future.get();
-    if (response->success)
-    {
-        RCLCPP_INFO(node_->get_logger(), "Planner params changed: acc_factor = %f, vel_factor = %f", new_acc, new_vel);
-    }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to set planner params");
-    }
+    auto cb = [&, this](rclcpp::Client<manipulator_interfaces::srv::ChangePlannerScalingFactors>::SharedFuture future){
+        auto result = future.get();
+        if (result->success)
+        {
+            RCLCPP_INFO(node_->get_logger(), "Planner scaling factors changed: acc_factor = %f, vel_factor = %f", new_acc, new_vel);
+        }
+        else
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to set planner scaling factors");
+        }
+    };
+
+    // Send the request asynchronously
+    changePlannerScalingFactors_client_->async_send_request(request, cb);
 }
 
 // Set new dynamic planners vel/acc params
@@ -1153,74 +1198,27 @@ void ManipulatorMenu::setPlannerTolerances(float position, float orientation, fl
     params_.tcp_position_tolerance = position; 
     params_.tcp_orientation_tolerance = orientation; 
 
-    // Wait for the service to be available
-    while (!changePlannerTolerances_client_->wait_for_service(std::chrono::seconds(1)))
+    // Check if service is available
+    while (!changePlannerTolerances_client_->wait_for_service(std::chrono::milliseconds(100)))
     {
-        if (!rclcpp::ok()){
-            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
-            return;
-        }
-        RCLCPP_INFO(node_->get_logger(), "change_planner_params service not available, waiting again...");
-    }
-
-    // Send the request asynchronously
-    auto response_future = changePlannerTolerances_client_->async_send_request(request);
-
-    // Wait until the future is completed
-    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service change_planner_params");
+        RCLCPP_INFO(node_->get_logger(), "Unable to connect to set_planner_tolerances service");
         return;
     }
 
-    // If the service call was successful, process the response
-    auto response = response_future.get();
-    if (response->success)
-    {
-        RCLCPP_INFO(node_->get_logger(), "Planner params changed: position_tolerance = %f, orientation_tolerance = %f, joint_tolerance = %f", position, orientation, joint);
-    }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to set planner params");
-    }
-}
-
-// Set Joints real time speed control
-void ManipulatorMenu::setJsRealTimeControl(bool set)
-{
-    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-    request->data = set;
-
-    // Wait for the service to be available
-    while (!setRealTimeControl_client_->wait_for_service(std::chrono::seconds(1)))
-    {
-        if (!rclcpp::ok()){
-            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
-            return;
+    auto cb = [&, this](rclcpp::Client<manipulator_interfaces::srv::ChangePlannerTolerances>::SharedFuture future){
+        auto result = future.get();
+        if (result->success)
+        {
+            RCLCPP_INFO(node_->get_logger(), "Planner params changed: position_tolerance = %f, orientation_tolerance = %f, joint_tolerance = %f", position, orientation, joint);
         }
-        RCLCPP_INFO(node_->get_logger(), "joints_real_time_setter service not available, waiting again...");
-    }
+        else
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to set planner params");
+        }
+    };
 
     // Send the request asynchronously
-    auto response_future = setRealTimeControl_client_->async_send_request(request);
-
-    // Wait until the future is completed
-    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call service joints_real_time_setter");
-        return;
-    }
-
-    // If the service call was successful, process the response
-    auto response = response_future.get();
-    if (response->success)
-    {
-        RCLCPP_INFO(node_->get_logger(), "Joints real time control set to %d", set);
-    }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to set joints real time control");
-    }
+    changePlannerTolerances_client_->async_send_request(request, cb);
 }
 
 // --------------------- MATRIX UTILS ------------------------

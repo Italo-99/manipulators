@@ -16,6 +16,8 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     ros_freq_ = this->get_parameter("ros_freq").as_int();
     max_speed_ee_ = this->get_parameter("max_speed_ee").as_double();
     max_accel_ee_ = this->get_parameter("max_accel_ee").as_double();
+    max_rot_speed_ee_ = this->get_parameter("max_rot_speed_ee").as_double();
+    max_rot_accel_ee_ = this->get_parameter("max_rot_accel_ee").as_double();
     max_spd_jnts_ = this->get_parameter("max_spd_jnts").as_double();
     max_acc_jnts_ = this->get_parameter("max_acc_jnts").as_double();
     gripper_links_ = this->get_parameter("gripper_links").as_string_array();
@@ -36,14 +38,14 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     RCLCPP_INFO(this->get_logger(), "Joints number: %d", NUM_JOINTS);
 
     //Initialize the velocity command vectors
+    current_js_vel_.resize(NUM_JOINTS, 1);
+    current_js_vel_.setZero();
     js_vel_cmd_.resize(NUM_JOINTS, 1);
     js_vel_cmd_.setZero();
-    js_msg_new_.resize(NUM_JOINTS, 1);
-    js_msg_new_.setZero();
-    arm_vel_cmd_.resize(6, 1);
-    arm_vel_cmd_.setZero();
-    arm_msg_new_.resize(3, 1);
-    arm_msg_new_.setZero();
+    current_ee_vel_.resize(6, 1);
+    current_ee_vel_.setZero();
+    ee_vel_cmd_.resize(6, 1);
+    ee_vel_cmd_.setZero();
 
     auto cb_group = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive
@@ -849,11 +851,11 @@ void ManipulatorPlannerNode::jointsRealTimeSetter_callback(const std_srvs::srv::
     // Stop the robot to prevent bad behaviours during mode switch
     for (unsigned int k = 0; k < joint_names_.size(); k++)
     {
-        js_vel_cmd_[k]  = 0.;
+        current_js_vel_[k]  = 0.;
     }
     for (unsigned int k = 0; k<6; k++)
     {
-        arm_vel_cmd_[k] = 0.;
+        current_ee_vel_[k] = 0.;
     }
     // Publish the msg to the robot
     jacobianControl();
@@ -869,7 +871,7 @@ void ManipulatorPlannerNode::jacobianControlSetter_callback(const std_srvs::srv:
     jac_control_ = req->data;
     RCLCPP_INFO(get_logger(), "Jacobian control mode set as %s", jac_control_ ? "True":"False");
     // Stop the robot to prevent bad behaviours during mode switch
-    for (unsigned int k = 0; k<6; k++) {arm_vel_cmd_(k) = 0.;}
+    for (unsigned int k = 0; k<6; k++) {current_ee_vel_(k) = 0.;}
     // Publish the msg to the robot
     jacobianControl();
     // Return success
@@ -883,11 +885,11 @@ void ManipulatorPlannerNode::realTimeSetpoint_callback(const sensor_msgs::msg::J
     for (unsigned int k = 0; k < joint_names_.size(); k++)
     {
         // Update setpoint of the k-th joint
-        js_msg_new_[k] = msg->velocity[k];
+        js_vel_cmd_[k] = msg->velocity[k];
         // Check if the vel cmds exceed the maximum acceptable speed
         if (abs(msg->velocity[k]) > max_spd_jnts_)
         {
-            js_msg_new_[k] = sign(msg->velocity[k])*max_spd_jnts_;
+            js_vel_cmd_[k] = sign(msg->velocity[k])*max_spd_jnts_;
         }
     }
 }
@@ -895,24 +897,23 @@ void ManipulatorPlannerNode::realTimeSetpoint_callback(const sensor_msgs::msg::J
 // Update the velocity setpoint of the arm for the jacobian speed based control
 void ManipulatorPlannerNode::velJacSetpoint_callback(const geometry_msgs::msg::Twist::SharedPtr& msg)
 {
-    // Compute the norm of the linear vels components of the new msg
-    arm_msg_new_[0] = msg->linear.x;
-    arm_msg_new_[1] = msg->linear.y;
-    arm_msg_new_[2] = msg->linear.z;
-    // arm_vel_cmd_[0] = msg->linear.x;
-    // arm_vel_cmd_[1] = msg->linear.y;
-    // arm_vel_cmd_[2] = msg->linear.z;
+    // Map the linear velocity
+    ee_vel_cmd_[0] = msg->linear.x;
+    ee_vel_cmd_[1] = msg->linear.y;
+    ee_vel_cmd_[2] = msg->linear.z;
     
     // Map the angular velocity components from the Twist message
-    arm_vel_cmd_[3] = msg->angular.x; // X component of angular velocity
-    arm_vel_cmd_[4] = msg->angular.y; // Y component of angular velocity
-    arm_vel_cmd_[5] = msg->angular.z; // Z component of angular velocity
+    ee_vel_cmd_[3] = msg->angular.x; // X component of angular velocity
+    ee_vel_cmd_[4] = msg->angular.y; // Y component of angular velocity
+    ee_vel_cmd_[5] = msg->angular.z; // Z component of angular velocity
 
-    // Check if the speed is below the maximum
-    double norm_vel = arm_msg_new_.norm();
-    if (norm_vel > max_speed_ee_) {arm_msg_new_ *= (max_speed_ee_/norm_vel);}
-    // double norm_vel = arm_vel_cmd_.head<3>().norm();
-    // if (norm_vel > max_speed_ee_) {arm_vel_cmd_ *= (max_speed_ee_/norm_vel);}
+    // Check if linear speed is below the maximum, otherwise scale velocity to fit
+    double norm_linear = ee_vel_cmd_.head<3>().norm();
+    if (norm_linear > max_speed_ee_) {ee_vel_cmd_ *= (max_speed_ee_/norm_linear);}
+
+    // Check if angular speed is below the maximum, otherwise scale velocity to fit
+    double norm_angular = ee_vel_cmd_.tail<3>().norm();
+    if (norm_angular > max_speed_ee_) {ee_vel_cmd_.tail<3>() *= (max_rot_speed_ee_/norm_angular);}
 }
 
 void ManipulatorPlannerNode::jointConstraint_callback(const moveit_msgs::msg::JointConstraint::SharedPtr msg)
@@ -977,7 +978,7 @@ void ManipulatorPlannerNode::motorsController(const sensor_msgs::msg::JointState
 
 void setToZeroIfSmall(double &value)
 {
-    if (std::abs(value) < 1e-20) {value = 0.0;}
+    if (std::abs(value) < 1e-6) {value = 0.0;}
 }
 
 double ManipulatorPlannerNode::sign(double val)
@@ -990,55 +991,12 @@ double ManipulatorPlannerNode::sign(double val)
 // Execute the jacobian based control
 void ManipulatorPlannerNode::jacobianControl()
 {
-    // Compute the norm of the current linear vels components
-    double norm_vel = arm_vel_cmd_.head<3>().norm();
-    
-    // Compute the norm of the linear vels components of the new msg
-    double norm_msg = arm_msg_new_.norm();
+    updateJacobianSpeedCmd(); // Update the speed setpoint of the arm
 
-    // Check if the acceleration is over the maximum, set a limitation
-    if (abs(norm_msg-norm_vel)*ros_freq_ > max_accel_ee_)
-    {
-        // Split the acceleration over the three axes
-        double acc_x = max_accel_ee_/3;
-        double acc_y = max_accel_ee_/3;
-        double acc_z = max_accel_ee_/3;
-        if      (norm_msg > 0.001)  // norm_msg < -0.001 || 
-        {
-            acc_x = max_accel_ee_*abs(arm_msg_new_(0))/norm_msg;
-            acc_y = max_accel_ee_*abs(arm_msg_new_(1))/norm_msg;
-            acc_z = max_accel_ee_*abs(arm_msg_new_(2))/norm_msg;
-            // Update linear velocity components
-            arm_vel_cmd_(0) = arm_vel_cmd_(0) + sign(arm_msg_new_(0)-arm_vel_cmd_(0))*acc_x/ros_freq_;
-            arm_vel_cmd_(1) = arm_vel_cmd_(1) + sign(arm_msg_new_(1)-arm_vel_cmd_(1))*acc_y/ros_freq_;
-            arm_vel_cmd_(2) = arm_vel_cmd_(2) + sign(arm_msg_new_(2)-arm_vel_cmd_(2))*acc_z/ros_freq_;
-        }
-        else if (norm_vel > 0.001)  // norm_vel < -0.001 || 
-        {
-            acc_x = max_accel_ee_*(abs(arm_vel_cmd_[0]))/norm_vel;
-            acc_y = max_accel_ee_*(abs(arm_vel_cmd_[1]))/norm_vel;
-            acc_z = max_accel_ee_*(abs(arm_vel_cmd_[2]))/norm_vel;
-            
-            // Update linear velocity components
-            arm_vel_cmd_(0) = arm_vel_cmd_(0) + sign(arm_msg_new_(0)-arm_vel_cmd_(0))*acc_x/ros_freq_;
-            arm_vel_cmd_(1) = arm_vel_cmd_(1) + sign(arm_msg_new_(1)-arm_vel_cmd_(1))*acc_y/ros_freq_;
-            arm_vel_cmd_(2) = arm_vel_cmd_(2) + sign(arm_msg_new_(2)-arm_vel_cmd_(2))*acc_z/ros_freq_;
-        }
-        else
-        {
-            arm_vel_cmd_.head<3>() = arm_msg_new_;
-        }
-
-    }
-    else {arm_vel_cmd_.head<3>() = arm_msg_new_;}
-    
-    // Set a lower limit to velocities to avoid noises
-    for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(arm_vel_cmd_[k]);}
-    
     // Compute the speed
     const unsigned int NUM_JOINTS = joint_names_.size();
     Eigen::VectorXd dq(NUM_JOINTS);
-    dq = getPseudoInverseJacobian() * arm_vel_cmd_;
+    dq = getPseudoInverseJacobian() * current_ee_vel_;
     
     // Set a lower limit to joint velocities to avoid noises
     for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(dq[k]);}
@@ -1076,6 +1034,44 @@ void ManipulatorPlannerNode::jacobianControl()
     dynamic_planner_->moveRobot(js);
 }
 
+void ManipulatorPlannerNode::updateJacobianSpeedCmd(){
+    // Compute the difference between the new and old velocity commands
+    Eigen::VectorXd delta = ee_vel_cmd_ - current_ee_vel_;
+    for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(delta[k]);}
+
+    double delta_linear_norm = delta.head<3>().norm();
+    double delta_angular_norm = delta.tail<3>().norm();
+
+    if (delta_linear_norm * ros_freq_ < max_accel_ee_){
+        // Delta is small enough to set the new velocity directly (or the robot is not moving)
+        current_ee_vel_.head<3>() = ee_vel_cmd_.head<3>();
+    }
+    else {
+        for (unsigned int k = 0; k < 3; k++)
+        {
+            // Compute the acceleration for each component mutiplying acceleration max by the component of the delta versor
+            double acc = max_accel_ee_ * abs(delta[k]) / delta_linear_norm;
+            current_ee_vel_(k) = current_ee_vel_(k) + sign(delta[k]) * acc / ros_freq_;
+        }
+    }
+
+    if (delta_angular_norm * ros_freq_ < max_rot_accel_ee_){
+        // Delta is small enough to set the new velocity directly (or the robot is not moving)
+        current_ee_vel_.tail<3>() = ee_vel_cmd_.tail<3>();
+    }
+    else {
+        for (unsigned int k = 3; k < 6; k++)
+        {
+            // Compute the acceleration for each component mutiplying acceleration max by the component of the delta versor
+            double acc = max_rot_accel_ee_ * abs(delta[k]) / delta_angular_norm;
+            current_ee_vel_(k) = current_ee_vel_(k) + sign(delta[k]) * acc / ros_freq_;
+        }
+    }
+
+    // Set a lower limit to velocities to avoid noises
+    for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(current_ee_vel_[k]);}
+}
+
 // Execute the jacobian based control
 void ManipulatorPlannerNode::jointsRealTimeControl()
 {
@@ -1084,9 +1080,9 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
     // Check if the accelerations are acceptable and map the joints speed from the JointState message
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
-        if (abs(js_msg_new_[k]-js_vel_cmd_[k])*ros_freq_ > max_acc_jnts_)
-            {js_vel_cmd_[k] = js_vel_cmd_[k] + sign(js_msg_new_[k]-js_vel_cmd_[k])*max_acc_jnts_/ros_freq_;}
-        else  {js_vel_cmd_[k] = js_msg_new_[k];}
+        if (abs(js_vel_cmd_[k]-current_js_vel_[k])*ros_freq_ > max_acc_jnts_)
+            {current_js_vel_[k] = current_js_vel_[k] + sign(js_vel_cmd_[k]-current_js_vel_[k])*max_acc_jnts_/ros_freq_;}
+        else  {current_js_vel_[k] = js_vel_cmd_[k];}
     }
 
     // Convert joints state into Eigen::MatrixXd
@@ -1097,23 +1093,23 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
     }
         
     // Set a lower limit to joint velocities to avoid noises
-    for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(js_vel_cmd_[k]);}
+    for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(current_js_vel_[k]);}
 
     // Update joint position setpoint
     Eigen::VectorXd qd(NUM_JOINTS);
-    qd = q + js_vel_cmd_ / ros_freq_;
+    qd = q + current_js_vel_ / ros_freq_;
 
     // Build the msg for the joints setpoint
     sensor_msgs::msg::JointState js;
     js.name     = joint_names_;
     js.position.resize(qd.size());
-    js.velocity.resize(js_vel_cmd_.size());
+    js.velocity.resize(current_js_vel_.size());
 
     // Insert positions and velocity setpoints
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
         js.position[k] = qd[k];
-        js.velocity[k] = js_vel_cmd_[k];
+        js.velocity[k] = current_js_vel_[k];
     }
 
     // Send the goal to the move it fake controller as trajectory point
@@ -1143,6 +1139,8 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("ros_freq", 500);
     this->declare_parameter("max_speed_ee", 1.0);
     this->declare_parameter("max_accel_ee", 1.0);
+    this->declare_parameter("max_rot_speed_ee", 1.0);
+    this->declare_parameter("max_rot_accel_ee", 1.0);
     this->declare_parameter("max_spd_jnts", 1.0);
     this->declare_parameter("max_acc_jnts", 1.0);
     this->declare_parameter("gripper_links", std::vector<std::string>()); //This is used to disable collision with the fingers when attaching objects
