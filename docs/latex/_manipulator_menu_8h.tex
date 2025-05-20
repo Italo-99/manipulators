@@ -1,0 +1,65 @@
+\hypertarget{_manipulator_menu_8h}{}\doxysection{include/manipulators/\+Manipulator\+Menu.h File Reference}
+\label{_manipulator_menu_8h}\index{include/manipulators/ManipulatorMenu.h@{include/manipulators/ManipulatorMenu.h}}
+{\ttfamily \#include $<$iostream$>$}\newline
+{\ttfamily \#include $<$cmath$>$}\newline
+{\ttfamily \#include $<$Eigen/\+Geometry$>$}\newline
+{\ttfamily \#include $<$unordered\+\_\+map$>$}\newline
+{\ttfamily \#include $<$yaml-\/cpp/yaml.\+h$>$}\newline
+{\ttfamily \#include $<$fstream$>$}\newline
+{\ttfamily \#include \char`\"{}geometry\+\_\+msgs/msg/pose.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}geometry\+\_\+msgs/msg/pose\+\_\+array.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}geometry\+\_\+msgs/msg/pose\+\_\+stamped.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}geometry\+\_\+msgs/msg/transform\+\_\+stamped.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}geometry\+\_\+msgs/msg/quaternion.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}moveit\+\_\+msgs/msg/collision\+\_\+object.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}moveit\+\_\+msgs/msg/attached\+\_\+collision\+\_\+object.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}moveit\+\_\+msgs/msg/position\+\_\+constraint.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}moveit\+\_\+msgs/msg/joint\+\_\+constraint.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}moveit\+\_\+msgs/msg/orientation\+\_\+constraint.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}rclcpp/rclcpp.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}sensor\+\_\+msgs/msg/joint\+\_\+state.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}std\+\_\+msgs/msg/float64.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}std\+\_\+msgs/msg/float64\+\_\+multi\+\_\+array.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}std\+\_\+msgs/msg/bool.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}std\+\_\+msgs/msg/empty.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}std\+\_\+msgs/msg/int8.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}tf2/\+Linear\+Math/\+Quaternion.\+h\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}tf2\+\_\+geometry\+\_\+msgs/tf2\+\_\+geometry\+\_\+msgs.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}tf2\+\_\+ros/transform\+\_\+listener.\+h\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}tf2\+\_\+ros/buffer.\+h\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}std\+\_\+srvs/srv/set\+\_\+bool.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}motors\+\_\+trajectory/srv/roboti\+\_\+q\+\_\+gripper\+\_\+control.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulator\+\_\+interfaces/srv/coppelia\+\_\+menu.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulator\+\_\+interfaces/srv/inv\+\_\+kine.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulator\+\_\+interfaces/srv/pseudo\+\_\+inverse.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulator\+\_\+interfaces/srv/f\+\_\+kine.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulator\+\_\+interfaces/srv/jacobian.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulator\+\_\+interfaces/srv/change\+\_\+planner\+\_\+tolerances.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulator\+\_\+interfaces/srv/change\+\_\+planner\+\_\+scaling\+\_\+factors.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulator\+\_\+interfaces/msg/joint\+\_\+goal.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulator\+\_\+interfaces/msg/tcp\+\_\+goal.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulator\+\_\+interfaces/msg/cartesian\+\_\+goal.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulator\+\_\+interfaces/msg/trajectory\+\_\+result.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}trajectory\+\_\+msgs/msg/joint\+\_\+trajectory.\+hpp\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}manipulators/\+Menu\+User\+Interface.\+h\char`\"{}}\newline
+Include dependency graph for Manipulator\+Menu.\+h\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{_manipulator_menu_8h__incl}
+\end{center}
+\end{figure}
+This graph shows which files directly or indirectly include this file\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=210pt]{_manipulator_menu_8h__dep__incl}
+\end{center}
+\end{figure}
+\doxysubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+struct \mbox{\hyperlink{struct_manipulator_menu_params}{Manipulator\+Menu\+Params}}
+\begin{DoxyCompactList}\small\item\em Struct to hold the parameters for the \mbox{\hyperlink{class_manipulator_menu}{Manipulator\+Menu}} class. \end{DoxyCompactList}\item 
+class \mbox{\hyperlink{class_manipulator_menu}{Manipulator\+Menu}}
+\begin{DoxyCompactList}\small\item\em Main class for the manipulator menu. \end{DoxyCompactList}\end{DoxyCompactItemize}

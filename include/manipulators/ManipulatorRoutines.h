@@ -33,7 +33,7 @@ private:
 
     rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr routineCmd_sub_; //Subscribe to routines execution commands
 
-    double pick_z_offset_ = 0.2; //Pick routine will place the ee at this height above the probe
+    double pick_z_offset_ = 0.1; //Pick routine will place the ee at this height above the probe
     bool is_executing_ = false;  //If a routine is being executed
 
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};

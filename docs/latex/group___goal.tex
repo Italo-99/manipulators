@@ -1,0 +1,134 @@
+\hypertarget{group___goal}{}\doxysection{publishers\+:}
+\label{group___goal}\index{publishers:@{publishers:}}
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+sensor\+\_\+msgs\+::msg\+::\+Joint\+State \mbox{\hyperlink{group___goal_gaeac14324ba37628216d808c55700aef9}{Manipulator\+Menu\+::publish\+Joint\+Goal}} (const std\+::vector$<$ double $>$ joint\+\_\+goal, const std\+::vector$<$ double $>$ start\+\_\+state=std\+::vector$<$ double $>$(), const bool execute=true)
+\begin{DoxyCompactList}\small\item\em Publish a joint goal to the manipulator planner. \end{DoxyCompactList}\item 
+sensor\+\_\+msgs\+::msg\+::\+Joint\+State \mbox{\hyperlink{group___goal_ga863e7b395ba2a2a2f19a1356956fa62e}{Manipulator\+Menu\+::publish\+Joint\+Goal}} (const sensor\+\_\+msgs\+::msg\+::\+Joint\+State joint\+\_\+goal, const std\+::vector$<$ double $>$ start\+\_\+state=std\+::vector$<$ double $>$(), const bool execute=true)
+\begin{DoxyCompactList}\small\item\em Publish a joint goal to the manipulator planner. \end{DoxyCompactList}\item 
+geometry\+\_\+msgs\+::msg\+::\+Pose \mbox{\hyperlink{group___goal_ga25b25a78d3f93524acc40befb3126d23}{Manipulator\+Menu\+::publish\+Tcp\+Goal}} (const std\+::vector$<$ double $>$ position, const std\+::vector$<$ double $>$ start\+\_\+state=std\+::vector$<$ double $>$(), const std\+::string \&frame=\char`\"{}\char`\"{}, const bool execute=true)
+\begin{DoxyCompactList}\small\item\em Publish a TCP goal to the manipulator planner. \end{DoxyCompactList}\item 
+geometry\+\_\+msgs\+::msg\+::\+Pose \mbox{\hyperlink{group___goal_ga8f6500396f32632b2e957136e732e832}{Manipulator\+Menu\+::publish\+Tcp\+Goal}} (const geometry\+\_\+msgs\+::msg\+::\+Pose tcp\+Pose\+Msg, const std\+::vector$<$ double $>$ start\+\_\+state=std\+::vector$<$ double $>$(), const std\+::string \&frame=\char`\"{}\char`\"{}, const bool execute=true)
+\begin{DoxyCompactList}\small\item\em Publish a TCP goal to the manipulator planner. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{group___goal_ga3ca19b4c0d8920ee21345c4bb752e843}{Manipulator\+Menu\+::publish\+Cartesian\+Goal}} (const std\+::vector$<$ geometry\+\_\+msgs\+::msg\+::\+Pose $>$ waypoints, const std\+::vector$<$ double $>$ start\+\_\+state=std\+::vector$<$ double $>$(), const std\+::string \&frame=\char`\"{}\char`\"{}, const bool execute=true)
+\begin{DoxyCompactList}\small\item\em Publish a TCP goal to the manipulator planner. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+
+
+\doxysubsection{Function Documentation}
+\mbox{\Hypertarget{group___goal_ga3ca19b4c0d8920ee21345c4bb752e843}\label{group___goal_ga3ca19b4c0d8920ee21345c4bb752e843}} 
+\index{publishers:@{publishers:}!publishCartesianGoal@{publishCartesianGoal}}
+\index{publishCartesianGoal@{publishCartesianGoal}!publishers:@{publishers:}}
+\doxysubsubsection{\texorpdfstring{publishCartesianGoal()}{publishCartesianGoal()}}
+{\footnotesize\ttfamily void Manipulator\+Menu\+::publish\+Cartesian\+Goal (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ geometry\+\_\+msgs\+::msg\+::\+Pose $>$}]{waypoints,  }\item[{const std\+::vector$<$ double $>$}]{start\+\_\+state = {\ttfamily std\+:\+:vector$<$~double~$>$()},  }\item[{const std\+::string \&}]{frame = {\ttfamily \char`\"{}\char`\"{}},  }\item[{const bool}]{execute = {\ttfamily true} }\end{DoxyParamCaption})}
+
+
+
+Publish a TCP goal to the manipulator planner. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em tcp\+\_\+goal} & TCP goal to be published (in meters). \\
+\hline
+{\em start\+\_\+state} & Start state of the manipulator (in degrees). \\
+\hline
+{\em frame} & Frame in which the position is expressed (leave empty for default frame). \\
+\hline
+{\em execute} & If true, the trajectory will be executed \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{group___goal_ga863e7b395ba2a2a2f19a1356956fa62e}\label{group___goal_ga863e7b395ba2a2a2f19a1356956fa62e}} 
+\index{publishers:@{publishers:}!publishJointGoal@{publishJointGoal}}
+\index{publishJointGoal@{publishJointGoal}!publishers:@{publishers:}}
+\doxysubsubsection{\texorpdfstring{publishJointGoal()}{publishJointGoal()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily sensor\+\_\+msgs\+::msg\+::\+Joint\+State Manipulator\+Menu\+::publish\+Joint\+Goal (\begin{DoxyParamCaption}\item[{const sensor\+\_\+msgs\+::msg\+::\+Joint\+State}]{joint\+\_\+goal,  }\item[{const std\+::vector$<$ double $>$}]{start\+\_\+state = {\ttfamily std\+:\+:vector$<$~double~$>$()},  }\item[{const bool}]{execute = {\ttfamily true} }\end{DoxyParamCaption})}
+
+
+
+Publish a joint goal to the manipulator planner. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em joint\+\_\+goal} & Joint goal to be published (in radians). \\
+\hline
+{\em start\+\_\+state} & Start state of the manipulator (in degrees). \\
+\hline
+{\em execute} & If true, the trajectory will be executed. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The passed joint goal. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group___goal_gaeac14324ba37628216d808c55700aef9}\label{group___goal_gaeac14324ba37628216d808c55700aef9}} 
+\index{publishers:@{publishers:}!publishJointGoal@{publishJointGoal}}
+\index{publishJointGoal@{publishJointGoal}!publishers:@{publishers:}}
+\doxysubsubsection{\texorpdfstring{publishJointGoal()}{publishJointGoal()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily sensor\+\_\+msgs\+::msg\+::\+Joint\+State Manipulator\+Menu\+::publish\+Joint\+Goal (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ double $>$}]{joint\+\_\+goal,  }\item[{const std\+::vector$<$ double $>$}]{start\+\_\+state = {\ttfamily std\+:\+:vector$<$~double~$>$()},  }\item[{const bool}]{execute = {\ttfamily true} }\end{DoxyParamCaption})}
+
+
+
+Publish a joint goal to the manipulator planner. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em joint\+\_\+goal} & Joint goal to be published (in degrees). \\
+\hline
+{\em start\+\_\+state} & Start state of the manipulator (in degrees). \\
+\hline
+{\em execute} & If true, the trajectory will be executed. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The passed joint goal. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group___goal_ga8f6500396f32632b2e957136e732e832}\label{group___goal_ga8f6500396f32632b2e957136e732e832}} 
+\index{publishers:@{publishers:}!publishTcpGoal@{publishTcpGoal}}
+\index{publishTcpGoal@{publishTcpGoal}!publishers:@{publishers:}}
+\doxysubsubsection{\texorpdfstring{publishTcpGoal()}{publishTcpGoal()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily geometry\+\_\+msgs\+::msg\+::\+Pose Manipulator\+Menu\+::publish\+Tcp\+Goal (\begin{DoxyParamCaption}\item[{const geometry\+\_\+msgs\+::msg\+::\+Pose}]{tcp\+Pose\+Msg,  }\item[{const std\+::vector$<$ double $>$}]{start\+\_\+state = {\ttfamily std\+:\+:vector$<$~double~$>$()},  }\item[{const std\+::string \&}]{frame = {\ttfamily \char`\"{}\char`\"{}},  }\item[{const bool}]{execute = {\ttfamily true} }\end{DoxyParamCaption})}
+
+
+
+Publish a TCP goal to the manipulator planner. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em tcp\+Pose\+Msg} & TCP goal to be published (in meters). \\
+\hline
+{\em start\+\_\+state} & Start state of the manipulator (in degrees). \\
+\hline
+{\em frame} & Frame in which the position is expressed (leave empty for default frame). \\
+\hline
+{\em execute} & If true, the trajectory will be executed. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The passed TCP goal. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group___goal_ga25b25a78d3f93524acc40befb3126d23}\label{group___goal_ga25b25a78d3f93524acc40befb3126d23}} 
+\index{publishers:@{publishers:}!publishTcpGoal@{publishTcpGoal}}
+\index{publishTcpGoal@{publishTcpGoal}!publishers:@{publishers:}}
+\doxysubsubsection{\texorpdfstring{publishTcpGoal()}{publishTcpGoal()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily geometry\+\_\+msgs\+::msg\+::\+Pose Manipulator\+Menu\+::publish\+Tcp\+Goal (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ double $>$}]{position,  }\item[{const std\+::vector$<$ double $>$}]{start\+\_\+state = {\ttfamily std\+:\+:vector$<$~double~$>$()},  }\item[{const std\+::string \&}]{frame = {\ttfamily \char`\"{}\char`\"{}},  }\item[{const bool}]{execute = {\ttfamily true} }\end{DoxyParamCaption})}
+
+
+
+Publish a TCP goal to the manipulator planner. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em position} & Position of the end effector (in meters). \\
+\hline
+{\em start\+\_\+state} & Start state of the manipulator (in degrees). \\
+\hline
+{\em frame} & Frame in which the position is expressed (leave empty for default frame). \\
+\hline
+{\em execute} & If true, the trajectory will be executed. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The passed TCP goal. 
+\end{DoxyReturn}

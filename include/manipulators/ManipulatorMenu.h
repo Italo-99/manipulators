@@ -1,3 +1,4 @@
+/** @file */
 #ifndef MANIPULATOR_MENU_H
 #define MANIPULATOR_MENU_H
 
@@ -53,31 +54,47 @@
 
 #include "manipulators/MenuUserInterface.h"
 
+/*! @struct ManipulatorMenuParams
+        @brief Struct to hold the parameters for the ManipulatorMenu class.
+
+        @param node_name Name of the node.
+        @param ros_freq Frequency of the node.
+        @param manipulator_name Name of the manipulator, must match the one in the manipulator planner.
+        @param planning_group Name of the planning group specified in the srdf, must match the one in the manipulator planner.
+        @param joint_names Names of the joints, must be members of the planning group.
+        @param base_link_name Name of the base link, used as a reference frame for coordinates.
+        @param tcp_position_tolerance Tolerance for the position of the end effector (m).
+        @param tcp_orientation_tolerance Tolerance for the orientation of the end effector (rad).
+        @param joint_tolerance Tolerance for the position of the joints (rad).
+        @param known_poses_path Full path to the yaml file with the known poses (leave empty if not used).
+                               Known poses are defined as their name and a vector of joint angles in degrees eg: home: [0, 0, 0, 0, 0, 0].
+        @param gripper Type of gripper to be used, must be in the list of available grippers.
+        @param gripper_group (specific for gripper type robotiq_85) Name of the gripper group, must match the one in the srdf.
+        @param gripper_IO_cmds (specific for gripper type toolIO) Tool IO commands for the gripper, must be in the list of available grippers.
+
+        @details Available grippers:
+  
+        @li no_gripper: No gripper, only the manipulator is used.
+        @li robotiq_85: Robotiq 85 gripper, actuated through a service.
+        @li toolIO: Generic gripper actuated through the tool IO of the robot.
+*/
 struct ManipulatorMenuParams
 {
-    std::string node_name                = "manipulator_menu_node";
+    std::string node_name                = "manipulator_menu_node"; 
     double ros_freq                      = 500;
     std::string manipulator_name         = "manipulator";
     std::string planning_group           = "ur_manipulator";
 
-    
-    std::vector<std::string> joint_names = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
-        "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
+    std::vector<std::string> joint_names = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
+
     std::string base_link_name           = "base_link";
     
     double tcp_position_tolerance        = 0.01; //Tolerance for the position of the end effector
     double tcp_orientation_tolerance     = 0.01; //Tolerance for the orientation of the end effector
     double joint_tolerance               = 0.01; //Tolerance for the position of the joints
-    
-    std::string known_poses_path          = ""; //Full path to the yaml file with the known poses (leave empty if not used)
-                                                //Known poses are defined as a vector of joint angles in degrees eg: home: [0, 0, 0, 0, 0, 0]
 
-    /* AVAILABLE GRIPPERS:
-        - no_gripper
-        - robotiq_85: Robotiq 85 gripper, actuated through a service
-        - toolIO: Generic gripper actuated through the tool IO of the robot
-    */
-                                                
+    std::string known_poses_path          = "";  
+
     std::string gripper                  = "no_gripper"; //Must be in list of available grippers
 
     //Robotiq 85 gripper parameters
@@ -86,6 +103,16 @@ struct ManipulatorMenuParams
     std::vector<int8_t> gripper_IO_cmds  = {0, 0};
 };
 
+/*! @class ManipulatorMenu
+*       @brief Main class for the manipulator menu.
+*       @details This class is used to create a high level, command line interface for the manipulator planner.
+*                It allows to plan and execute trajectories as well as perform various operations on the manipulator.
+*       @note In general when using the sensor_msgs/JointState type the angles will be expressed in radians, 
+*             instead when using a vector joint angles will be expressed in degrees.
+*             In a similar way when using vectors to represent poses, the first 3 elements will be the x, y 
+*             and z coordinates in meters while the last 3 elements will be the roll, pitch and yaw in degrees.
+*  
+*/
 class ManipulatorMenu
 {
     //NOTE: In general when using the sensor_msgs/JointState type the angles will be expressed in radians, 
@@ -94,11 +121,11 @@ class ManipulatorMenu
     //      and z coordinates in meters while the last 3 elements will be the roll, pitch and yaw in degrees.
     public:
         // ---------------------  PUBLIC CONSTRUCTOR ---------------------
-        /*
-            Constructor for the ManipulatorMenu class. It initializes the menu and the node.
-            params: Parameters for the manipulator menu (must match the ones passed to the manipulator planner)
-            node: Pointer to the node that will host the menu
-            sync_parameters: If true, the parameters will be synchronized with the manipulator planner automatically 
+        /*!
+            @brief Constructor for the ManipulatorMenu class.
+            @param params: Parameters for the manipulator menu (must match the ones passed to the manipulator planner)
+            @param node: Pointer to the node that will host the menu
+            @param sync_parameters: If true, the parameters will be synchronized with the manipulator planner automatically 
                              (may cause some delay or issues, if the menu blocks when started disable this option and 
                               manually set the parameters in src/manipulator_menu_user.cpp)
         */
@@ -110,73 +137,152 @@ class ManipulatorMenu
 
         ~ManipulatorMenu();
 
-        sensor_msgs::msg::JointState current_joint_pose_;
-
         // ---------------------  PUBLIC FUNCTIONS ---------------------
 
-        // Spinner
-        void spinnerMenu(void);         // Asynchronous spinner for ROS routines with user menu
-        void spinner(void);             // Update current robot joints state
+        /*!
+            @brief Start the menu and wait for user input.
+            @details This function will start a thread that will run the function spinner() and then it will start the
+            command line menu.
+            @note This will block the execution until the user exits the menu.
+        */
+        void spinnerMenu(void);
 
-        // Joint and TCP moves
-        //The following functions will plan and execute a trajectory, then return immediatly
-        // publish a joint goal to the manipulator planner
+        /*!
+            @brief Start the actual spinner for the node.
+            @details This function should run asynchronously to the menu interface and will handle the node specific tasks 
+            such as publishing and subscribing to topics, waiting for services and handling the node lifecycle.
+        */
+        void spinner(void);
+
+        // Goal publishers
+
+        /*!
+            @brief Publish a joint goal to the manipulator planner.
+            @param joint_goal: Joint goal to be published (in degrees).
+            @param start_state: Start state of the manipulator (in degrees).
+            @param execute: If true, the trajectory will be executed.
+            @return The passed joint goal.
+        */
         sensor_msgs::msg::JointState publishJointGoal(
             const std::vector<double> joint_goal, 
             const std::vector<double> start_state = std::vector<double>(), 
             const bool execute=true);
 
+        /*!
+            @brief Publish a joint goal to the manipulator planner.
+            @param joint_goal: Joint goal to be published (in radians).
+            @param start_state: Start state of the manipulator (in degrees).
+            @param execute: If true, the trajectory will be executed.
+            @return The passed joint goal.
+        */
         sensor_msgs::msg::JointState publishJointGoal(
             const sensor_msgs::msg::JointState joint_goal, 
             const std::vector<double> start_state = std::vector<double>(), 
             const bool execute=true);
 
-        // publish a tcp goal to the manipulator planner
+        /*!
+            @brief Publish a TCP goal to the manipulator planner.
+            @param position: Position of the end effector (in meters).
+            @param start_state: Start state of the manipulator (in degrees).
+            @param frame: Frame in which the position is expressed (leave empty for default frame).
+            @param execute: If true, the trajectory will be executed.
+            @return The passed TCP goal.
+        */
         geometry_msgs::msg::Pose publishTcpGoal(
             const std::vector<double> position, 
             const std::vector<double> start_state = std::vector<double>(),
             const std::string& frame = "", //Leave empty for default frame
             const bool execute=true);
 
+        /*!
+            @brief Publish a TCP goal to the manipulator planner.
+            @param tcpPoseMsg: TCP goal to be published (in meters).
+            @param start_state: Start state of the manipulator (in degrees).
+            @param frame: Frame in which the position is expressed (leave empty for default frame).
+            @param execute: If true, the trajectory will be executed.
+            @return The passed TCP goal.
+        */
         geometry_msgs::msg::Pose publishTcpGoal(
             const geometry_msgs::msg::Pose tcpPoseMsg, 
             const std::vector<double> start_state = std::vector<double>(),
             const std::string& frame = "", //Leave empty for default frame
             const bool execute=true);
 
+        /*!
+            @brief Publish a TCP goal to the manipulator planner.
+            @param tcp_goal: TCP goal to be published (in meters).
+            @param start_state: Start state of the manipulator (in degrees).
+            @param frame: Frame in which the position is expressed (leave empty for default frame).
+            @param execute: If true, the trajectory will be executed
+        */
         void publishCartesianGoal(
             const std::vector<geometry_msgs::msg::Pose> waypoints,
             const std::vector<double> start_state = std::vector<double>(),
             const std::string& frame = "", //Leave empty for default frame
             const bool execute=true
         );
-            
+        
+        /*!
+            @brief Execute movement of a single joint.
+            @param num: Number of the joint to be moved.
+            @param joint_rot: Degrees to rotate the joint.
+            @return The joint state of the manipulator after the movement.
+        */
         sensor_msgs::msg::JointState oneJointMove(const int num, const double joint_rot); // to execute rotation of a single joint
 
+        /*!
+            @brief Get the joint state of a known pose specified in the yaml file.
+            @param pose_name: Name of the pose to be retrieved.
+            @return The known pose as a vector of joint angles in degrees.
+        */
         std::vector<double> getKnownPose(const std::string& pose_name); //Get a known pose from the yaml file
 
         // Planning 
 
-        //The following functions will plan a trajectory and return it (if timeout or error return an empty trajectory)
-        //timeout arg is in seconds
+        /*!
+            @brief Send a joint goal to the manipulator planner and wait for the result.
+            @param joint_goal: Joint goal to be published (in radians).
+            @param start_state: Start state of the manipulator (in degrees).
+            @param timeout: Timeout for the operation (in seconds).
+            @return The planned trajectory result (see manipulator_interfaces::msg::TrajectoryResult).
+        */
         manipulator_interfaces::msg::TrajectoryResult planAndWait(
             const sensor_msgs::msg::JointState joint_goal, 
             const std::vector<double> start_state = std::vector<double>(),
             uint timeout=2);
-            
+        
+        /*!
+            @brief Send a TCP goal to the manipulator planner and wait for the result.
+            @param tcp_goal: TCP goal to be published.
+            @param start_state: Start state of the manipulator (in degrees).
+            @param timeout: Timeout for the operation (in seconds).
+            @return The planned trajectory result (see manipulator_interfaces::msg::TrajectoryResult).
+        */
         manipulator_interfaces::msg::TrajectoryResult planAndWait(
             const geometry_msgs::msg::Pose tcp_goal, 
             const std::vector<double> start_state = std::vector<double>(), 
             const std::string& frame = "", //Leave empty for default frame
             uint timeout=2);
 
+        /*!
+            @brief Send a Cartesian goal to the manipulator planner and wait for the result.
+            @param waypoints: Waypoints to be published.
+            @param start_state: Start state of the manipulator (in degrees).
+            @param timeout: Timeout for the operation (in seconds).
+            @return The planned trajectory result (see manipulator_interfaces::msg::TrajectoryResult).
+        */
         manipulator_interfaces::msg::TrajectoryResult cartesianPlanAndWait(
             const std::vector<geometry_msgs::msg::Pose> waypoints, 
             const std::vector<double> start_state = std::vector<double>(), 
             const std::string& frame = "", //Leave empty for default frame
             uint timeout=2);
 
-        //The following functions will execute a trajectory and return once it's finished
+        /*!
+            @brief Execute a trajectory, blocks until the trajectory is executed or timeout is reached.
+            @param joint_trajectory: Joint trajectory to be executed.
+            @param timeout: Timeout for the operation (in seconds).
+            @return True if the trajectory was executed successfully, false otherwise.
+        */
         bool executeAndWait(const moveit_msgs::msg::RobotTrajectory joint_trajectory, uint timeout=20);
 
         // Get the position and orientation of the end effector (they contain a ros spin once)
@@ -412,6 +518,8 @@ class ManipulatorMenu
 
     public:
         // --------------------- PUBLIC VARIABLES ---------------------
+
+        sensor_msgs::msg::JointState current_joint_pose_;
 
         // Planning 
         rclcpp::Subscription<manipulator_interfaces::msg::TrajectoryResult>::SharedPtr plannedTrajectory_sub_;      // Subscription to the planned trajectory

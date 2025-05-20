@@ -1,0 +1,153 @@
+\hypertarget{class_dynamic_planner}{}\doxysection{Dynamic\+Planner Class Reference}
+\label{class_dynamic_planner}\index{DynamicPlanner@{DynamicPlanner}}
+\doxysubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_adee2ad7b9c1e5cfe35f4eebcff157b2f}\label{class_dynamic_planner_adee2ad7b9c1e5cfe35f4eebcff157b2f}} 
+enum {\bfseries Planning\+Space} \+: bool \{ {\bfseries JOINTS\+\_\+\+SPACE} = 0
+, {\bfseries OPERATIVE\+\_\+\+SPACE} = 1
+ \}
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a307a6f68917dccb477bcc5cb2b3c566c}\label{class_dynamic_planner_a307a6f68917dccb477bcc5cb2b3c566c}} 
+{\bfseries Dynamic\+Planner} (const rclcpp\+::\+Node\+::\+Shared\+Ptr \&node, const std\+::string \&planning\+\_\+group, \mbox{\hyperlink{struct_dynamic_planner_params}{Dynamic\+Planner\+Params}} params, bool dynamic\+\_\+behavior=true)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a1c2c09a5d830dc46009a8552c67811ed}\label{class_dynamic_planner_a1c2c09a5d830dc46009a8552c67811ed}} 
+void {\bfseries initialize} ()
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_af295b9bf4c15d594a2338b27f649d5cf}\label{class_dynamic_planner_af295b9bf4c15d594a2338b27f649d5cf}} 
+void {\bfseries plan} (const std\+::vector$<$ double $>$ joint\+\_\+positions)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_ace80b2ff7da79f142afd50171d3f997c}\label{class_dynamic_planner_ace80b2ff7da79f142afd50171d3f997c}} 
+void {\bfseries plan} (const geometry\+\_\+msgs\+::msg\+::\+Pose \&goal\+\_\+pose, const std\+::string \&ee\+\_\+link, const std\+::string \&frame)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_acc13ae58c2f18f3f4d79009dd969b10a}\label{class_dynamic_planner_acc13ae58c2f18f3f4d79009dd969b10a}} 
+void {\bfseries plan} (const geometry\+\_\+msgs\+::msg\+::\+Pose \&goal\+\_\+pose, const std\+::string \&ee\+\_\+link)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a33ffd57b3a5db222d735b42146b0562a}\label{class_dynamic_planner_a33ffd57b3a5db222d735b42146b0562a}} 
+void {\bfseries plan} (const geometry\+\_\+msgs\+::msg\+::\+Pose \&goal\+\_\+pose)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_ab231869b607668239fd256c8c5995859}\label{class_dynamic_planner_ab231869b607668239fd256c8c5995859}} 
+double {\bfseries cartesian\+Plan} (const std\+::vector$<$ geometry\+\_\+msgs\+::msg\+::\+Pose $>$ \&waypoints, const std\+::string \&ee\+\_\+link, const std\+::string \&frame)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a8254038b9f5a211b94fe091cd5dffde0}\label{class_dynamic_planner_a8254038b9f5a211b94fe091cd5dffde0}} 
+double {\bfseries cartesian\+Plan} (const std\+::vector$<$ geometry\+\_\+msgs\+::msg\+::\+Pose $>$ \&waypoints, const std\+::string \&ee\+\_\+link)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a72fc07745fac72eb311cbf7e251fd390}\label{class_dynamic_planner_a72fc07745fac72eb311cbf7e251fd390}} 
+double {\bfseries cartesian\+Plan} (const std\+::vector$<$ geometry\+\_\+msgs\+::msg\+::\+Pose $>$ \&waypoints)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_ac5d6a3ea82ac71a094b0e30b0ce295ac}\label{class_dynamic_planner_ac5d6a3ea82ac71a094b0e30b0ce295ac}} 
+void {\bfseries move\+Robot} (const sensor\+\_\+msgs\+::msg\+::\+Joint\+State \&joint\+\_\+state)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a55a8eedfd8219affb3cda34406e23e14}\label{class_dynamic_planner_a55a8eedfd8219affb3cda34406e23e14}} 
+void {\bfseries move\+Robot} (const trajectory\+\_\+msgs\+::msg\+::\+Joint\+Trajectory\+Point \&traj\+\_\+pt)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a6fdadb738de2cb81eac7e09053374b59}\label{class_dynamic_planner_a6fdadb738de2cb81eac7e09053374b59}} 
+void {\bfseries move\+Robot} ()
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a06559605cfd851ab44a24312be5ac2d0}\label{class_dynamic_planner_a06559605cfd851ab44a24312be5ac2d0}} 
+void {\bfseries move\+Robot} (moveit\+\_\+msgs\+::msg\+::\+Robot\+Trajectory \&robot\+\_\+trajectory)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a5ad164a961c740219d33ce31e3ab2bf3}\label{class_dynamic_planner_a5ad164a961c740219d33ce31e3ab2bf3}} 
+bool {\bfseries is\+Moving} ()
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a449bbcb5df487a0b5860940934e4fe41}\label{class_dynamic_planner_a449bbcb5df487a0b5860940934e4fe41}} 
+bool {\bfseries is\+Ready} () const
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a05c46eb5b9484178e8082a10f0e73922}\label{class_dynamic_planner_a05c46eb5b9484178e8082a10f0e73922}} 
+void {\bfseries stop} ()
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a024e9fc6719668d1611fe391fdaf6f95}\label{class_dynamic_planner_a024e9fc6719668d1611fe391fdaf6f95}} 
+\mbox{\hyperlink{struct_dynamic_planner_params}{Dynamic\+Planner\+Params}} {\bfseries get\+Params} () const
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a0408917146da8ab7e5af3a7f0405cc2d}\label{class_dynamic_planner_a0408917146da8ab7e5af3a7f0405cc2d}} 
+void {\bfseries set\+Params} (const \mbox{\hyperlink{struct_dynamic_planner_params}{Dynamic\+Planner\+Params}} \&params)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a9cd5e0e2f44585944a5bad572202de03}\label{class_dynamic_planner_a9cd5e0e2f44585944a5bad572202de03}} 
+void {\bfseries set\+Dynamic\+Behavior} (bool dynamic\+\_\+behavior)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_ae4c934e09fa1c538c83dbf755dc45078}\label{class_dynamic_planner_ae4c934e09fa1c538c83dbf755dc45078}} 
+bool {\bfseries is\+Dynamic} () const
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a00cb22a75aee228b92d35c03dc7849aa}\label{class_dynamic_planner_a00cb22a75aee228b92d35c03dc7849aa}} 
+void {\bfseries set\+Planning\+Space} (Planning\+Space space)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a1fba964ca70f0220df0cff227614ac3f}\label{class_dynamic_planner_a1fba964ca70f0220df0cff227614ac3f}} 
+Planning\+Space {\bfseries get\+Planning\+Space} () const
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_ac6ee4ea1b226dfebd37ea1d89ffbfd39}\label{class_dynamic_planner_ac6ee4ea1b226dfebd37ea1d89ffbfd39}} 
+std\+::shared\+\_\+ptr$<$ moveit\+::planning\+\_\+interface\+::\+Move\+Group\+Interface $>$ {\bfseries get\+Move\+Group} () const
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a02456551c9a1356b3f6ef9c8d1321b34}\label{class_dynamic_planner_a02456551c9a1356b3f6ef9c8d1321b34}} 
+std\+::shared\+\_\+ptr$<$ moveit\+::planning\+\_\+interface\+::\+Planning\+Scene\+Interface $>$ {\bfseries get\+Planning\+Scene} () const
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a9fdf957c6490f9da458a1d17b422bbfb}\label{class_dynamic_planner_a9fdf957c6490f9da458a1d17b422bbfb}} 
+std\+::shared\+\_\+ptr$<$ moveit\+\_\+visual\+\_\+tools\+::\+Move\+It\+Visual\+Tools $>$ {\bfseries get\+Visual\+Tools} () const
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_ae97cb97c1ba28e5d8ed326e5563c246b}\label{class_dynamic_planner_ae97cb97c1ba28e5d8ed326e5563c246b}} 
+std\+::vector$<$ double $>$ {\bfseries get\+Named\+Target} (const std\+::string \&target\+\_\+name)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a1ab284e1ae4a9e1a19c02710bf309391}\label{class_dynamic_planner_a1ab284e1ae4a9e1a19c02710bf309391}} 
+void {\bfseries set\+Robot\+State} (moveit\+::core\+::\+Robot\+State\+Ptr \&robot\+\_\+state)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_affb073ce9bab781e12000a0f6a0af8e0}\label{class_dynamic_planner_affb073ce9bab781e12000a0f6a0af8e0}} 
+moveit\+::core\+::\+Robot\+State\+Ptr {\bfseries get\+Robot\+State} ()
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_ac83b36921789218db8193ec552e007b6}\label{class_dynamic_planner_ac83b36921789218db8193ec552e007b6}} 
+void {\bfseries set\+Path\+Constraints} (const moveit\+\_\+msgs\+::msg\+::\+Constraints \&position\+\_\+constraint)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_af90f31500db63562ba03e4cd0f493bab}\label{class_dynamic_planner_af90f31500db63562ba03e4cd0f493bab}} 
+void {\bfseries clear\+Path\+Constraints} ()
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a0a5d9595b11643603157d85d6ce7818c}\label{class_dynamic_planner_a0a5d9595b11643603157d85d6ce7818c}} 
+moveit\+\_\+msgs\+::msg\+::\+Constraints {\bfseries get\+Path\+Constraints} () const
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a3978d89a10b16fc8e16d4d063151b5b0}\label{class_dynamic_planner_a3978d89a10b16fc8e16d4d063151b5b0}} 
+geometry\+\_\+msgs\+::msg\+::\+Pose\+Stamped {\bfseries get\+FKine} (const std\+::vector$<$ double $>$ \&joint\+\_\+positions, const std\+::string \&end\+\_\+effector\+\_\+link)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_adf5c5d30a8fa24665d353a990e06256b}\label{class_dynamic_planner_adf5c5d30a8fa24665d353a990e06256b}} 
+geometry\+\_\+msgs\+::msg\+::\+Pose\+Stamped {\bfseries get\+FKine} (const std\+::string \&end\+\_\+effector\+\_\+link)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_ada1687800e690f8e56e8e4dfe722104b}\label{class_dynamic_planner_ada1687800e690f8e56e8e4dfe722104b}} 
+geometry\+\_\+msgs\+::msg\+::\+Pose\+Stamped {\bfseries get\+FKine} ()
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a48748f31d19d8da76fab2c0d1ef90bd7}\label{class_dynamic_planner_a48748f31d19d8da76fab2c0d1ef90bd7}} 
+std\+::vector$<$ double $>$ {\bfseries inv\+Kine} (const geometry\+\_\+msgs\+::msg\+::\+Pose \&target\+\_\+pose, const std\+::string \&end\+\_\+effector\+\_\+link)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a17d7e299a741449a0f5dce6903241be2}\label{class_dynamic_planner_a17d7e299a741449a0f5dce6903241be2}} 
+std\+::vector$<$ double $>$ {\bfseries inv\+Kine} (const geometry\+\_\+msgs\+::msg\+::\+Pose \&target\+\_\+pose)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a33801d9d45868faf99cb0a883b6f9fba}\label{class_dynamic_planner_a33801d9d45868faf99cb0a883b6f9fba}} 
+const Eigen\+::\+Matrix\+Xd {\bfseries get\+Jacobian} (const std\+::vector$<$ double $>$ \&joint\+\_\+positions, const std\+::string \&end\+\_\+effector\+\_\+link)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_ab4283c228d275c1beaac11322eb87271}\label{class_dynamic_planner_ab4283c228d275c1beaac11322eb87271}} 
+const Eigen\+::\+Matrix\+Xd {\bfseries get\+Jacobian} (const std\+::string \&end\+\_\+effector\+\_\+link)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_ad5e2d0157585213070647016f144cef1}\label{class_dynamic_planner_ad5e2d0157585213070647016f144cef1}} 
+const Eigen\+::\+Matrix\+Xd {\bfseries get\+Jacobian} ()
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a533e9baaa539aeace2cfd055d8ec6fba}\label{class_dynamic_planner_a533e9baaa539aeace2cfd055d8ec6fba}} 
+const Eigen\+::\+Matrix\+Xd {\bfseries get\+Pseudo\+Inverse\+Jacobian} (const std\+::vector$<$ double $>$ \&joint\+\_\+positions, const std\+::string \&end\+\_\+effector\+\_\+link)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_af18a851f925b07dfafcd8298682bffe9}\label{class_dynamic_planner_af18a851f925b07dfafcd8298682bffe9}} 
+const Eigen\+::\+Matrix\+Xd {\bfseries get\+Pseudo\+Inverse\+Jacobian} (const std\+::string \&end\+\_\+effector\+\_\+link)
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a7b32cbed12d6935fbe78cd761d7e720f}\label{class_dynamic_planner_a7b32cbed12d6935fbe78cd761d7e720f}} 
+const Eigen\+::\+Matrix\+Xd {\bfseries get\+Pseudo\+Inverse\+Jacobian} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_a27e47a3a656822fc4a5cd8d39ff60d36}\label{class_dynamic_planner_a27e47a3a656822fc4a5cd8d39ff60d36}} 
+std\+::vector$<$ double $>$ {\bfseries joints\+\_\+values\+\_\+group\+\_\+}
+\item 
+\mbox{\Hypertarget{class_dynamic_planner_ad81bc01ce7d458c8e45ce5b3996bc035}\label{class_dynamic_planner_ad81bc01ce7d458c8e45ce5b3996bc035}} 
+std\+::vector$<$ double $>$ {\bfseries joints\+\_\+speed\+\_\+group\+\_\+}
+\end{DoxyCompactItemize}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+include/manipulators/Dynamic\+Planner.\+h\end{DoxyCompactItemize}

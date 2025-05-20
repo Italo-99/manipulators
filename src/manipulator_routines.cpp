@@ -63,7 +63,7 @@ void ManipulatorRoutines::pickProbe_callback()
     geometry_msgs::msg::Pose probe_pose;
     probe_pose.position.x = transform.transform.translation.x;
     probe_pose.position.y = transform.transform.translation.y;
-    probe_pose.position.z = transform.transform.translation.z;
+    probe_pose.position.z = transform.transform.translation.z - 0.033;
     probe_pose.orientation = transform.transform.rotation;
 
     is_executing_ = true;
@@ -159,13 +159,13 @@ bool ManipulatorRoutines::pickUpRoutine(geometry_msgs::msg::Pose obj_pose, std::
         }
         moveGripper(false);
         move_along_z(-pick_z_offset_, true);
-        rclcpp::sleep_for(std::chrono::milliseconds(1200));
+        rclcpp::sleep_for(std::chrono::milliseconds(4000));
         moveGripper(true);
         rclcpp::sleep_for(std::chrono::milliseconds(300));
         publishJointGoal(getKnownPose("home_gripper_down"), std::vector<double>(), true);
         rclcpp::sleep_for(std::chrono::milliseconds(3000));
         move_along_z(-0.3, true);
-        rclcpp::sleep_for(std::chrono::milliseconds(5000));
+        rclcpp::sleep_for(std::chrono::milliseconds(4000));
         moveGripper(false);
         publishJointGoal(getKnownPose("home_gripper_down"), std::vector<double>(), true);
     }

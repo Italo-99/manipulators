@@ -1,0 +1,5 @@
+<map id="ManipulatorMenu" name="ManipulatorMenu">
+<area shape="rect" id="node1" title="Main class for the manipulator menu." alt="" coords="113,109,249,136"/>
+<area shape="rect" id="node2" href="$class_menu_user_interface.html" title=" " alt="" coords="5,5,163,47"/>
+<area shape="rect" id="node3" href="$struct_manipulator_menu_params.html" title="Struct to hold the parameters for the ManipulatorMenu class." alt="" coords="187,13,371,39"/>
+</map>
