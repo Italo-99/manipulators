@@ -114,6 +114,15 @@ Install rviz and moveit visual tools:
 
     More information can be found at [Pick ik kinematics solver](https://moveit.picknik.ai/main/doc/how_to_guides/pick_ik/pick_ik_tutorial.html)
 
+## Install Coppelia
+
+1. Download coppelia
+2. Download ros2 sim package for coppelia: simExtROS2
+3. Set COPPELIASIM_ROOT_DIR env variable
+4. Add joint states to simExtROS2/meta/interfaces.txt
+5. Build
+6. Copy .so file from build into coppelia dir
+
 ## Useful packages
 
 1) [Install drivers for xbox one controller](https://fostips.com/install-driver-xbox-one-controller-headset-ubuntu/)
