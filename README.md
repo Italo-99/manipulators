@@ -50,9 +50,10 @@ Install the realsense package:
 
     sudo apt install ros-humble-realsense2-*
 
-Install rviz visual tools:
+Install rviz and moveit visual tools:
 
     sudo apt install ros-humble-rviz-visual-tools
+    sudo apt install ros-humble-moveit-visual-tools
 
 ### 4. Fix known issues
 
@@ -132,6 +133,8 @@ To launch the planner with robotiq_85_gripper attached as end effector:
 
 ### Planner parameters
 
+This is a list of parameters that can be passed to the planner.launch.py launch file:
+
  - `rate`: Rate for the joint_state_publisher node (Hz).
  - `gui`: Whether to run joint_state_publisher with gui or not.
  - `publish_joint_states`: Whether to run joint_state_publisher node.
@@ -182,7 +185,7 @@ The launch file `planner.launch.py` will automatically retrieve all these parame
 
 ### The manipulator menu node
 
-The manipulator menu node can be used to perform different actions with the manipulator.
+The manipulator menu node can be used to perform different actions with the manipulator, it has a simple command line interface.
 
 To run the manipulator menu:
 
