@@ -121,7 +121,7 @@ Install rviz and moveit visual tools:
 3. Set COPPELIASIM_ROOT_DIR env variable
 4. Add joint states to simExtROS2/meta/interfaces.txt
 5. Build
-6. Copy .so file from build into coppelia dir
+6. Copy .so file from build into coppelia dircd
 
 ## Useful packages
 

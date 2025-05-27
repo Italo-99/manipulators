@@ -47,14 +47,6 @@ set(MANIPULATOR_MENU_DEPENDS
     yaml_cpp_vendor
 )
 
-set(JOYSTICK_CONTROLLER_DEPENDS
-    rclcpp
-    geometry_msgs
-    sensor_msgs
-    std_srvs
-    manipulator_interfaces
-)
-
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
     # the following line skips the linter which checks for copyrights
@@ -185,10 +177,10 @@ install(
 
 # ---------------- JOYSTICK CONTROLLER -----------------
 
-add_executable(joystick_controller_node src/joystick_controller.cpp src/joystick_controller_node.cpp)
+add_executable(joystick_controller_node src/joystick_controller.cpp src/joystick_controller_node.cpp src/manipulator_menu.cpp)
 
 ament_target_dependencies(joystick_controller_node
-    ${JOYSTICK_CONTROLLER_DEPENDS}
+    ${MANIPULATOR_MENU_DEPENDS}
 )
 
 install(
@@ -210,7 +202,7 @@ install(
 )
 
 ament_target_dependencies(joystick_controller
-    ${JOYSTICK_CONTROLLER_DEPENDS}
+    ${MANIPULATOR_MENU_DEPENDS}
 )
 
 # ------------------------------------------------------------
