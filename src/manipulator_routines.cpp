@@ -63,66 +63,12 @@ void ManipulatorRoutines::pickProbe_callback()
     geometry_msgs::msg::Pose probe_pose;
     probe_pose.position.x = transform.transform.translation.x;
     probe_pose.position.y = transform.transform.translation.y;
-    probe_pose.position.z = transform.transform.translation.z - 0.033;
+    probe_pose.position.z = transform.transform.translation.z - 0.025;
     probe_pose.orientation = transform.transform.rotation;
 
     is_executing_ = true;
     bool success = pickUpRoutine(probe_pose, getKnownPose("home_gripper_down"), !(params_.gripper == "no_gripper"));
     is_executing_ = false;
-
-    // if (executed_ && current_pose_.position.x != 0.0)
-    // {
-    //     return;
-    // }
-    // executed_ = true;
-
-    // geometry_msgs::msg::Pose pick_pose_offset;
-
-    // pick_pose_offset.position.x = current_pose_.position.x;
-    // pick_pose_offset.position.y = current_pose_.position.y;
-    // pick_pose_offset.position.z = current_pose_.position.z;
-
-    // RCLCPP_INFO(node_->get_logger(), "Current pose: x: %f, y: %f, z: %f", pick_pose_offset.position.x, pick_pose_offset.position.y, pick_pose_offset.position.z);
-
-    // pick_pose_offset.position.x += probe_pose->pose.position.x;
-    // pick_pose_offset.position.y -= probe_pose->pose.position.y;
-    // pick_pose_offset.position.z -= probe_pose->pose.position.z;
-
-    // pick_pose_offset.position.z += pick_z_offset_;
-
-    // pick_pose_offset.position.y += 0.0775; // Offset to the front
-    // pick_pose_offset.position.z -= 0.024; // Offset to the top
-
-    // pick_pose_offset.orientation = quaternion_from_euler(180, 0, 0);
-
-    // std_msgs::msg::Bool pickProbeResult;
-
-    // RCLCPP_INFO(node_->get_logger(), "Pick probe offset pose: x: %f, y: %f, z: %f", pick_pose_offset.position.x, pick_pose_offset.position.y, pick_pose_offset.position.z);
-
-    // publishTcpGoal(pick_pose_offset);
-
-    // manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(pick_pose_offset, std::vector<double>(), "", 4U);
-    // if (traj_result.success)
-    // {
-    //     RCLCPP_INFO(node_->get_logger(), "Pick probe offset trajectory planned successfully");
-    //     bool execution_success = executeAndWait(traj_result.trajectory);
-    //     if (execution_success)
-    //     {
-    //         pickProbeResult.data = true;
-    //         RCLCPP_INFO(node_->get_logger(), "End effectot reached pick probe offset pose");
-    //     }
-    //     else
-    //     {
-    //         pickProbeResult.data = false;
-    //         RCLCPP_ERROR(node_->get_logger(), "Pick probe offset trajectory execution failed");
-    //     }
-    // }
-    // else
-    // {
-    //     RCLCPP_ERROR(node_->get_logger(), "Pick probe offset trajectory planning failed");
-    //     pickProbeResult.data = false;
-    // }
-    // pickProbeResult_pub_->publish(pickProbeResult);
 }
 
 bool ManipulatorRoutines::pickUpRoutine(geometry_msgs::msg::Pose obj_pose, std::vector<double> destination, const bool use_gripper)

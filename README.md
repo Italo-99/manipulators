@@ -116,12 +116,25 @@ Install rviz and moveit visual tools:
 
 ## Install Coppelia
 
-1. Download coppelia
-2. Download ros2 sim package for coppelia: simExtROS2
+1. Download coppelia [here](https://www.coppeliarobotics.com/)
+2. Download ros2 sim package for coppelia in a ros workspace of your choosing (just remember to always source it)
+
+    git clone https://github.com/CoppeliaRobotics/simROS2.git
+
 3. Set COPPELIASIM_ROOT_DIR env variable
+
+    echo 'export COPPELIASIM_ROOT_DIR=<path to coppelia directory>' >> ~/.bashrc
+
 4. Add joint states to simExtROS2/meta/interfaces.txt
-5. Build
-6. Copy .so file from build into coppelia dircd
+5. Install dependencies
+
+    sudo apt install xsltproc
+    pip install xmlschema
+
+6. Build the workspace
+7. Copy plugin file to coppelia directory
+
+    cp build/sim_ros2_interface/libsimROS2.so $COPPELIASIM_ROOT_DIR
 
 ## Useful packages
 

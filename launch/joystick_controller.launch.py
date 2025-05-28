@@ -13,13 +13,25 @@ def get_node(context, *args, **kwargs):
         os.path.join("config", "joystick", "generic.yaml"),
     )
 
-    return [Node(
+    nodes = []
+
+    nodes.append(Node(
         package="manipulators",
         executable="joystick_controller_node",
         parameters=[
             params
         ]
-    )]
+    ))
+
+    nodes.append(Node(
+        package="joy",
+        executable="game_controller_node",
+        parameters=[{
+            'autorepeat_rate' : 0.0
+        }]
+    ))
+    
+    return nodes
 
 def generate_launch_description():
     return LaunchDescription([
