@@ -2,12 +2,12 @@ manipulator_name: manipulator
 
 joint_names:      [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint]
 
-ros_freq:         10
+ros_freq:         10    # Hz
 
 gripper_group:    ""
 
-vel_step:         0.4
+vel_step:         0.4   # Multiplier factor for joy axes [m/s]   to move the tcp
 
-rot_step:         0.4
+rot_step:         0.4   # Multiplier factor for joy axes [rad/s] to rotate around the tcp 
 
-js_step:          1.0
+js_step:          1.0   # Multiplier factor for joy axes [rad/s] to move joints

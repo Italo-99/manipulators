@@ -98,6 +98,7 @@ def generate_launch_description():
 
     declared_arguments = []
 
+    # RATE
     declared_arguments.append(
         DeclareLaunchArgument(
             "rate",
@@ -106,6 +107,7 @@ def generate_launch_description():
         )
     )
 
+    # GUI
     declared_arguments.append(
         DeclareLaunchArgument(
             "gui",
@@ -115,6 +117,7 @@ def generate_launch_description():
         )
     )
 
+    # PUBLISH JOINT STATES
     declared_arguments.append(
         DeclareLaunchArgument(
             "publish_joint_states",
@@ -124,6 +127,7 @@ def generate_launch_description():
         )
     )
 
+    # RVIZ
     declared_arguments.append(
         DeclareLaunchArgument(
             "rviz",
@@ -133,6 +137,7 @@ def generate_launch_description():
         )
     )
 
+    # UR TYPE
     declared_arguments.append(
         DeclareLaunchArgument(
             "ur_type",
@@ -142,6 +147,7 @@ def generate_launch_description():
         )
     )
 
+    # DESCRIPTION PKG
     declared_arguments.append(
         DeclareLaunchArgument(
             "description_package",
@@ -158,6 +164,7 @@ def generate_launch_description():
         )
     )
 
+    # DESCRIPTION PATH URDF/XACRO
     declared_arguments.append(
         DeclareLaunchArgument(
             "description_path",
@@ -168,6 +175,7 @@ def generate_launch_description():
         )
     )
 
+    # RVIZ CONFIG PATH
     declared_arguments.append(
         DeclareLaunchArgument(
             "rviz_config_path",
@@ -177,6 +185,8 @@ def generate_launch_description():
             description="RViz config file (absolute path) to use when launching rviz.",
         )
     )
+    
+    # PREFIX
     declared_arguments.append(
         DeclareLaunchArgument(
             "prefix",
@@ -187,6 +197,7 @@ def generate_launch_description():
         )
     )
 
+    # JOINT LIMITS AND KINEMATICS FILES
     declared_arguments.append(
         DeclareLaunchArgument(
             "joint_limits_file",
@@ -194,7 +205,6 @@ def generate_launch_description():
             description="MoveIt joint limits filename, only needed for UR robots",
         )
     )
-
     declared_arguments.append(
         DeclareLaunchArgument(
             "kinematics_file",
@@ -203,6 +213,7 @@ def generate_launch_description():
         )
     )
 
+    # MOVEIT CONFIG PACKAGE
     declared_arguments.append(
         DeclareLaunchArgument(
             "moveit_config_package",

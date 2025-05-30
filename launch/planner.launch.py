@@ -1,7 +1,7 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution, FindExecutable, PythonExpression
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch.conditions import IfCondition
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -13,6 +13,7 @@ def launch_setup(context, *args, **kwargs):
 
     # ---------------------------------------- ACTIONS ----------------------------------------
 
+    # LOAD MANIPULATOR PLANNER PARAMETERS
     mp_params = load_yaml(
         "manipulators",
         os.path.join(
@@ -21,12 +22,14 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
+    # LOAD UR MOVEIT PARAMETERS
     moveit_params = get_ur_moveit_launch_params(context)
 
     # ---------------------------------------- NODES ----------------------------------------
 
     nodes_to_start = []
 
+    # MANIPULATOR PLANNER NODE
     nodes_to_start.append(
         Node(
             package="manipulators",
@@ -43,6 +46,7 @@ def launch_setup(context, *args, **kwargs):
 
     # ---------------------- GRIPPER NODES ----------------------
 
+    # MOTOR MOVER NODE
     nodes_to_start.append(
         Node(
             package="motors_trajectory",
@@ -52,6 +56,7 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
+    # ROBOTIQ 85 GRIPPER NODE
     nodes_to_start.append(
         Node(
             package="motors_trajectory",
@@ -63,6 +68,7 @@ def launch_setup(context, *args, **kwargs):
 
     # -----------------------------------------------------------
 
+    # LAUNCH PLANNING CONTEXT
     nodes_to_start.append(
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -90,6 +96,7 @@ def generate_launch_description():
 
     declared_arguments = []
 
+    # RATE
     declared_arguments.append(
         DeclareLaunchArgument(
             "rate",
@@ -98,6 +105,7 @@ def generate_launch_description():
         )
     )
 
+    # GUI
     declared_arguments.append(
         DeclareLaunchArgument(
             "gui",
@@ -107,6 +115,7 @@ def generate_launch_description():
         )
     )
 
+    # PUBLISH JOINT STATES
     declared_arguments.append(
         DeclareLaunchArgument(
             "publish_joint_states",
@@ -116,6 +125,7 @@ def generate_launch_description():
         )
     )
 
+    # RVIZ
     declared_arguments.append(
         DeclareLaunchArgument(
             "rviz",
@@ -125,6 +135,7 @@ def generate_launch_description():
         )
     )
 
+    # UR TYPE
     declared_arguments.append(
         DeclareLaunchArgument(
             "ur_type",
@@ -134,6 +145,7 @@ def generate_launch_description():
         )
     )
 
+    # DESCRIPTION PKG
     declared_arguments.append( 
         DeclareLaunchArgument(
             "description_package",
@@ -149,6 +161,7 @@ def generate_launch_description():
         )
     )
 
+    # DESCRIPTION PATH URDF/XACRO
     declared_arguments.append(
         DeclareLaunchArgument(
             "description_path",
@@ -159,6 +172,7 @@ def generate_launch_description():
         )
     )
 
+    # RVIZ CONFIG
     declared_arguments.append(
         DeclareLaunchArgument(
             "rviz_config_path",
@@ -169,6 +183,7 @@ def generate_launch_description():
         )
     )
     
+    # PREFIX
     declared_arguments.append(
         DeclareLaunchArgument(
             "prefix",
@@ -179,6 +194,7 @@ def generate_launch_description():
         )
     )
 
+    # JOINT LIMITS AND KINEMATICS
     declared_arguments.append(
         DeclareLaunchArgument(
             "joint_limits_file",
@@ -186,7 +202,6 @@ def generate_launch_description():
             description="MoveIt joint limits filename, only needed for UR robots",
         )
     )
-
     declared_arguments.append(
         DeclareLaunchArgument(
             "kinematics_file",
@@ -195,6 +210,7 @@ def generate_launch_description():
         )
     )
 
+    # MOVEIT CONFIG PACKAGE
     declared_arguments.append(
         DeclareLaunchArgument(
             "moveit_config_package",
@@ -203,6 +219,7 @@ def generate_launch_description():
         )
     )
 
+    # GRIPPER
     declared_arguments.append(
         DeclareLaunchArgument(
             "gripper",

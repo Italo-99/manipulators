@@ -38,7 +38,7 @@ def get_ur_moveit_launch_params(context,
 
     ur_type                   = ur_type_ if ur_type_ else                                     LaunchConfiguration("ur_type")
     description_path          = description_path_ if description_path_ else                   LaunchConfiguration("description_path")
-    prefix                 = prefix_ if prefix_ else                                 LaunchConfiguration("prefix")
+    prefix                    = prefix_ if prefix_ else                                       LaunchConfiguration("prefix")
     description_package       = description_package_ if description_package_ else             LaunchConfiguration("description_package")
     moveit_config_package     = moveit_config_package_ if moveit_config_package_ else         LaunchConfiguration("moveit_config_package")
     joint_limits_file         = joint_limits_file_ if joint_limits_file_ else                 LaunchConfiguration("joint_limits_file")

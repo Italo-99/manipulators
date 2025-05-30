@@ -121,15 +121,18 @@ Install rviz and moveit visual tools:
 
     git clone https://github.com/CoppeliaRobotics/simROS2.git
 
-3. Set COPPELIASIM_ROOT_DIR env variable
+3. Set COPPELIASIM_ROOT_DIR env variable in your ~/.bashrc file
 
-    echo 'export COPPELIASIM_ROOT_DIR=<path to coppelia directory>' >> ~/.bashrc
+    export COPPELIASIM_ROOT_DIR=/opt/CoppeliaSim
 
-4. Add joint states to simExtROS2/meta/interfaces.txt
+4. Add "sensor_msgs/msg/JointState" to 'simExtROS2/meta/interfaces.txt'
+
 5. Install dependencies
 
+    ```
     sudo apt install xsltproc
     pip install xmlschema
+    ```
 
 6. Build the workspace
 7. Copy plugin file to coppelia directory
