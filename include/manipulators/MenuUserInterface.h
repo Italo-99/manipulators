@@ -6,6 +6,7 @@
 #include <vector>
 #include <tuple>
 #include <functional> 
+#include <cmath> 
 
 /*
  ====== MenuUserInterface class ======
