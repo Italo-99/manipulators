@@ -119,12 +119,14 @@ Install rviz and moveit visual tools:
 1. Download coppelia [here](https://www.coppeliarobotics.com/)
 2. Download ros2 sim package for coppelia in a ros workspace of your choosing (just remember to always source it)
 
+    ```
     git clone https://github.com/CoppeliaRobotics/simROS2.git
-
+    ```
 3. Set COPPELIASIM_ROOT_DIR env variable in your ~/.bashrc file
 
+    ```
     export COPPELIASIM_ROOT_DIR=/opt/CoppeliaSim
-
+    ```
 4. Add "sensor_msgs/msg/JointState" to 'simExtROS2/meta/interfaces.txt'
 
 5. Install dependencies
@@ -137,7 +139,9 @@ Install rviz and moveit visual tools:
 6. Build the workspace
 7. Copy plugin file to coppelia directory
 
+    ```
     cp build/sim_ros2_interface/libsimROS2.so $COPPELIASIM_ROOT_DIR
+    ```
 
 ## Useful packages
 
