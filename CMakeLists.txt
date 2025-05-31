@@ -163,18 +163,6 @@ install(
     DESTINATION lib/${PROJECT_NAME}
 )
 
-#---------------- ROUTINES -----------------
-
-add_executable(manipulator_routines src/manipulator_routines.cpp src/manipulator_routines_node.cpp src/manipulator_menu.cpp)
-ament_target_dependencies(manipulator_routines
-    ${MANIPULATOR_MENU_DEPENDS}
-)
-install(
-    TARGETS manipulator_routines
-    DESTINATION lib/${PROJECT_NAME}
-)
-
-
 # ---------------- JOYSTICK CONTROLLER -----------------
 
 add_executable(joystick_controller_node src/joystick_controller.cpp src/joystick_controller_node.cpp src/manipulator_menu.cpp)
