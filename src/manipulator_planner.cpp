@@ -35,7 +35,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         return;
     }
 
-    RCLCPP_INFO(this->get_logger(), "Joints number: %d", NUM_JOINTS);
+    RCLCPP_INFO(this->get_logger(), "Joints number: %ld", NUM_JOINTS);
 
     //Initialize the velocity command vectors
     current_js_vel_.resize(NUM_JOINTS, 1);
@@ -1145,7 +1145,7 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("max_acc_jnts", 1.0);
     this->declare_parameter("gripper_links", std::vector<std::string>()); //This is used to disable collision with the fingers when attaching objects
     this->declare_parameter("prefix", std::string()); //Prefix for the joint and link names
-    this->declare_parameter("min_jacobian_determinant", 0.01); //Minimum determinant for the inverse jacobian
+    this->declare_parameter("min_jacobian_determinant", 0.0001); //Minimum determinant for the inverse jacobian
 
     //Dynamic planner params
     this->declare_parameter("planner_id", "geometric::RRTConnect");
