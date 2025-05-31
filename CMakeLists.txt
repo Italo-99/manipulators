@@ -111,13 +111,6 @@ install(
 )
 
 # ---------------- MANIPULATOR MENU -----------------
-
-add_executable(manipulator_menu_nouser src/manipulator_menu.cpp src/manipulator_menu_node_nouser.cpp)
-
-ament_target_dependencies(manipulator_menu_nouser
-    ${MANIPULATOR_MENU_DEPENDS}
-)
-
 add_executable(manipulator_menu_user src/manipulator_menu.cpp src/manipulator_menu_node_user.cpp)
 
 ament_target_dependencies(manipulator_menu_user
@@ -125,7 +118,7 @@ ament_target_dependencies(manipulator_menu_user
 )
 
 install(
-    TARGETS manipulator_menu_user manipulator_menu_nouser
+    TARGETS manipulator_menu_user
     DESTINATION lib/${PROJECT_NAME}
 )
 

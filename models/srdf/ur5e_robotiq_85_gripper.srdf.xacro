@@ -21,6 +21,9 @@
         <link name="$(arg prefix)robotiq_85_right_inner_knuckle_link"/>
     </group>
 
+    <!-- Virtual base joint -->
+    <virtual_joint name="fixed_base" type="fixed" parent_frame="world" child_link="base_link" />
+
     <!-- Disable collisions for Robotiq 85 gripper -->
     <disable_collisions link1="$(arg prefix)robotiq_85_base_link" link2="wrist_3_link" reason="Adjacent" />
 

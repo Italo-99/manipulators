@@ -1,4 +1,5 @@
 #include "manipulators/JoystickController.h"
+#include "ament_index_cpp/get_package_share_directory.hpp"
 
 int main(int argc, char* argv[]) {    
     const std::string prefix = "";
@@ -6,12 +7,13 @@ int main(int argc, char* argv[]) {
 
     ManipulatorMenuParams params;
     params.node_name          = "joystick_controller_node";
-    params.ros_freq           = 50;
+    params.ros_freq           = 10;
     params.manipulator_name   = "manipulator";
     params.planning_group     = prefix + "ur_manipulator";
 
-    params.gripper = "robotiq_85";
-    params.gripper_IO_cmds = {1, 0}; // For gripper type "real_gripper", IO commands to close/open the gripper
+    params.gripper            = "robotiq_85";           // Gripper type, can be "robotiq_85" for 'motor_mover' integration or "toolIO"
+    params.gripper_group      = "robotiq_85_gripper";   // For gripper type "robotiq_85"
+    params.gripper_IO_cmds    = {1, 0};                 // For gripper type "toolIO", IO commands to close/open the gripper
 
     params.joint_names        = {prefix + "shoulder_pan_joint", 
                                  prefix + "shoulder_lift_joint", 
@@ -22,8 +24,9 @@ int main(int argc, char* argv[]) {
 
     params.base_link_name     = prefix + "base_link";
 
-    params.known_poses_path = "/home/matteo/projectred_ws/src/manipulators/config/known_poses.yaml";
-
+    // Set the path to the known poses YAML file
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory("manipulators");
+    params.known_poses_path = package_share_directory + "/config/known_poses.yaml";
     rclcpp::init(argc, argv);
 
     rclcpp::NodeOptions options;

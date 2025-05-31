@@ -1,38 +1,43 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <!-- Robot URDF file-->
     <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+
+    <!-- Robotiq 85 Gripper URDF file -->
     <xacro:include filename="$(find robotiq_85_description)/urdf/robotiq_85_gripper_macro.urdf.xacro"/>
 
+    <!-- Gripper macro definition -->
     <xacro:macro name="ur_robotiq_85_gripper" params="
         robot_name
         tf_prefix
         ur_type
         joint_limits_parameters_file
         kinematics_parameters_file
-        ">
+        "
+    >
 
-        <!--This will create the gripper and attach it to the flange link -->
-
+        <!-- Create a link for the 'tool0' as parent for the gripper -->
         <xacro:robotiq_85_gripper
             prefix="${tf_prefix}"
-            parent="${tf_prefix}flange"
+            parent="${tf_prefix}tool0"
         >
-            <origin xyz="0 0 0" rpy="0 0 0" /> 
+            <origin xyz="0 0 0" rpy="0 -1.57 1.57" /> 
         </xacro:robotiq_85_gripper>
 
         <!-- Create a non visual link to mark the tool center point -->
-
-        <link name="tcp_link">
+        <link name="tcp_gripper">
             <origin xyz="0 0 0" rpy="0 0 0" />
         </link>
 
         <joint name="tool0_to_tcp_joint" type="fixed">
             <origin xyz="0 0 0.165" rpy="0 0 0" />
             <parent link="${tf_prefix}tool0" />
-            <child link="tcp_link" />
+            <child link="tcp_gripper" />
         </joint>
 
         <!--This will create the specific robot-->
+        <link name="world"/>
         <xacro:ur_robot
             parent="world"
             name="${robot_name}"
@@ -44,6 +49,7 @@
         >
             <origin xyz="0 0 0" rpy="0 0 0" />
         </xacro:ur_robot>
+
   </xacro:macro>
 
 </robot>

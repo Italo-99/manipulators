@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<robot name="$(arg name)" xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <!-- Robot Arguments -->
+    <xacro:arg name="name" default="ur"/>
+    <xacro:arg name="ur_type" default="ur5e"/>
+    <xacro:arg name="tf_prefix" default=""/>
+    <xacro:arg name="joint_limits_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
+    <xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/default_kinematics.yaml"/>
+
+    <!-- Additional objects Arguments -->
+    <xacro:arg name="camera"    default="true"/>
+    <xacro:arg name="gripper"   default="true"/>
+    <xacro:arg name="gfloor"    default="false"/>
+
+    <xacro:property name="camera"   value="$(arg camera)"/>
+    <xacro:property name="gripper"  value="$(arg gripper)"/>
+    <xacro:property name="gfloor"   value="$(arg gfloor)"/>
+
+    <!-- Gripper inclusion -->
+    <xacro:if value="${gripper}">
+        <xacro:include filename="$(find manipulators)/models/urdf/ur_robotiq_85_gripper_macro.xacro"/>
+        <xacro:ur_robotiq_85_gripper
+            tf_prefix="$(arg tf_prefix)"
+            robot_name="$(arg name)"
+            ur_type="$(arg ur_type)"
+            joint_limits_parameters_file="$(arg joint_limits_parameters_file)"
+            kinematics_parameters_file="$(arg kinematics_parameters_file)"
+        />
+    </xacro:if>
+
+    <!-- Camera inclusion -->
+    <xacro:if value="${camera}">
+        <xacro:include filename="$(find realsense2_description)/urdf/_d435i.urdf.xacro"/>
+        <link name="d435i_base_link" />
+        <joint name="tool0-d4351_base_link" type="fixed">
+            <parent link="tool0"/>
+            <child link="d435i_base_link"/>
+            <origin xyz="0 -0.0775 0.024" rpy="0 -1.57 1.57"/>
+        </joint>
+
+        <xacro:sensor_d435i parent="d435i_base_link" name="camera">
+            <origin xyz="0 0 0" rpy="0 0 0" />
+        </xacro:sensor_d435i>
+    </xacro:if>
+
+    <!-- Floor inclusion -->
+    <xacro:if value="${gfloor}">
+        <link name="floor">
+            <visual>
+                <geometry>
+                    <box size="10 10 0.01"/>
+                </geometry>
+                <material name="">
+                    <color rgba="0.8 0.1 0.1 0.4"/>
+                </material>
+            </visual>
+            <collision>
+                <geometry>
+                    <box size="10 10 0.01"/>
+                </geometry>
+            </collision>
+        </link>
+
+        <joint name="world_floor" type="fixed">
+            <parent link="world"/>
+            <child link="floor"/>
+            <origin xyz="0 0 -0.005" rpy="0 0 0"/>
+        </joint>
+    </xacro:if>
+
+</robot>

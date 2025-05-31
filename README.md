@@ -11,7 +11,7 @@ It is conceived for beginners who wants to include robots in their projects, wit
 
 This document explains how to use this pkg for simulations and for the real hardware.
 
-More in depth documentation can be found in the doxigen documentation in [docs/](docs/).
+More in depth documentation can be found in the doxigen documentation in [docs/](docs/), by clicking on the file 'index.html'.
 
 # Installation
 
