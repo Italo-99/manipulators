@@ -107,7 +107,7 @@ struct ManipulatorMenuParams
     //Robotiq 85 gripper parameters
     std::string gripper_group            = "robotiq_85_gripper";
     //toolIO gripper parameters
-    std::vector<int8_t> gripper_IO_cmds  = {0, 0};
+    std::vector<int64_t> gripper_IO_cmds  = {0, 0};
 };
 
 /*! @class ManipulatorMenu

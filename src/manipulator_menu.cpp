@@ -2272,7 +2272,7 @@ ManipulatorMenuParams::ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node
     node->declare_parameter("known_poses_path", std::string(""));
     node->declare_parameter("gripper", std::string("no_gripper"));
     node->declare_parameter("gripper_group", std::string("robotiq_85_gripper"));
-    node->declare_parameter("gripper_IO_cmds", std::vector<int8_t>{0, 0});
+    node->declare_parameter("gripper_IO_cmds", std::vector<int64_t>{0, 0});
 
     // Get parameters
     node->get_parameter("ros_freq", ros_freq);
