@@ -2246,3 +2246,45 @@ void ManipulatorMenu::initializeMenu(){
     menu_->addSection("Routines", section_start, menu_->last_);
     section_start = menu_->last_ + 1;
 }
+
+
+// Menu constructor to retrieve parameters from the node
+ManipulatorMenuParams::ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node){
+    std::string ns = node->get_namespace();
+    std::string prefix = ns.empty() ? "" : ns + "_";
+  
+    //Declareation
+    node->declare_parameter("ros_freq", 10);
+    node->declare_parameter("manipulator_name", "manipulator");
+    node->declare_parameter("planning_group", prefix + "ur_manipulator");
+    node->declare_parameter("joint_names", std::vector<std::string>{
+        prefix + "shoulder_pan_joint", 
+        prefix + "shoulder_lift_joint", 
+        prefix + "elbow_joint",
+        prefix + "wrist_1_joint", 
+        prefix + "wrist_2_joint", 
+        prefix + "wrist_3_joint"
+    });
+    node->declare_parameter("base_link_name", prefix + "base_link");
+    node->declare_parameter("tcp_position_tolerance", 0.01);
+    node->declare_parameter("tcp_orientation_tolerance", 0.01);
+    node->declare_parameter("joint_tolerance", 0.01);
+    node->declare_parameter("known_poses_path", std::string(""));
+    node->declare_parameter("gripper", std::string("no_gripper"));
+    node->declare_parameter("gripper_group", std::string("robotiq_85_gripper"));
+    node->declare_parameter("gripper_IO_cmds", std::vector<int8_t>{0, 0});
+
+    // Get parameters
+    node->get_parameter("ros_freq", ros_freq);
+    node->get_parameter("manipulator_name", manipulator_name);
+    node->get_parameter("planning_group", planning_group);
+    node->get_parameter("joint_names", joint_names);
+    node->get_parameter("base_link_name", base_link_name);
+    node->get_parameter("tcp_position_tolerance", tcp_position_tolerance);
+    node->get_parameter("tcp_orientation_tolerance", tcp_orientation_tolerance);
+    node->get_parameter("joint_tolerance", joint_tolerance);
+    node->get_parameter("known_poses_path", known_poses_path);
+    node->get_parameter("gripper", gripper);
+    node->get_parameter("gripper_group", gripper_group);
+    node->get_parameter("gripper_IO_cmds", gripper_IO_cmds);
+}

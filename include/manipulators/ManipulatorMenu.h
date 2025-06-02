@@ -80,8 +80,15 @@
 */
 struct ManipulatorMenuParams
 {
+
+    /*! Constructor with default values */
+    ManipulatorMenuParams() = default;
+
+    /*! Constructor which retrieves values from node parameters */
+    ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node);
+
     std::string node_name                = "manipulator_menu_node"; 
-    double ros_freq                      = 500;
+    double ros_freq                      = 10;
     std::string manipulator_name         = "manipulator";
     std::string planning_group           = "ur_manipulator";
 
