@@ -1,13 +1,14 @@
+#Parameters for menu, these are robot specific
 manipulator_name: manipulator
-
+planning_group:   ur_manipulator
+base_link_name:   base_link
 joint_names:      [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint]
-
 ros_freq:         10    # Hz
+gripper:          robotiq_85  # Gripper type, can be "robotiq_85" for 'motor_mover' integration or "toolIO"
+gripper_group:    "robotiq_85_gripper"
+gripper_IO_cmds:  [1, 0]  # For gripper type "toolIO", IO commands to close/open the gripper
 
-gripper_group:    ""
-
+#Parameters for joystick
 vel_step:         0.4   # Multiplier factor for joy axes [m/s]   to move the tcp
-
 rot_step:         0.4   # Multiplier factor for joy axes [rad/s] to rotate around the tcp 
-
 js_step:          1.0   # Multiplier factor for joy axes [rad/s] to move joints

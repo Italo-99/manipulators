@@ -43,6 +43,16 @@ class JoystickController : public ManipulatorMenu
         void spinnerJoystick();
 
     protected:
+
+        // Loads the mapping for joystick commands from the YAML file specified in the 'mapping_file' parameter
+        void loadMapping();
+
+        //Evaluate the event (eg: move joint 4, move gripper, etc.) 
+        /// Returns the value of the axis (if above 'threshold'), capped to 'max' and multiplied by 'scale'
+        double evaluateAxis(std::string category, std::string event);
+        /// Returns true if the button is pressed, false otherwise (if an axis is provided it will need to be above 'threshold')
+        bool evaluateButton(std::string category, std::string event);
+
         virtual void joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy); //Callback for joystick commands
         void declareParameters(); 
     
@@ -52,7 +62,10 @@ class JoystickController : public ManipulatorMenu
         //Commands
         void publishCmd();                        //Publish velocity commands to manipulator
 
+        YAML::Node mapping_;                     //Mapping of joystick commands
+
         rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;                    //Receive commands from joystick
+        sensor_msgs::msg::Joy::SharedPtr joy_msg_; //Last received joystick message
 
         rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velJacSetpoint_pub_;        //Publish end effector velocity commands to manipulator
         rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr velJsRtSetpoint_pub_;    //Publish joint velocity commands to manipulator

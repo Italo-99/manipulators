@@ -37,10 +37,47 @@ JoystickController::JoystickController(ManipulatorMenuParams params, rclcpp::Nod
     );
 }
 
+void JoystickController::loadMapping(){
+    std::string path = node_->get_parameter("mapping_file").as_string();
+    try 
+    {
+        mapping_ = YAML::LoadFile(path);
+    } 
+    catch (const YAML::Exception & e) 
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Error parsing YAML file %s: %s", path.c_str(), e.what());
+    }
+}
+
+double JoystickController::evaluateAxis(std::string category, std::string event){
+    bool axis = mapping_[category][event]["type"].as<std::string>() == "axis";
+    int id = mapping_[category][event]["id"].as<int>();
+    double scale = mapping_[category][event]["scale"].as<double>();
+
+    if(axis){
+        double threshold = mapping_[category][event]["threshold"].as<double>();
+        double max = mapping_[category][event]["max"].as<double>();
+
+        double value = joy_msg_->axes[id] * scale;
+        if (std::abs(value) < threshold) {
+            return 0.0; // Axis value is below the threshold
+        } else {
+            value = std::max(-max, std::min(max, value)); // Cap the value to max and apply scaling
+            return value;
+        }
+    } else {
+        if (joy_msg_->buttons[id] == 1) {
+            return scale; // Button is pressed, return the value
+        } else {
+            return 0.0; // Button is not pressed
+        }
+    }
+}
+
 void JoystickController::joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy){
     js_cmd_vel_.velocity = std::vector<double>(params_.joint_names.size(), 0);
     arm_cmd_vel_ = geometry_msgs::msg::Twist();
-
+    joy_msg_ = joy; // Store the last received joystick message
 
     // Linear velocity
     double x_axis = joy->axes[AxesMap::LEFTX];
@@ -114,8 +151,6 @@ void JoystickController::publishCmd()
 }
 
 void JoystickController::spinnerJoystick(){
-    rclcpp::Rate rate(params_.ros_freq);
-
     cmd_pub_timer_ = node_->create_wall_timer(
         std::chrono::milliseconds(int(1000 / params_.ros_freq)),
         [this]() -> void {
