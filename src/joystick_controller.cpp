@@ -37,72 +37,22 @@ JoystickController::JoystickController(ManipulatorMenuParams params, rclcpp::Nod
     );
 }
 
-void JoystickController::loadMapping(){
-    std::string path = node_->get_parameter("mapping_file").as_string();
-    try 
-    {
-        mapping_ = YAML::LoadFile(path);
-    } 
-    catch (const YAML::Exception & e) 
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Error parsing YAML file %s: %s", path.c_str(), e.what());
-    }
-}
-
-double JoystickController::evaluateAxis(std::string category, std::string event){
-    bool axis = mapping_[category][event]["type"].as<std::string>() == "axis";
-    int id = mapping_[category][event]["id"].as<int>();
-    double scale = 1.0; // Default value
-    if (mapping_[category][event]["scale"].IsDefined()) {
-        scale = mapping_[category][event]["scale"].as<double>();
-    }
-
-    if(axis){
-        double threshold = 0.0; // Default value
-        if (mapping_[category][event]["threshold"].IsDefined()) {
-            threshold = mapping_[category][event]["threshold"].as<double>();
-        }
-
-        double max = 1.0; // Default value
-        if (mapping_[category][event]["max"].IsDefined()) {
-            max = mapping_[category][event]["max"].as<double>();
-        }
-
-        double value = joy_msg_->axes[id] * scale;
-        if (std::abs(value) < threshold) {
-            return 0.0; // Axis value is below the threshold
-        } else {
-            value = std::max(-max, std::min(max, value)); // Cap the value to max and apply scaling
-            return value;
-        }
-    } else {
-        if (joy_msg_->buttons[id] == 1) {
-            return scale; // Button is pressed, return the value
-        } else {
-            return 0.0; // Button is not pressed
-        }
-    }
-}
-
-bool JoystickController::evaluateButton(std::string category, std::string event){
-    bool axis = mapping_[category][event]["type"].as<std::string>() == "axis";
-    int id = mapping_[category][event]["id"].as<int>();
-
-    if(axis){
-        double threshold = 0.0; // Default value
-        if (mapping_[category][event]["threshold"].IsDefined()) {
-            threshold = mapping_[category][event]["threshold"].as<double>();
-        }
-        return (joy_msg_->axes[id] < -threshold)
-    } else {
-        return (joy_msg_->buttons[id] == 1) ? scale : 0.0; // Button is pressed
-    }
-}
 
 void JoystickController::joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy){
     js_cmd_vel_.velocity = std::vector<double>(params_.joint_names.size(), 0);
     arm_cmd_vel_ = geometry_msgs::msg::Twist();
     joy_msg_ = joy; // Store the last received joystick message
+
+    if (joy->buttons[ButtonsMap::CROSS]) { // Cross button pressed
+        RCLCPP_INFO(node_->get_logger(), "Going to home  position gripper facing down...");
+        userGoHomeDown();
+        return;
+    } else if (joy->buttons[ButtonsMap::SQUARE]) { // Square button pressed
+        RCLCPP_INFO(node_->get_logger(), "Going to home position gripper facing front...");
+        userGoHomeFront();
+        return;
+    }
+
 
     // Linear velocity
     double x_axis = joy->axes[AxesMap::LEFTX];

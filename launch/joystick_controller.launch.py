@@ -10,7 +10,7 @@ import os
 def get_node(context, *args, **kwargs):
     params = load_yaml(
         "manipulators",
-        os.path.join("config", "joystick", f"generic.yaml"),
+        os.path.join("config", "joystick", "generic.yaml"),
     )
 
     nodes = []
@@ -20,7 +20,7 @@ def get_node(context, *args, **kwargs):
         executable="joystick_controller_node",
         parameters=[
             params,
-            {"mapping_file": os.path.join("config", "joystick", "profiles", f"{LaunchConfiguration('profile').perform(context)}.yaml")}
+            {'profile': LaunchConfiguration('profile')}
         ]
     ))
 
@@ -38,7 +38,7 @@ def generate_launch_description():
 
     profile_arg = DeclareLaunchArgument(
         'profile',
-        default_value='generic',
+        default_value='default',
         description='Joystick profile to use'
     )
 
