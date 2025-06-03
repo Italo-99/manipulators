@@ -52,11 +52,21 @@ void JoystickController::loadMapping(){
 double JoystickController::evaluateAxis(std::string category, std::string event){
     bool axis = mapping_[category][event]["type"].as<std::string>() == "axis";
     int id = mapping_[category][event]["id"].as<int>();
-    double scale = mapping_[category][event]["scale"].as<double>();
+    double scale = 1.0; // Default value
+    if (mapping_[category][event]["scale"].IsDefined()) {
+        scale = mapping_[category][event]["scale"].as<double>();
+    }
 
     if(axis){
-        double threshold = mapping_[category][event]["threshold"].as<double>();
-        double max = mapping_[category][event]["max"].as<double>();
+        double threshold = 0.0; // Default value
+        if (mapping_[category][event]["threshold"].IsDefined()) {
+            threshold = mapping_[category][event]["threshold"].as<double>();
+        }
+
+        double max = 1.0; // Default value
+        if (mapping_[category][event]["max"].IsDefined()) {
+            max = mapping_[category][event]["max"].as<double>();
+        }
 
         double value = joy_msg_->axes[id] * scale;
         if (std::abs(value) < threshold) {
@@ -71,6 +81,21 @@ double JoystickController::evaluateAxis(std::string category, std::string event)
         } else {
             return 0.0; // Button is not pressed
         }
+    }
+}
+
+bool JoystickController::evaluateButton(std::string category, std::string event){
+    bool axis = mapping_[category][event]["type"].as<std::string>() == "axis";
+    int id = mapping_[category][event]["id"].as<int>();
+
+    if(axis){
+        double threshold = 0.0; // Default value
+        if (mapping_[category][event]["threshold"].IsDefined()) {
+            threshold = mapping_[category][event]["threshold"].as<double>();
+        }
+        return (joy_msg_->axes[id] < -threshold)
+    } else {
+        return (joy_msg_->buttons[id] == 1) ? scale : 0.0; // Button is pressed
     }
 }
 
