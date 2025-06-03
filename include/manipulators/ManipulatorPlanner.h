@@ -173,6 +173,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         // --------------- VARIABLES INITIALIZATION ---------------
 
         std::string node_name_;
+        size_t NUM_JOINTS = 6;
 
         //Parameters
         std::string manipulator_name_;

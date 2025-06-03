@@ -28,7 +28,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     addPrefix(prefix, gripper_links_);
 
     //Initialize velocity variables
-    const size_t NUM_JOINTS = joint_names_.size();
+    NUM_JOINTS = joint_names_.size();
 
     if (NUM_JOINTS == 0) {
         RCLCPP_ERROR(this->get_logger(), "No joint names provided");
@@ -276,7 +276,7 @@ void ManipulatorPlannerNode::spinner() {
     rclcpp::Clock steady_clock(RCL_STEADY_TIME);
 
     auto main_cb_group = this->create_callback_group(
-        rclcpp::CallbackGroupType::Reentrant
+        rclcpp::CallbackGroupType::MutuallyExclusive
     );
 
     mainloop_timer_ = this->create_wall_timer(
@@ -695,7 +695,6 @@ void ManipulatorPlannerNode::changePlannerTolerances_callback(
                 params.position_tolerance, params.orientation_tolerance, params.joint_tolerance);
 }
 
-
 void ManipulatorPlannerNode::tcpGoal_callback(const manipulator_interfaces::msg::TcpGoal::SharedPtr msg) 
 {
     /*
@@ -882,7 +881,7 @@ void ManipulatorPlannerNode::jacobianControlSetter_callback(const std_srvs::srv:
 // Update speed setpoint of the arm for the real time joints speed based control
 void ManipulatorPlannerNode::realTimeSetpoint_callback(const sensor_msgs::msg::JointState::SharedPtr& msg)
 {
-    for (unsigned int k = 0; k < joint_names_.size(); k++)
+    for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
         // Update setpoint of the k-th joint
         js_vel_cmd_[k] = msg->velocity[k];
@@ -994,12 +993,11 @@ void ManipulatorPlannerNode::jacobianControl()
     updateJacobianSpeedCmd(); // Update the speed setpoint of the arm
 
     // Compute the speed
-    const unsigned int NUM_JOINTS = joint_names_.size();
     Eigen::VectorXd dq(NUM_JOINTS);
     dq = getPseudoInverseJacobian() * current_ee_vel_;
     
     // Set a lower limit to joint velocities to avoid noises
-    for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(dq[k]);}
+    for (unsigned int k = 0; k < NUM_JOINTS; k++) {setToZeroIfSmall(dq[k]);}
     
     // Convert joints state into Eigen::VectorXd
     Eigen::VectorXd q(NUM_JOINTS);
@@ -1007,7 +1005,7 @@ void ManipulatorPlannerNode::jacobianControl()
     {
         q(k) = dynamic_planner_->joints_values_group_[k];
     }
-    
+
     // Update joint position setpoint
     Eigen::VectorXd qd(NUM_JOINTS);
     qd = q + dq / ros_freq_;
@@ -1025,10 +1023,10 @@ void ManipulatorPlannerNode::jacobianControl()
         js.velocity[k] = dq[k];
     }
 
-    Eigen::MatrixXd jacobian = getJacobian(js.position, ee_name_); // Compute the jacobian matrix
-    if (abs(jacobian.determinant()) < min_jacobian_determinant_){
-        return; // Approaching singularity, don't execute
-    }
+    // Eigen::MatrixXd jacobian = getJacobian(js.position, ee_name_); // Compute the jacobian matrix
+    // if (abs(jacobian.determinant()) < min_jacobian_determinant_){
+    //     return; // Approaching singularity, don't execute
+    // }
     
     // Send the goal to the move it fake controller as trajectory point
     dynamic_planner_->moveRobot(js);
@@ -1075,8 +1073,6 @@ void ManipulatorPlannerNode::updateJacobianSpeedCmd(){
 // Execute the jacobian based control
 void ManipulatorPlannerNode::jointsRealTimeControl()
 {
-    const unsigned int NUM_JOINTS = joint_names_.size();
-
     // Check if the accelerations are acceptable and map the joints speed from the JointState message
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
@@ -1101,7 +1097,7 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
 
     // Build the msg for the joints setpoint
     sensor_msgs::msg::JointState js;
-    js.name     = joint_names_;
+    js.name = joint_names_;
     js.position.resize(qd.size());
     js.velocity.resize(current_js_vel_.size());
 

@@ -6,7 +6,7 @@ int main(int argc, char* argv[]) {
     // ManipulatorMenuParams params;
     const std::string node_name = "joystick_controller_node";
     const std::string ns = "";
-    // params.ros_freq           = 10;
+    // params.ros_freq      = 10;
     // params.manipulator_name   = "manipulator";
     // params.planning_group     = prefix + "ur_manipulator";
 
@@ -33,6 +33,7 @@ int main(int argc, char* argv[]) {
     ManipulatorMenuParams params(node);
     std::string package_share_directory = ament_index_cpp::get_package_share_directory("manipulators");
     params.known_poses_path = package_share_directory + "/config/known_poses.yaml";
+    params.ros_freq         = 10;
 
     auto controller = std::make_shared<JoystickController>(params, node, false);
     controller->spinnerJoystick();

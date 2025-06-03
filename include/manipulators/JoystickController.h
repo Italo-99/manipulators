@@ -9,8 +9,8 @@
 #include "manipulators/ManipulatorMenu.h"
 
 enum AxesMap {
-    LEFTX = 0,
-    LEFTY = 1,
+    LEFTY = 0,
+    LEFTX = 1,
     RIGHTX = 2,
     RIGHTY = 3,
     TRIGGERLEFT = 4,

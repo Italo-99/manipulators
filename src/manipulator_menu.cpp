@@ -2254,7 +2254,7 @@ ManipulatorMenuParams::ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node
     std::string prefix = ns.empty() ? "" : ns + "_";
   
     //Declareation
-    node->declare_parameter("ros_freq", 10);
+    node->declare_parameter<int>("ros_freq", 10);
     node->declare_parameter("manipulator_name", "manipulator");
     node->declare_parameter("planning_group", prefix + "ur_manipulator");
     node->declare_parameter("joint_names", std::vector<std::string>{

@@ -5,6 +5,8 @@ JoystickController::JoystickController(ManipulatorMenuParams params, rclcpp::Nod
 {
     declareParameters();
 
+    params_ = params;
+
     vel_step_ = node_->get_parameter("vel_step").as_double();
     rot_step_ = node_->get_parameter("rot_step").as_double();
     js_step_ = node_->get_parameter("js_step").as_double();
@@ -123,11 +125,11 @@ void JoystickController::joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy
         }
     }
 
-    if(joy->buttons[ButtonsMap::DPAD_UP]){
-        moveGripper(false);
-    } else if(joy->buttons[ButtonsMap::DPAD_DOWN]){
-        moveGripper(true);
-    }
+    // if(joy->buttons[ButtonsMap::DPAD_UP]){
+    //     moveGripper(false);
+    // } else if(joy->buttons[ButtonsMap::DPAD_DOWN]){
+    //     moveGripper(true);
+    // }
 }
 
 void JoystickController::declareParameters(){
