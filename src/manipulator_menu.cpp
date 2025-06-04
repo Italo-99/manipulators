@@ -351,17 +351,19 @@ void ManipulatorMenu::spinnerMenu()
         spinner();
     });
 
-    // ROS loop
-    while (rclcpp::ok())
-    {
-        // Display the user menu and process user choices
-        menu_->printMenu();
-        int choice = menu_->getUserChoice();
-        RCLCPP_INFO(node_->get_logger(), "User choice: %d", choice);
-        menu_->processChoice(choice);
+    int choice = -1;
 
+    // ROS loop
+    while (rclcpp::ok() && choice != 0)
+    {
         // Wait for next loop time
         rclcpp::sleep_for(std::chrono::milliseconds(100));
+
+        // Display the user menu and process user choices
+        menu_->printMenu();
+        choice = menu_->getUserChoice();
+        RCLCPP_INFO(node_->get_logger(), "User choice: %d", choice);
+        menu_->processChoice(choice);
     }
 
     // Shutdown ROS if Ctrl+C or Ctrl+D are pressed
@@ -2112,7 +2114,6 @@ void ManipulatorMenu::userSetPlannerTolerances()
     setPlannerTolerances(positon, orientation, joint);
 }
 
-
 // --------------------- GRIPPER HANDLERS ------------------------
 
 void ManipulatorMenu::userGripperMove()
@@ -2172,6 +2173,11 @@ void ManipulatorMenu::initializeMenu(){
     menu_ = new MenuUserInterface<ManipulatorMenu>(this);
 
     int section_start = 0; //Temporary variable to hold the last section start point
+
+    // Fake section to shutdwon the menu
+    menu_->addChoice("Shutdown manipulator menu", &ManipulatorMenu::shutdown_handler);
+    menu_->addSection("Shutdown", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
 
     //Joint/TCP Goals
     menu_->addChoice("Plan and execute joint goal", &ManipulatorMenu::userJointGoal);
@@ -2246,7 +2252,6 @@ void ManipulatorMenu::initializeMenu(){
     menu_->addSection("Routines", section_start, menu_->last_);
     section_start = menu_->last_ + 1;
 }
-
 
 // Menu constructor to retrieve parameters from the node
 ManipulatorMenuParams::ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node){
