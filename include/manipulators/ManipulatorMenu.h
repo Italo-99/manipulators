@@ -88,7 +88,7 @@ struct ManipulatorMenuParams
     ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node);
 
     std::string node_name                = "manipulator_menu_node"; 
-    int ros_freq                         = 10;
+    double ros_freq                      = 10.0;
     std::string manipulator_name         = "manipulator";
     std::string planning_group           = "ur_manipulator";
 

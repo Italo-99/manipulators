@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
     std::string profile = node->get_parameter("profile").as_string();
 
     auto controller = JoystickControllerFactory::fromProfile(
-        profile, params, node, true
+        profile, params, node, false
     );
     controller->spinnerJoystick();
 
