@@ -13,7 +13,7 @@ JoystickController::JoystickController(ManipulatorMenuParams params, rclcpp::Nod
     js_cmd_vel_.name = params_.joint_names;
     js_cmd_vel_.velocity = std::vector<double>(params_.joint_names.size(), 0);
 
-    auto joy_sub_cb_group = node_->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+    auto joy_sub_cb_group = node_->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     rclcpp::SubscriptionOptions joy_sub_options;
     joy_sub_options.callback_group = joy_sub_cb_group;
 
