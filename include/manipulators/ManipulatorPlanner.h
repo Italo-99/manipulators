@@ -173,6 +173,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         // --------------- VARIABLES INITIALIZATION ---------------
 
         std::string node_name_;
+        size_t NUM_JOINTS = 6;
 
         //Parameters
         std::string manipulator_name_;
@@ -190,6 +191,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         double max_acc_jnts_;
         std::vector<std::string> gripper_links_;
         double min_jacobian_determinant_;
+        Eigen::MatrixXd jacobian_var_;
 
         //Services
         rclcpp::Service<manipulator_interfaces::srv::FKine>::SharedPtr fkine_service_;
