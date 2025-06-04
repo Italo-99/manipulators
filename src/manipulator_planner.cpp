@@ -282,22 +282,32 @@ void ManipulatorPlannerNode::spinner() {
     mainloop_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
         [&, this]() {
-            // This is the main loop for the node
-            auto start_time = steady_clock.now();
 
             if (jac_control_) {
+
+                // This is the main loop for the node
+                auto start_time = steady_clock.now();
+
                 // Jacobian control
                 jacobianControl();    
+            
+                // Calculate the mean time for each iteration of the spinner
+                double elapsed_time = (steady_clock.now() - start_time).seconds();
+                spinner_mean_ = (spinner_mean_ * static_cast<double>(num_samples) + elapsed_time) / static_cast<double>(num_samples + 1);
+                num_samples++;
             }
             else if (js_rt_control_) {
+                // This is the main loop for the node
+                auto start_time = steady_clock.now();
+
                 // Real-time joint speed control
                 jointsRealTimeControl();
-            }
             
-            // Calculate the mean time for each iteration of the spinner
-            double elapsed_time = (steady_clock.now() - start_time).seconds();
-            spinner_mean_ = (spinner_mean_ * static_cast<double>(num_samples) + elapsed_time) / static_cast<double>(num_samples + 1);
-            num_samples++;
+                // Calculate the mean time for each iteration of the spinner
+                double elapsed_time = (steady_clock.now() - start_time).seconds();
+                spinner_mean_ = (spinner_mean_ * static_cast<double>(num_samples) + elapsed_time) / static_cast<double>(num_samples + 1);
+                num_samples++;
+            }
 
             rate.sleep();
         },
@@ -469,7 +479,6 @@ const geometry_msgs::msg::Pose ManipulatorPlannerNode::getFKine() {
 const geometry_msgs::msg::Twist ManipulatorPlannerNode::getTcpVel()
 {
     // Initialize dq with the appropriate size and assign values
-    const unsigned int NUM_JOINTS = joint_names_.size();
     Eigen::VectorXd dq(NUM_JOINTS);
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
@@ -477,7 +486,8 @@ const geometry_msgs::msg::Twist ManipulatorPlannerNode::getTcpVel()
     }
 
     // Compute the end-effector twist (linear and angular velocities) using the Jacobian
-    Eigen::VectorXd twist = getJacobian() * dq;
+    jacobian_var_ = getJacobian();
+    Eigen::VectorXd twist = jacobian_var_ * dq;
 
     // Create a Twist message to hold the result
     geometry_msgs::msg::Twist tcp_twist;
@@ -994,7 +1004,7 @@ void ManipulatorPlannerNode::jacobianControl()
 
     // Compute the speed
     Eigen::VectorXd dq(NUM_JOINTS);
-    dq = getPseudoInverseJacobian() * current_ee_vel_;
+    dq = jacobian_var_.completeOrthogonalDecomposition().pseudoInverse() * current_ee_vel_;
     
     // Set a lower limit to joint velocities to avoid noises
     for (unsigned int k = 0; k < NUM_JOINTS; k++) {setToZeroIfSmall(dq[k]);}
