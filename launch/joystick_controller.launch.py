@@ -14,6 +14,7 @@ def get_node(context, *args, **kwargs):
     )
 
     nodes = []
+    profile = LaunchConfiguration('profile').perform(context)
 
     nodes.append(Node(
         package="manipulators",
@@ -24,13 +25,22 @@ def get_node(context, *args, **kwargs):
         ]
     ))
 
-    nodes.append(Node(
-        package="joy",
-        executable="game_controller_node",
-        parameters=[{
-            'autorepeat_rate' : 0.0
-        }]
-    ))
+    if profile.lower() == 'default':
+        nodes.append(Node(
+            package="joy",
+            executable="game_controller_node",
+            parameters=[{
+                'autorepeat_rate' : 0.0
+            }]
+        ))
+    else:
+        nodes.append(Node(
+            package="joy",
+            executable="joy_node",
+            parameters=[{
+                'autorepeat_rate' : 0.0
+            }]
+        ))
     
     return nodes
 
