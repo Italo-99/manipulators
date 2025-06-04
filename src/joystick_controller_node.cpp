@@ -6,24 +6,6 @@ int main(int argc, char* argv[]) {
     // ManipulatorMenuParams params;
     const std::string node_name = "joystick_controller_node";
     const std::string ns = "";
-    // params.ros_freq      = 10;
-    // params.manipulator_name   = "manipulator";
-    // params.planning_group     = prefix + "ur_manipulator";
-
-    // params.gripper            = "robotiq_85";           // Gripper type, can be "robotiq_85" for 'motor_mover' integration or "toolIO"
-    // params.gripper_group      = "robotiq_85_gripper";   // For gripper type "robotiq_85"
-    // params.gripper_IO_cmds    = {1, 0};                 // For gripper type "toolIO", IO commands to close/open the gripper
-
-    // params.joint_names        = {prefix + "shoulder_pan_joint", 
-    //                              prefix + "shoulder_lift_joint", 
-    //                              prefix + "elbow_joint",
-    //                              prefix + "wrist_1_joint", 
-    //                              prefix + "wrist_2_joint", 
-    //                              prefix + "wrist_3_joint"};
-
-    // params.base_link_name     = prefix + "base_link";
-
-    // Set the path to the known poses YAML file
 
     rclcpp::init(argc, argv);
 
@@ -35,7 +17,12 @@ int main(int argc, char* argv[]) {
     params.known_poses_path = package_share_directory + "/config/known_poses.yaml";
     params.ros_freq         = 10;
 
-    auto controller = std::make_shared<JoystickController>(params, node, false);
+    node->declare_parameter("profile", "default");
+    std::string profile = node->get_parameter("profile").as_string();
+
+    auto controller = JoystickControllerFactory::fromProfile(
+        profile, params, node, true
+    );
     controller->spinnerJoystick();
 
     rclcpp::shutdown();

@@ -111,15 +111,12 @@ install(
 )
 
 # ---------------- MANIPULATOR MENU -----------------
+
+
 add_executable(manipulator_menu_user src/manipulator_menu.cpp src/manipulator_menu_node_user.cpp)
 
 ament_target_dependencies(manipulator_menu_user
     ${MANIPULATOR_MENU_DEPENDS}
-)
-
-install(
-    TARGETS manipulator_menu_user
-    DESTINATION lib/${PROJECT_NAME}
 )
 
 #Export library
@@ -156,9 +153,21 @@ install(
     DESTINATION lib/${PROJECT_NAME}
 )
 
+#---------------- ROUTINES -----------------
+
+# add_executable(manipulator_routines src/manipulator_routines.cpp src/manipulator_routines_node.cpp src/manipulator_menu.cpp)
+# ament_target_dependencies(manipulator_routines
+#     ${MANIPULATOR_MENU_DEPENDS}
+# )
+# install(
+#     TARGETS manipulator_routines
+#     DESTINATION lib/${PROJECT_NAME}
+# )
+
+
 # ---------------- JOYSTICK CONTROLLER -----------------
 
-add_executable(joystick_controller_node src/joystick_controller.cpp src/joystick_controller_node.cpp src/manipulator_menu.cpp)
+add_executable(joystick_controller_node src/joystick_controller.cpp src/joystick_controller_node.cpp src/joystick_controller_mappings.cpp src/manipulator_menu.cpp)
 
 ament_target_dependencies(joystick_controller_node
     ${MANIPULATOR_MENU_DEPENDS}

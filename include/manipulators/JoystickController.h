@@ -5,6 +5,7 @@
 #include "std_srvs/srv/set_bool.hpp"
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include <signal.h>
+#include <functional>
 
 #include "manipulators/ManipulatorMenu.h"
 
@@ -44,16 +45,7 @@ class JoystickController : public ManipulatorMenu
 
     protected:
 
-        // Loads the mapping for joystick commands from the YAML file specified in the 'mapping_file' parameter
-        void loadMapping();
-
-        //Evaluate the event (eg: move joint 4, move gripper, etc.) 
-        /// Returns the value of the axis (if above 'threshold'), capped to 'max' and multiplied by 'scale'
-        double evaluateAxis(std::string category, std::string event);
-        /// Returns true if the button is pressed, false otherwise (if an axis is provided it will need to be above 'threshold')
-        bool evaluateButton(std::string category, std::string event);
-
-        virtual void joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy); //Callback for joystick commands
+        virtual void joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy); //Callback for joystick 
         void declareParameters(); 
     
         //Shutdown handler
@@ -81,4 +73,36 @@ class JoystickController : public ManipulatorMenu
         int clients_wait_timeout_ = 5; 
 
         rclcpp::TimerBase::SharedPtr cmd_pub_timer_;
+};
+
+class JoystickControllerFactory{
+    public:
+        static std::shared_ptr<JoystickController> fromProfile(
+            const std::string& profile,
+            ManipulatorMenuParams params, 
+            rclcpp::Node::SharedPtr node, 
+            const bool sync_parameters = false
+        );
+};
+
+/*
+    ===================================================================
+    ======================== JOYSTICK PROFILES ========================
+    ===================================================================
+
+
+
+*/
+
+
+
+class JoystickControllerPS3 : public JoystickController
+{
+    public:
+        // Make sure the constructor signature matches the base class
+        JoystickControllerPS3(ManipulatorMenuParams params, rclcpp::Node::SharedPtr node, const bool sync_parameters = false): 
+            JoystickController(params, node, sync_parameters) {}
+
+    protected:
+        void joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy) override;
 };
