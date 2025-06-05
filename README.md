@@ -17,7 +17,7 @@ More in depth documentation can be found in the doxigen documentation in [docs/]
 
 ### 1. Pre-requisites
  - Ubuntu 22.04 (LTS)
- - Ros 2 Humble installed [(Guide)]()
+ - Ros 2 Humble installed [(Guide)](https://docs.ros.org/en/humble/Installation.html)
  - Moveit2 installed [(Guide)](https://moveit.ai/install-moveit2/binary/)
 
 ### 2. Creating the workspace
