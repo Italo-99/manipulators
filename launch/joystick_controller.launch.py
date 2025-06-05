@@ -25,7 +25,10 @@ def get_node(context, *args, **kwargs):
         ]
     ))
 
-    if profile.lower() == 'default':
+    #Edit this to specify which profiles should use the game controller node, others will use the joy node
+    game_controller_profiles = ['default']
+
+    if profile.lower() in game_controller_profiles:
         nodes.append(Node(
             package="joy",
             executable="game_controller_node",

@@ -94,12 +94,9 @@ class JoystickControllerFactory{
 
 */
 
-
-
 class JoystickControllerPS3 : public JoystickController
 {
     public:
-        // Make sure the constructor signature matches the base class
         JoystickControllerPS3(ManipulatorMenuParams params, rclcpp::Node::SharedPtr node, const bool sync_parameters = false): 
             JoystickController(params, node, sync_parameters) {}
 

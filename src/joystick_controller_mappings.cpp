@@ -17,7 +17,7 @@ std::shared_ptr<JoystickController> JoystickControllerFactory::fromProfile(
     using ControllerFactory = std::function<std::shared_ptr<JoystickController>(
         ManipulatorMenuParams, rclcpp::Node::SharedPtr, bool)>;
     
-    // Map profile names to factory functions
+    // PROFILES MAP
     static const std::unordered_map<std::string, ControllerFactory> profileFactories = {
         {"ps3", [](ManipulatorMenuParams p, rclcpp::Node::SharedPtr n, bool s) {
             return std::make_shared<JoystickControllerPS3>(p, n, s);

@@ -17,7 +17,7 @@ More in depth documentation can be found in the doxigen documentation in [docs/]
 
 ### 1. Pre-requisites
  - Ubuntu 22.04 (LTS)
- - Ros 2 Humble
+ - Ros 2 Humble installed [(Guide)]()
  - Moveit2 installed [(Guide)](https://moveit.ai/install-moveit2/binary/)
 
 ### 2. Creating the workspace
@@ -449,4 +449,56 @@ int main(int argc, char* argv[]) {
 
 ## Joystick
 
-To implement a custom joystick control node you can simply copy-paste the 'vanilla' JoystickController class and joystick_control_node.cpp, then remap the control scheme by editing the joyCallback method (refer to the two enums `ButtonsMap`, `AxesMap` and [Joy docs](https://index.ros.org/p/joy/) for more informations).
+The joystick node inherits from the `ManipulatorMenu` class, this makes it able to use its functions and to easily inherit any change made to the menu. Joystick commands are read using the `joy ` package, by default the `game_controller_node` is used, this node can be preferable over its counterpart `joy_node` as it provides joystick mappings for most consumer joysticks so no further logic is needed other than binding each command to its respective action. 
+
+You can launch both the `game_controller_node` and the `joystick_controller_node` by using:
+
+    ros2 launch manipulators joystick_controller.launch.py
+
+### Custom mappings
+
+It is possible some joysticks won't be correctly mapped by the `game_controller_node` or that you want to use different bindings, for this you can create a class that inherits from the `JoystickController` class and overrides the `joyCallback` method, this allows users to be able to code their own logic while still relying on the basic functions.
+
+Here is a quick guide on how to setup your custom mappings:
+
+#### 1. Create the mapping class
+
+You can see some examples on how this is done in `include/manipulators/JoystickController.h` (bottom of the header) and `src/joystick_controller_mappings.cpp`, in this case an header file is used but you can implament is however you want, here is a more compact example:
+
+```cpp
+class MyCustomJoystickController : public JoystickController
+{
+    public:
+        MyCustomJoystickController(ManipulatorMenuParams params, rclcpp::Node::SharedPtr node, const bool sync_parameters = false): 
+            MyCustomJoystickController(params, node, sync_parameters) {
+            //Constructor...
+        }
+
+    protected:
+        void joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy) override{
+            //Custom controller commands logic...
+        };
+};
+```
+
+#### 2. Add to the JoystickControllerFactory
+
+Since the desired profile is passed to the launch file as a parameter a factory will take in the profile name and construct the appropriate node.
+To add your custom mapping to the factory navigate to `src/joystick_controller_mappings.cpp`, at the start of the file you will find the `JoystickControllerFactory::fromProfile` method, inside this method add your mapping to the `profileFactories` variable by following this template:
+
+```cpp
+{"<profile_name>", [](ManipulatorMenuParams p, rclcpp::Node::SharedPtr n, bool s) {
+    return std::make_shared<MyCustomJoystickController>(p, n, s);
+}}
+
+```
+
+#### 3. (Optional) specify if your mapping should use game_controller_node
+
+By default the launch file will use the `game_controller_node` only for the `default` profile (which loads the plain `JoystickController` class), if your custom implementation should use it navigate to `launch/joystick_controller.launch.py` and add the profile name to the `game_controller_profiles` list.
+
+#### 4. Launch the controller
+
+Use the following command to launch custom joystick control nodes:
+
+    ros2 launch manipulators joystick_controller.launch.py profile:=<profile_name>
