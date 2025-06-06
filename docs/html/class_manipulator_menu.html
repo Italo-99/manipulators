@@ -81,8 +81,9 @@ Inheritance diagram for ManipulatorMenu:</div>
 <div class="dyncontent">
 <div class="center"><img src="class_manipulator_menu__inherit__graph.png" border="0" usemap="#a_manipulator_menu_inherit__map" alt="Inheritance graph"/></div>
 <map name="a_manipulator_menu_inherit__map" id="a_manipulator_menu_inherit__map">
-<area shape="rect" title="Main class for the manipulator menu." alt="" coords="16,5,152,32"/>
-<area shape="rect" href="class_manipulator_routines.html" title=" " alt="" coords="5,80,163,107"/>
+<area shape="rect" title="Main class for the manipulator menu." alt="" coords="18,5,154,32"/>
+<area shape="rect" href="class_joystick_controller.html" title=" " alt="" coords="17,80,155,107"/>
+<area shape="rect" href="class_joystick_controller_p_s3.html" title=" " alt="" coords="5,155,167,181"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <div class="dynheader">
@@ -140,26 +141,40 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a36c74d65ad1756a262c5e19e2b2a0bcd"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a36c74d65ad1756a262c5e19e2b2a0bcd">executeAndWait</a> (const moveit_msgs::msg::RobotTrajectory joint_trajectory, uint timeout=20)</td></tr>
 <tr class="memdesc:a36c74d65ad1756a262c5e19e2b2a0bcd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Execute a trajectory, blocks until the trajectory is executed or timeout is reached.  <a href="class_manipulator_menu.html#a36c74d65ad1756a262c5e19e2b2a0bcd">More...</a><br /></td></tr>
 <tr class="separator:a36c74d65ad1756a262c5e19e2b2a0bcd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa36bd3cf7124c581ad8b83b629d4334d"><td class="memItemLeft" align="right" valign="top"><a id="aa36bd3cf7124c581ad8b83b629d4334d"></a>
-geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><b>getEEpose</b> ()</td></tr>
+<tr class="memitem:ab2a97be751434f8b71a6d70e716d7cf4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ab2a97be751434f8b71a6d70e716d7cf4">planExecuteAndWait</a> (const sensor_msgs::msg::JointState joint_goal, const std::vector&lt; double &gt; start_state=std::vector&lt; double &gt;(), uint timeout_planning=2, uint timeout_execution=20)</td></tr>
+<tr class="memdesc:ab2a97be751434f8b71a6d70e716d7cf4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Plan a joint goal, execute it and wait for the result.  <a href="class_manipulator_menu.html#ab2a97be751434f8b71a6d70e716d7cf4">More...</a><br /></td></tr>
+<tr class="separator:ab2a97be751434f8b71a6d70e716d7cf4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aefefb672360c8e1ba32d6002e6fdf4a1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#aefefb672360c8e1ba32d6002e6fdf4a1">planExecuteAndWait</a> (const geometry_msgs::msg::Pose tcp_goal, const std::vector&lt; double &gt; start_state=std::vector&lt; double &gt;(), const std::string &amp;frame=&quot;&quot;, uint timeout_planning=2, uint timeout_execution=20)</td></tr>
+<tr class="memdesc:aefefb672360c8e1ba32d6002e6fdf4a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Plan a TCP goal, execute it and wait for the result.  <a href="class_manipulator_menu.html#aefefb672360c8e1ba32d6002e6fdf4a1">More...</a><br /></td></tr>
+<tr class="separator:aefefb672360c8e1ba32d6002e6fdf4a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa1db271b07e47208ce86d0504dcbeb7b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#aa1db271b07e47208ce86d0504dcbeb7b">cartesianPlanExecuteAndWait</a> (const std::vector&lt; geometry_msgs::msg::Pose &gt; waypoints, const std::vector&lt; double &gt; start_state=std::vector&lt; double &gt;(), const std::string &amp;frame=&quot;&quot;, uint timeout_planning=2, uint timeout_execution=20)</td></tr>
+<tr class="memdesc:aa1db271b07e47208ce86d0504dcbeb7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Plan a Cartesian path through waypoints, execute it and wait for the result.  <a href="class_manipulator_menu.html#aa1db271b07e47208ce86d0504dcbeb7b">More...</a><br /></td></tr>
+<tr class="separator:aa1db271b07e47208ce86d0504dcbeb7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a95df0a492be065c3e6e9e85208c07715"><td class="memItemLeft" align="right" valign="top"><a id="a95df0a492be065c3e6e9e85208c07715"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a95df0a492be065c3e6e9e85208c07715">stopTrajectory</a> ()</td></tr>
+<tr class="memdesc:a95df0a492be065c3e6e9e85208c07715"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop trajectory execution. <br /></td></tr>
+<tr class="separator:a95df0a492be065c3e6e9e85208c07715"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa36bd3cf7124c581ad8b83b629d4334d"><td class="memItemLeft" align="right" valign="top">geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#aa36bd3cf7124c581ad8b83b629d4334d">getEEpose</a> ()</td></tr>
+<tr class="memdesc:aa36bd3cf7124c581ad8b83b629d4334d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current end effector pose.  <a href="class_manipulator_menu.html#aa36bd3cf7124c581ad8b83b629d4334d">More...</a><br /></td></tr>
 <tr class="separator:aa36bd3cf7124c581ad8b83b629d4334d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a532868c9a331fc74f084b71a412e1f1a"><td class="memItemLeft" align="right" valign="top"><a id="a532868c9a331fc74f084b71a412e1f1a"></a>
-std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>getEEpos_rpy</b> ()</td></tr>
+<tr class="memitem:a532868c9a331fc74f084b71a412e1f1a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a532868c9a331fc74f084b71a412e1f1a">getEEpos_rpy</a> ()</td></tr>
+<tr class="memdesc:a532868c9a331fc74f084b71a412e1f1a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current position of the end effector in the form of a vector [x (m), y(m), z(m), roll(°), pitch(°), yaw(°)].  <a href="class_manipulator_menu.html#a532868c9a331fc74f084b71a412e1f1a">More...</a><br /></td></tr>
 <tr class="separator:a532868c9a331fc74f084b71a412e1f1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad2edda48213e2d0a47bd5a072801730b"><td class="memItemLeft" align="right" valign="top"><a id="ad2edda48213e2d0a47bd5a072801730b"></a>
-geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><b>getTf</b> (const std::string &amp;source_frame, const std::string &amp;target_frame)</td></tr>
+geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ad2edda48213e2d0a47bd5a072801730b">getTf</a> (const std::string &amp;source_frame, const std::string &amp;target_frame)</td></tr>
+<tr class="memdesc:ad2edda48213e2d0a47bd5a072801730b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the transformation between two frames. <br /></td></tr>
 <tr class="separator:ad2edda48213e2d0a47bd5a072801730b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2bce0c64fd4d8803b804069982f5bab0"><td class="memItemLeft" align="right" valign="top"><a id="a2bce0c64fd4d8803b804069982f5bab0"></a>
-geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><b>move_along_x</b> (const double x_step, bool cartesian=false)</td></tr>
+<tr class="memitem:a2bce0c64fd4d8803b804069982f5bab0"><td class="memItemLeft" align="right" valign="top">geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a2bce0c64fd4d8803b804069982f5bab0">move_along_x</a> (const double x_step, bool cartesian=false)</td></tr>
+<tr class="memdesc:a2bce0c64fd4d8803b804069982f5bab0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move the end effector x_step meters along the x axis.  <a href="class_manipulator_menu.html#a2bce0c64fd4d8803b804069982f5bab0">More...</a><br /></td></tr>
 <tr class="separator:a2bce0c64fd4d8803b804069982f5bab0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abcf1acd49a68c1e906b4f3cfb0eec8da"><td class="memItemLeft" align="right" valign="top"><a id="abcf1acd49a68c1e906b4f3cfb0eec8da"></a>
-geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><b>move_along_y</b> (const double y_step, bool cartesian=false)</td></tr>
+<tr class="memitem:abcf1acd49a68c1e906b4f3cfb0eec8da"><td class="memItemLeft" align="right" valign="top">geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#abcf1acd49a68c1e906b4f3cfb0eec8da">move_along_y</a> (const double y_step, bool cartesian=false)</td></tr>
+<tr class="memdesc:abcf1acd49a68c1e906b4f3cfb0eec8da"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move the end effector y_step meters along the y axis.  <a href="class_manipulator_menu.html#abcf1acd49a68c1e906b4f3cfb0eec8da">More...</a><br /></td></tr>
 <tr class="separator:abcf1acd49a68c1e906b4f3cfb0eec8da"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aee2cd78bd8e24602f939eaf90e28135b"><td class="memItemLeft" align="right" valign="top"><a id="aee2cd78bd8e24602f939eaf90e28135b"></a>
-geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><b>move_along_z</b> (const double z_step, bool cartesian=false)</td></tr>
+<tr class="memitem:aee2cd78bd8e24602f939eaf90e28135b"><td class="memItemLeft" align="right" valign="top">geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#aee2cd78bd8e24602f939eaf90e28135b">move_along_z</a> (const double z_step, bool cartesian=false)</td></tr>
+<tr class="memdesc:aee2cd78bd8e24602f939eaf90e28135b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move the end effector z_step meters along the z axis.  <a href="class_manipulator_menu.html#aee2cd78bd8e24602f939eaf90e28135b">More...</a><br /></td></tr>
 <tr class="separator:aee2cd78bd8e24602f939eaf90e28135b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab656314535a752812238f03a21f413a1"><td class="memItemLeft" align="right" valign="top"><a id="ab656314535a752812238f03a21f413a1"></a>
-geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><b>make_tcp_rot</b> (const std::vector&lt; double &gt; rot_vec)</td></tr>
+<tr class="memitem:ab656314535a752812238f03a21f413a1"><td class="memItemLeft" align="right" valign="top">geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ab656314535a752812238f03a21f413a1">make_tcp_rot</a> (const std::vector&lt; double &gt; rot_vec)</td></tr>
+<tr class="memdesc:ab656314535a752812238f03a21f413a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rotate the end effector (relative to current orientation).  <a href="class_manipulator_menu.html#ab656314535a752812238f03a21f413a1">More...</a><br /></td></tr>
 <tr class="separator:ab656314535a752812238f03a21f413a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7ff1b91eef60738d1669b722b6df7658"><td class="memItemLeft" align="right" valign="top"><a id="a7ff1b91eef60738d1669b722b6df7658"></a>
 geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><b>rotate_around_x</b> (const double x_rot_step)</td></tr>
@@ -173,32 +188,32 @@ geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><b>r
 <tr class="memitem:a5e37e6a147dfd9f426a8f0acc8123104"><td class="memItemLeft" align="right" valign="top"><a id="a5e37e6a147dfd9f426a8f0acc8123104"></a>
 geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><b>change_tcp_orient</b> (const std::vector&lt; double &gt; rot_vec)</td></tr>
 <tr class="separator:a5e37e6a147dfd9f426a8f0acc8123104"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ddd3cd0c367d47d02cf82768d973e90"><td class="memItemLeft" align="right" valign="top"><a id="a2ddd3cd0c367d47d02cf82768d973e90"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>moveGripper</b> (const bool close)</td></tr>
+<tr class="memitem:a2ddd3cd0c367d47d02cf82768d973e90"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a2ddd3cd0c367d47d02cf82768d973e90">moveGripper</a> (const bool close)</td></tr>
+<tr class="memdesc:a2ddd3cd0c367d47d02cf82768d973e90"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move the gripper to the specified position.  <a href="class_manipulator_menu.html#a2ddd3cd0c367d47d02cf82768d973e90">More...</a><br /></td></tr>
 <tr class="separator:a2ddd3cd0c367d47d02cf82768d973e90"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a08286ec82a8da8b6d14691920d776e98"><td class="memItemLeft" align="right" valign="top"><a id="a08286ec82a8da8b6d14691920d776e98"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>publishCollisionObject</b> (const moveit_msgs::msg::CollisionObject collisionObjectMsg)</td></tr>
+<tr class="memitem:a08286ec82a8da8b6d14691920d776e98"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a08286ec82a8da8b6d14691920d776e98">publishCollisionObject</a> (const moveit_msgs::msg::CollisionObject collisionObjectMsg)</td></tr>
+<tr class="memdesc:a08286ec82a8da8b6d14691920d776e98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a collision object to the planning scene.  <a href="class_manipulator_menu.html#a08286ec82a8da8b6d14691920d776e98">More...</a><br /></td></tr>
 <tr class="separator:a08286ec82a8da8b6d14691920d776e98"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a97c3b5e830373ec7bddcde532a0efcc9"><td class="memItemLeft" align="right" valign="top"><a id="a97c3b5e830373ec7bddcde532a0efcc9"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>addObj</b> (const std::string &amp;name, const int obj_type, std::vector&lt; double &gt; obj_dims, double obj_pos[], double rot_pos[], uint operation)</td></tr>
+<tr class="memitem:a97c3b5e830373ec7bddcde532a0efcc9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a97c3b5e830373ec7bddcde532a0efcc9">addObj</a> (const std::string &amp;name, const int obj_type, std::vector&lt; double &gt; obj_dims, double obj_pos[], double rot_pos[], uint operation)</td></tr>
+<tr class="memdesc:a97c3b5e830373ec7bddcde532a0efcc9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a collision object to the planning scene in form of a primitive shape.  <a href="class_manipulator_menu.html#a97c3b5e830373ec7bddcde532a0efcc9">More...</a><br /></td></tr>
 <tr class="separator:a97c3b5e830373ec7bddcde532a0efcc9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7b8414a729ee8b04b0abb47784fbe999"><td class="memItemLeft" align="right" valign="top"><a id="a7b8414a729ee8b04b0abb47784fbe999"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>publishAttachedCollisionObject</b> (const moveit_msgs::msg::AttachedCollisionObject collisionAttachedObjectMsg)</td></tr>
+<tr class="memitem:a7b8414a729ee8b04b0abb47784fbe999"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a7b8414a729ee8b04b0abb47784fbe999">publishAttachedCollisionObject</a> (const moveit_msgs::msg::AttachedCollisionObject collisionAttachedObjectMsg)</td></tr>
+<tr class="memdesc:a7b8414a729ee8b04b0abb47784fbe999"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a collision object attached to the end effector to the planning scene.  <a href="class_manipulator_menu.html#a7b8414a729ee8b04b0abb47784fbe999">More...</a><br /></td></tr>
 <tr class="separator:a7b8414a729ee8b04b0abb47784fbe999"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3f699a3a727d86a607d389d7ec5786f2"><td class="memItemLeft" align="right" valign="top"><a id="a3f699a3a727d86a607d389d7ec5786f2"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>addAttachedObj</b> (const std::string &amp;name, const int obj_type, std::vector&lt; double &gt; obj_dims, double obj_pos[], double rot_pos[], uint operation)</td></tr>
+<tr class="memitem:a3f699a3a727d86a607d389d7ec5786f2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a3f699a3a727d86a607d389d7ec5786f2">addAttachedObj</a> (const std::string &amp;name, const int obj_type, std::vector&lt; double &gt; obj_dims, double obj_pos[], double rot_pos[], uint operation)</td></tr>
+<tr class="memdesc:a3f699a3a727d86a607d389d7ec5786f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add an attached collision object to the planning scene.  <a href="class_manipulator_menu.html#a3f699a3a727d86a607d389d7ec5786f2">More...</a><br /></td></tr>
 <tr class="separator:a3f699a3a727d86a607d389d7ec5786f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a967d97120aa055fc1e537c87cfbf92b4"><td class="memItemLeft" align="right" valign="top"><a id="a967d97120aa055fc1e537c87cfbf92b4"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>publishJointConstraint</b> (const uint &amp;joint_num, const double &amp;position, const double &amp;tolerance_above, const double &amp;tolerance_below, const double &amp;weight=1.0)</td></tr>
+<tr class="memitem:a967d97120aa055fc1e537c87cfbf92b4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a967d97120aa055fc1e537c87cfbf92b4">publishJointConstraint</a> (const uint &amp;joint_num, const double &amp;position, const double &amp;tolerance_above, const double &amp;tolerance_below, const double &amp;weight=1.0)</td></tr>
+<tr class="memdesc:a967d97120aa055fc1e537c87cfbf92b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a joint constraint to the manipulator planner.  <a href="class_manipulator_menu.html#a967d97120aa055fc1e537c87cfbf92b4">More...</a><br /></td></tr>
 <tr class="separator:a967d97120aa055fc1e537c87cfbf92b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8dc840ccbe0a20534ad7010b6bf58f52"><td class="memItemLeft" align="right" valign="top"><a id="a8dc840ccbe0a20534ad7010b6bf58f52"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>publishPositionConstraint</b> (const std::string &amp;link_name, const geometry_msgs::msg::Pose &amp;shape_pose, const uint &amp;shape_type, const std::vector&lt; double &gt; &amp;shape_dims, const double &amp;weight=1.0)</td></tr>
+<tr class="memitem:a8dc840ccbe0a20534ad7010b6bf58f52"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a8dc840ccbe0a20534ad7010b6bf58f52">publishPositionConstraint</a> (const std::string &amp;link_name, const geometry_msgs::msg::Pose &amp;shape_pose, const uint &amp;shape_type, const std::vector&lt; double &gt; &amp;shape_dims, const double &amp;weight=1.0)</td></tr>
+<tr class="memdesc:a8dc840ccbe0a20534ad7010b6bf58f52"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a position constraint to the manipulator planner in form of a primitive.  <a href="class_manipulator_menu.html#a8dc840ccbe0a20534ad7010b6bf58f52">More...</a><br /></td></tr>
 <tr class="separator:a8dc840ccbe0a20534ad7010b6bf58f52"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a905dfb7c2f091eb525472d4278493bbd"><td class="memItemLeft" align="right" valign="top"><a id="a905dfb7c2f091eb525472d4278493bbd"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>publishOrientationConstraint</b> (const std::string &amp;link_name, const geometry_msgs::msg::Quaternion &amp;orientation, const std::vector&lt; double &gt; &amp;tolerances={0.01, 0.01, 0.01}, const double &amp;weight=1.0)</td></tr>
+<tr class="memitem:a905dfb7c2f091eb525472d4278493bbd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a905dfb7c2f091eb525472d4278493bbd">publishOrientationConstraint</a> (const std::string &amp;link_name, const geometry_msgs::msg::Quaternion &amp;orientation, const std::vector&lt; double &gt; &amp;tolerances={0.01, 0.01, 0.01}, const double &amp;weight=1.0)</td></tr>
+<tr class="memdesc:a905dfb7c2f091eb525472d4278493bbd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish an orientation constraint to the manipulator planner.  <a href="class_manipulator_menu.html#a905dfb7c2f091eb525472d4278493bbd">More...</a><br /></td></tr>
 <tr class="separator:a905dfb7c2f091eb525472d4278493bbd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a952b79a53c9253b5e565fe3875a7d211"><td class="memItemLeft" align="right" valign="top"><a id="a952b79a53c9253b5e565fe3875a7d211"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>publishClearConstraints</b> (void)</td></tr>
+<tr class="memitem:a952b79a53c9253b5e565fe3875a7d211"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a952b79a53c9253b5e565fe3875a7d211">publishClearConstraints</a> (void)</td></tr>
+<tr class="memdesc:a952b79a53c9253b5e565fe3875a7d211"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a command to clear all path constraints in the manipulator planner.  <a href="class_manipulator_menu.html#a952b79a53c9253b5e565fe3875a7d211">More...</a><br /></td></tr>
 <tr class="separator:a952b79a53c9253b5e565fe3875a7d211"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af0f23d5d67e534b5badb8263f400e145"><td class="memItemLeft" align="right" valign="top"><a id="af0f23d5d67e534b5badb8263f400e145"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>publishToolIOCmd</b> (const size_t id, const bool value)</td></tr>
@@ -257,17 +272,17 @@ Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><b>getJacobia
 <tr class="memitem:a93e4d34b37f17f7fe6cc26d1e91ab441"><td class="memItemLeft" align="right" valign="top"><a id="a93e4d34b37f17f7fe6cc26d1e91ab441"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>gripperMoveClient</b> (const bool close)</td></tr>
 <tr class="separator:a93e4d34b37f17f7fe6cc26d1e91ab441"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad2223115b377ef3b0f7c037c69d2eae4"><td class="memItemLeft" align="right" valign="top"><a id="ad2223115b377ef3b0f7c037c69d2eae4"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>setJacobianSpeedControl</b> (bool)</td></tr>
+<tr class="memitem:ad2223115b377ef3b0f7c037c69d2eae4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ad2223115b377ef3b0f7c037c69d2eae4">setJacobianSpeedControl</a> (bool)</td></tr>
+<tr class="memdesc:ad2223115b377ef3b0f7c037c69d2eae4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the jacobian speed control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#ad2223115b377ef3b0f7c037c69d2eae4">More...</a><br /></td></tr>
 <tr class="separator:ad2223115b377ef3b0f7c037c69d2eae4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a35bc7da6edbe69dd537ee1243552d008"><td class="memItemLeft" align="right" valign="top"><a id="a35bc7da6edbe69dd537ee1243552d008"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>setJsRealTimeControl</b> (bool)</td></tr>
+<tr class="memitem:a35bc7da6edbe69dd537ee1243552d008"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a35bc7da6edbe69dd537ee1243552d008">setJsRealTimeControl</a> (bool)</td></tr>
+<tr class="memdesc:a35bc7da6edbe69dd537ee1243552d008"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the real time control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#a35bc7da6edbe69dd537ee1243552d008">More...</a><br /></td></tr>
 <tr class="separator:a35bc7da6edbe69dd537ee1243552d008"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a60c1a71bee6e2838b5ae25cbc0c695b6"><td class="memItemLeft" align="right" valign="top"><a id="a60c1a71bee6e2838b5ae25cbc0c695b6"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>setPlannerScalingFactors</b> (float, float)</td></tr>
+<tr class="memitem:a60c1a71bee6e2838b5ae25cbc0c695b6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a60c1a71bee6e2838b5ae25cbc0c695b6">setPlannerScalingFactors</a> (float, float)</td></tr>
+<tr class="memdesc:a60c1a71bee6e2838b5ae25cbc0c695b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the planner velocity and acceleration factors.  <a href="class_manipulator_menu.html#a60c1a71bee6e2838b5ae25cbc0c695b6">More...</a><br /></td></tr>
 <tr class="separator:a60c1a71bee6e2838b5ae25cbc0c695b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab4720527628d9f99a80f05923422b931"><td class="memItemLeft" align="right" valign="top"><a id="ab4720527628d9f99a80f05923422b931"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>setPlannerTolerances</b> (float, float, float)</td></tr>
+<tr class="memitem:ab4720527628d9f99a80f05923422b931"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ab4720527628d9f99a80f05923422b931">setPlannerTolerances</a> (float, float, float)</td></tr>
+<tr class="memdesc:ab4720527628d9f99a80f05923422b931"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the planner tolerances in the manipulator planner.  <a href="class_manipulator_menu.html#ab4720527628d9f99a80f05923422b931">More...</a><br /></td></tr>
 <tr class="separator:ab4720527628d9f99a80f05923422b931"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aed1be2c13b6aec2b41efbf557cad480e"><td class="memTemplParams" colspan="2"><a id="aed1be2c13b6aec2b41efbf557cad480e"></a>
 template&lt;typename T &gt; </td></tr>
@@ -551,6 +566,146 @@ rclcpp::Client&lt; manipulator_interfaces::srv::Jacobian &gt;::SharedPtr&#160;</
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a3f699a3a727d86a607d389d7ec5786f2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3f699a3a727d86a607d389d7ec5786f2">&#9670;&nbsp;</a></span>addAttachedObj()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::addAttachedObj </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const int&#160;</td>
+          <td class="paramname"><em>obj_type</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; double &gt;&#160;</td>
+          <td class="paramname"><em>obj_dims</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>obj_pos</em>[], </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>rot_pos</em>[], </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>operation</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add an attached collision object to the planning scene. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>Name of the object. </td></tr>
+    <tr><td class="paramname">obj_type</td><td>Type of the object (1: BOX, 2: SPHERE, 3: CYLINDER, 4: CONE). </td></tr>
+    <tr><td class="paramname">obj_dims</td><td>Dimensions of the object (depends on the type, see below). </td></tr>
+    <tr><td class="paramname">obj_pos</td><td>Position of the object in the form [x (m), y (m), z (m)]. </td></tr>
+    <tr><td class="paramname">rot_pos</td><td>Orientation of the object in the form [x (rad), y (rad), z (rad), w (rad)]. </td></tr>
+    <tr><td class="paramname">operation</td><td>Operation to be performed on the object (0: ADD, 1: REMOVE, 2: APPEND, 3: MOVE).</td></tr>
+  </table>
+  </dd>
+</dl>
+<ul>
+<li>For a BOX, obj_dims should contain [length (m), width (m), height (m)].</li>
+<li>For a SPHERE, obj_dims should contain [radius (m)].</li>
+<li>For a CYLINDER or CONE, obj_dims should contain [height (m), radius (m)]. </li>
+</ul>
+
+</div>
+</div>
+<a id="a97c3b5e830373ec7bddcde532a0efcc9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a97c3b5e830373ec7bddcde532a0efcc9">&#9670;&nbsp;</a></span>addObj()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::addObj </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const int&#160;</td>
+          <td class="paramname"><em>obj_type</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; double &gt;&#160;</td>
+          <td class="paramname"><em>obj_dims</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>obj_pos</em>[], </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>rot_pos</em>[], </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>operation</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add a collision object to the planning scene in form of a primitive shape. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>Name of the object. </td></tr>
+    <tr><td class="paramname">obj_type</td><td>Type of the object (1: BOX, 2: SPHERE, 3: CYLINDER, 4: CONE). </td></tr>
+    <tr><td class="paramname">obj_dims</td><td>Dimensions of the object (depends on the type, see below). </td></tr>
+    <tr><td class="paramname">obj_pos</td><td>Position of the object in the form [x (m), y (m), z (m)]. </td></tr>
+    <tr><td class="paramname">rot_pos</td><td>Orientation of the object in the form [x (rad), y (rad), z (rad)]. </td></tr>
+    <tr><td class="paramname">operation</td><td>Operation to be performed on the object (0: ADD, 1: REMOVE, 2: MOVE).</td></tr>
+  </table>
+  </dd>
+</dl>
+<ul>
+<li>For a BOX, obj_dims should contain [length (m), width (m), height (m)].</li>
+<li>For a SPHERE, obj_dims should contain [radius (m)].</li>
+<li>For a CYLINDER or CONE, obj_dims should contain [height (m), radius (m)]. </li>
+</ul>
+
+</div>
+</div>
 <a id="aad942412677419ae1a39820f404d0549"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aad942412677419ae1a39820f404d0549">&#9670;&nbsp;</a></span>cartesianPlanAndWait()</h2>
 
@@ -599,6 +754,67 @@ rclcpp::Client&lt; manipulator_interfaces::srv::Jacobian &gt;::SharedPtr&#160;</
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The planned trajectory result (see manipulator_interfaces::msg::TrajectoryResult). </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function will block until the trajectory is planned or the timeout is reached. </dd></dl>
+
+</div>
+</div>
+<a id="aa1db271b07e47208ce86d0504dcbeb7b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa1db271b07e47208ce86d0504dcbeb7b">&#9670;&nbsp;</a></span>cartesianPlanExecuteAndWait()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool ManipulatorMenu::cartesianPlanExecuteAndWait </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; geometry_msgs::msg::Pose &gt;&#160;</td>
+          <td class="paramname"><em>waypoints</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; double &gt;&#160;</td>
+          <td class="paramname"><em>start_state</em> = <code>std::vector&lt;&#160;double&#160;&gt;()</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>frame</em> = <code>&quot;&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>timeout_planning</em> = <code>2</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>timeout_execution</em> = <code>20</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Plan a Cartesian path through waypoints, execute it and wait for the result. </p>
+<p>This function combines planning and execution for a Cartesian trajectory through multiple waypoints. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">waypoints</td><td>Vector of waypoint poses defining the Cartesian path. </td></tr>
+    <tr><td class="paramname">start_state</td><td>Start state of the manipulator (in degrees). </td></tr>
+    <tr><td class="paramname">frame</td><td>Frame in which the positions are expressed (leave empty for default frame). </td></tr>
+    <tr><td class="paramname">timeout_planning</td><td>Timeout for the planning operation (in seconds). </td></tr>
+    <tr><td class="paramname">timeout_execution</td><td>Timeout for the execution operation (in seconds). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the trajectory was executed successfully, false otherwise. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function will block until the trajectory is executed or the timeout is reached. </dd></dl>
 
 </div>
 </div>
@@ -637,6 +853,47 @@ rclcpp::Client&lt; manipulator_interfaces::srv::Jacobian &gt;::SharedPtr&#160;</
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the trajectory was executed successfully, false otherwise. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function will block until the trajectory is executed or the timeout is reached. </dd></dl>
+
+</div>
+</div>
+<a id="a532868c9a331fc74f084b71a412e1f1a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a532868c9a331fc74f084b71a412e1f1a">&#9670;&nbsp;</a></span>getEEpos_rpy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;double&gt; ManipulatorMenu::getEEpos_rpy </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the current position of the end effector in the form of a vector [x (m), y(m), z(m), roll(°), pitch(°), yaw(°)]. </p>
+<dl class="section note"><dt>Note</dt><dd>Might block due to service call, so use with caution in real-time applications. </dd></dl>
+
+</div>
+</div>
+<a id="aa36bd3cf7124c581ad8b83b629d4334d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa36bd3cf7124c581ad8b83b629d4334d">&#9670;&nbsp;</a></span>getEEpose()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">geometry_msgs::msg::Pose ManipulatorMenu::getEEpose </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the current end effector pose. </p>
+<dl class="section note"><dt>Note</dt><dd>Might block due to service call, so use with caution in real-time applications. </dd></dl>
 
 </div>
 </div>
@@ -664,6 +921,175 @@ rclcpp::Client&lt; manipulator_interfaces::srv::Jacobian &gt;::SharedPtr&#160;</
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The known pose as a vector of joint angles in degrees. </dd></dl>
+
+</div>
+</div>
+<a id="ab656314535a752812238f03a21f413a1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab656314535a752812238f03a21f413a1">&#9670;&nbsp;</a></span>make_tcp_rot()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">geometry_msgs::msg::Pose ManipulatorMenu::make_tcp_rot </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; double &gt;&#160;</td>
+          <td class="paramname"><em>rot_vec</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Rotate the end effector (relative to current orientation). </p>
+<p>rotate_around_x, rotate_around_y and rotate_around_z are used to rotate the end effector around the x, y and z axes respectively. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">rot_vec</td><td>Vector containing the rotation angles in degrees [x_rot, y_rot, z_rot]. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The new end effector pose after the rotation. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>The rotation is relative to the current orientation of the end effector. </dd></dl>
+
+</div>
+</div>
+<a id="a2bce0c64fd4d8803b804069982f5bab0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2bce0c64fd4d8803b804069982f5bab0">&#9670;&nbsp;</a></span>move_along_x()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">geometry_msgs::msg::Pose ManipulatorMenu::move_along_x </td>
+          <td>(</td>
+          <td class="paramtype">const double&#160;</td>
+          <td class="paramname"><em>x_step</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>cartesian</em> = <code>false</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Move the end effector x_step meters along the x axis. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">x_step</td><td>Distance to move along the x axis (in meters). </td></tr>
+    <tr><td class="paramname">cartesian</td><td>If true, the movement will be planned as a Cartesian path, otherwise it will be a simple TCP goal. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The new end effector pose after the movement. </dd></dl>
+
+</div>
+</div>
+<a id="abcf1acd49a68c1e906b4f3cfb0eec8da"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abcf1acd49a68c1e906b4f3cfb0eec8da">&#9670;&nbsp;</a></span>move_along_y()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">geometry_msgs::msg::Pose ManipulatorMenu::move_along_y </td>
+          <td>(</td>
+          <td class="paramtype">const double&#160;</td>
+          <td class="paramname"><em>y_step</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>cartesian</em> = <code>false</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Move the end effector y_step meters along the y axis. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">y_step</td><td>Distance to move along the y axis (in meters). </td></tr>
+    <tr><td class="paramname">cartesian</td><td>If true, the movement will be planned as a Cartesian path, otherwise it will be a simple TCP goal. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The new end effector pose after the movement. </dd></dl>
+
+</div>
+</div>
+<a id="aee2cd78bd8e24602f939eaf90e28135b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aee2cd78bd8e24602f939eaf90e28135b">&#9670;&nbsp;</a></span>move_along_z()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">geometry_msgs::msg::Pose ManipulatorMenu::move_along_z </td>
+          <td>(</td>
+          <td class="paramtype">const double&#160;</td>
+          <td class="paramname"><em>z_step</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>cartesian</em> = <code>false</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Move the end effector z_step meters along the z axis. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">z_step</td><td>Distance to move along the z axis (in meters). </td></tr>
+    <tr><td class="paramname">cartesian</td><td>If true, the movement will be planned as a Cartesian path, otherwise it will be a simple TCP goal. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The new end effector pose after the movement. </dd></dl>
+
+</div>
+</div>
+<a id="a2ddd3cd0c367d47d02cf82768d973e90"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2ddd3cd0c367d47d02cf82768d973e90">&#9670;&nbsp;</a></span>moveGripper()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::moveGripper </td>
+          <td>(</td>
+          <td class="paramtype">const bool&#160;</td>
+          <td class="paramname"><em>close</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Move the gripper to the specified position. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">close</td><td>If true, the gripper will be closed, otherwise it will be opened. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>The gripper type must be set in the parameters. </dd></dl>
 
 </div>
 </div>
@@ -753,6 +1179,7 @@ rclcpp::Client&lt; manipulator_interfaces::srv::Jacobian &gt;::SharedPtr&#160;</
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The planned trajectory result (see manipulator_interfaces::msg::TrajectoryResult). </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function will block until the trajectory is planned or the timeout is reached. </dd></dl>
 
 </div>
 </div>
@@ -798,6 +1225,147 @@ rclcpp::Client&lt; manipulator_interfaces::srv::Jacobian &gt;::SharedPtr&#160;</
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The planned trajectory result (see manipulator_interfaces::msg::TrajectoryResult). </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function will block until the trajectory is planned or the timeout is reached. </dd></dl>
+
+</div>
+</div>
+<a id="aefefb672360c8e1ba32d6002e6fdf4a1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aefefb672360c8e1ba32d6002e6fdf4a1">&#9670;&nbsp;</a></span>planExecuteAndWait() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool ManipulatorMenu::planExecuteAndWait </td>
+          <td>(</td>
+          <td class="paramtype">const geometry_msgs::msg::Pose&#160;</td>
+          <td class="paramname"><em>tcp_goal</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; double &gt;&#160;</td>
+          <td class="paramname"><em>start_state</em> = <code>std::vector&lt;&#160;double&#160;&gt;()</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>frame</em> = <code>&quot;&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>timeout_planning</em> = <code>2</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>timeout_execution</em> = <code>20</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Plan a TCP goal, execute it and wait for the result. </p>
+<p>This function combines planning and execution for a TCP goal position. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">tcp_goal</td><td>TCP goal position to be published. </td></tr>
+    <tr><td class="paramname">start_state</td><td>Start state of the manipulator (in degrees). </td></tr>
+    <tr><td class="paramname">frame</td><td>Frame in which the position is expressed (leave empty for default frame). </td></tr>
+    <tr><td class="paramname">timeout_planning</td><td>Timeout for the planning operation (in seconds). </td></tr>
+    <tr><td class="paramname">timeout_execution</td><td>Timeout for the execution operation (in seconds). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the trajectory was executed successfully, false otherwise. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function will block until the trajectory is executed or the timeout is reached. </dd></dl>
+
+</div>
+</div>
+<a id="ab2a97be751434f8b71a6d70e716d7cf4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab2a97be751434f8b71a6d70e716d7cf4">&#9670;&nbsp;</a></span>planExecuteAndWait() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool ManipulatorMenu::planExecuteAndWait </td>
+          <td>(</td>
+          <td class="paramtype">const sensor_msgs::msg::JointState&#160;</td>
+          <td class="paramname"><em>joint_goal</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; double &gt;&#160;</td>
+          <td class="paramname"><em>start_state</em> = <code>std::vector&lt;&#160;double&#160;&gt;()</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>timeout_planning</em> = <code>2</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint&#160;</td>
+          <td class="paramname"><em>timeout_execution</em> = <code>20</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Plan a joint goal, execute it and wait for the result. </p>
+<p>This function combines the two functions <a class="el" href="class_manipulator_menu.html#aaeb3c4d8fd1b22a5003b49a21a201744" title="Send a joint goal to the manipulator planner and wait for the result.">planAndWait()</a> and <a class="el" href="class_manipulator_menu.html#a36c74d65ad1756a262c5e19e2b2a0bcd" title="Execute a trajectory, blocks until the trajectory is executed or timeout is reached.">executeAndWait()</a>. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">joint_goal</td><td>Joint goal to be published (in radians). </td></tr>
+    <tr><td class="paramname">start_state</td><td>Start state of the manipulator (in degrees). </td></tr>
+    <tr><td class="paramname">timeout_planning</td><td>Timeout for the planning operation (in seconds). </td></tr>
+    <tr><td class="paramname">timeout_execution</td><td>Timeout for the execution operation (in seconds). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the trajectory was executed successfully, false otherwise. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function will block until the trajectory is executed or the timeout is reached. </dd></dl>
+
+</div>
+</div>
+<a id="a7b8414a729ee8b04b0abb47784fbe999"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7b8414a729ee8b04b0abb47784fbe999">&#9670;&nbsp;</a></span>publishAttachedCollisionObject()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishAttachedCollisionObject </td>
+          <td>(</td>
+          <td class="paramtype">const moveit_msgs::msg::AttachedCollisionObject&#160;</td>
+          <td class="paramname"><em>collisionAttachedObjectMsg</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish a collision object attached to the end effector to the planning scene. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">collisionAttachedObjectMsg</td><td>Attached collision object message to be published.</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>This function is used to attach an object to a link in the planning scene. </p>
 
 </div>
 </div>
@@ -846,6 +1414,111 @@ rclcpp::Client&lt; manipulator_interfaces::srv::Jacobian &gt;::SharedPtr&#160;</
     <tr><td class="paramname">start_state</td><td>Start state of the manipulator (in degrees). </td></tr>
     <tr><td class="paramname">frame</td><td>Frame in which the position is expressed (leave empty for default frame). </td></tr>
     <tr><td class="paramname">execute</td><td>If true, the trajectory will be executed </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a952b79a53c9253b5e565fe3875a7d211"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a952b79a53c9253b5e565fe3875a7d211">&#9670;&nbsp;</a></span>publishClearConstraints()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishClearConstraints </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish a command to clear all path constraints in the manipulator planner. </p>
+<p>This will remove all previously set joint, position, and orientation constraints. </p>
+
+</div>
+</div>
+<a id="a08286ec82a8da8b6d14691920d776e98"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a08286ec82a8da8b6d14691920d776e98">&#9670;&nbsp;</a></span>publishCollisionObject()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishCollisionObject </td>
+          <td>(</td>
+          <td class="paramtype">const moveit_msgs::msg::CollisionObject&#160;</td>
+          <td class="paramname"><em>collisionObjectMsg</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add a collision object to the planning scene. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">collisionObjectMsg</td><td>Collision object message to be published. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a967d97120aa055fc1e537c87cfbf92b4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a967d97120aa055fc1e537c87cfbf92b4">&#9670;&nbsp;</a></span>publishJointConstraint()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishJointConstraint </td>
+          <td>(</td>
+          <td class="paramtype">const uint &amp;&#160;</td>
+          <td class="paramname"><em>joint_num</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double &amp;&#160;</td>
+          <td class="paramname"><em>position</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double &amp;&#160;</td>
+          <td class="paramname"><em>tolerance_above</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double &amp;&#160;</td>
+          <td class="paramname"><em>tolerance_below</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double &amp;&#160;</td>
+          <td class="paramname"><em>weight</em> = <code>1.0</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish a joint constraint to the manipulator planner. </p>
+<p>The specified joint will be constrained to [position - tolerance_below, position + tolerance_above] </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">joint_num</td><td>Index of the joint to be constrained (0-based). </td></tr>
+    <tr><td class="paramname">position</td><td>Position of the joint in radians. </td></tr>
+    <tr><td class="paramname">tolerance_above</td><td>Tolerance above the position (in radians). </td></tr>
+    <tr><td class="paramname">tolerance_below</td><td>Tolerance below the position (in radians). </td></tr>
+    <tr><td class="paramname">weight</td><td>Weight of the constraint (default is 1.0). </td></tr>
   </table>
   </dd>
 </dl>
@@ -939,6 +1612,120 @@ rclcpp::Client&lt; manipulator_interfaces::srv::Jacobian &gt;::SharedPtr&#160;</
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The passed joint goal. </dd></dl>
+
+</div>
+</div>
+<a id="a905dfb7c2f091eb525472d4278493bbd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a905dfb7c2f091eb525472d4278493bbd">&#9670;&nbsp;</a></span>publishOrientationConstraint()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishOrientationConstraint </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>link_name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const geometry_msgs::msg::Quaternion &amp;&#160;</td>
+          <td class="paramname"><em>orientation</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>tolerances</em> = <code>{0.01,&#160;0.01,&#160;0.01}</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double &amp;&#160;</td>
+          <td class="paramname"><em>weight</em> = <code>1.0</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish an orientation constraint to the manipulator planner. </p>
+<p>The specified link will maintain the given orientation within the specified tolerances. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">link_name</td><td>Name of the link to be constrained. </td></tr>
+    <tr><td class="paramname">orientation</td><td>Orientation of the link in the form of a geometry_msgs::msg::Quaternion. </td></tr>
+    <tr><td class="paramname">tolerances</td><td>Tolerances for the orientation along the x, y, and z axes (default is {0.01, 0.01, 0.01}). </td></tr>
+    <tr><td class="paramname">weight</td><td>Weight of the constraint (default is 1.0). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a8dc840ccbe0a20534ad7010b6bf58f52"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8dc840ccbe0a20534ad7010b6bf58f52">&#9670;&nbsp;</a></span>publishPositionConstraint()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishPositionConstraint </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>link_name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const geometry_msgs::msg::Pose &amp;&#160;</td>
+          <td class="paramname"><em>shape_pose</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const uint &amp;&#160;</td>
+          <td class="paramname"><em>shape_type</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>shape_dims</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double &amp;&#160;</td>
+          <td class="paramname"><em>weight</em> = <code>1.0</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish a position constraint to the manipulator planner in form of a primitive. </p>
+<p>The specified link will stay inside that primitive. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">link_name</td><td>Name of the link to be constrained. </td></tr>
+    <tr><td class="paramname">shape_pose</td><td>Pose of the primitive in the form of a geometry_msgs::msg::Pose (relative to world). </td></tr>
+    <tr><td class="paramname">shape_type</td><td>Type of the primitive (1: BOX, 2: SPHERE, 3: CYLINDER, 4: CONE). </td></tr>
+    <tr><td class="paramname">shape_dims</td><td>Dimensions of the primitive (depends on the type, see below). </td></tr>
+    <tr><td class="paramname">weight</td><td>Weight of the constraint (default is 1.0).</td></tr>
+  </table>
+  </dd>
+</dl>
+<ul>
+<li>For a BOX, shape_dims should contain [length (m), width (m), height (m)].</li>
+<li>For a SPHERE, shape_dims should contain [radius (m)].</li>
+<li>For a CYLINDER or CONE, shape_dims should contain [height (m), radius (m)]. </li>
+</ul>
 
 </div>
 </div>
@@ -1043,6 +1830,143 @@ rclcpp::Client&lt; manipulator_interfaces::srv::Jacobian &gt;::SharedPtr&#160;</
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The passed TCP goal. </dd></dl>
+
+</div>
+</div>
+<a id="ad2223115b377ef3b0f7c037c69d2eae4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad2223115b377ef3b0f7c037c69d2eae4">&#9670;&nbsp;</a></span>setJacobianSpeedControl()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::setJacobianSpeedControl </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the jacobian speed control parameter in the manipulator planner. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">enable</td><td>If true, the jacobian speed control will be enabled. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged </dd></dl>
+
+</div>
+</div>
+<a id="a35bc7da6edbe69dd537ee1243552d008"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a35bc7da6edbe69dd537ee1243552d008">&#9670;&nbsp;</a></span>setJsRealTimeControl()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::setJsRealTimeControl </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the real time control parameter in the manipulator planner. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">enable</td><td>If true, the real time control will be enabled. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged </dd></dl>
+
+</div>
+</div>
+<a id="a60c1a71bee6e2838b5ae25cbc0c695b6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a60c1a71bee6e2838b5ae25cbc0c695b6">&#9670;&nbsp;</a></span>setPlannerScalingFactors()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::setPlannerScalingFactors </td>
+          <td>(</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the planner velocity and acceleration factors. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">velocity_scaling_factor</td><td>Velocity scaling factor. </td></tr>
+    <tr><td class="paramname">acceleration_scaling_factor</td><td>Acceleration scaling factor. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged </dd></dl>
+
+</div>
+</div>
+<a id="ab4720527628d9f99a80f05923422b931"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4720527628d9f99a80f05923422b931">&#9670;&nbsp;</a></span>setPlannerTolerances()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::setPlannerTolerances </td>
+          <td>(</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the planner tolerances in the manipulator planner. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">position_tolerance</td><td>Position tolerance for the end effector (in meters). </td></tr>
+    <tr><td class="paramname">orientation_tolerance</td><td>Orientation tolerance for the end effector (in radians). </td></tr>
+    <tr><td class="paramname">joint_tolerance</td><td>Joint tolerance for the manipulator (in radians). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged </dd></dl>
 
 </div>
 </div>

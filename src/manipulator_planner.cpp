@@ -507,73 +507,35 @@ const geometry_msgs::msg::Twist ManipulatorPlannerNode::getTcpVel()
 }
 
 const Eigen::MatrixXd ManipulatorPlannerNode::getJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link) {
-    /*
-    Computes the jacobian matrix
-    Args:
-        joint_positions: Joint positions to compute the jacobian
-        end_effector_link: Name of the end effector link to which the jacobian is referred
-    */
     return dynamic_planner_->getJacobian(joint_positions, end_effector_link);
 }
 
 const Eigen::MatrixXd ManipulatorPlannerNode::getJacobian(const std::string &end_effector_link) {
-    /*
-    Computes the jacobian matrix
-    Args:
-        end_effector_link: Name of the end effector link to which the jacobian is referred
-    */
     return dynamic_planner_->getJacobian(end_effector_link);
 }
 
 const Eigen::MatrixXd ManipulatorPlannerNode::getJacobian() {
-    /*
-    Computes the jacobian matrix
-    "ee_name" parameter is used as the end effector link
-    */
     return getJacobian(ee_name_);
 }
 
 const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link) {
-    /*
-    Computes the pseudo-inverse of the jacobian matrix
-    Args:
-        joint_positions: Joint positions to compute the jacobian
-        end_effector_link: Name of the end effector link to which the jacobian is referred
-    */
     return dynamic_planner_->getPseudoInverseJacobian(joint_positions, end_effector_link);
 }
 
 const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian(const std::string &end_effector_link) {
-    /*
-    Computes the pseudo-inverse of the jacobian matrix
-    Args:
-        end_effector_link: Name of the end effector link to which the jacobian is referred
-    */
     return dynamic_planner_->getPseudoInverseJacobian(end_effector_link);
 }
 
 const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian() {
-    /*
-    Computes the pseudo-inverse of the jacobian matrix
-    "ee_name" parameter is used as the end effector link
-    */
     return getPseudoInverseJacobian(ee_name_);
 }
 
 //CALLBACK FUNCTIONS
+
 void ManipulatorPlannerNode::getFKine_callback(
     const std::shared_ptr<manipulator_interfaces::srv::FKine::Request> request, 
     std::shared_ptr<manipulator_interfaces::srv::FKine::Response> response
 ) {
-    /*
-    Callback function for the forward kinematics service
-    Interface:
-        request: 
-            joint_state (sensor_msgs/JointState): Joint state to compute the forward kinematics, 
-                                                  if empty the current joint state is used
-        response: 
-            tcp_pose (geometry_msgs/PoseStamped): End effector pose
-    */
     sensor_msgs::msg::JointState joint_state = request->joint_state;
 
     if (joint_state.position.empty()) {
@@ -589,14 +551,6 @@ void ManipulatorPlannerNode::getInvKine_callback(
     const std::shared_ptr<manipulator_interfaces::srv::InvKine::Request> request,
     std::shared_ptr<manipulator_interfaces::srv::InvKine::Response> response
 ) {
-    /*
-    Callback function for the inverse kinematics service
-    Interface:
-        request: 
-            target_pose: (geometry_msgs/Pose): End effector pose
-        response: 
-            joint_values           (float64[]): inverse kinematics result
-    */
     response->joint_values = dynamic_planner_->invKine(
         request->target_pose, 
         ee_name_
@@ -607,13 +561,6 @@ void ManipulatorPlannerNode::getJacobian_callback(
     const std::shared_ptr<manipulator_interfaces::srv::Jacobian::Request> request,
     std::shared_ptr<manipulator_interfaces::srv::Jacobian::Response> response
 ) {
-    /*
-    Callback function for the jacobian service
-    Interface:
-        request: None
-        response: 
-            matrix_values (float64[]): Flattened jacobian matrix
-    */
     request.get(); //Suppress unused var warning
 
     Eigen::MatrixXd jacobian = dynamic_planner_->getJacobian(ee_name_);
@@ -626,13 +573,6 @@ void ManipulatorPlannerNode::getPseudoInverseJacobian_callback(
     const std::shared_ptr<manipulator_interfaces::srv::PseudoInverse::Request> request,
     std::shared_ptr<manipulator_interfaces::srv::PseudoInverse::Response> response
 ) {
-    /*
-    Callback function for the pseudo-inverse jacobian service
-    Interface:
-        request: None
-        response: 
-            matrix_values (float64[]): Flattened pseudo-inverse jacobian matrix
-    */
     request.get(); //Suppress unused var warning
 
     Eigen::MatrixXd pseudo_inv = getPseudoInverseJacobian();
@@ -645,16 +585,6 @@ void ManipulatorPlannerNode::changePlannerScalingFactors_callback(
     const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerScalingFactors::Request> request,
     std::shared_ptr<manipulator_interfaces::srv::ChangePlannerScalingFactors::Response> response
 ) {
-    /*
-    Callback function for the change planner parameters service
-    Interface:
-        request: 
-            vel_factor (float64): Velocity factor
-            acc_factor (float64): Acceleration factor
-        response: 
-            success       (bool): True if the parameters were changed successfully
-    */
-
     DynamicPlannerParams params = dynamic_planner_->getParams();
     params.acc_factor = request->acc_factor;
     params.vel_factor = request->vel_factor;
@@ -674,17 +604,6 @@ void ManipulatorPlannerNode::changePlannerTolerances_callback(
     const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerTolerances::Request> request,
     std::shared_ptr<manipulator_interfaces::srv::ChangePlannerTolerances::Response> response
 ) {
-    /*
-    Callback function for the change planner parameters service
-    Interface:
-        request: 
-            position_tolerance      (float64): Tolerance for tcp position
-            orientation_tolerance   (float64): Tolerance for tcp orientation
-            joint_tolerance         (float64): Tolerance for joint positions
-        response: 
-            success                    (bool): True if the parameters were changed successfully
-    */
-
     DynamicPlannerParams params = dynamic_planner_->getParams();
     params.position_tolerance = request->position_tolerance;
     params.orientation_tolerance = request->orientation_tolerance;
@@ -707,15 +626,6 @@ void ManipulatorPlannerNode::changePlannerTolerances_callback(
 
 void ManipulatorPlannerNode::tcpGoal_callback(const manipulator_interfaces::msg::TcpGoal::SharedPtr msg) 
 {
-    /*
-    Callback function for the TCP goal subscriber, plans and moves the robot to the goal pose
-    Interface TcpGoal:
-        start_state (sensor_msgs/JointState): start joints positions
-        target_pose     (geometry_msgs/Pose): target position for the end effector
-        end_effector                (string): the end effector which will reach the target_pose
-        frame                       (string): the reference frame for the pose
-        execute                       (bool): wether to execute the planned trajectory rightaway
-    */
     RCLCPP_INFO(this->get_logger(), "Received TCP goal");
 
     std::string ee_link_name;
@@ -747,14 +657,6 @@ void ManipulatorPlannerNode::tcpGoal_callback(const manipulator_interfaces::msg:
 
 void ManipulatorPlannerNode::jointGoal_callback(const manipulator_interfaces::msg::JointGoal::SharedPtr msg) 
 {
-    /*
-    Callback function for the joint goal subscriber, plans and moves the robot to the goal joint positions
-    Interface JointGoal:
-        start_state     (sensor_msgs/JointState): start joints positions
-        joint_goal      (sensor_msgs/JointState): joints positions to reach
-        execute         (bool): wether to execute the planned trajectory rightaway
-    */
-
     RCLCPP_INFO(this->get_logger(), "Received joint goal");
 
     if(!msg->start_state.position.empty()){ //If a start state is provided set the robot to that state
@@ -1033,10 +935,16 @@ void ManipulatorPlannerNode::jacobianControl()
         js.velocity[k] = dq[k];
     }
 
-    // Eigen::MatrixXd jacobian = getJacobian(js.position, ee_name_); // Compute the jacobian matrix
-    // if (abs(jacobian.determinant()) < min_jacobian_determinant_){
-    //     return; // Approaching singularity, don't execute
-    // }
+    if (min_jacobian_determinant_ > 0.0){
+        Eigen::MatrixXd jacobian = getJacobian(js.position, ee_name_); // Compute the jacobian matrix for the new position
+        if (abs(jacobian.determinant()) < min_jacobian_determinant_){
+            js.position = dynamic_planner_->joints_values_group_; // Set the position to the current one
+            js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
+            dynamic_planner_->moveRobot(js); // Send command to stand still
+
+            return; // Approaching singularity, don't execute
+        }
+    }
     
     // Send the goal to the move it fake controller as trajectory point
     dynamic_planner_->moveRobot(js);
@@ -1151,7 +1059,7 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("max_acc_jnts", 1.0);
     this->declare_parameter("gripper_links", std::vector<std::string>()); //This is used to disable collision with the fingers when attaching objects
     this->declare_parameter("prefix", std::string()); //Prefix for the joint and link names
-    this->declare_parameter("min_jacobian_determinant", 0.0001); //Minimum determinant for the inverse jacobian
+    this->declare_parameter("min_jacobian_determinant", 0.0); //Minimum determinant for the inverse jacobian (0 is disabled)
 
     //Dynamic planner params
     this->declare_parameter("planner_id", "geometric::RRTConnect");

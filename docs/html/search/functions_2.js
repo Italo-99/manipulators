@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['getknownpose_36',['getKnownPose',['../class_manipulator_menu.html#a4a66df1cc71ab135551648fcfb5bfa51',1,'ManipulatorMenu']]]
+  ['executeandwait_65',['executeAndWait',['../class_manipulator_menu.html#a36c74d65ad1756a262c5e19e2b2a0bcd',1,'ManipulatorMenu']]]
 ];

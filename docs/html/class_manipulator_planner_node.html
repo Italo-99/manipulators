@@ -63,6 +63,9 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pri-types">Private Types</a> &#124;
+<a href="#pri-methods">Private Member Functions</a> &#124;
+<a href="#pri-attribs">Private Attributes</a> &#124;
 <a href="class_manipulator_planner_node-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">ManipulatorPlannerNode Class Reference</div>  </div>
@@ -95,7 +98,594 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a29ffb1586372f9761de6047d98662bb2"><td class="memItemLeft" align="right" valign="top"><a id="a29ffb1586372f9761de6047d98662bb2"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>spinner</b> ()</td></tr>
 <tr class="separator:a29ffb1586372f9761de6047d98662bb2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-types"></a>
+Private Types</h2></td></tr>
+<tr class="memitem:afe3c2f3533435912ef92deda101cace4"><td class="memItemLeft" align="right" valign="top"><a id="afe3c2f3533435912ef92deda101cace4"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><b>ShapeType</b> { <b>BOX</b> = 1
+, <b>SPHERE</b> = 2
+, <b>CYLINDER</b> = 3
+, <b>CONE</b> = 4
+ }</td></tr>
+<tr class="separator:afe3c2f3533435912ef92deda101cace4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-methods"></a>
+Private Member Functions</h2></td></tr>
+<tr class="memitem:a13373074e405ab8d04d917ae8e68ca8f"><td class="memItemLeft" align="right" valign="top"><a id="a13373074e405ab8d04d917ae8e68ca8f"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>shutdown_handler</b> ()</td></tr>
+<tr class="separator:a13373074e405ab8d04d917ae8e68ca8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a178662718da69fb88a52d38e0e08e116"><td class="memItemLeft" align="right" valign="top">const geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_planner_node.html#a178662718da69fb88a52d38e0e08e116">getFKine</a> ()</td></tr>
+<tr class="memdesc:a178662718da69fb88a52d38e0e08e116"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the current forward kinematics of the manipulator.  <a href="class_manipulator_planner_node.html#a178662718da69fb88a52d38e0e08e116">More...</a><br /></td></tr>
+<tr class="separator:a178662718da69fb88a52d38e0e08e116"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac908abe2495191cae6c36f5401b466a8"><td class="memItemLeft" align="right" valign="top">const geometry_msgs::msg::Twist&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_planner_node.html#ac908abe2495191cae6c36f5401b466a8">getTcpVel</a> ()</td></tr>
+<tr class="memdesc:ac908abe2495191cae6c36f5401b466a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the current end effector velocity.  <a href="class_manipulator_planner_node.html#ac908abe2495191cae6c36f5401b466a8">More...</a><br /></td></tr>
+<tr class="separator:ac908abe2495191cae6c36f5401b466a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d6356bcb27536cd8a8610f882627b32"><td class="memItemLeft" align="right" valign="top">const Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_planner_node.html#a5d6356bcb27536cd8a8610f882627b32">getJacobian</a> (const std::vector&lt; double &gt; &amp;joint_positions, const std::string &amp;end_effector_link)</td></tr>
+<tr class="memdesc:a5d6356bcb27536cd8a8610f882627b32"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the jacobian matrix for the passed joint state.  <a href="class_manipulator_planner_node.html#a5d6356bcb27536cd8a8610f882627b32">More...</a><br /></td></tr>
+<tr class="separator:a5d6356bcb27536cd8a8610f882627b32"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a43e6f5b29eab70b4577253a1c7073428"><td class="memItemLeft" align="right" valign="top">const Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_planner_node.html#a43e6f5b29eab70b4577253a1c7073428">getJacobian</a> (const std::string &amp;end_effector_link)</td></tr>
+<tr class="memdesc:a43e6f5b29eab70b4577253a1c7073428"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the jacobian matrix for the current position.  <a href="class_manipulator_planner_node.html#a43e6f5b29eab70b4577253a1c7073428">More...</a><br /></td></tr>
+<tr class="separator:a43e6f5b29eab70b4577253a1c7073428"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a11aeea5fe0dfc9d5ba90c24d2fa90d24"><td class="memItemLeft" align="right" valign="top">const Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_planner_node.html#a11aeea5fe0dfc9d5ba90c24d2fa90d24">getJacobian</a> ()</td></tr>
+<tr class="memdesc:a11aeea5fe0dfc9d5ba90c24d2fa90d24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the jacobian matrix for the current position and the end effector set in the "ee_name" parameter.  <a href="class_manipulator_planner_node.html#a11aeea5fe0dfc9d5ba90c24d2fa90d24">More...</a><br /></td></tr>
+<tr class="separator:a11aeea5fe0dfc9d5ba90c24d2fa90d24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afc653d303c2f8c4e44f25f50eac4adca"><td class="memItemLeft" align="right" valign="top">const Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_planner_node.html#afc653d303c2f8c4e44f25f50eac4adca">getPseudoInverseJacobian</a> (const std::vector&lt; double &gt; &amp;joint_positions, const std::string &amp;end_effector_link)</td></tr>
+<tr class="memdesc:afc653d303c2f8c4e44f25f50eac4adca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the pseudo-inverse of the jacobian matrix for the passed joint state.  <a href="class_manipulator_planner_node.html#afc653d303c2f8c4e44f25f50eac4adca">More...</a><br /></td></tr>
+<tr class="separator:afc653d303c2f8c4e44f25f50eac4adca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a275593ca6cd8bb41775b7ec58a638796"><td class="memItemLeft" align="right" valign="top">const Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_planner_node.html#a275593ca6cd8bb41775b7ec58a638796">getPseudoInverseJacobian</a> (const std::string &amp;end_effector_link)</td></tr>
+<tr class="memdesc:a275593ca6cd8bb41775b7ec58a638796"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the pseudo-inverse of the jacobian matrix for the current position.  <a href="class_manipulator_planner_node.html#a275593ca6cd8bb41775b7ec58a638796">More...</a><br /></td></tr>
+<tr class="separator:a275593ca6cd8bb41775b7ec58a638796"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab949e62b038ca10eac75a15a03e2b501"><td class="memItemLeft" align="right" valign="top">const Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_planner_node.html#ab949e62b038ca10eac75a15a03e2b501">getPseudoInverseJacobian</a> ()</td></tr>
+<tr class="memdesc:ab949e62b038ca10eac75a15a03e2b501"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the pseudo-inverse of the jacobian matrix for the current position and the end effector set in the "ee_name" parameter.  <a href="class_manipulator_planner_node.html#ab949e62b038ca10eac75a15a03e2b501">More...</a><br /></td></tr>
+<tr class="separator:ab949e62b038ca10eac75a15a03e2b501"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a95cb5cf233182354355087cad5ad0a86"><td class="memItemLeft" align="right" valign="top"><a id="a95cb5cf233182354355087cad5ad0a86"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>getFKine_callback</b> (const manipulator_interfaces::srv::FKine::Request::SharedPtr request, manipulator_interfaces::srv::FKine::Response::SharedPtr response)</td></tr>
+<tr class="separator:a95cb5cf233182354355087cad5ad0a86"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a173fc88523ff6489ce91c8e69597387d"><td class="memItemLeft" align="right" valign="top"><a id="a173fc88523ff6489ce91c8e69597387d"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>getInvKine_callback</b> (const manipulator_interfaces::srv::InvKine::Request::SharedPtr request, manipulator_interfaces::srv::InvKine::Response::SharedPtr response)</td></tr>
+<tr class="separator:a173fc88523ff6489ce91c8e69597387d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a869026a4c776a5fd859e05f0da4ac1"><td class="memItemLeft" align="right" valign="top"><a id="a2a869026a4c776a5fd859e05f0da4ac1"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>getJacobian_callback</b> (const manipulator_interfaces::srv::Jacobian::Request::SharedPtr request, manipulator_interfaces::srv::Jacobian::Response::SharedPtr response)</td></tr>
+<tr class="separator:a2a869026a4c776a5fd859e05f0da4ac1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac4a6e1ece030dccf5c01d6d758165c36"><td class="memItemLeft" align="right" valign="top"><a id="ac4a6e1ece030dccf5c01d6d758165c36"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>getPseudoInverseJacobian_callback</b> (const manipulator_interfaces::srv::PseudoInverse::Request::SharedPtr request, manipulator_interfaces::srv::PseudoInverse::Response::SharedPtr response)</td></tr>
+<tr class="separator:ac4a6e1ece030dccf5c01d6d758165c36"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0e0868b7e4eab7d29e75bc41b84e1b67"><td class="memItemLeft" align="right" valign="top"><a id="a0e0868b7e4eab7d29e75bc41b84e1b67"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>changePlannerScalingFactors_callback</b> (const manipulator_interfaces::srv::ChangePlannerScalingFactors::Request::SharedPtr request, manipulator_interfaces::srv::ChangePlannerScalingFactors::Response::SharedPtr response)</td></tr>
+<tr class="separator:a0e0868b7e4eab7d29e75bc41b84e1b67"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a33bdfba54f22bc9e157b340fda8e7891"><td class="memItemLeft" align="right" valign="top"><a id="a33bdfba54f22bc9e157b340fda8e7891"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>changePlannerTolerances_callback</b> (const manipulator_interfaces::srv::ChangePlannerTolerances::Request::SharedPtr request, manipulator_interfaces::srv::ChangePlannerTolerances::Response::SharedPtr response)</td></tr>
+<tr class="separator:a33bdfba54f22bc9e157b340fda8e7891"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab46581759c373d7fbde173ec994f5271"><td class="memItemLeft" align="right" valign="top"><a id="ab46581759c373d7fbde173ec994f5271"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>jointsRealTimeSetter_callback</b> (const std_srvs::srv::SetBool::Request::SharedPtr req, std_srvs::srv::SetBool::Response::SharedPtr res)</td></tr>
+<tr class="separator:ab46581759c373d7fbde173ec994f5271"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac2990cf1b692a59034d68ebff547bd19"><td class="memItemLeft" align="right" valign="top"><a id="ac2990cf1b692a59034d68ebff547bd19"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>jacobianControlSetter_callback</b> (const std_srvs::srv::SetBool::Request::SharedPtr req, std_srvs::srv::SetBool::Response::SharedPtr res)</td></tr>
+<tr class="separator:ac2990cf1b692a59034d68ebff547bd19"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ea75c75d60281b4ac4b5cbdbffdcedd"><td class="memItemLeft" align="right" valign="top"><a id="a1ea75c75d60281b4ac4b5cbdbffdcedd"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>tcpGoal_callback</b> (const manipulator_interfaces::msg::TcpGoal::SharedPtr goal_pose)</td></tr>
+<tr class="separator:a1ea75c75d60281b4ac4b5cbdbffdcedd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1875c8d3d22d4ddc92a3becc098e023d"><td class="memItemLeft" align="right" valign="top"><a id="a1875c8d3d22d4ddc92a3becc098e023d"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>jointGoal_callback</b> (const manipulator_interfaces::msg::JointGoal::SharedPtr goal_joints)</td></tr>
+<tr class="separator:a1875c8d3d22d4ddc92a3becc098e023d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a30c31c4abb806e765640c73147221c16"><td class="memItemLeft" align="right" valign="top"><a id="a30c31c4abb806e765640c73147221c16"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>cartesianPlan_callback</b> (const manipulator_interfaces::msg::CartesianGoal::SharedPtr waypoints)</td></tr>
+<tr class="separator:a30c31c4abb806e765640c73147221c16"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a448c21ab784d3273af76895b897c8840"><td class="memItemLeft" align="right" valign="top"><a id="a448c21ab784d3273af76895b897c8840"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>executionControl_callback</b> (const std_msgs::msg::Bool::SharedPtr msg)</td></tr>
+<tr class="separator:a448c21ab784d3273af76895b897c8840"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a490997f3cc0796526d2b1580fdf25e7a"><td class="memItemLeft" align="right" valign="top"><a id="a490997f3cc0796526d2b1580fdf25e7a"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>collisionObject_callback</b> (const moveit_msgs::msg::CollisionObject::SharedPtr collision_object)</td></tr>
+<tr class="separator:a490997f3cc0796526d2b1580fdf25e7a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a53615802e9fd4ca43d4ab9fabeda2d3b"><td class="memItemLeft" align="right" valign="top"><a id="a53615802e9fd4ca43d4ab9fabeda2d3b"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>attachedCollisionObject_callback</b> (const moveit_msgs::msg::AttachedCollisionObject::SharedPtr attached_collision_object)</td></tr>
+<tr class="separator:a53615802e9fd4ca43d4ab9fabeda2d3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab98e9dc2a21f8dbab517a1e9ca43508a"><td class="memItemLeft" align="right" valign="top"><a id="ab98e9dc2a21f8dbab517a1e9ca43508a"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>velJacSetpoint_callback</b> (const geometry_msgs::msg::Twist::SharedPtr &amp;msg)</td></tr>
+<tr class="separator:ab98e9dc2a21f8dbab517a1e9ca43508a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac0a1fabc82a6c8ec18c6b1d6dacf2f6c"><td class="memItemLeft" align="right" valign="top"><a id="ac0a1fabc82a6c8ec18c6b1d6dacf2f6c"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>realTimeSetpoint_callback</b> (const sensor_msgs::msg::JointState::SharedPtr &amp;msg)</td></tr>
+<tr class="separator:ac0a1fabc82a6c8ec18c6b1d6dacf2f6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73f9c64641d6a38a849cb325df52fa54"><td class="memItemLeft" align="right" valign="top"><a id="a73f9c64641d6a38a849cb325df52fa54"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>jointConstraint_callback</b> (const moveit_msgs::msg::JointConstraint::SharedPtr joint_constraint)</td></tr>
+<tr class="separator:a73f9c64641d6a38a849cb325df52fa54"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6da0705fb8b5a4fdeca23bc629f5846"><td class="memItemLeft" align="right" valign="top"><a id="af6da0705fb8b5a4fdeca23bc629f5846"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>positionConstraint_callback</b> (const moveit_msgs::msg::PositionConstraint::SharedPtr position_constraint)</td></tr>
+<tr class="separator:af6da0705fb8b5a4fdeca23bc629f5846"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad159d93300fb22d4cbc7bacc7d5f7791"><td class="memItemLeft" align="right" valign="top"><a id="ad159d93300fb22d4cbc7bacc7d5f7791"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>orientationConstraint_callback</b> (const moveit_msgs::msg::OrientationConstraint::SharedPtr orientation_constraint)</td></tr>
+<tr class="separator:ad159d93300fb22d4cbc7bacc7d5f7791"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6faa6ea3c19b1d7182d88a520ae8cb24"><td class="memItemLeft" align="right" valign="top"><a id="a6faa6ea3c19b1d7182d88a520ae8cb24"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>motorsController</b> (const sensor_msgs::msg::JointState &amp;js)</td></tr>
+<tr class="separator:a6faa6ea3c19b1d7182d88a520ae8cb24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a77ad0fc1e922fdaaedce1359634edf36"><td class="memItemLeft" align="right" valign="top"><a id="a77ad0fc1e922fdaaedce1359634edf36"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>jacobianControl</b> ()</td></tr>
+<tr class="separator:a77ad0fc1e922fdaaedce1359634edf36"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8f520c49410405cd0d718cc846cf52bb"><td class="memItemLeft" align="right" valign="top"><a id="a8f520c49410405cd0d718cc846cf52bb"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>updateJacobianSpeedCmd</b> ()</td></tr>
+<tr class="separator:a8f520c49410405cd0d718cc846cf52bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4f47caf3a747475a0a5d3ccf65196bfe"><td class="memItemLeft" align="right" valign="top"><a id="a4f47caf3a747475a0a5d3ccf65196bfe"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>jointsRealTimeControl</b> ()</td></tr>
+<tr class="separator:a4f47caf3a747475a0a5d3ccf65196bfe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a71c1b1bf40fba6a1475c7a353f78c997"><td class="memItemLeft" align="right" valign="top"><a id="a71c1b1bf40fba6a1475c7a353f78c997"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>addCollisionObject</b> (const std::string &amp;object_name, const std::string &amp;object_frame, const ShapeType object_type, const std::vector&lt; double &gt; &amp;object_dims, const geometry_msgs::msg::Pose &amp;object_pose)</td></tr>
+<tr class="separator:a71c1b1bf40fba6a1475c7a353f78c997"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a805de20900c6abc0a6c912cbc9bfff89"><td class="memItemLeft" align="right" valign="top"><a id="a805de20900c6abc0a6c912cbc9bfff89"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>addCollisionObject</b> (const std::string &amp;object_name, const std::string &amp;object_frame, const shape_msgs::msg::SolidPrimitive &amp;object_primitive, const geometry_msgs::msg::Pose &amp;object_pose)</td></tr>
+<tr class="separator:a805de20900c6abc0a6c912cbc9bfff89"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a71f169a9b9d19b35d29da42c6ebb0c9e"><td class="memItemLeft" align="right" valign="top"><a id="a71f169a9b9d19b35d29da42c6ebb0c9e"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>addAttachedCollisionObject</b> (const std::string &amp;object_name, const shape_msgs::msg::SolidPrimitive &amp;object_primitive, const geometry_msgs::msg::Pose &amp;object_pose, const std::string &amp;link_name=&quot;&quot;, const std::vector&lt; std::string &gt; &amp;disabled_collisions={})</td></tr>
+<tr class="separator:a71f169a9b9d19b35d29da42c6ebb0c9e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad8f83c7e9b022290a862832314b4f1d3"><td class="memItemLeft" align="right" valign="top"><a id="ad8f83c7e9b022290a862832314b4f1d3"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>addAttachedCollisionObject</b> (const std::string &amp;object_name, const ShapeType object_type, const std::vector&lt; double &gt; &amp;object_dims, const geometry_msgs::msg::Pose &amp;object_pose, const std::string &amp;link_name=&quot;&quot;, const std::vector&lt; std::string &gt; &amp;disabled_collisions={})</td></tr>
+<tr class="separator:ad8f83c7e9b022290a862832314b4f1d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4c6d610072c7f7b3405dc8376768f720"><td class="memItemLeft" align="right" valign="top"><a id="a4c6d610072c7f7b3405dc8376768f720"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>addPrefix</b> (const std::string &amp;prefix, std::vector&lt; std::string &gt; &amp;vector) const</td></tr>
+<tr class="separator:a4c6d610072c7f7b3405dc8376768f720"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e32da42c39ccc1181b2c757b0dfa80f"><td class="memItemLeft" align="right" valign="top"><a id="a4e32da42c39ccc1181b2c757b0dfa80f"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>initializePlanner</b> ()</td></tr>
+<tr class="separator:a4e32da42c39ccc1181b2c757b0dfa80f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e209b2808fad05d3cd40c06cf3da6b5"><td class="memItemLeft" align="right" valign="top"><a id="a6e209b2808fad05d3cd40c06cf3da6b5"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>declareParameters</b> ()</td></tr>
+<tr class="separator:a6e209b2808fad05d3cd40c06cf3da6b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a04e9bede18c0af3bb6b184c928ccdd43"><td class="memItemLeft" align="right" valign="top"><a id="a04e9bede18c0af3bb6b184c928ccdd43"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>setPrimitiveDimensions</b> (const ShapeType object_type, const std::vector&lt; double &gt; &amp;object_dims, shape_msgs::msg::SolidPrimitive &amp;primitive)</td></tr>
+<tr class="separator:a04e9bede18c0af3bb6b184c928ccdd43"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2c7a7d3e229f6309b33f7762e64feff9"><td class="memItemLeft" align="right" valign="top"><a id="a2c7a7d3e229f6309b33f7762e64feff9"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>sign</b> (double val)</td></tr>
+<tr class="separator:a2c7a7d3e229f6309b33f7762e64feff9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-attribs"></a>
+Private Attributes</h2></td></tr>
+<tr class="memitem:a50306aa904118fede8886fd66f0633bc"><td class="memItemLeft" align="right" valign="top"><a id="a50306aa904118fede8886fd66f0633bc"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>node_name_</b></td></tr>
+<tr class="separator:a50306aa904118fede8886fd66f0633bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a097389206fa05f65d530e5197164e0ce"><td class="memItemLeft" align="right" valign="top"><a id="a097389206fa05f65d530e5197164e0ce"></a>
+size_t&#160;</td><td class="memItemRight" valign="bottom"><b>NUM_JOINTS</b> = 6</td></tr>
+<tr class="separator:a097389206fa05f65d530e5197164e0ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a782edb6cdfe6b303f00583b2b079c61e"><td class="memItemLeft" align="right" valign="top"><a id="a782edb6cdfe6b303f00583b2b079c61e"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>manipulator_name_</b></td></tr>
+<tr class="separator:a782edb6cdfe6b303f00583b2b079c61e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a420d055d1cba7ca5265a7570b967f0f8"><td class="memItemLeft" align="right" valign="top"><a id="a420d055d1cba7ca5265a7570b967f0f8"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>planning_group_</b></td></tr>
+<tr class="separator:a420d055d1cba7ca5265a7570b967f0f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad157e35f8138f836d65d6296b20def4a"><td class="memItemLeft" align="right" valign="top"><a id="ad157e35f8138f836d65d6296b20def4a"></a>
+std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joint_names_</b></td></tr>
+<tr class="separator:ad157e35f8138f836d65d6296b20def4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aec784576f9a329c890caa61b6aa31787"><td class="memItemLeft" align="right" valign="top"><a id="aec784576f9a329c890caa61b6aa31787"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>ee_name_</b></td></tr>
+<tr class="separator:aec784576f9a329c890caa61b6aa31787"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae9fb30a1ab75309554bd49496775e416"><td class="memItemLeft" align="right" valign="top"><a id="ae9fb30a1ab75309554bd49496775e416"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>base_link_</b></td></tr>
+<tr class="separator:ae9fb30a1ab75309554bd49496775e416"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab71ad1bf9bfa15a296e961732ad8b434"><td class="memItemLeft" align="right" valign="top"><a id="ab71ad1bf9bfa15a296e961732ad8b434"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>world_frame_</b></td></tr>
+<tr class="separator:ab71ad1bf9bfa15a296e961732ad8b434"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ada6f5ca304b6f22dc600e28b739d82e8"><td class="memItemLeft" align="right" valign="top"><a id="ada6f5ca304b6f22dc600e28b739d82e8"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>ros_freq_</b></td></tr>
+<tr class="separator:ada6f5ca304b6f22dc600e28b739d82e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab2a9a23fffe6c809f6738c4b45320165"><td class="memItemLeft" align="right" valign="top"><a id="ab2a9a23fffe6c809f6738c4b45320165"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_speed_ee_</b></td></tr>
+<tr class="separator:ab2a9a23fffe6c809f6738c4b45320165"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af7261d85d942d7dd7fc196c122051922"><td class="memItemLeft" align="right" valign="top"><a id="af7261d85d942d7dd7fc196c122051922"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_accel_ee_</b></td></tr>
+<tr class="separator:af7261d85d942d7dd7fc196c122051922"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6ab9d9b8fa3c27c543f5e4c84ab5cdcb"><td class="memItemLeft" align="right" valign="top"><a id="a6ab9d9b8fa3c27c543f5e4c84ab5cdcb"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_rot_speed_ee_</b></td></tr>
+<tr class="separator:a6ab9d9b8fa3c27c543f5e4c84ab5cdcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a79f4ef355867e80f22bc355ad7a4bc7a"><td class="memItemLeft" align="right" valign="top"><a id="a79f4ef355867e80f22bc355ad7a4bc7a"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_rot_accel_ee_</b></td></tr>
+<tr class="separator:a79f4ef355867e80f22bc355ad7a4bc7a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa85b957940f962548b1d7ab56d368f6f"><td class="memItemLeft" align="right" valign="top"><a id="aa85b957940f962548b1d7ab56d368f6f"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_spd_jnts_</b></td></tr>
+<tr class="separator:aa85b957940f962548b1d7ab56d368f6f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a83d8e6797d8acf7852c934038552343f"><td class="memItemLeft" align="right" valign="top"><a id="a83d8e6797d8acf7852c934038552343f"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_acc_jnts_</b></td></tr>
+<tr class="separator:a83d8e6797d8acf7852c934038552343f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1849f05c571c4ef6098b2a57a4bd85a3"><td class="memItemLeft" align="right" valign="top"><a id="a1849f05c571c4ef6098b2a57a4bd85a3"></a>
+std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>gripper_links_</b></td></tr>
+<tr class="separator:a1849f05c571c4ef6098b2a57a4bd85a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae433dcfa1eb08acc2bb1c58ce46b1b16"><td class="memItemLeft" align="right" valign="top"><a id="ae433dcfa1eb08acc2bb1c58ce46b1b16"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>min_jacobian_determinant_</b></td></tr>
+<tr class="separator:ae433dcfa1eb08acc2bb1c58ce46b1b16"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5be605d4162868a504b3cb6f8cdf94bc"><td class="memItemLeft" align="right" valign="top"><a id="a5be605d4162868a504b3cb6f8cdf94bc"></a>
+Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><b>jacobian_var_</b></td></tr>
+<tr class="separator:a5be605d4162868a504b3cb6f8cdf94bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad6094b856ea07a63a8cb7c9572486daf"><td class="memItemLeft" align="right" valign="top"><a id="ad6094b856ea07a63a8cb7c9572486daf"></a>
+rclcpp::Service&lt; manipulator_interfaces::srv::FKine &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>fkine_service_</b></td></tr>
+<tr class="separator:ad6094b856ea07a63a8cb7c9572486daf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa6de61507e23c69527f863959e06ac76"><td class="memItemLeft" align="right" valign="top"><a id="aa6de61507e23c69527f863959e06ac76"></a>
+rclcpp::Service&lt; manipulator_interfaces::srv::InvKine &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>invkine_service_</b></td></tr>
+<tr class="separator:aa6de61507e23c69527f863959e06ac76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4100c2b3f0203efbfabe1843e12906be"><td class="memItemLeft" align="right" valign="top"><a id="a4100c2b3f0203efbfabe1843e12906be"></a>
+rclcpp::Service&lt; manipulator_interfaces::srv::Jacobian &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>jacobian_service_</b></td></tr>
+<tr class="separator:a4100c2b3f0203efbfabe1843e12906be"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a49ef56a044c391fb31f0378b382bcd0b"><td class="memItemLeft" align="right" valign="top"><a id="a49ef56a044c391fb31f0378b382bcd0b"></a>
+rclcpp::Service&lt; manipulator_interfaces::srv::PseudoInverse &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>pseudoInverse_service_</b></td></tr>
+<tr class="separator:a49ef56a044c391fb31f0378b382bcd0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1a99f0f7212f45d1015ae985e5657f37"><td class="memItemLeft" align="right" valign="top"><a id="a1a99f0f7212f45d1015ae985e5657f37"></a>
+rclcpp::Service&lt; std_srvs::srv::SetBool &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>jointsRealTimeSetter_service_</b></td></tr>
+<tr class="separator:a1a99f0f7212f45d1015ae985e5657f37"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa191b8e68aa7883f13a79f47c45446ab"><td class="memItemLeft" align="right" valign="top"><a id="aa191b8e68aa7883f13a79f47c45446ab"></a>
+rclcpp::Service&lt; std_srvs::srv::SetBool &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>jacobianControlSetter_service_</b></td></tr>
+<tr class="separator:aa191b8e68aa7883f13a79f47c45446ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2feb370fe561989a581e8230db3f7bae"><td class="memItemLeft" align="right" valign="top"><a id="a2feb370fe561989a581e8230db3f7bae"></a>
+rclcpp::Service&lt; manipulator_interfaces::srv::ChangePlannerTolerances &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>changePlannerTolerances_service_</b></td></tr>
+<tr class="separator:a2feb370fe561989a581e8230db3f7bae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abb433b1c0b9b27690c79ac29329e4d43"><td class="memItemLeft" align="right" valign="top"><a id="abb433b1c0b9b27690c79ac29329e4d43"></a>
+rclcpp::Service&lt; manipulator_interfaces::srv::ChangePlannerScalingFactors &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>changePlannerScalingFactors_service_</b></td></tr>
+<tr class="separator:abb433b1c0b9b27690c79ac29329e4d43"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac56cc19abbcfb48b4698a2270755feb1"><td class="memItemLeft" align="right" valign="top"><a id="ac56cc19abbcfb48b4698a2270755feb1"></a>
+rclcpp::Subscription&lt; manipulator_interfaces::msg::TcpGoal &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>tcpGoal_sub_</b></td></tr>
+<tr class="separator:ac56cc19abbcfb48b4698a2270755feb1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a44f955c40bed982f468b90933f6ac2d8"><td class="memItemLeft" align="right" valign="top"><a id="a44f955c40bed982f468b90933f6ac2d8"></a>
+rclcpp::Subscription&lt; manipulator_interfaces::msg::JointGoal &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>jointGoal_sub_</b></td></tr>
+<tr class="separator:a44f955c40bed982f468b90933f6ac2d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7203f4f34793270753bf7886a699c4fe"><td class="memItemLeft" align="right" valign="top"><a id="a7203f4f34793270753bf7886a699c4fe"></a>
+rclcpp::Subscription&lt; manipulator_interfaces::msg::CartesianGoal &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>cartesianPlan_sub_</b></td></tr>
+<tr class="separator:a7203f4f34793270753bf7886a699c4fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab32328a2dc851ac53e93fbfff9a0bdc3"><td class="memItemLeft" align="right" valign="top"><a id="ab32328a2dc851ac53e93fbfff9a0bdc3"></a>
+rclcpp::Subscription&lt; moveit_msgs::msg::CollisionObject &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>collisionObject_sub_</b></td></tr>
+<tr class="separator:ab32328a2dc851ac53e93fbfff9a0bdc3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4dd84ccc019e4189c226bfeaa892d492"><td class="memItemLeft" align="right" valign="top"><a id="a4dd84ccc019e4189c226bfeaa892d492"></a>
+rclcpp::Subscription&lt; moveit_msgs::msg::AttachedCollisionObject &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>attachedcollisionObject_sub_</b></td></tr>
+<tr class="separator:a4dd84ccc019e4189c226bfeaa892d492"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73fc871c7f00e34c195fd9d4789905fb"><td class="memItemLeft" align="right" valign="top"><a id="a73fc871c7f00e34c195fd9d4789905fb"></a>
+rclcpp::Subscription&lt; geometry_msgs::msg::Twist &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velJacSetpoint_sub_</b></td></tr>
+<tr class="separator:a73fc871c7f00e34c195fd9d4789905fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab6bb8e0a1af5433abba84db4a60bd267"><td class="memItemLeft" align="right" valign="top"><a id="ab6bb8e0a1af5433abba84db4a60bd267"></a>
+rclcpp::Subscription&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>realTimeSetpoint_sub_</b></td></tr>
+<tr class="separator:ab6bb8e0a1af5433abba84db4a60bd267"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab48b27a22121fb79509877a6b3dc848f"><td class="memItemLeft" align="right" valign="top"><a id="ab48b27a22121fb79509877a6b3dc848f"></a>
+rclcpp::Subscription&lt; std_msgs::msg::Bool &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>execution_ctrl_sub_</b></td></tr>
+<tr class="separator:ab48b27a22121fb79509877a6b3dc848f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5ab5ac7a731b41186142e1f75e3687db"><td class="memItemLeft" align="right" valign="top"><a id="a5ab5ac7a731b41186142e1f75e3687db"></a>
+rclcpp::Subscription&lt; moveit_msgs::msg::PositionConstraint &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>positionConstraint_sub_</b></td></tr>
+<tr class="separator:a5ab5ac7a731b41186142e1f75e3687db"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0b92d26c710f3783db87d30699a6ff77"><td class="memItemLeft" align="right" valign="top"><a id="a0b92d26c710f3783db87d30699a6ff77"></a>
+rclcpp::Subscription&lt; moveit_msgs::msg::OrientationConstraint &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>orientationConstraint_sub_</b></td></tr>
+<tr class="separator:a0b92d26c710f3783db87d30699a6ff77"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6ccc2a5ed590bfc40642e3e47ee9110f"><td class="memItemLeft" align="right" valign="top"><a id="a6ccc2a5ed590bfc40642e3e47ee9110f"></a>
+rclcpp::Subscription&lt; moveit_msgs::msg::JointConstraint &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>jointConstraint_sub_</b></td></tr>
+<tr class="separator:a6ccc2a5ed590bfc40642e3e47ee9110f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a07a9955cc376f7453b56917c3bc7af0d"><td class="memItemLeft" align="right" valign="top"><a id="a07a9955cc376f7453b56917c3bc7af0d"></a>
+rclcpp::Subscription&lt; std_msgs::msg::Empty &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>clearConstraints_sub_</b></td></tr>
+<tr class="separator:a07a9955cc376f7453b56917c3bc7af0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af2673b9a60b4b003bf1b83a16a37366c"><td class="memItemLeft" align="right" valign="top"><a id="af2673b9a60b4b003bf1b83a16a37366c"></a>
+rclcpp::Publisher&lt; std_msgs::msg::Float64 &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>j0_pub_</b></td></tr>
+<tr class="separator:af2673b9a60b4b003bf1b83a16a37366c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab561bbb0f30dc304ad43f070d46f26a3"><td class="memItemLeft" align="right" valign="top"><a id="ab561bbb0f30dc304ad43f070d46f26a3"></a>
+rclcpp::Publisher&lt; std_msgs::msg::Float64 &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>j1_pub_</b></td></tr>
+<tr class="separator:ab561bbb0f30dc304ad43f070d46f26a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a437c1669cb72199267bb54eaf43382f5"><td class="memItemLeft" align="right" valign="top"><a id="a437c1669cb72199267bb54eaf43382f5"></a>
+rclcpp::Publisher&lt; std_msgs::msg::Float64 &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>j2_pub_</b></td></tr>
+<tr class="separator:a437c1669cb72199267bb54eaf43382f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1cdb6b3c50e9d4973db8ba4e8538ea9b"><td class="memItemLeft" align="right" valign="top"><a id="a1cdb6b3c50e9d4973db8ba4e8538ea9b"></a>
+rclcpp::Publisher&lt; std_msgs::msg::Float64 &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>j3_pub_</b></td></tr>
+<tr class="separator:a1cdb6b3c50e9d4973db8ba4e8538ea9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a80a31c5eb9e08fddcacc78ffb51a12e0"><td class="memItemLeft" align="right" valign="top"><a id="a80a31c5eb9e08fddcacc78ffb51a12e0"></a>
+rclcpp::Publisher&lt; std_msgs::msg::Float64 &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>j4_pub_</b></td></tr>
+<tr class="separator:a80a31c5eb9e08fddcacc78ffb51a12e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a35da4659f6e290da835269201f0b77bc"><td class="memItemLeft" align="right" valign="top"><a id="a35da4659f6e290da835269201f0b77bc"></a>
+rclcpp::Publisher&lt; std_msgs::msg::Float64 &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>j5_pub_</b></td></tr>
+<tr class="separator:a35da4659f6e290da835269201f0b77bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a052e802af6f4059c77f2111caeef964e"><td class="memItemLeft" align="right" valign="top"><a id="a052e802af6f4059c77f2111caeef964e"></a>
+rclcpp::Publisher&lt; geometry_msgs::msg::Pose &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>tcpPose_pub_</b></td></tr>
+<tr class="separator:a052e802af6f4059c77f2111caeef964e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaab00ee0dc208ec5bb8209c1d3bf3e60"><td class="memItemLeft" align="right" valign="top"><a id="aaab00ee0dc208ec5bb8209c1d3bf3e60"></a>
+rclcpp::Publisher&lt; geometry_msgs::msg::Twist &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>tcpVel_pub_</b></td></tr>
+<tr class="separator:aaab00ee0dc208ec5bb8209c1d3bf3e60"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d18564e7a3736d30f7570e9248c9a52"><td class="memItemLeft" align="right" valign="top"><a id="a5d18564e7a3736d30f7570e9248c9a52"></a>
+std::shared_ptr&lt; <a class="el" href="class_dynamic_planner.html">DynamicPlanner</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>dynamic_planner_</b></td></tr>
+<tr class="separator:a5d18564e7a3736d30f7570e9248c9a52"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adfe189a1f72b25e2203af6d5ac22c8eb"><td class="memItemLeft" align="right" valign="top"><a id="adfe189a1f72b25e2203af6d5ac22c8eb"></a>
+rclcpp::executors::MultiThreadedExecutor&#160;</td><td class="memItemRight" valign="bottom"><b>executor_</b></td></tr>
+<tr class="separator:adfe189a1f72b25e2203af6d5ac22c8eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a600a4bb5c5a94d4319f433de1acf75b6"><td class="memItemLeft" align="right" valign="top"><a id="a600a4bb5c5a94d4319f433de1acf75b6"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>spinner_mean_</b> = 0.0</td></tr>
+<tr class="separator:a600a4bb5c5a94d4319f433de1acf75b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8261ff98d266f9f6179df9534b6d8260"><td class="memItemLeft" align="right" valign="top"><a id="a8261ff98d266f9f6179df9534b6d8260"></a>
+rclcpp::TimerBase::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>mainloop_timer_</b></td></tr>
+<tr class="separator:a8261ff98d266f9f6179df9534b6d8260"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7362ea112dd7b610d9a30f8b05a06eac"><td class="memItemLeft" align="right" valign="top"><a id="a7362ea112dd7b610d9a30f8b05a06eac"></a>
+rclcpp::TimerBase::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>tcpPose_timer_</b></td></tr>
+<tr class="separator:a7362ea112dd7b610d9a30f8b05a06eac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8c26b9a5cb2fba86bff2486a167ac4eb"><td class="memItemLeft" align="right" valign="top"><a id="a8c26b9a5cb2fba86bff2486a167ac4eb"></a>
+rclcpp::TimerBase::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>tcpVel_timer_</b></td></tr>
+<tr class="separator:a8c26b9a5cb2fba86bff2486a167ac4eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a137ab273eab6cdcfdab9faa54c418d05"><td class="memItemLeft" align="right" valign="top"><a id="a137ab273eab6cdcfdab9faa54c418d05"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>jac_control_</b> = false</td></tr>
+<tr class="separator:a137ab273eab6cdcfdab9faa54c418d05"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad683350d644f31e4149d3c5d71b480f8"><td class="memItemLeft" align="right" valign="top"><a id="ad683350d644f31e4149d3c5d71b480f8"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>js_rt_control_</b> = false</td></tr>
+<tr class="separator:ad683350d644f31e4149d3c5d71b480f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab7c407132b592d918f2b79f483846fb9"><td class="memItemLeft" align="right" valign="top"><a id="ab7c407132b592d918f2b79f483846fb9"></a>
+Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><b>current_ee_vel_</b></td></tr>
+<tr class="separator:ab7c407132b592d918f2b79f483846fb9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a481556998f4683687b826867c6bb5901"><td class="memItemLeft" align="right" valign="top"><a id="a481556998f4683687b826867c6bb5901"></a>
+Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><b>current_js_vel_</b></td></tr>
+<tr class="separator:a481556998f4683687b826867c6bb5901"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae85bc2826ee433a8b9e9e8b7d6f26ce8"><td class="memItemLeft" align="right" valign="top"><a id="ae85bc2826ee433a8b9e9e8b7d6f26ce8"></a>
+Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><b>ee_vel_cmd_</b></td></tr>
+<tr class="separator:ae85bc2826ee433a8b9e9e8b7d6f26ce8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8fca6d94231bbf0dc5f8e7fff3492295"><td class="memItemLeft" align="right" valign="top"><a id="a8fca6d94231bbf0dc5f8e7fff3492295"></a>
+Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><b>js_vel_cmd_</b></td></tr>
+<tr class="separator:a8fca6d94231bbf0dc5f8e7fff3492295"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="a178662718da69fb88a52d38e0e08e116"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a178662718da69fb88a52d38e0e08e116">&#9670;&nbsp;</a></span>getFKine()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const geometry_msgs::msg::Pose ManipulatorPlannerNode::getFKine </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the current forward kinematics of the manipulator. </p>
+<dl class="section return"><dt>Returns</dt><dd>The end effector pose as a geometry_msgs::msg::Pose </dd></dl>
+
+</div>
+</div>
+<a id="a11aeea5fe0dfc9d5ba90c24d2fa90d24"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a11aeea5fe0dfc9d5ba90c24d2fa90d24">&#9670;&nbsp;</a></span>getJacobian() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const Eigen::MatrixXd ManipulatorPlannerNode::getJacobian </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the jacobian matrix for the current position and the end effector set in the "ee_name" parameter. </p>
+<dl class="section return"><dt>Returns</dt><dd>The jacobian matrix as an Eigen::MatrixXd </dd></dl>
+
+</div>
+</div>
+<a id="a43e6f5b29eab70b4577253a1c7073428"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a43e6f5b29eab70b4577253a1c7073428">&#9670;&nbsp;</a></span>getJacobian() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const Eigen::MatrixXd ManipulatorPlannerNode::getJacobian </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>end_effector_link</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the jacobian matrix for the current position. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">end_effector_link</td><td>Name of the end effector link to which the jacobian is referred </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The jacobian matrix as an Eigen::MatrixXd </dd></dl>
+
+</div>
+</div>
+<a id="a5d6356bcb27536cd8a8610f882627b32"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d6356bcb27536cd8a8610f882627b32">&#9670;&nbsp;</a></span>getJacobian() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const Eigen::MatrixXd ManipulatorPlannerNode::getJacobian </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>joint_positions</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>end_effector_link</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the jacobian matrix for the passed joint state. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">joint_positions</td><td>Joint positions to compute the jacobian </td></tr>
+    <tr><td class="paramname">end_effector_link</td><td>Name of the end effector link to which the jacobian is referred </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The jacobian matrix as an Eigen::MatrixXd </dd></dl>
+
+</div>
+</div>
+<a id="ab949e62b038ca10eac75a15a03e2b501"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab949e62b038ca10eac75a15a03e2b501">&#9670;&nbsp;</a></span>getPseudoInverseJacobian() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the pseudo-inverse of the jacobian matrix for the current position and the end effector set in the "ee_name" parameter. </p>
+<dl class="section return"><dt>Returns</dt><dd>The pseudo-inverse jacobian matrix as an Eigen::MatrixXd </dd></dl>
+
+</div>
+</div>
+<a id="a275593ca6cd8bb41775b7ec58a638796"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a275593ca6cd8bb41775b7ec58a638796">&#9670;&nbsp;</a></span>getPseudoInverseJacobian() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>end_effector_link</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the pseudo-inverse of the jacobian matrix for the current position. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">end_effector_link</td><td>Name of the end effector link to which the jacobian is referred </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The pseudo-inverse jacobian matrix as an Eigen::MatrixXd </dd></dl>
+
+</div>
+</div>
+<a id="afc653d303c2f8c4e44f25f50eac4adca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afc653d303c2f8c4e44f25f50eac4adca">&#9670;&nbsp;</a></span>getPseudoInverseJacobian() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const Eigen::MatrixXd ManipulatorPlannerNode::getPseudoInverseJacobian </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>joint_positions</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>end_effector_link</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the pseudo-inverse of the jacobian matrix for the passed joint state. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">joint_positions</td><td>Joint positions to compute the pseudo-inverse jacobian </td></tr>
+    <tr><td class="paramname">end_effector_link</td><td>Name of the end effector link to which the jacobian is referred </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The pseudo-inverse jacobian matrix as an Eigen::MatrixXd </dd></dl>
+
+</div>
+</div>
+<a id="ac908abe2495191cae6c36f5401b466a8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac908abe2495191cae6c36f5401b466a8">&#9670;&nbsp;</a></span>getTcpVel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const geometry_msgs::msg::Twist ManipulatorPlannerNode::getTcpVel </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the current end effector velocity. </p>
+<dl class="section return"><dt>Returns</dt><dd>The end effector velocity as a geometry_msgs::msg::Twist </dd></dl>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>include/manipulators/<a class="el" href="_manipulator_planner_8h_source.html">ManipulatorPlanner.h</a></li>
 </ul>

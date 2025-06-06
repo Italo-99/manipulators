@@ -65,11 +65,22 @@ $(function() {
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="#pri-methods">Private Member Functions</a> &#124;
+<a href="#pri-attribs">Private Attributes</a> &#124;
 <a href="class_dynamic_planner-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">DynamicPlanner Class Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
+<div class="dynheader">
+Collaboration diagram for DynamicPlanner:</div>
+<div class="dyncontent">
+<div class="center"><img src="class_dynamic_planner__coll__graph.png" border="0" usemap="#a_dynamic_planner_coll__map" alt="Collaboration graph"/></div>
+<map name="a_dynamic_planner_coll__map" id="a_dynamic_planner_coll__map">
+<area shape="rect" title=" " alt="" coords="29,95,159,121"/>
+<area shape="rect" href="struct_dynamic_planner_params.html" title=" " alt="" coords="5,5,183,32"/>
+</map>
+<center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-types"></a>
 Public Types</h2></td></tr>
@@ -215,6 +226,153 @@ std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><
 <tr class="memitem:ad81bc01ce7d458c8e45ce5b3996bc035"><td class="memItemLeft" align="right" valign="top"><a id="ad81bc01ce7d458c8e45ce5b3996bc035"></a>
 std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joints_speed_group_</b></td></tr>
 <tr class="separator:ad81bc01ce7d458c8e45ce5b3996bc035"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-methods"></a>
+Private Member Functions</h2></td></tr>
+<tr class="memitem:aa340d462f0d331de41812311d2766222"><td class="memItemLeft" align="right" valign="top"><a id="aa340d462f0d331de41812311d2766222"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>jointsState_callback</b> (const sensor_msgs::msg::JointState::SharedPtr &amp;joints_state)</td></tr>
+<tr class="separator:aa340d462f0d331de41812311d2766222"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e79a3cde029cd5313f2c3205009bb93"><td class="memItemLeft" align="right" valign="top"><a id="a6e79a3cde029cd5313f2c3205009bb93"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>trajpoint_callback</b> (const std_msgs::msg::UInt32::SharedPtr msg)</td></tr>
+<tr class="separator:a6e79a3cde029cd5313f2c3205009bb93"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0768d15c7b60c9e1103a52b39f6f5d09"><td class="memItemLeft" align="right" valign="top"><a id="a0768d15c7b60c9e1103a52b39f6f5d09"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>setTrajectory</b> (const moveit_msgs::msg::RobotTrajectory &amp;trajectory, const std::string &amp;end_effector_link=&quot;&quot;)</td></tr>
+<tr class="separator:a0768d15c7b60c9e1103a52b39f6f5d09"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afc338aaaaf0fc3d988b34c033a5dfe72"><td class="memItemLeft" align="right" valign="top"><a id="afc338aaaaf0fc3d988b34c033a5dfe72"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>processTrajectory</b> (moveit_msgs::msg::RobotTrajectory &amp;trajectory)</td></tr>
+<tr class="separator:afc338aaaaf0fc3d988b34c033a5dfe72"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae3f20aaf9febb85e2f170f766b45b970"><td class="memItemLeft" align="right" valign="top"><a id="ae3f20aaf9febb85e2f170f766b45b970"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>checkTrajectory</b> ()</td></tr>
+<tr class="separator:ae3f20aaf9febb85e2f170f766b45b970"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a910f623a7212437c3ee5415dd47a7b05"><td class="memItemLeft" align="right" valign="top"><a id="a910f623a7212437c3ee5415dd47a7b05"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>recalculateTrajectory</b> (size_t start_index)</td></tr>
+<tr class="separator:a910f623a7212437c3ee5415dd47a7b05"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2677fe5e45944c1b2627b89235d62156"><td class="memItemLeft" align="right" valign="top"><a id="a2677fe5e45944c1b2627b89235d62156"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>mergeTrajectory</b> (moveit_msgs::msg::RobotTrajectory &amp;new_traj, size_t start_index)</td></tr>
+<tr class="separator:a2677fe5e45944c1b2627b89235d62156"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aac03d13245d2063b4192cac80e1676dc"><td class="memItemLeft" align="right" valign="top"><a id="aac03d13245d2063b4192cac80e1676dc"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>checkTrajectoryConstraints</b> (const moveit_msgs::msg::RobotTrajectory &amp;trajectory)</td></tr>
+<tr class="separator:aac03d13245d2063b4192cac80e1676dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a380d7e82be27789e9e9744cd98666243"><td class="memItemLeft" align="right" valign="top"><a id="a380d7e82be27789e9e9744cd98666243"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>checkJointDiff</b> (const std::vector&lt; double &gt; &amp;joint_values)</td></tr>
+<tr class="separator:a380d7e82be27789e9e9744cd98666243"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af913f8eb03c5322fc177e5ce8feb9184"><td class="memItemLeft" align="right" valign="top"><a id="af913f8eb03c5322fc177e5ce8feb9184"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>checkJointDiff</b> (const std::vector&lt; double &gt; &amp;val_a, const std::vector&lt; double &gt; &amp;val_b)</td></tr>
+<tr class="separator:af913f8eb03c5322fc177e5ce8feb9184"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a48fb0d81ef53c5430f990f2d425bf76a"><td class="memItemLeft" align="right" valign="top"><a id="a48fb0d81ef53c5430f990f2d425bf76a"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>checkPoseDiff</b> (const geometry_msgs::msg::Pose &amp;pose, const std::string &amp;ee_link)</td></tr>
+<tr class="separator:a48fb0d81ef53c5430f990f2d425bf76a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7ccaefd46c6bb3f4e6eff0b5b7e8a9a4"><td class="memItemLeft" align="right" valign="top"><a id="a7ccaefd46c6bb3f4e6eff0b5b7e8a9a4"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>checkPoseDiff</b> (const geometry_msgs::msg::Pose &amp;pose_a, const geometry_msgs::msg::Pose &amp;pose_b)</td></tr>
+<tr class="separator:a7ccaefd46c6bb3f4e6eff0b5b7e8a9a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abd2235c6ccc576ab57f40271b63fce1f"><td class="memItemLeft" align="right" valign="top"><a id="abd2235c6ccc576ab57f40271b63fce1f"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>updatePlannerParams</b> ()</td></tr>
+<tr class="separator:abd2235c6ccc576ab57f40271b63fce1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad0f7effaa391dddeae9ddb43f56e9ad5"><td class="memItemLeft" align="right" valign="top"><a id="ad0f7effaa391dddeae9ddb43f56e9ad5"></a>
+geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><b>toPoseStamped</b> (const Eigen::Isometry3d &amp;pose, const std::string &amp;frame_id=&quot;&quot;)</td></tr>
+<tr class="separator:ad0f7effaa391dddeae9ddb43f56e9ad5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a96de65233b358b93134d27d2a894738b"><td class="memItemLeft" align="right" valign="top"><a id="a96de65233b358b93134d27d2a894738b"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>visualizePrimitive</b> (const shape_msgs::msg::SolidPrimitive &amp;primitive, const geometry_msgs::msg::Pose &amp;pose, const std::vector&lt; double &gt; rgba_color={0.0, 0.0, 0.0, 0.1}, const std::string &amp;ns=&quot;rviz&quot;)</td></tr>
+<tr class="separator:a96de65233b358b93134d27d2a894738b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-attribs"></a>
+Private Attributes</h2></td></tr>
+<tr class="memitem:a4453f38c85bee0891c30df844cbfcb6a"><td class="memItemLeft" align="right" valign="top"><a id="a4453f38c85bee0891c30df844cbfcb6a"></a>
+rclcpp::Node::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>node_</b></td></tr>
+<tr class="separator:a4453f38c85bee0891c30df844cbfcb6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af0ec0d36d9d5f6210f38579bdf605415"><td class="memItemLeft" align="right" valign="top"><a id="af0ec0d36d9d5f6210f38579bdf605415"></a>
+<a class="el" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a>&#160;</td><td class="memItemRight" valign="bottom"><b>params_</b></td></tr>
+<tr class="separator:af0ec0d36d9d5f6210f38579bdf605415"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a93db50e1f37c32d8d2002b2d9008f993"><td class="memItemLeft" align="right" valign="top"><a id="a93db50e1f37c32d8d2002b2d9008f993"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>dynamic_behavior_</b></td></tr>
+<tr class="separator:a93db50e1f37c32d8d2002b2d9008f993"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a442d98677ef23a8130ab7d834c276934"><td class="memItemLeft" align="right" valign="top"><a id="a442d98677ef23a8130ab7d834c276934"></a>
+PlanningSpace&#160;</td><td class="memItemRight" valign="bottom"><b>planning_space_</b> = JOINTS_SPACE</td></tr>
+<tr class="separator:a442d98677ef23a8130ab7d834c276934"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d0772697dbd87edfacc6c7de725d499"><td class="memItemLeft" align="right" valign="top"><a id="a9d0772697dbd87edfacc6c7de725d499"></a>
+std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joints_names_group_</b></td></tr>
+<tr class="separator:a9d0772697dbd87edfacc6c7de725d499"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8c31bfac2bf1bc4532c6504fae24e673"><td class="memItemLeft" align="right" valign="top"><a id="a8c31bfac2bf1bc4532c6504fae24e673"></a>
+std::unordered_map&lt; std::string, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joints_map_group_</b></td></tr>
+<tr class="separator:a8c31bfac2bf1bc4532c6504fae24e673"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7bf69e277c98222d6de70a4dbf821c7c"><td class="memItemLeft" align="right" valign="top"><a id="a7bf69e277c98222d6de70a4dbf821c7c"></a>
+std::unordered_map&lt; std::string, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>dq_jts_map_group_</b></td></tr>
+<tr class="separator:a7bf69e277c98222d6de70a4dbf821c7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af1b2c2250449933c344cdc037a6ee066"><td class="memItemLeft" align="right" valign="top"><a id="af1b2c2250449933c344cdc037a6ee066"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>joints_group_received_</b> = false</td></tr>
+<tr class="separator:af1b2c2250449933c344cdc037a6ee066"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6ded819e40a45d7e8ac0dbf434bb5c99"><td class="memItemLeft" align="right" valign="top"><a id="a6ded819e40a45d7e8ac0dbf434bb5c99"></a>
+std::shared_ptr&lt; moveit::planning_interface::MoveGroupInterface &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>move_group_</b></td></tr>
+<tr class="separator:a6ded819e40a45d7e8ac0dbf434bb5c99"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9ce4970169bb95d96dba3187412b4299"><td class="memItemLeft" align="right" valign="top"><a id="a9ce4970169bb95d96dba3187412b4299"></a>
+std::shared_ptr&lt; moveit::planning_interface::PlanningSceneInterface &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>planning_scene_interface_</b></td></tr>
+<tr class="separator:a9ce4970169bb95d96dba3187412b4299"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9323ffbeaf2f8495d0ae57e00dd5e35e"><td class="memItemLeft" align="right" valign="top"><a id="a9323ffbeaf2f8495d0ae57e00dd5e35e"></a>
+std::shared_ptr&lt; planning_scene::PlanningScene &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>planning_scene_</b></td></tr>
+<tr class="separator:a9323ffbeaf2f8495d0ae57e00dd5e35e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab97edf7a5c37200be8c718e158bd8e38"><td class="memItemLeft" align="right" valign="top"><a id="ab97edf7a5c37200be8c718e158bd8e38"></a>
+std::shared_ptr&lt; moveit_visual_tools::MoveItVisualTools &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>moveit_visual_tools_</b></td></tr>
+<tr class="separator:ab97edf7a5c37200be8c718e158bd8e38"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae851ad8b084fad8a80aa5c4ec6bb38bc"><td class="memItemLeft" align="right" valign="top"><a id="ae851ad8b084fad8a80aa5c4ec6bb38bc"></a>
+rviz_visual_tools::RvizVisualToolsPtr&#160;</td><td class="memItemRight" valign="bottom"><b>rviz_visual_tools_</b></td></tr>
+<tr class="separator:ae851ad8b084fad8a80aa5c4ec6bb38bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a141bb1baf0aae9e2f3a6ddf7650706b7"><td class="memItemLeft" align="right" valign="top"><a id="a141bb1baf0aae9e2f3a6ddf7650706b7"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>planning_group_</b></td></tr>
+<tr class="separator:a141bb1baf0aae9e2f3a6ddf7650706b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aadbca4d0e32fd6ce4b6a9f7f3323fba2"><td class="memItemLeft" align="right" valign="top"><a id="aadbca4d0e32fd6ce4b6a9f7f3323fba2"></a>
+std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joint_names_</b></td></tr>
+<tr class="separator:aadbca4d0e32fd6ce4b6a9f7f3323fba2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afc88c45d7ebb74b712ba03252eec0a65"><td class="memItemLeft" align="right" valign="top"><a id="afc88c45d7ebb74b712ba03252eec0a65"></a>
+moveit_msgs::msg::RobotTrajectory&#160;</td><td class="memItemRight" valign="bottom"><b>robot_trajectory_</b></td></tr>
+<tr class="separator:afc88c45d7ebb74b712ba03252eec0a65"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adf58518272d1e7fcac6e1f887e301a1d"><td class="memItemLeft" align="right" valign="top"><a id="adf58518272d1e7fcac6e1f887e301a1d"></a>
+std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>final_joint_positions_</b></td></tr>
+<tr class="separator:adf58518272d1e7fcac6e1f887e301a1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9b94e1c2740114980fbc4245d79422b9"><td class="memItemLeft" align="right" valign="top"><a id="a9b94e1c2740114980fbc4245d79422b9"></a>
+geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><b>final_pose_</b></td></tr>
+<tr class="separator:a9b94e1c2740114980fbc4245d79422b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a678509d41d6576fb2d768f003fb7a40e"><td class="memItemLeft" align="right" valign="top"><a id="a678509d41d6576fb2d768f003fb7a40e"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>traj_end_effector_link_</b></td></tr>
+<tr class="separator:a678509d41d6576fb2d768f003fb7a40e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a435a175669b4afbde8cd4c0e6db0bf5c"><td class="memItemLeft" align="right" valign="top"><a id="a435a175669b4afbde8cd4c0e6db0bf5c"></a>
+unsigned long&#160;</td><td class="memItemRight" valign="bottom"><b>trajpoint_</b></td></tr>
+<tr class="separator:a435a175669b4afbde8cd4c0e6db0bf5c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad8e2945f3db8822e7f5d5d9896715289"><td class="memItemLeft" align="right" valign="top"><a id="ad8e2945f3db8822e7f5d5d9896715289"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_moving</b> = false</td></tr>
+<tr class="separator:ad8e2945f3db8822e7f5d5d9896715289"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4f17910ebab07ae19fbc7c66bc23f23e"><td class="memItemLeft" align="right" valign="top"><a id="a4f17910ebab07ae19fbc7c66bc23f23e"></a>
+trajectory_processing::TimeOptimalTrajectoryGenerationPtr&#160;</td><td class="memItemRight" valign="bottom"><b>time_optimal_traj_gen</b></td></tr>
+<tr class="separator:a4f17910ebab07ae19fbc7c66bc23f23e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac4b0e6ea46b69034c4ab7c5efb653369"><td class="memItemLeft" align="right" valign="top"><a id="ac4b0e6ea46b69034c4ab7c5efb653369"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>totg_resample_dt</b> = 0.002</td></tr>
+<tr class="separator:ac4b0e6ea46b69034c4ab7c5efb653369"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a51218d539d6cc2420691034102c0b38c"><td class="memItemLeft" align="right" valign="top"><a id="a51218d539d6cc2420691034102c0b38c"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>totg_tolerance</b> = 0.1</td></tr>
+<tr class="separator:a51218d539d6cc2420691034102c0b38c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a03bd40fc07e6be694afe733c6403ace5"><td class="memItemLeft" align="right" valign="top"><a id="a03bd40fc07e6be694afe733c6403ace5"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>totg_min_angle_change</b> = 0.001</td></tr>
+<tr class="separator:a03bd40fc07e6be694afe733c6403ace5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf33ff8ad20066384a3988761fcd8c21"><td class="memItemLeft" align="right" valign="top"><a id="aaf33ff8ad20066384a3988761fcd8c21"></a>
+rclcpp::Publisher&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>joint_state_pub_</b></td></tr>
+<tr class="separator:aaf33ff8ad20066384a3988761fcd8c21"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aef7859f893b981608c7fb90e77f67df4"><td class="memItemLeft" align="right" valign="top"><a id="aef7859f893b981608c7fb90e77f67df4"></a>
+rclcpp::Publisher&lt; manipulator_interfaces::msg::TrajectoryResult &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>trajectory_pub_</b></td></tr>
+<tr class="separator:aef7859f893b981608c7fb90e77f67df4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a44a24dcd7825a79cb6b8d0125d3b6512"><td class="memItemLeft" align="right" valign="top"><a id="a44a24dcd7825a79cb6b8d0125d3b6512"></a>
+rclcpp::Subscription&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>joints_state_sub_</b></td></tr>
+<tr class="separator:a44a24dcd7825a79cb6b8d0125d3b6512"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e57035312bab2b847d9dd6309c6b7a1"><td class="memItemLeft" align="right" valign="top"><a id="a8e57035312bab2b847d9dd6309c6b7a1"></a>
+rclcpp::Subscription&lt; std_msgs::msg::UInt32 &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>trajpoint_sub_</b></td></tr>
+<tr class="separator:a8e57035312bab2b847d9dd6309c6b7a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abbe262c03d7cf5dfa23375435c8c4e91"><td class="memItemLeft" align="right" valign="top"><a id="abbe262c03d7cf5dfa23375435c8c4e91"></a>
+rclcpp::Subscription&lt; moveit_msgs::msg::RobotTrajectory &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>trajectory_sub_</b></td></tr>
+<tr class="separator:abbe262c03d7cf5dfa23375435c8c4e91"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a25214b9b396afbe6ed936306b62226df"><td class="memItemLeft" align="right" valign="top"><a id="a25214b9b396afbe6ed936306b62226df"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>end_effector_link_</b> = &quot;tool0&quot;</td></tr>
+<tr class="separator:a25214b9b396afbe6ed936306b62226df"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a532a297d284384c07416036f187d44b6"><td class="memItemLeft" align="right" valign="top"><a id="a532a297d284384c07416036f187d44b6"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>world_frame_</b> = &quot;base_link&quot;</td></tr>
+<tr class="separator:a532a297d284384c07416036f187d44b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>include/manipulators/<a class="el" href="_dynamic_planner_8h_source.html">DynamicPlanner.h</a></li>

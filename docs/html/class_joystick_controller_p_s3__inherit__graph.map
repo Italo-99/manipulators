@@ -1,0 +1,5 @@
+<map id="JoystickControllerPS3" name="JoystickControllerPS3">
+<area shape="rect" id="node1" title=" " alt="" coords="5,155,167,181"/>
+<area shape="rect" id="node2" href="$class_joystick_controller.html" title=" " alt="" coords="17,80,155,107"/>
+<area shape="rect" id="node3" href="$class_manipulator_menu.html" title="Main class for the manipulator menu." alt="" coords="18,5,154,32"/>
+</map>

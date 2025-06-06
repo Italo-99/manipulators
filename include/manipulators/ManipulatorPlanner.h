@@ -39,58 +39,60 @@ class ManipulatorPlannerNode : public rclcpp::Node {
 
         void shutdown_handler(); 
 
-        // --------------- COLLISION OBJECTS ---------------
-
-        enum ShapeType {        //Shape type for shape_msgs::msg::SolidPrimitive
-            BOX = 1,            //Sizes: x, y, z
-            SPHERE = 2,         //Sizes: radius
-            CYLINDER = 3,       //Sizes: height, radius
-            CONE = 4            //Sizes: height, radius
-        };
-
-        void addCollisionObject( //UNUSED
-            const std::string &object_name,
-            const std::string &object_frame,
-            const ShapeType object_type,
-            const std::vector<double> &object_dims,
-            const geometry_msgs::msg::Pose &object_pose
-        );
-
-        void addCollisionObject( //UNUSED
-            const std::string &object_name,
-            const std::string &object_frame,
-            const shape_msgs::msg::SolidPrimitive &object_primitive,
-            const geometry_msgs::msg::Pose &object_pose
-        );
-
-        void addAttachedCollisionObject( //UNUSED
-            const std::string &object_name,
-            const shape_msgs::msg::SolidPrimitive &object_primitive,
-            const geometry_msgs::msg::Pose &object_pose,
-            const std::string &link_name="",
-            const std::vector<std::string> &disabled_collisions={}
-        );
-
-        void addAttachedCollisionObject( //UNUSED
-            const std::string &object_name,
-            const ShapeType object_type,
-            const std::vector<double> &object_dims,
-            const geometry_msgs::msg::Pose &object_pose,
-            const std::string &link_name="",
-            const std::vector<std::string> &disabled_collisions={}
-        );
-
         // --------------- KINEMATICS FUNCTIONS ---------------
 
+        /*!
+            @brief Computes the current forward kinematics of the manipulator.
+            @return The end effector pose as a geometry_msgs::msg::Pose
+        */
         const geometry_msgs::msg::Pose getFKine();
+
+        /*!
+            @brief Computes the current end effector velocity.
+            @return The end effector velocity as a geometry_msgs::msg::Twist
+        */
         const geometry_msgs::msg::Twist getTcpVel();
 
+        /*!
+            @brief Computes the jacobian matrix for the passed joint state.
+            @param joint_positions: Joint positions to compute the jacobian
+            @param end_effector_link: Name of the end effector link to which the jacobian is referred
+            @return The jacobian matrix as an Eigen::MatrixXd
+        */
         const Eigen::MatrixXd getJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link);
-        const Eigen::MatrixXd getJacobian(const std::string &end_effector_link);
-        const Eigen::MatrixXd getJacobian();
         
+        /*!
+            @brief Computes the jacobian matrix for the current position.
+            @param end_effector_link: Name of the end effector link to which the jacobian is referred
+            @return The jacobian matrix as an Eigen::MatrixXd
+        */
+        const Eigen::MatrixXd getJacobian(const std::string &end_effector_link);
+
+        /*!
+            @brief Computes the jacobian matrix for the current position and the end effector set in the "ee_name" parameter.
+            @return The jacobian matrix as an Eigen::MatrixXd
+        */
+        const Eigen::MatrixXd getJacobian();
+
+        /*!
+            @brief Computes the pseudo-inverse of the jacobian matrix for the passed joint state.
+            @param joint_positions: Joint positions to compute the pseudo-inverse jacobian
+            @param end_effector_link: Name of the end effector link to which the jacobian is referred
+            @return The pseudo-inverse jacobian matrix as an Eigen::MatrixXd
+        */
         const Eigen::MatrixXd getPseudoInverseJacobian(const std::vector<double> &joint_positions, const std::string &end_effector_link);
+
+        /*!
+            @brief Computes the pseudo-inverse of the jacobian matrix for the current position.
+            @param end_effector_link: Name of the end effector link to which the jacobian is referred
+            @return The pseudo-inverse jacobian matrix as an Eigen::MatrixXd
+        */
         const Eigen::MatrixXd getPseudoInverseJacobian(const std::string &end_effector_link);
+
+        /*!
+            @brief Computes the pseudo-inverse of the jacobian matrix for the current position and the end effector set in the "ee_name" parameter.
+            @return The pseudo-inverse jacobian matrix as an Eigen::MatrixXd
+        */
         const Eigen::MatrixXd getPseudoInverseJacobian();
 
         // --------------- CALLBACK FUNCTIONS ---------------
@@ -160,6 +162,47 @@ class ManipulatorPlannerNode : public rclcpp::Node {
 
         // Execute the real time joints speed based control
         void jointsRealTimeControl();
+
+        // --------------- COLLISION OBJECTS ---------------
+
+        enum ShapeType {        //Shape type for shape_msgs::msg::SolidPrimitive
+            BOX = 1,            //Sizes: x, y, z
+            SPHERE = 2,         //Sizes: radius
+            CYLINDER = 3,       //Sizes: height, radius
+            CONE = 4            //Sizes: height, radius
+        };
+
+        void addCollisionObject( //UNUSED
+            const std::string &object_name,
+            const std::string &object_frame,
+            const ShapeType object_type,
+            const std::vector<double> &object_dims,
+            const geometry_msgs::msg::Pose &object_pose
+        );
+
+        void addCollisionObject( //UNUSED
+            const std::string &object_name,
+            const std::string &object_frame,
+            const shape_msgs::msg::SolidPrimitive &object_primitive,
+            const geometry_msgs::msg::Pose &object_pose
+        );
+
+        void addAttachedCollisionObject( //UNUSED
+            const std::string &object_name,
+            const shape_msgs::msg::SolidPrimitive &object_primitive,
+            const geometry_msgs::msg::Pose &object_pose,
+            const std::string &link_name="",
+            const std::vector<std::string> &disabled_collisions={}
+        );
+
+        void addAttachedCollisionObject( //UNUSED
+            const std::string &object_name,
+            const ShapeType object_type,
+            const std::vector<double> &object_dims,
+            const geometry_msgs::msg::Pose &object_pose,
+            const std::string &link_name="",
+            const std::vector<std::string> &disabled_collisions={}
+        );
 
         // --------------- HELPER FUNCTIONS ---------------
 

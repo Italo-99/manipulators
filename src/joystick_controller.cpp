@@ -5,11 +5,10 @@ JoystickController::JoystickController(ManipulatorMenuParams params, rclcpp::Nod
 {
     declareParameters();
 
-    params_ = params;
-
     vel_step_ = node_->get_parameter("vel_step").as_double();
     rot_step_ = node_->get_parameter("rot_step").as_double();
     js_step_ = node_->get_parameter("js_step").as_double();
+    joy_topic_ = node_->get_parameter("joy_topic").as_string();
 
     js_cmd_vel_ = sensor_msgs::msg::JointState();
     js_cmd_vel_.name = params_.joint_names;
@@ -20,7 +19,7 @@ JoystickController::JoystickController(ManipulatorMenuParams params, rclcpp::Nod
     joy_sub_options.callback_group = joy_sub_cb_group;
 
     joy_sub_ = node_->create_subscription<sensor_msgs::msg::Joy>(
-        "joy", 1, 
+        joy_topic_, 1, 
         [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void {
             joyCallback(msg);
         },
@@ -111,6 +110,7 @@ void JoystickController::declareParameters(){
     node_->declare_parameter("vel_step", 0.4);
     node_->declare_parameter("rot_step", 0.4);
     node_->declare_parameter("js_step", 1.0);
+    node_->declare_parameter("joy_topic", "joy");
 }
 
 // Shutdown handler

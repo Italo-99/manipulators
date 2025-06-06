@@ -640,6 +640,76 @@ bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajector
     return false;
 }
 
+bool ManipulatorMenu::planExecuteAndWait(
+    const sensor_msgs::msg::JointState joint_goal, 
+    const std::vector<double> start_state,
+    uint timeout_planning,
+    uint timeout_execution
+){
+    // Plan the trajectory
+    manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(joint_goal, start_state, timeout_planning);
+
+    if (traj_result.success)
+    {
+        // Execute the trajectory and wait for it to finish
+        return executeAndWait(traj_result.trajectory, timeout_execution);
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool ManipulatorMenu::planExecuteAndWait(
+    const geometry_msgs::msg::Pose tcp_goal, 
+    const std::vector<double> start_state, 
+    const std::string& frame, //Leave empty for default frame
+    uint timeout_planning,
+    uint timeout_execution
+){
+    // Plan the trajectory
+    manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(tcp_goal, start_state, frame, timeout_planning);
+
+    if (traj_result.success)
+    {
+        // Execute the trajectory and wait for it to finish
+        return executeAndWait(traj_result.trajectory, timeout_execution);
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool ManipulatorMenu::cartesianPlanExecuteAndWait(
+    const std::vector<geometry_msgs::msg::Pose> waypoints, 
+    const std::vector<double> start_state, 
+    const std::string& frame, //Leave empty for default frame
+    uint timeout_planning,
+    uint timeout_execution
+){
+    // Plan the trajectory
+    manipulator_interfaces::msg::TrajectoryResult traj_result = cartesianPlanAndWait(waypoints, start_state, frame, timeout_planning);
+
+    if (traj_result.success)
+    {
+        // Execute the trajectory and wait for it to finish
+        return executeAndWait(traj_result.trajectory, timeout_execution);
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void ManipulatorMenu::stopTrajectory(){
+    // Publish an empty trajectory to stop the current one
+    std_msgs::msg::Bool ctrl_msg;
+    ctrl_msg.data = false;
+    executionControl_pub_->publish(ctrl_msg);
+    RCLCPP_INFO(node_->get_logger(), "Stopping trajectory execution");
+}
+
 // -------------------- TF END EFFECTOR LISTENER -----------------------
 
 // Listen a TF between two given frames
@@ -1116,7 +1186,7 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
         auto result = future.get();
         if (result->success)
         {
-            RCLCPP_INFO(node_->get_logger(), "Jacobian control set to %d", set);
+            RCLCPP_INFO(node_->get_logger(), "Jacobian control set to %s", set ? "true" : "false");
         }
         else
         {
@@ -1145,7 +1215,7 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
         auto result = future.get();
         if (result->success)
         {
-            RCLCPP_INFO(node_->get_logger(), "Real time joints control set to %d", set);
+            RCLCPP_INFO(node_->get_logger(), "Real time joints control set to %s", set ? "true" : "false");
         }
         else
         {

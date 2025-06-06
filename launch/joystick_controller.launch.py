@@ -10,7 +10,7 @@ import os
 def get_node(context, *args, **kwargs):
     params = load_yaml(
         "manipulators",
-        os.path.join("config", "joystick", "generic.yaml"),
+        LaunchConfiguration('config').perform(context),
     )
 
     nodes = []
@@ -55,7 +55,17 @@ def generate_launch_description():
         description='Joystick profile to use'
     )
 
+    config_arg = DeclareLaunchArgument(
+        'config',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('manipulators'),
+            'config',
+            'joystick',
+            'generic.yaml'
+        ])
+    )
+
     return LaunchDescription([
-        profile_arg,
+        profile_arg, config_arg,
         OpaqueFunction(function=get_node)
     ])

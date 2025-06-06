@@ -122,10 +122,6 @@ struct ManipulatorMenuParams
 */
 class ManipulatorMenu
 {
-    //NOTE: In general when using the sensor_msgs/JointState type the angles will be expressed in radians, 
-    //      instead when using a vector joint angles will be expressed in degrees.
-    //      In a similar way when using vectors to represent poses, the first 3 elements will be the x, y 
-    //      and z coordinates in meters while the last 3 elements will be the roll, pitch and yaw in degrees.
     public:
         // ---------------------  PUBLIC CONSTRUCTOR ---------------------
         /*!
@@ -252,6 +248,7 @@ class ManipulatorMenu
             @param start_state: Start state of the manipulator (in degrees).
             @param timeout: Timeout for the operation (in seconds).
             @return The planned trajectory result (see manipulator_interfaces::msg::TrajectoryResult).
+            @note This function will block until the trajectory is planned or the timeout is reached.
         */
         manipulator_interfaces::msg::TrajectoryResult planAndWait(
             const sensor_msgs::msg::JointState joint_goal, 
@@ -264,6 +261,7 @@ class ManipulatorMenu
             @param start_state: Start state of the manipulator (in degrees).
             @param timeout: Timeout for the operation (in seconds).
             @return The planned trajectory result (see manipulator_interfaces::msg::TrajectoryResult).
+            @note This function will block until the trajectory is planned or the timeout is reached.
         */
         manipulator_interfaces::msg::TrajectoryResult planAndWait(
             const geometry_msgs::msg::Pose tcp_goal, 
@@ -277,6 +275,7 @@ class ManipulatorMenu
             @param start_state: Start state of the manipulator (in degrees).
             @param timeout: Timeout for the operation (in seconds).
             @return The planned trajectory result (see manipulator_interfaces::msg::TrajectoryResult).
+            @note This function will block until the trajectory is planned or the timeout is reached.
         */
         manipulator_interfaces::msg::TrajectoryResult cartesianPlanAndWait(
             const std::vector<geometry_msgs::msg::Pose> waypoints, 
@@ -289,32 +288,150 @@ class ManipulatorMenu
             @param joint_trajectory: Joint trajectory to be executed.
             @param timeout: Timeout for the operation (in seconds).
             @return True if the trajectory was executed successfully, false otherwise.
+            @note This function will block until the trajectory is executed or the timeout is reached.
         */
         bool executeAndWait(const moveit_msgs::msg::RobotTrajectory joint_trajectory, uint timeout=20);
 
-        // Get the position and orientation of the end effector (they contain a ros spin once)
+        /*!
+            @brief Plan a joint goal, execute it and wait for the result.
+            @details This function combines the two functions planAndWait() and executeAndWait().
+            @param joint_goal: Joint goal to be published (in radians).
+            @param start_state: Start state of the manipulator (in degrees).
+            @param timeout_planning: Timeout for the planning operation (in seconds).
+            @param timeout_execution: Timeout for the execution operation (in seconds).
+            @return True if the trajectory was executed successfully, false otherwise.
+            @note This function will block until the trajectory is executed or the timeout is reached.
+        */
+       bool planExecuteAndWait(
+            const sensor_msgs::msg::JointState joint_goal, 
+            const std::vector<double> start_state = std::vector<double>(),
+            uint timeout_planning=2,
+            uint timeout_execution=20
+        );
+
+        /*!
+            @brief Plan a TCP goal, execute it and wait for the result.
+            @details This function combines planning and execution for a TCP goal position.
+            @param tcp_goal: TCP goal position to be published.
+            @param start_state: Start state of the manipulator (in degrees).
+            @param frame: Frame in which the position is expressed (leave empty for default frame).
+            @param timeout_planning: Timeout for the planning operation (in seconds).
+            @param timeout_execution: Timeout for the execution operation (in seconds).
+            @return True if the trajectory was executed successfully, false otherwise.
+            @note This function will block until the trajectory is executed or the timeout is reached.
+        */
+        bool planExecuteAndWait(
+            const geometry_msgs::msg::Pose tcp_goal, 
+            const std::vector<double> start_state = std::vector<double>(), 
+            const std::string& frame = "", //Leave empty for default frame
+            uint timeout_planning=2,
+            uint timeout_execution=20
+        );
+
+        /*!
+            @brief Plan a Cartesian path through waypoints, execute it and wait for the result.
+            @details This function combines planning and execution for a Cartesian trajectory through multiple waypoints.
+            @param waypoints: Vector of waypoint poses defining the Cartesian path.
+            @param start_state: Start state of the manipulator (in degrees).
+            @param frame: Frame in which the positions are expressed (leave empty for default frame).
+            @param timeout_planning: Timeout for the planning operation (in seconds).
+            @param timeout_execution: Timeout for the execution operation (in seconds).
+            @return True if the trajectory was executed successfully, false otherwise.
+            @note This function will block until the trajectory is executed or the timeout is reached.
+        */
+        bool cartesianPlanExecuteAndWait(
+            const std::vector<geometry_msgs::msg::Pose> waypoints, 
+            const std::vector<double> start_state = std::vector<double>(), 
+            const std::string& frame = "", //Leave empty for default frame
+            uint timeout_planning=2,
+            uint timeout_execution=20
+        );
+
+        /*!
+            @brief Stop trajectory execution.
+        */
+        void stopTrajectory();
+
+        /*!
+            @brief Get the current end effector pose.
+            @note Might block due to service call, so use with caution in real-time applications.
+        */
         geometry_msgs::msg::Pose getEEpose();
+
+        /*!
+            @brief Get the current position of the end effector in the form of a vector [x (m), y(m), z(m), roll(°), pitch(°), yaw(°)].
+            @note Might block due to service call, so use with caution in real-time applications.
+        */
         std::vector<double> getEEpos_rpy();
 
-        // Get the transform between two frames
+        /*!
+            @brief Get the transformation between two frames.
+        */
         geometry_msgs::msg::PoseStamped getTf(const std::string& source_frame, const std::string& target_frame);
 
-        // Move along axes
+        /*!
+            @brief Move the end effector x_step meters along the x axis.
+            @param x_step: Distance to move along the x axis (in meters).
+            @param cartesian: If true, the movement will be planned as a Cartesian path, otherwise it will be a simple TCP goal.
+            @return The new end effector pose after the movement.
+        */
         geometry_msgs::msg::Pose move_along_x(const double x_step,bool cartesian = false);
+
+        /*!
+            @brief Move the end effector y_step meters along the y axis.
+            @param y_step: Distance to move along the y axis (in meters).
+            @param cartesian: If true, the movement will be planned as a Cartesian path, otherwise it will be a simple TCP goal.
+            @return The new end effector pose after the movement.
+        */
         geometry_msgs::msg::Pose move_along_y(const double y_step,bool cartesian = false);
+
+        /*!
+            @brief Move the end effector z_step meters along the z axis.
+            @param z_step: Distance to move along the z axis (in meters).
+            @param cartesian: If true, the movement will be planned as a Cartesian path, otherwise it will be a simple TCP goal.
+            @return The new end effector pose after the movement.
+        */
         geometry_msgs::msg::Pose move_along_z(const double z_step,bool cartesian = false);
 
-        // Tcp orientation handling
+        /*!
+            @brief Rotate the end effector (relative to current orientation).
+            @details rotate_around_x, rotate_around_y and rotate_around_z are used to rotate the end effector around the x, y and z axes respectively.
+            @param rot_vec: Vector containing the rotation angles in degrees [x_rot, y_rot, z_rot].
+            @return The new end effector pose after the rotation.
+            @note The rotation is relative to the current orientation of the end effector.
+        */
         geometry_msgs::msg::Pose make_tcp_rot(const std::vector<double> rot_vec);
         geometry_msgs::msg::Pose rotate_around_x(const double x_rot_step);
         geometry_msgs::msg::Pose rotate_around_y(const double y_rot_step);
         geometry_msgs::msg::Pose rotate_around_z(const double z_rot_step);
         geometry_msgs::msg::Pose change_tcp_orient(const std::vector<double> rot_vec);
 
+        /*!
+            @brief Move the gripper to the specified position.
+            @param close: If true, the gripper will be closed, otherwise it will be opened.
+            @note The gripper type must be set in the parameters.
+        */
         void moveGripper(const bool close);
 
-        // Add collision objects
+        /*!
+            @brief Add a collision object to the planning scene.
+            @param collisionObjectMsg: Collision object message to be published.
+        */
         void publishCollisionObject(const moveit_msgs::msg::CollisionObject collisionObjectMsg);
+
+        /*!
+            @brief Add a collision object to the planning scene in form of a primitive shape.
+            @param name: Name of the object.
+            @param obj_type: Type of the object (1: BOX, 2: SPHERE, 3: CYLINDER, 4: CONE).
+            @param obj_dims: Dimensions of the object (depends on the type, see below).
+            @param obj_pos: Position of the object in the form [x (m), y (m), z (m)].
+            @param rot_pos: Orientation of the object in the form [x (rad), y (rad), z (rad)].
+            @param operation: Operation to be performed on the object (0: ADD, 1: REMOVE, 2: MOVE).
+            @details
+            - For a BOX, obj_dims should contain [length (m), width (m), height (m)].
+            - For a SPHERE, obj_dims should contain [radius (m)].
+            - For a CYLINDER or CONE, obj_dims should contain [height (m), radius (m)].
+        */
         void addObj(const std::string& name,
                     const int            obj_type, 
                     std::vector<double>  obj_dims, 
@@ -322,8 +439,26 @@ class ManipulatorMenu
                     double               rot_pos[],
                     uint                 operation);
 
-        // Add attached collision objects
+        /*!
+            @brief Publish a collision object attached to the end effector to the planning scene.
+            @param collisionAttachedObjectMsg: Attached collision object message to be published.
+            @details This function is used to attach an object to a link in the planning scene.
+        */
         void publishAttachedCollisionObject(const moveit_msgs::msg::AttachedCollisionObject collisionAttachedObjectMsg);
+
+        /*!
+            @brief Add an attached collision object to the planning scene.
+            @param name: Name of the object.
+            @param obj_type: Type of the object (1: BOX, 2: SPHERE, 3: CYLINDER, 4: CONE).
+            @param obj_dims: Dimensions of the object (depends on the type, see below).
+            @param obj_pos: Position of the object in the form [x (m), y (m), z (m)].
+            @param rot_pos: Orientation of the object in the form [x (rad), y (rad), z (rad), w (rad)].
+            @param operation: Operation to be performed on the object (0: ADD, 1: REMOVE, 2: APPEND, 3: MOVE).
+            @details
+            - For a BOX, obj_dims should contain [length (m), width (m), height (m)].
+            - For a SPHERE, obj_dims should contain [radius (m)].
+            - For a CYLINDER or CONE, obj_dims should contain [height (m), radius (m)].
+        */
         void addAttachedObj(const std::string&  name,
                             const int           obj_type, 
                             std::vector<double> obj_dims, 
@@ -334,7 +469,15 @@ class ManipulatorMenu
 
         // Path constraints
 
-        // Publish joint constraint, the specified joint will be constrained to [position - tolerance_below, position + tolerance_above]
+        /*!
+            @brief Publish a joint constraint to the manipulator planner.
+            @details The specified joint will be constrained to [position - tolerance_below, position + tolerance_above]
+            @param joint_num: Index of the joint to be constrained (0-based).
+            @param position: Position of the joint in radians.
+            @param tolerance_above: Tolerance above the position (in radians).
+            @param tolerance_below: Tolerance below the position (in radians).
+            @param weight: Weight of the constraint (default is 1.0).
+        */
         void publishJointConstraint(const uint &joint_num, 
                                     const double &position, 
                                     const double &tolerance_above, 
@@ -343,18 +486,42 @@ class ManipulatorMenu
 
 
         //Publish a primitive as a position constraint, the specified link will stay inside that primitive
+        /*!
+            @brief Publish a position constraint to the manipulator planner in form of a primitive.
+            @details The specified link will stay inside that primitive.
+            @param link_name: Name of the link to be constrained.
+            @param shape_pose: Pose of the primitive in the form of a geometry_msgs::msg::Pose (relative to world).
+            @param shape_type: Type of the primitive (1: BOX, 2: SPHERE, 3: CYLINDER, 4: CONE).
+            @param shape_dims: Dimensions of the primitive (depends on the type, see below).
+            @param weight: Weight of the constraint (default is 1.0).
+            @details
+            - For a BOX, shape_dims should contain [length (m), width (m), height (m)].
+            - For a SPHERE, shape_dims should contain [radius (m)].
+            - For a CYLINDER or CONE, shape_dims should contain [height (m), radius (m)].
+        */
         void publishPositionConstraint(const std::string& link_name, 
                                        const geometry_msgs::msg::Pose& shape_pose, 
                                        const uint &shape_type, 
                                        const std::vector<double>& shape_dims, 
                                        const double &weight = 1.0);
 
-        //Publish an orientation constraint, the specified link will maintain that orientation +- the specified tolerances
+        /*!
+            @brief Publish an orientation constraint to the manipulator planner.
+            @details The specified link will maintain the given orientation within the specified tolerances.
+            @param link_name: Name of the link to be constrained.
+            @param orientation: Orientation of the link in the form of a geometry_msgs::msg::Quaternion.
+            @param tolerances: Tolerances for the orientation along the x, y, and z axes (default is {0.01, 0.01, 0.01}).
+            @param weight: Weight of the constraint (default is 1.0).
+        */
         void publishOrientationConstraint(const std::string& link_name, 
                                           const geometry_msgs::msg::Quaternion& orientation, 
                                           const std::vector<double> &tolerances = {0.01, 0.01, 0.01}, //Along x,y,z axis 
                                           const double &weight = 1.0);
 
+        /*!
+            @brief Publish a command to clear all path constraints in the manipulator planner.
+            @details This will remove all previously set joint, position, and orientation constraints.
+        */
         void publishClearConstraints(void); //Clear all constraints
 
         void publishToolIOCmd(const size_t id, const bool value); //Publish a command to the tool digital IO
@@ -385,7 +552,6 @@ class ManipulatorMenu
         double angular_distance(const geometry_msgs::msg::Quaternion& q1, const geometry_msgs::msg::Quaternion& q2);
 
         // Kinematics clients
-        // These clients will block execution until a response is received or timeout is reached
         geometry_msgs::msg::Pose  getFKineClient(const sensor_msgs::msg::JointState joint_state = sensor_msgs::msg::JointState()); // Get the forward kinematics of the pose, if empty uses the current joint state
         Eigen::MatrixXd           pseudoInverseClient(void);
         std::vector<double>       invKineClient(const geometry_msgs::msg::Pose pose);
@@ -393,10 +559,32 @@ class ManipulatorMenu
         bool                      gripperMoveClient(const bool close);
 
         //Setter clients
-        //These clients don't expect actual results from the server, the response will only evaluate the success of the query and will be logged
+        /*!
+            @brief Set the jacobian speed control parameter in the manipulator planner.
+            @param enable: If true, the jacobian speed control will be enabled.
+            @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
+        */
         void setJacobianSpeedControl(bool);
+        /*!
+            @brief Set the real time control parameter in the manipulator planner.
+            @param enable: If true, the real time control will be enabled.
+            @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
+        */
         void setJsRealTimeControl(bool);
+        /*!
+            @brief Set the planner velocity and acceleration factors.
+            @param velocity_scaling_factor: Velocity scaling factor.
+            @param acceleration_scaling_factor: Acceleration scaling factor.
+            @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
+        */
         void setPlannerScalingFactors(float,float);
+        /*!
+            @brief Set the planner tolerances in the manipulator planner.
+            @param position_tolerance: Position tolerance for the end effector (in meters).
+            @param orientation_tolerance: Orientation tolerance for the end effector (in radians).
+            @param joint_tolerance: Joint tolerance for the manipulator (in radians).
+            @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
+        */
         void setPlannerTolerances(float,float,float);
 
         //Get parameter from manipulator_planner node

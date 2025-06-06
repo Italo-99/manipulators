@@ -15,7 +15,6 @@ int main(int argc, char* argv[]) {
     ManipulatorMenuParams params(node);
     std::string package_share_directory = ament_index_cpp::get_package_share_directory("manipulators");
     params.known_poses_path = package_share_directory + "/config/known_poses.yaml";
-    params.ros_freq         = 10;
 
     node->declare_parameter("profile", "default");
     std::string profile = node->get_parameter("profile").as_string();

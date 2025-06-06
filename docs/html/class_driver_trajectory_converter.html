@@ -63,6 +63,8 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pri-methods">Private Member Functions</a> &#124;
+<a href="#pri-attribs">Private Attributes</a> &#124;
 <a href="class_driver_trajectory_converter-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">DriverTrajectoryConverter Class Reference</div>  </div>
@@ -98,6 +100,87 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>spinner</b> ()</td></
 <tr class="memitem:a4e86831d416b0d8965a29df34f1224c9"><td class="memItemLeft" align="right" valign="top"><a id="a4e86831d416b0d8965a29df34f1224c9"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>isReady</b> ()</td></tr>
 <tr class="separator:a4e86831d416b0d8965a29df34f1224c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-methods"></a>
+Private Member Functions</h2></td></tr>
+<tr class="memitem:a4dc62b0d8c32c39c25caaeb3c33a08bb"><td class="memItemLeft" align="right" valign="top"><a id="a4dc62b0d8c32c39c25caaeb3c33a08bb"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>declareParameters</b> ()</td></tr>
+<tr class="separator:a4dc62b0d8c32c39c25caaeb3c33a08bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ee76486cacae43a9323d01317804f9a"><td class="memItemLeft" align="right" valign="top"><a id="a3ee76486cacae43a9323d01317804f9a"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>shutdown_handler</b> ()</td></tr>
+<tr class="separator:a3ee76486cacae43a9323d01317804f9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6ff5b2ac51ecaf5c4fba5684cb34708a"><td class="memItemLeft" align="right" valign="top"><a id="a6ff5b2ac51ecaf5c4fba5684cb34708a"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>jointStateCallback</b> (const sensor_msgs::msg::JointState::SharedPtr joint_state)</td></tr>
+<tr class="separator:a6ff5b2ac51ecaf5c4fba5684cb34708a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7d046bcfff27ae075abfb2ca752ff920"><td class="memItemLeft" align="right" valign="top"><a id="a7d046bcfff27ae075abfb2ca752ff920"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>jointCmdCallback</b> (const sensor_msgs::msg::JointState::SharedPtr joint_cmd)</td></tr>
+<tr class="separator:a7d046bcfff27ae075abfb2ca752ff920"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a078d072547ecfc384a82c238c6eba5d5"><td class="memItemLeft" align="right" valign="top"><a id="a078d072547ecfc384a82c238c6eba5d5"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>computeVel</b> ()</td></tr>
+<tr class="separator:a078d072547ecfc384a82c238c6eba5d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-attribs"></a>
+Private Attributes</h2></td></tr>
+<tr class="memitem:ae4c0406168675963175087009e5fa49d"><td class="memItemLeft" align="right" valign="top"><a id="ae4c0406168675963175087009e5fa49d"></a>
+rclcpp::Subscription&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>joint_state_sub_</b></td></tr>
+<tr class="separator:ae4c0406168675963175087009e5fa49d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad87b54ac1997394e30549ca95e0a6ecf"><td class="memItemLeft" align="right" valign="top"><a id="ad87b54ac1997394e30549ca95e0a6ecf"></a>
+rclcpp::Subscription&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>joint_cmd_sub_</b></td></tr>
+<tr class="separator:ad87b54ac1997394e30549ca95e0a6ecf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a48d84ee9d7aa44b0034d38634aca5bb1"><td class="memItemLeft" align="right" valign="top"><a id="a48d84ee9d7aa44b0034d38634aca5bb1"></a>
+rclcpp::Publisher&lt; std_msgs::msg::Float64MultiArray &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velocity_publisher_</b></td></tr>
+<tr class="separator:a48d84ee9d7aa44b0034d38634aca5bb1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab87b159fbf3e4bb413e388053142146e"><td class="memItemLeft" align="right" valign="top"><a id="ab87b159fbf3e4bb413e388053142146e"></a>
+Eigen::Matrix&lt; double, 6, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joints_values_</b></td></tr>
+<tr class="separator:ab87b159fbf3e4bb413e388053142146e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0cdfa7344aac2a3c911d486f21645115"><td class="memItemLeft" align="right" valign="top"><a id="a0cdfa7344aac2a3c911d486f21645115"></a>
+Eigen::Matrix&lt; double, 6, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>dq_cmd_</b></td></tr>
+<tr class="separator:a0cdfa7344aac2a3c911d486f21645115"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa7cce4288472945118f98bde4e26865c"><td class="memItemLeft" align="right" valign="top"><a id="aa7cce4288472945118f98bde4e26865c"></a>
+Eigen::Matrix&lt; double, 6, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>qd_cmd_</b></td></tr>
+<tr class="separator:aa7cce4288472945118f98bde4e26865c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a793b42520b0a335022252c359d481c31"><td class="memItemLeft" align="right" valign="top"><a id="a793b42520b0a335022252c359d481c31"></a>
+Eigen::Matrix&lt; double, 6, 1 &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>real_vel_</b></td></tr>
+<tr class="separator:a793b42520b0a335022252c359d481c31"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9361741d532cdb7bfbaad77733fc6459"><td class="memItemLeft" align="right" valign="top"><a id="a9361741d532cdb7bfbaad77733fc6459"></a>
+std_msgs::msg::Float64MultiArray&#160;</td><td class="memItemRight" valign="bottom"><b>vel_msg_</b></td></tr>
+<tr class="separator:a9361741d532cdb7bfbaad77733fc6459"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af033a7d8b931137d1a69342280552178"><td class="memItemLeft" align="right" valign="top"><a id="af033a7d8b931137d1a69342280552178"></a>
+std::unordered_map&lt; std::string, size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joint_name_to_index_</b></td></tr>
+<tr class="separator:af033a7d8b931137d1a69342280552178"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af2d1ad9ffe9a614806aa02a21f2ee7c5"><td class="memItemLeft" align="right" valign="top"><a id="af2d1ad9ffe9a614806aa02a21f2ee7c5"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>joint_map_initialized_</b></td></tr>
+<tr class="separator:af2d1ad9ffe9a614806aa02a21f2ee7c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a527b89386c4073b7a970ec6c7b46b692"><td class="memItemLeft" align="right" valign="top"><a id="a527b89386c4073b7a970ec6c7b46b692"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>cmd_map_initialized_</b></td></tr>
+<tr class="separator:a527b89386c4073b7a970ec6c7b46b692"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3649fd4cd7a1cd4af8bbdd921f534662"><td class="memItemLeft" align="right" valign="top"><a id="a3649fd4cd7a1cd4af8bbdd921f534662"></a>
+std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joints_names_group_</b></td></tr>
+<tr class="separator:a3649fd4cd7a1cd4af8bbdd921f534662"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac264e52d62f8511b6886433231258a7f"><td class="memItemLeft" align="right" valign="top"><a id="ac264e52d62f8511b6886433231258a7f"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>velocity_topic_</b></td></tr>
+<tr class="separator:ac264e52d62f8511b6886433231258a7f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a271f76372c2ebb5f1b23cb63bc3f798d"><td class="memItemLeft" align="right" valign="top"><a id="a271f76372c2ebb5f1b23cb63bc3f798d"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>kp_</b></td></tr>
+<tr class="separator:a271f76372c2ebb5f1b23cb63bc3f798d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a485141d9c18a994da7d5a408ec696c73"><td class="memItemLeft" align="right" valign="top"><a id="a485141d9c18a994da7d5a408ec696c73"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>min_motor_speed_</b></td></tr>
+<tr class="separator:a485141d9c18a994da7d5a408ec696c73"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a789c185711b231f24bafb69ed67cabcb"><td class="memItemLeft" align="right" valign="top"><a id="a789c185711b231f24bafb69ed67cabcb"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>spinner_rate_</b></td></tr>
+<tr class="separator:a789c185711b231f24bafb69ed67cabcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a975f97d641fee7160caf9ecff1028798"><td class="memItemLeft" align="right" valign="top"><a id="a975f97d641fee7160caf9ecff1028798"></a>
+rclcpp::executors::SingleThreadedExecutor&#160;</td><td class="memItemRight" valign="bottom"><b>executor</b></td></tr>
+<tr class="separator:a975f97d641fee7160caf9ecff1028798"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab3df83e9d96968efcc2ef6f86aee4ff1"><td class="memItemLeft" align="right" valign="top"><a id="ab3df83e9d96968efcc2ef6f86aee4ff1"></a>
+rclcpp::TimerBase::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>timer_</b></td></tr>
+<tr class="separator:ab3df83e9d96968efcc2ef6f86aee4ff1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abd424cdca49cee9c93294b467e10d4be"><td class="memItemLeft" align="right" valign="top"><a id="abd424cdca49cee9c93294b467e10d4be"></a>
+unsigned long long int&#160;</td><td class="memItemRight" valign="bottom"><b>k</b> = 0</td></tr>
+<tr class="separator:abd424cdca49cee9c93294b467e10d4be"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af834e49533430f95be088e83b981a8fc"><td class="memItemLeft" align="right" valign="top"><a id="af834e49533430f95be088e83b981a8fc"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>mean_</b> = 0.0</td></tr>
+<tr class="separator:af834e49533430f95be088e83b981a8fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>include/manipulators/<a class="el" href="_driver_trajectory_converter_8h_source.html">DriverTrajectoryConverter.h</a></li>

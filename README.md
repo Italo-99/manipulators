@@ -11,7 +11,7 @@ It is conceived for beginners who wants to include robots in their projects, wit
 
 This document explains how to use this pkg for simulations and for the real hardware.
 
-More in depth documentation can be found in the doxigen documentation in [docs/](docs/), by clicking on the file 'index.html'.
+More in depth documentation can be found in the doxygen documentation in [docs/](docs/), by opening the file 'annotated.html' through a browser.
 
 # Installation
 
@@ -222,7 +222,7 @@ To run the manipulator menu:
 
 ### Manipulator menu params
 
-Can be edited in `src/manipulator_menu_node_user.cpp` and  `src/manipulator_menu_node_nouser.cpp`:
+Can be edited in `src/manipulator_menu_node_user.cpp`:
 
  - `node_name`: Name for the manipulator menu node.
  - `ros_freq`: Frequency for the spinner.
