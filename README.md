@@ -122,10 +122,10 @@ Install rviz and moveit visual tools:
     ```
     git clone https://github.com/CoppeliaRobotics/simROS2.git
     ```
-3. Set COPPELIASIM_ROOT_DIR env variable in your ~/.bashrc file
+3. Set COPPELIASIM_ROOT_DIR env variable in your ~/.bashrc file by replacing <path_to_coppeliasim> with the path of the folder from step 1 and running this command:
 
     ```
-    export COPPELIASIM_ROOT_DIR=/opt/CoppeliaSim
+    echo "export COPPELIASIM_ROOT_DIR=<path_to_coppeliasim>" >> ~/.bashrc
     ```
 4. Add "sensor_msgs/msg/JointState" to 'simExtROS2/meta/interfaces.txt'
 
