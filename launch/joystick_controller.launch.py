@@ -58,7 +58,6 @@ def generate_launch_description():
     config_arg = DeclareLaunchArgument(
         'config',
         default_value=PathJoinSubstitution([
-            FindPackageShare('manipulators'),
             'config',
             'joystick',
             'generic.yaml'
