@@ -6,6 +6,7 @@
 #include <string>
 #include <Eigen/Geometry>
 #include <vector> 
+#include <fcl/fcl.h>
 
 //Interfaces
 #include "shape_msgs/msg/solid_primitive.hpp"
@@ -153,9 +154,6 @@ class ManipulatorPlannerNode : public rclcpp::Node {
 
         // --------------- CONTROL FUNCTIONS ---------------
 
-        // Motors controller when no planner
-        void motorsController(const sensor_msgs::msg::JointState &js);
-
         // Execute the jacobian based control
         void jacobianControl();
         void updateJacobianSpeedCmd(); //Fit ee_vel_cmd_ to the acceleration limits for the end effector and assign the value to current_ee_vel_
@@ -213,6 +211,12 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         void setPrimitiveDimensions(const ShapeType object_type, const std::vector<double> &object_dims, shape_msgs::msg::SolidPrimitive &primitive); //Set the dimensions of the primitive object
         double sign(double val); //Returns the sign of a number or 0 (+1.0 or -1.0)
 
+        bool isPoseInsidePrimitive(
+            const geometry_msgs::msg::Pose &pose, 
+            const shape_msgs::msg::SolidPrimitive &primitive, 
+            const geometry_msgs::msg::Pose &primitive_pose
+        );
+
         // --------------- VARIABLES INITIALIZATION ---------------
 
         std::string node_name_;
@@ -235,6 +239,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         std::vector<std::string> gripper_links_;
         double min_jacobian_determinant_;
         Eigen::MatrixXd jacobian_var_;
+        bool limit_joints_control_ = false; // If true, the joints speed control is limited to the max_spd_jnts_ parameter
+        bool limit_jacobian_control_ = false; // If true, the jacobian speed control is limited to the max_speed_ee_ parameter
 
         //Services
         rclcpp::Service<manipulator_interfaces::srv::FKine>::SharedPtr fkine_service_;
@@ -261,12 +267,6 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr clearConstraints_sub_;                                //Subscriber for clearing constraints
 
         //Publishers
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j0_pub_;           // Publisher to j0 motor controller
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j1_pub_;           // Publisher to j1 motor controller
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j2_pub_;           // Publisher to j2 motor controller
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j3_pub_;           // Publisher to j3 motor controller
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j4_pub_;           // Publisher to j4 motor controller
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr j5_pub_;           // Publisher to j5 motor controller
         rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr tcpPose_pub_;    // Publisher to end effector pose
         rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr tcpVel_pub_;    // Publisher to end effector velocity
 
@@ -286,6 +286,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         Eigen::VectorXd  current_js_vel_;           // Command of speed to the joints
         Eigen::VectorXd ee_vel_cmd_;           // New command of speed to the ee
         Eigen::VectorXd js_vel_cmd_;            // New command of joints speed
+        std::vector<shape_msgs::msg::SolidPrimitive> constraints_primitives_; // List of contraints for jacobian control
+        std::vector<geometry_msgs::msg::Pose> constraints_poses_; // List of poses for jacobian control
 };
 
 #endif

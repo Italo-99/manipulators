@@ -28,6 +28,7 @@ find_package(motors_trajectory REQUIRED)
 find_package(rviz_visual_tools REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(yaml_cpp_vendor REQUIRED)
+find_package(fcl REQUIRED)
 
 # ---------------- VARIABLES -----------------
 
@@ -101,6 +102,7 @@ ament_target_dependencies(manipulator_planner
     moveit_visual_tools
     rviz_visual_tools
     manipulator_interfaces
+    fcl
 )
 
 target_link_libraries(manipulator_planner Eigen3::Eigen)

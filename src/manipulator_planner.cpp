@@ -23,6 +23,8 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     gripper_links_ = this->get_parameter("gripper_links").as_string_array();
     world_frame_ = prefix + this->get_parameter("world_frame").as_string();
     min_jacobian_determinant_ = this->get_parameter("min_jacobian_determinant").as_double();
+    limit_joints_control_ = this->get_parameter("limit_joints_control").as_bool();
+    limit_jacobian_control_ = this->get_parameter("limit_jacobian_control").as_bool();
 
     addPrefix(prefix, joint_names_);
     addPrefix(prefix, gripper_links_);
@@ -232,14 +234,6 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         },
         sub_options
     );
-
-    // Initialize publishers
-    j0_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[0] + "/motor_control", 1);
-    j1_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[1] + "/motor_control", 1);
-    j2_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[2] + "/motor_control", 1);
-    j3_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[3] + "/motor_control", 1);
-    j4_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[4] + "/motor_control", 1);
-    j5_pub_ = this->create_publisher<std_msgs::msg::Float64>(manipulator_name_ + "/" + joint_names_[5] + "/motor_control", 1);
 
     tcpPose_pub_ = this->create_publisher<geometry_msgs::msg::Pose>(manipulator_name_ + "/tcp_pose", 1);
     tcpVel_pub_  = this->create_publisher<geometry_msgs::msg::Twist>(manipulator_name_ + "/tcp_vel", 1);
@@ -781,10 +775,26 @@ void ManipulatorPlannerNode::jacobianControlSetter_callback(const std_srvs::srv:
     // Set robot jacobian control
     jac_control_ = req->data;
     RCLCPP_INFO(get_logger(), "Jacobian control mode set as %s", jac_control_ ? "True":"False");
+
+    if (limit_jacobian_control_){
+        constraints_primitives_.clear(); // Clear the constraints if the jacobian control is enabled
+        constraints_poses_.clear(); // Clear the poses if the jacobian control is enabled
+        moveit_msgs::msg::Constraints current_constraints = dynamic_planner_->getPathConstraints();
+        for (auto &constraint : current_constraints.position_constraints) {
+            for (size_t i {0}; i < constraint.constraint_region.primitives.size(); ++i) {
+                // Store the primitives for later use
+                constraints_primitives_.push_back(constraint.constraint_region.primitives[i]);
+                // Store the poses for later use
+                constraints_poses_.push_back(constraint.constraint_region.primitive_poses[i]);
+            }
+        }
+    }
+
     // Stop the robot to prevent bad behaviours during mode switch
     for (unsigned int k = 0; k<6; k++) {current_ee_vel_(k) = 0.;}
     // Publish the msg to the robot
     jacobianControl();
+
     // Return success
     res->success = true;
     res->message = jac_control_ ? "Jacobian control mode enabled":"Jacobian control mode disabled";
@@ -869,24 +879,6 @@ void ManipulatorPlannerNode::orientationConstraint_callback(const moveit_msgs::m
 
 //CONTROL FUNCTIONS
 
-// Set the the motors' position and speed through the controllers
-void ManipulatorPlannerNode::motorsController(const sensor_msgs::msg::JointState &js)
-{
-  std_msgs::msg::Float64 msg;
-  msg.data = js.position[0];
-  j0_pub_->publish(msg);
-  msg.data = js.position[1];
-  j1_pub_->publish(msg);
-  msg.data = js.position[2];
-  j2_pub_->publish(msg);
-  msg.data = js.position[3];
-  j3_pub_->publish(msg);
-  msg.data = js.position[4];
-  j4_pub_->publish(msg);
-  msg.data = js.position[5];
-  j5_pub_->publish(msg);
-}
-
 void setToZeroIfSmall(double &value)
 {
     if (std::abs(value) < 1e-6) {value = 0.0;}
@@ -935,15 +927,32 @@ void ManipulatorPlannerNode::jacobianControl()
         js.velocity[k] = dq[k];
     }
 
+    bool jac_check = true;
+    bool constraints_check = true;
+
     if (min_jacobian_determinant_ > 0.0){
         Eigen::MatrixXd jacobian = getJacobian(js.position, ee_name_); // Compute the jacobian matrix for the new position
-        if (abs(jacobian.determinant()) < min_jacobian_determinant_){
-            js.position = dynamic_planner_->joints_values_group_; // Set the position to the current one
-            js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
-            dynamic_planner_->moveRobot(js); // Send command to stand still
+        jac_check = abs(jacobian.determinant()) >= min_jacobian_determinant_; // Jacobian check failed
+    }
 
-            return; // Approaching singularity, don't execute
+    if (limit_jacobian_control_) {
+        // If the jacobian control is limited, check if the joint constraints are violated
+        for (unsigned int k = 0; k < constraints_primitives_.size(); k++) {
+            // Check if the position constraints are violated
+            if (!isPoseInsidePrimitive(
+                dynamic_planner_->getFKine(js.position, ee_name_).pose,
+                constraints_primitives_[k], 
+                constraints_poses_[k]
+            )) {
+                constraints_check = false;
+                break; // Exit the loop if a constraint is violated
+            }
         }
+    }
+
+    if (!jac_check || !constraints_check) {
+        js.position = dynamic_planner_->joints_values_group_; // Set the position to the current one
+        js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
     }
     
     // Send the goal to the move it fake controller as trajectory point
@@ -1026,6 +1035,15 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
         js.velocity[k] = current_js_vel_[k];
     }
 
+    if (limit_joints_control_) {
+        // If the joint control is limited, check if the joint constraints are violated
+        if (!dynamic_planner_->checkJointConstraints(js.position)) {
+            RCLCPP_WARN(get_logger(), "Joint constraints violated, stopping the robot");
+            js.position = dynamic_planner_->joints_values_group_; // Set the position to the current one
+            js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
+        }
+    }
+
     // Send the goal to the move it fake controller as trajectory point
     dynamic_planner_->moveRobot(js);
 }
@@ -1060,6 +1078,8 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("gripper_links", std::vector<std::string>()); //This is used to disable collision with the fingers when attaching objects
     this->declare_parameter("prefix", std::string()); //Prefix for the joint and link names
     this->declare_parameter("min_jacobian_determinant", 0.0); //Minimum determinant for the inverse jacobian (0 is disabled)
+    this->declare_parameter("limit_joints_control", false);
+    this->declare_parameter("limit_jacobian_control", false);
 
     //Dynamic planner params
     this->declare_parameter("planner_id", "geometric::RRTConnect");
@@ -1154,5 +1174,52 @@ void ManipulatorPlannerNode::setPrimitiveDimensions(const ShapeType object_type,
         default:
             RCLCPP_WARN(this->get_logger(), "Invalid object type, check the ShapeType enum");
             return;
+    }
+}
+
+bool ManipulatorPlannerNode::isPoseInsidePrimitive(
+    const geometry_msgs::msg::Pose &pose,
+    const shape_msgs::msg::SolidPrimitive &primitive,
+    const geometry_msgs::msg::Pose &primitive_pose
+) {
+    // Convert ROS poses to Eigen
+    Eigen::Vector3d point(pose.position.x, pose.position.y, pose.position.z);
+
+    tf2::Transform tf_primitive;
+    tf2::fromMsg(primitive_pose, tf_primitive);
+
+    tf2::Vector3 tf_point(point.x(), point.y(), point.z());
+
+    // Transform the point into the primitive's local frame
+    tf2::Vector3 local_point = tf_primitive.inverse() * tf_point;
+    Eigen::Vector3d p_local(local_point.x(), local_point.y(), local_point.z());
+
+    switch (primitive.type) {
+        case shape_msgs::msg::SolidPrimitive::SPHERE: {
+            double radius = primitive.dimensions[shape_msgs::msg::SolidPrimitive::SPHERE_RADIUS];
+            return p_local.norm() <= radius;
+        }
+
+        case shape_msgs::msg::SolidPrimitive::BOX: {
+            double hx = primitive.dimensions[shape_msgs::msg::SolidPrimitive::BOX_X] / 2.0;
+            double hy = primitive.dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y] / 2.0;
+            double hz = primitive.dimensions[shape_msgs::msg::SolidPrimitive::BOX_Z] / 2.0;
+
+            return (std::abs(p_local.x()) <= hx &&
+                    std::abs(p_local.y()) <= hy &&
+                    std::abs(p_local.z()) <= hz);
+        }
+
+        case shape_msgs::msg::SolidPrimitive::CYLINDER: {
+            double height = primitive.dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_HEIGHT];
+            double radius = primitive.dimensions[shape_msgs::msg::SolidPrimitive::CYLINDER_RADIUS];
+
+            double r_xy = std::sqrt(p_local.x() * p_local.x() + p_local.y() * p_local.y());
+            return (r_xy <= radius && std::abs(p_local.z()) <= height / 2.0);
+        }
+
+        default:
+            RCLCPP_WARN(this->get_logger(), "Unsupported primitive type.");
+            return false;
     }
 }

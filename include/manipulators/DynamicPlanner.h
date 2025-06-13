@@ -154,6 +154,9 @@ class DynamicPlanner
         void clearPathConstraints(); //Clear all constraints
         moveit_msgs::msg::Constraints getPathConstraints() const; //Get the current path constraints
 
+        bool checkJointConstraints(const std::vector<double>& joint_positions); //Check if the joint positions respect the constraints
+        bool checkPoseConstraints(const std::vector<double> &joint_positions); //Check if the pose respects the constraints
+
         // --------------- FORWARD KINEMATICS ----------------
         /* \: computes forward kinematics
             Args:

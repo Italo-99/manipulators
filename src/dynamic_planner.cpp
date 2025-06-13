@@ -668,6 +668,48 @@ void DynamicPlanner::clearPathConstraints()
     rviz_visual_tools_->trigger();
 }
 
+bool DynamicPlanner::checkJointConstraints(const std::vector<double> &joint_positions)
+{
+    /*
+    Checks if the joint positions respect the joint limits
+    Args:
+        joint_positions: Array of joint positions (radians)
+    Returns:
+        True if the joint positions respect the joint limits, False otherwise
+    */
+
+    moveit::core::RobotStatePtr robot_state = getRobotState();
+    robot_state->setJointGroupPositions(move_group_->getName(), joint_positions);
+
+    moveit_msgs::msg::Constraints path_constraints = getPathConstraints();
+
+    path_constraints.position_constraints.clear();
+    path_constraints.orientation_constraints.clear();
+
+    return planning_scene_->isStateConstrained(*robot_state, path_constraints) && robot_state->satisfiesBounds();
+}
+
+bool DynamicPlanner::checkPoseConstraints(const std::vector<double> &joint_positions)
+{
+    /*
+    Checks if the pose respects the path constraints
+    Args:
+        pose: Pose to check
+    Returns:
+        True if the pose respects the path constraints, False otherwise
+    */
+
+    moveit::core::RobotStatePtr robot_state = getRobotState();
+    robot_state->setJointGroupPositions(move_group_->getName(), joint_positions);
+
+    moveit_msgs::msg::Constraints path_constraints = getPathConstraints();
+
+    path_constraints.joint_constraints.clear();
+    path_constraints.orientation_constraints.clear();
+
+    return planning_scene_->isStateConstrained(*robot_state, path_constraints);
+}
+
 // ------------------------------------- FORWARD KINEMATICS ------------------------------------
 
 geometry_msgs::msg::PoseStamped DynamicPlanner::getFKine(const std::vector<double> &joint_positions, const std::string &end_effector_link)
