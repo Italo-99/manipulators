@@ -121,6 +121,11 @@ ament_target_dependencies(manipulator_menu_user
     ${MANIPULATOR_MENU_DEPENDS}
 )
 
+install(
+    TARGETS manipulator_menu_user
+    DESTINATION lib/${PROJECT_NAME}
+)
+
 #Export library
 add_library(manipulator_menu SHARED src/manipulator_menu.cpp)
 ament_export_targets(manipulator_menu)
