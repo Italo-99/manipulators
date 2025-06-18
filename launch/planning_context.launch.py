@@ -7,7 +7,6 @@ from launch_ros.substitutions import FindPackageShare
 from manipulators.launch_utils import get_ur_moveit_launch_params, get_namespace
 
 def launch_setup_ur(context, *args, **kwargs):
-
     # Initialize Arguments
     moveit_params = get_ur_moveit_launch_params(context)
     rate = LaunchConfiguration("rate")

@@ -17,13 +17,12 @@ def launch_setup(context, *args, **kwargs):
     mp_params = load_yaml(
         "manipulators",
         os.path.join(
-            "config/ur10e_eecam.yaml",
+            "config", "ur10e_eecam.yaml",
         )
     )
 
     # LOAD UR MOVEIT PARAMETERS
     moveit_params = get_ur_moveit_launch_params(context)
-
     # ---------------------------------------- NODES ----------------------------------------
 
     nodes_to_start = []
@@ -45,14 +44,25 @@ def launch_setup(context, *args, **kwargs):
 
     # ---------------------- GRIPPER NODES ----------------------
 
-    # ROBOTIQ 85 GRIPPER NODE
-    nodes_to_start.append(
-        Node(
-            package="motors_trajectory",
-            executable="robotiq_85_gripper_node",
-            namespace=get_namespace(context),
+    if LaunchConfiguration("gripper").perform(context) == "robotiq_85":
+        # ROBOTIQ 85 GRIPPER NODE
+        gripper_params = load_yaml(
+            "manipulators",
+            os.path.join(
+                "config",
+                "grippers",
+                "robotiq_85.yaml"
+            )
         )
-    )
+
+        nodes_to_start.append(
+            Node(
+                package="motors_trajectory",
+                executable="robotiq_85_gripper_node",
+                namespace=get_namespace(context),
+                parameters=[gripper_params]
+            )
+        )
 
     # -----------------------------------------------------------
 
@@ -215,9 +225,9 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "gripper",
-            default_value="False",
-            choices=["True", "False"],
-            description="Whether to run the robotiq 85 gripper node or not."
+            default_value="robotiq_85",
+            choices=["robotiq_85", "no_gripper"],
+            description="What gripper to use with the robot."
         )
     )
 

@@ -1,0 +1,11 @@
+group_name : "robotiq_85_gripper"
+joint_name : "robotiq_85_left_knuckle_joint"
+upper_limit : 0.8
+lower_limit : 0.0
+vel_limit : 1.0
+acc_limit : 2.0
+ctrl_rate : 500
+min_vel : 0.1
+min_vel_region : 0.02
+tolerance : 0.01
+use_percentage : true
