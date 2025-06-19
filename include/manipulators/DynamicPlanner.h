@@ -119,8 +119,9 @@ class DynamicPlanner
 
         void moveRobot(const sensor_msgs::msg::JointState &joint_state); //Single trajectory point
         void moveRobot(const trajectory_msgs::msg::JointTrajectoryPoint &traj_pt); //Single trajectory point
-        void moveRobot(); //Execute the last planned trajectory
-        void moveRobot(moveit_msgs::msg::RobotTrajectory& robot_trajectory); //Execute the passed trajectory (waypoints)
+        
+        void executeTrajectory(); //Asynchronous execution of the last planned trajectory
+        void executeTrajectory(moveit_msgs::msg::RobotTrajectory& robot_trajectory); //Asynchronous execution of the passed trajectory (waypoints)
 
         bool isMoving(); //Check if the robot is moving
         bool isReady() const; //Check if the planner has received group definition, so the dynamic planner can start working
@@ -197,7 +198,8 @@ class DynamicPlanner
         // --------------- CALLBACK METHODS ----------------
 
         void jointsState_callback(const sensor_msgs::msg::JointState::SharedPtr &joints_state);     //Update the joint states
-        void trajpoint_callback(const std_msgs::msg::UInt32::SharedPtr msg);                        //Update the current trajectory point
+        void trajectoryExecution_callback(); //Update the current trajectory point index
+        void executionControl_callback(const std_msgs::msg::Bool::SharedPtr &msg); //Control the execution of the trajectory
 
         // --------------- TRAJECTORY METHODS ----------------
 
@@ -262,11 +264,10 @@ class DynamicPlanner
         geometry_msgs::msg::Pose final_pose_;                   //End effector pose of the planned trajectory
         std::string traj_end_effector_link_;                    //End effector link of the planned trajectory
         unsigned long trajpoint_;                               //Index of the current trajectory point
-        bool is_moving = false;                                 //Whether the robot is moving or not, can be set to false to stop execution of trajectory
+        bool is_moving_ = false;                                 //Whether the robot is moving or not, can be set to false to stop execution of trajectory
 
         //Time optimal trajectory generation 
         trajectory_processing::TimeOptimalTrajectoryGenerationPtr time_optimal_traj_gen;
-        const double totg_resample_dt = 0.002;
         const double totg_tolerance = 0.1;
         const double totg_min_angle_change = 0.001;
 
@@ -278,6 +279,10 @@ class DynamicPlanner
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joints_state_sub_;        //Subscriber for updating the joint states
         rclcpp::Subscription<std_msgs::msg::UInt32>::SharedPtr trajpoint_sub_;                  //Current trajpoint subscriber
         rclcpp::Subscription<moveit_msgs::msg::RobotTrajectory>::SharedPtr trajectory_sub_;     //Subscriber for trajectories
+        rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr execution_ctrl_sub_;               //Subscriber for moving and stopping the robot
+
+        //Timers
+        rclcpp::TimerBase::SharedPtr traj_timer_; //Timer to execute trajectory points
 
         //Default values for the 'plan' function
         std::string end_effector_link_ = "tool0";

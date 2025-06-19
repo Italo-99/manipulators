@@ -260,7 +260,6 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Subscription<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr attachedcollisionObject_sub_;    //Subscriber for addition and update of collision objects
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr velJacSetpoint_sub_;                             //Subscriber for the velocity setpoint for the jacobian speed based control
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr realTimeSetpoint_sub_;                        //Subscriber for the speed setpoint for the real time joints speed based control
-        rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr execution_ctrl_sub_;                                   //Subscriber for moving and stopping the robot
         rclcpp::Subscription<moveit_msgs::msg::PositionConstraint>::SharedPtr positionConstraint_sub_;              //Subscriber for position constraints
         rclcpp::Subscription<moveit_msgs::msg::OrientationConstraint>::SharedPtr orientationConstraint_sub_;        //Subscriber for orientation constraints
         rclcpp::Subscription<moveit_msgs::msg::JointConstraint>::SharedPtr jointConstraint_sub_;                    //Subscriber for joint constraints

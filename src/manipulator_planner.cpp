@@ -154,14 +154,6 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         sub_options
     );
 
-    execution_ctrl_sub_ = this->create_subscription<std_msgs::msg::Bool>(
-        planning_group_ + "/execution_control", 1, 
-        [this](const std_msgs::msg::Bool::SharedPtr msg) {
-            this->executionControl_callback(msg);
-        },
-        sub_options
-    );
-
     collisionObject_sub_ = this->create_subscription<moveit_msgs::msg::CollisionObject>(
         manipulator_name_ + "/collision_object", 1, 
         [this](const moveit_msgs::msg::CollisionObject::SharedPtr msg) {
@@ -276,6 +268,9 @@ void ManipulatorPlannerNode::spinner() {
     mainloop_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
         [&, this]() {
+            if (spinner_mean_ > 0.9 / ros_freq_) {
+                RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 20000, "Spinner mean time is too high: %f s", spinner_mean_);
+            }
 
             if (jac_control_) {
 
@@ -645,7 +640,7 @@ void ManipulatorPlannerNode::tcpGoal_callback(const manipulator_interfaces::msg:
     dynamic_planner_->plan(msg->target_pose, ee_link_name, ref_frame);
 
     if(msg->execute){
-        dynamic_planner_->moveRobot();
+        dynamic_planner_->executeTrajectory();
     }
 }
 
@@ -661,18 +656,7 @@ void ManipulatorPlannerNode::jointGoal_callback(const manipulator_interfaces::ms
     dynamic_planner_->plan(msg->joint_goal.position);
 
     if (msg->execute){
-        dynamic_planner_->moveRobot();
-    }
-}
-
-void ManipulatorPlannerNode::executionControl_callback(const std_msgs::msg::Bool::SharedPtr msg)
-{
-    //If true move the robot, otherwise stop
-    if (msg->data)
-    {
-        dynamic_planner_->moveRobot();
-    } else {
-        dynamic_planner_->stop();
+        dynamic_planner_->executeTrajectory();
     }
 }
 
@@ -742,7 +726,7 @@ void ManipulatorPlannerNode::cartesianPlan_callback(const manipulator_interfaces
     }
     else if (msg->execute)
     {
-        dynamic_planner_->moveRobot();
+        dynamic_planner_->executeTrajectory();
     }
 }
 

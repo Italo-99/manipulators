@@ -68,7 +68,7 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
     //Initialize time optimal trajectory generation
     time_optimal_traj_gen = std::make_shared<trajectory_processing::TimeOptimalTrajectoryGeneration>(
         totg_tolerance,
-        totg_resample_dt,
+        params.sample_time,
         totg_min_angle_change
     );
 
@@ -115,10 +115,19 @@ void DynamicPlanner::initialize()
         }
     );
 
-    trajpoint_sub_ = node_->create_subscription<std_msgs::msg::UInt32>(
-        planning_group_ + "/trajpoint", 1,
-        [this](const std_msgs::msg::UInt32::SharedPtr msg) {
-            this->trajpoint_callback(msg);
+    execution_ctrl_sub_ = node_->create_subscription<std_msgs::msg::Bool>(
+        planning_group_ + "/execution_control", 1, 
+        [this](const std_msgs::msg::Bool::SharedPtr msg) {
+            this->executionControl_callback(msg);
+        }
+    );
+
+    //Timers
+
+    traj_timer_ = node_->create_wall_timer(
+        std::chrono::milliseconds(static_cast<int>(params_.sample_time * 1000)),
+        [this]() {
+            this->trajectoryExecution_callback();
         }
     );
 }
@@ -482,67 +491,28 @@ void DynamicPlanner::moveRobot(const trajectory_msgs::msg::JointTrajectoryPoint&
     moveRobot(joint_state);
 }
 
-void DynamicPlanner::moveRobot()
+void DynamicPlanner::executeTrajectory()
 {
-    //Executes the last planned trajectory
+    //Asynchronous execution of the last planned trajectory
     if (robot_trajectory_.joint_trajectory.points.empty())
     {
         RCLCPP_ERROR(node_->get_logger(), "No trajectory to execute");
         return;
     }
 
-    // Setup the rate of the planner execution
-    // Hypothesis: all the points of the trajectory are uniformely sampled in time; if not, thery are forced here
-    double points_time = robot_trajectory_.joint_trajectory.points[1].time_from_start.sec +             //seconds
-                         robot_trajectory_.joint_trajectory.points[1].time_from_start.nanosec * 1e-9;
-    
-    is_moving = true;
-
-    rclcpp::Rate traj_exec_rate(1/(points_time));
-
-    if(!checkJointDiff(robot_trajectory_.joint_trajectory.points[0].positions)){
-        RCLCPP_ERROR(node_->get_logger(), "Trajectory doesn't start from the current position");
-        return;
-    }
-
-    for (auto traj_pt : robot_trajectory_.joint_trajectory.points)
-    {
-        if (is_moving == false){
-            //Send a trajectory msg with the last position and velocities set to 0
-            trajectory_msgs::msg::JointTrajectoryPoint stopping_point = traj_pt;
-            stopping_point.velocities = std::vector<double>(joint_names_.size(), 0.);
-            moveRobot(stopping_point);
-            break;
-        } else if (dynamic_behavior_){
-            //Check if the trajectory is still clear of obstacles
-            if (!checkTrajectory()){
-                //If not recalculate
-                RCLCPP_INFO(node_->get_logger(), "Recalculating trajectory");
-                //recalculateTrajectory(traj_current_index_);
-            }
-        }
-
-        // Execute the move
-        moveRobot(traj_pt);
-
-        traj_exec_rate.sleep();
-    }
-
-    RCLCPP_INFO(node_->get_logger(), "Trajectory executed.");
-
-    is_moving = false;
+    is_moving_ = true; //Set moving state to true
 }
 
-void DynamicPlanner::moveRobot(moveit_msgs::msg::RobotTrajectory& robot_trajectory)
+void DynamicPlanner::executeTrajectory(moveit_msgs::msg::RobotTrajectory& robot_trajectory)
 {
     setTrajectory(robot_trajectory);
-    moveRobot();
+    executeTrajectory();
 }
 
 bool DynamicPlanner::isMoving()
 {
     //Check if the robot is moving
-    return is_moving;
+    return is_moving_;
 }
 
 // Check if the planner has received group definition, so the dynamic planner can start working
@@ -554,7 +524,7 @@ bool DynamicPlanner::isReady() const
 
 void DynamicPlanner::stop()
 {
-    is_moving = false;
+    is_moving_ = false;
 }
 
 std::shared_ptr<moveit::planning_interface::MoveGroupInterface> DynamicPlanner::getMoveGroup() const
@@ -886,12 +856,41 @@ void DynamicPlanner::jointsState_callback(const sensor_msgs::msg::JointState::Sh
     }
 }
 
-void DynamicPlanner::trajpoint_callback(const std_msgs::msg::UInt32::SharedPtr msg)
-{
-    //Update the current trajectory point
-    trajpoint_ = msg->data;
+void DynamicPlanner::trajectoryExecution_callback(){
+    /*
+    Callback for trajectory execution from traj_timer_
+    */
+
+    if (is_moving_ && isReady() && rclcpp::ok()){
+        trajectory_msgs::msg::JointTrajectoryPoint traj_pt;
+        if (trajpoint_ < robot_trajectory_.joint_trajectory.points.size())
+        {
+            traj_pt = robot_trajectory_.joint_trajectory.points[trajpoint_];
+            moveRobot(traj_pt);
+            trajpoint_++;
+        }
+        else if (trajpoint_ == robot_trajectory_.joint_trajectory.points.size())
+        {
+            // If the trajectory is finished, stop the execution
+            RCLCPP_INFO(node_->get_logger(), "Trajectory executed.");
+            is_moving_ = false;
+            trajpoint_ = 0UL; // Reset trajectory point index
+        }
+    }
+    
 }
 
+
+void DynamicPlanner::executionControl_callback(const std_msgs::msg::Bool::SharedPtr& msg)
+{
+    //If true move the robot, otherwise stop
+    if (msg->data)
+    {
+        executeTrajectory();
+    } else {
+        stop();
+    }
+}
 
 // ------------------------------------- TRAJECTORY METHODS -------------------------------------
 
