@@ -6,7 +6,9 @@
 #include <vector>
 #include <tuple>
 #include <functional> 
-#include <cmath> 
+#include <cmath>
+#include <sstream>
+#include <iomanip>
 
 /*
  ====== MenuUserInterface class ======
@@ -23,6 +25,78 @@
 
  You can see an example of usage in the ManipulatorMenu node.
 */
+
+namespace MenuUserInterfaceUtils
+{
+    enum PaddingType
+    {
+        LEFT,
+        RIGHT,
+        CENTER
+    };
+
+    // Utility function to apply padding to a title string
+    static std::string applyPadding(std::string title, 
+                                    const unsigned long size = 50, 
+                                    const char padding_char = '=', 
+                                    PaddingType type = CENTER)
+    {
+        if (title.size() < size)
+        {
+            switch (type)
+            {
+                case RIGHT:
+                    return title + std::string(size - title.size(), padding_char);
+                case LEFT:
+                    return std::string(size - title.size(), padding_char) + title;
+                case CENTER: {
+                        int padding = floor((size - title.size()) / 2);
+                        return std::string(padding, padding_char) + " " + title + " " + std::string(padding, padding_char);
+                    }
+                default:
+                    return title;
+            }
+        }
+        else
+        {
+            return title;
+        }
+    }
+
+    [[maybe_unused]]
+    static std::string formatDouble(double value,
+                                    int precision    = 2,
+                                    int width        = 5,
+                                    PaddingType type = RIGHT,
+                                    char padding_char = ' ')
+    {
+
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(precision) << value;
+        std::string num = oss.str();          // e.g. "12.35"
+
+        if (static_cast<int>(num.size()) >= width)
+            return num;                       // no truncation
+
+        switch (type)
+        {
+            case RIGHT:
+                return num + std::string(width - num.size(), padding_char);
+
+            case LEFT:
+                return std::string(width - num.size(), padding_char) + num;
+
+            case CENTER:
+            default:
+                int pad_left  = (width - num.size()) / 2;
+                int pad_right = width - num.size() - pad_left;
+                return std::string(pad_left,  padding_char) +
+                    num +
+                    std::string(pad_right, padding_char);
+        }
+    }
+
+}
 
 template <typename SuperClass>
 class MenuUserInterface
@@ -52,7 +126,6 @@ private:
     SuperClass *super_;
 
     std::tuple<int, std::string, void (SuperClass::*)(void)> getChoice(int id); //Get choice by id
-    std::string applyPadding(std::string title); //Returs a string with "=" as padding to center the title
 };
 
 // Function Definitions
@@ -62,26 +135,12 @@ void MenuUserInterface<SuperClass>::printMenu()
 {
     for (auto section : sections_)
     {
-        std::cout << std::endl << applyPadding(std::get<0>(section)) << std::endl;
+        std::cout << std::endl << MenuUserInterfaceUtils::applyPadding(std::get<0>(section)) << std::endl;
         for (int i = std::get<1>(section); i <= std::get<2>(section); i++)
         {
             auto choice = getChoice(i);
             printf("%d. - %s\n", std::get<0>(choice), std::get<1>(choice).c_str());
         }
-    }
-}
-
-template <typename SuperClass>
-std::string MenuUserInterface<SuperClass>::applyPadding(std::string title)
-{
-    if (title.size() < 50)
-    {
-        int padding = floor((50 - title.size()) / 2);
-        return std::string(padding, '=') + " " + title + " " + std::string(padding, '=');
-    }
-    else
-    {
-        return title;
     }
 }
 

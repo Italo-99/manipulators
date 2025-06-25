@@ -1301,7 +1301,7 @@ void ManipulatorMenu::printMatrix(const Eigen::MatrixXd &matrix)
     {
         for (long j = 0; j < matrix.cols(); j++)
         {
-            std::cout << matrix(i, j) << " ";
+            std::cout << MenuUserInterfaceUtils::formatDouble(matrix(i, j), 2, 5) << " ";
         }
         std::cout << std::endl;
     }
