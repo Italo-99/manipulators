@@ -62,6 +62,10 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     changePlannerScalingFactors_client_  = node_->create_client<manipulator_interfaces::srv::ChangePlannerScalingFactors>(params_.manipulator_name+"/change_planner_scaling_factors");
     changePlannerTolerances_client_      = node_->create_client<manipulator_interfaces::srv::ChangePlannerTolerances>(params_.manipulator_name+"/change_planner_tolerances");
 
+    // ---------------------- TF ----------------------
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
     // ---------------------- Planning ----------------------
     plannedTrajectory_sub_ = node_->create_subscription<manipulator_interfaces::msg::TrajectoryResult>(
         params_.planning_group+"/planned_trajectory", 1,
@@ -715,42 +719,33 @@ void ManipulatorMenu::stopTrajectory(){
 // Listen a TF between two given frames
 geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &source_frame, const std::string &target_frame)
 {
-    // Create a TF2 buffer and listener
-    std::unique_ptr<tf2_ros::Buffer> tf_buffer = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
-    std::shared_ptr<tf2_ros::TransformListener> tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
-    // Wait for the transformation to be available
-    try
+    geometry_msgs::msg::TransformStamped transform;
+    bool received_transform = false;
+    for (size_t counter {0}; !received_transform && rclcpp::ok() && counter < 10; ++counter)
     {
-        tf_buffer->canTransform(source_frame, target_frame, rclcpp::Time(0), rclcpp::Duration(std::chrono::milliseconds(200)));
-    }
-    catch (tf2::TransformException &ex)
-    {
-        RCLCPP_WARN(node_->get_logger(), "%s", ex.what());
-    }
-
-    // Get the transformation
-    geometry_msgs::msg::TransformStamped transformStamped;
-    try
-    {
-        transformStamped = tf_buffer->lookupTransform(source_frame, target_frame, rclcpp::Time(0));
-    }
-    catch (tf2::TransformException &ex)
-    {
-        RCLCPP_WARN(node_->get_logger(), "%s", ex.what());
-        rclcpp::sleep_for(std::chrono::seconds(1));
+        try {
+            transform = tf_buffer_->lookupTransform(source_frame, target_frame, tf2::TimePointZero);
+            received_transform = true;
+        } catch (const tf2::TransformException & ex) {
+            rclcpp::sleep_for(std::chrono::milliseconds(100));
+        }
     }
 
-    // Convert the tf msg into a PoseStampedrclcp
-    geometry_msgs::msg::PoseStamped target_pose;
-    target_pose.header.frame_id = source_frame;
-    target_pose.header.stamp = node_->get_clock()->now();
-    target_pose.pose.position.x = transformStamped.transform.translation.x;
-    target_pose.pose.position.y = transformStamped.transform.translation.y;
-    target_pose.pose.position.z = transformStamped.transform.translation.z;
-    target_pose.pose.orientation = transformStamped.transform.rotation;
+    geometry_msgs::msg::PoseStamped pose_stamped;
+    if (received_transform)
+    {
+        pose_stamped.header.stamp = transform.header.stamp;
+        pose_stamped.header.frame_id = params_.base_link_name;
+        pose_stamped.pose.position.x = transform.transform.translation.x;
+        pose_stamped.pose.position.y = transform.transform.translation.y;
+        pose_stamped.pose.position.z = transform.transform.translation.z;
+        pose_stamped.pose.orientation = transform.transform.rotation;
+    } else {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to get transform from %s to %s", source_frame.c_str(), target_frame.c_str());
+    }
 
-    return target_pose;
+    return pose_stamped;
 }
 
 // Get current EE pose

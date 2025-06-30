@@ -52,7 +52,7 @@ def launch_setup(context, *args, **kwargs):
             "manipulators",
             os.path.join(
                 "config",
-                "grippers"
+                "grippers",
                 "robotiq_85.yaml"
             )
         )
@@ -62,7 +62,6 @@ def launch_setup(context, *args, **kwargs):
                 package="motors_trajectory",
                 executable="robotiq_85_gripper_node",
                 namespace=get_namespace(context),
-                condition=IfCondition(LaunchConfiguration("gripper")),
                 parameters=[gipper_params]
             )
         )

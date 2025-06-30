@@ -711,6 +711,10 @@ class ManipulatorMenu
         rclcpp::Client<manipulator_interfaces::srv::FKine>::SharedPtr fKine_client_;
         rclcpp::Client<manipulator_interfaces::srv::Jacobian>::SharedPtr jacobian_client_;
 
+        // TF
+        std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
+        std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+
     public:
         // --------------------- PUBLIC VARIABLES ---------------------
 
