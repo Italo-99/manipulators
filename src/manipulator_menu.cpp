@@ -635,7 +635,8 @@ bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajector
             if (std::abs(goal_state.position[i] - current_joint_pose_.position[i]) > params_.joint_tolerance){
                 break; //At least one joint is not in the goal position
             }
-            return true;
+
+            if (i == goal_state.position.size() - 1) {return true;} //If we got to the last element trajectory exec is complete
         }
 
         rate.sleep();
@@ -658,8 +659,10 @@ bool ManipulatorMenu::planExecuteAndWait(
         // Execute the trajectory and wait for it to finish
         return executeAndWait(traj_result.trajectory, timeout_execution);
     }
-    else
+    else if (traj_result_.error_code == manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION)
     {
+        return true; //If the robot was already in that position consider the execution successfull
+    } else {
         return false;
     }
 }
@@ -679,8 +682,10 @@ bool ManipulatorMenu::planExecuteAndWait(
         // Execute the trajectory and wait for it to finish
         return executeAndWait(traj_result.trajectory, timeout_execution);
     }
-    else
+    else if (traj_result_.error_code == manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION)
     {
+        return true; //If the robot was already in that position consider the execution successfull
+    } else {
         return false;
     }
 }
@@ -700,8 +705,10 @@ bool ManipulatorMenu::cartesianPlanExecuteAndWait(
         // Execute the trajectory and wait for it to finish
         return executeAndWait(traj_result.trajectory, timeout_execution);
     }
-    else
+    else if (traj_result_.error_code == manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION)
     {
+        return true; //If the robot was already in that position consider the execution successfull
+    } else {
         return false;
     }
 }
@@ -717,7 +724,7 @@ void ManipulatorMenu::stopTrajectory(){
 // -------------------- TF END EFFECTOR LISTENER -----------------------
 
 // Listen a TF between two given frames
-geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &source_frame, const std::string &target_frame)
+geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &reference_frame, const std::string &target_frame)
 {
 
     geometry_msgs::msg::TransformStamped transform;
@@ -725,7 +732,7 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &source
     for (size_t counter {0}; !received_transform && rclcpp::ok() && counter < 10; ++counter)
     {
         try {
-            transform = tf_buffer_->lookupTransform(source_frame, target_frame, tf2::TimePointZero);
+            transform = tf_buffer_->lookupTransform(reference_frame, target_frame, tf2::TimePointZero, tf2::durationFromSec(0.5));
             received_transform = true;
         } catch (const tf2::TransformException & ex) {
             rclcpp::sleep_for(std::chrono::milliseconds(100));
@@ -742,11 +749,40 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &source
         pose_stamped.pose.position.z = transform.transform.translation.z;
         pose_stamped.pose.orientation = transform.transform.rotation;
     } else {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to get transform from %s to %s", source_frame.c_str(), target_frame.c_str());
+        RCLCPP_ERROR(node_->get_logger(), "Failed to get transform from %s to %s", reference_frame.c_str(), target_frame.c_str());
     }
 
     return pose_stamped;
 }
+
+geometry_msgs::msg::PoseStamped ManipulatorMenu::getTfOffset(const std::string& target_frame, 
+                                                             const std::string& reference_frame,
+                                                             const geometry_msgs::msg::Pose &offset)
+{
+    geometry_msgs::msg::PoseStamped offset_stamped;
+    offset_stamped.pose = offset;
+    offset_stamped.header.frame_id = target_frame;
+    offset_stamped.header.stamp = node_->get_clock()->now();
+
+    geometry_msgs::msg::PoseStamped pose_stamped;
+    bool received_transform = false;
+    for (size_t counter {0}; !received_transform && rclcpp::ok() && counter < 10; ++counter)
+    {
+        try {
+            pose_stamped = tf_buffer_->transform(offset_stamped, reference_frame, tf2::durationFromSec(0.5));
+            received_transform = true;
+        } catch (const tf2::TransformException & ex) {
+            rclcpp::sleep_for(std::chrono::milliseconds(100));
+        }
+    }
+
+    if (!received_transform)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to transform pose from %s to %s", target_frame.c_str(), reference_frame.c_str());
+    }
+    return pose_stamped;
+}
+
 
 // Get current EE pose
 geometry_msgs::msg::Pose ManipulatorMenu::getEEpose()
@@ -1631,7 +1667,7 @@ void ManipulatorMenu::userJointGoal()
     }
 }
 
-void ManipulatorMenu::userOneJointMove_user()
+void ManipulatorMenu::userOneJointMove()
 {
     int num = 0;
     double joint_rot = 0.0;
@@ -2246,7 +2282,7 @@ void ManipulatorMenu::initializeMenu(){
 
     //Joint/TCP Goals
     menu_->addChoice("Plan and execute joint goal", &ManipulatorMenu::userJointGoal);
-    menu_->addChoice("Plan and execute one joint move", &ManipulatorMenu::userOneJointMove_user);
+    menu_->addChoice("Plan and execute one joint move", &ManipulatorMenu::userOneJointMove);
     menu_->addChoice("Plan and execute TCP goal", &ManipulatorMenu::userTcpGoal);
     menu_->addSection("Joint/TCP Goals", section_start, menu_->last_);
     section_start = menu_->last_ + 1;

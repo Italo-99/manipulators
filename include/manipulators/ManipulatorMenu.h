@@ -365,9 +365,16 @@ class ManipulatorMenu
         std::vector<double> getEEpos_rpy();
 
         /*!
-            @brief Get the transformation between two frames.
+            @brief Get the pose of target_frame relative to reference_frame.
         */
-        geometry_msgs::msg::PoseStamped getTf(const std::string& source_frame, const std::string& target_frame);
+        geometry_msgs::msg::PoseStamped getTf(const std::string& target_frame, const std::string& reference_frame);
+
+        /*!
+            @brief Get the pose of a point offset from target_frame according to its own frame, relative to reference frame.
+        */
+        geometry_msgs::msg::PoseStamped getTfOffset(const std::string& target_frame, 
+                                                    const std::string& reference_frame,
+                                                    const geometry_msgs::msg::Pose &offset);
 
         /*!
             @brief Move the end effector x_step meters along the x axis.
@@ -607,7 +614,7 @@ class ManipulatorMenu
         // --------------------- USER ACTIONS ---------------------
         
         void userJointGoal(void);            // to perform a joint goal set by the user 
-        void userOneJointMove_user();        // to move only a single joint
+        void userOneJointMove();        // to move only a single joint
         
         void userTcpGoal(void);              // to perform a tcp goal set by the user 
 
