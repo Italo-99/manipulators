@@ -203,4 +203,4 @@ std::tuple<int, std::string, void (SuperClass::*)(void)> MenuUserInterface<Super
     return std::make_tuple(-1, "Invalid choice", nullptr);
 }
 
-#endif /* MENU_USER_INTERFACE_H */
+#endif // MENU_USER_INTERFACE_H

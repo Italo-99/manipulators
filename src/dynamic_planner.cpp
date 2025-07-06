@@ -391,25 +391,21 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
     move_group_->setEndEffectorLink(ee_link);
 
     // Setup cartesian planner
+    double eef_step = params_.max_velocity*params_.sample_time * 10;
     double jump_treshold = 0.0;
-    double eef_step = params_.max_velocity*params_.sample_time; // Ideal distance step
     double fraction = 0.0;
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
     manipulator_interfaces::msg::TrajectoryResult result_msg;
     moveit_msgs::msg::RobotTrajectory trajectory;
 
-    for (int k = 0; k < params_.num_attempts; k++)
-    {
-        fraction = move_group_->computeCartesianPath(
-            waypoints, 
-            (pow(10,k))*eef_step, 
-            jump_treshold, 
-            trajectory    
-        );
+    fraction = move_group_->computeCartesianPath(
+        waypoints, 
+        eef_step, 
+        jump_treshold, 
+        trajectory    
+    );
 
-        if (fraction > 0.0) {break;}
-    }
     // Resample trajectory time
     bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
 

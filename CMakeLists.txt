@@ -5,6 +5,13 @@ project(manipulators)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
+# Comment these lines when debugging
+# They should reduce memory usage during compilation 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-var-tracking-assignments")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-depth=256")
+
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -43,9 +50,9 @@ set(MANIPULATOR_MENU_DEPENDS
     trajectory_msgs
     moveit_core
     moveit_msgs
-    manipulator_interfaces
     motors_trajectory
     yaml_cpp_vendor
+    manipulator_interfaces
 )
 
 if(BUILD_TESTING)
@@ -126,7 +133,17 @@ install(
     DESTINATION lib/${PROJECT_NAME}
 )
 
-#Export library
+#Export menu user interface library
+add_library(menu_user_interface INTERFACE)
+ament_export_targets(menu_user_interface)
+
+install(
+    TARGETS menu_user_interface
+    EXPORT menu_user_interface
+    INCLUDES DESTINATION include
+)
+
+#Export menu library
 add_library(manipulator_menu SHARED src/manipulator_menu.cpp)
 ament_export_targets(manipulator_menu)
 
