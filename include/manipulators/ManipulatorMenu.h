@@ -52,7 +52,7 @@
 #include "manipulator_interfaces/msg/trajectory_result.hpp"
 #include "trajectory_msgs/msg/joint_trajectory.hpp"
 
-#include "manipulators/MenuUserInterface.h"
+#include "manipulators/MenuUserInterface.hpp"
 
 /*! @struct ManipulatorMenuParams
         @brief Struct to hold the parameters for the ManipulatorMenu class.
@@ -363,6 +363,16 @@ class ManipulatorMenu
             @note Might block due to service call, so use with caution in real-time applications.
         */
         std::vector<double> getEEpos_rpy();
+
+        /*!
+            @brief Get the current joint state of the manipulator in radians.
+        */
+        sensor_msgs::msg::JointState getJointStateRadians();
+
+        /*!
+            @brief Get the current joint state of the manipulator in degrees.
+        */
+        std::vector<double> getJointStateDegrees();
 
         /*!
             @brief Get the pose of target_frame relative to reference_frame.

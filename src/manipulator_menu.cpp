@@ -467,6 +467,7 @@ void ManipulatorMenu::publishCartesianGoal(
     const bool execute)
 {
     manipulator_interfaces::msg::CartesianGoal cartesian_goal_msg;
+    cartesian_goal_msg.end_effector = manipulator_interfaces::msg::CartesianGoal::DEFAULT;
 
     for (const auto& waypoint : waypoints)
     {
@@ -805,6 +806,23 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
     // Declaration of the pose vector
     std::vector<double> tcp_pose_rpy = {pose.position.x, pose.position.y, pose.position.z, tcp_rpy[0], tcp_rpy[1], tcp_rpy[2]};
     return tcp_pose_rpy;
+}
+
+sensor_msgs::msg::JointState ManipulatorMenu::getJointStateRadians()
+{
+    // Get current joint state
+    return joint_state_from_vector(joints_values_group_);
+}
+
+std::vector<double> ManipulatorMenu::getJointStateDegrees()
+{
+    // Get current joint values in radians
+    std::vector<double> joint_values;
+    for (unsigned long k = 0; k < params_.joint_names.size(); ++k)
+    {
+        joint_values.push_back(joints_values_group_[k] * 180 / M_PI);
+    }
+    return joint_values;
 }
 
 // -------------------- SIMPLE MOVES ALONG CARTHESIAN AXES -----------------------//
@@ -1425,6 +1443,9 @@ std::vector<double> ManipulatorMenu::rad_from_deg(const std::vector<double> join
 sensor_msgs::msg::JointState ManipulatorMenu::joint_state_from_vector(const std::vector<double> positions)
 {
     sensor_msgs::msg::JointState joint_state;
+    joint_state.header.stamp = node_->get_clock()->now();
+    joint_state.header.frame_id = params_.base_link_name;
+    joint_state.name = params_.joint_names;
     joint_state.position = rad_from_deg(positions);
     return joint_state;
 }
