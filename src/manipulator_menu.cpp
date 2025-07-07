@@ -50,6 +50,13 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
         }
     );
 
+    eePose_sub_ = node_->create_subscription<geometry_msgs::msg::Pose>(
+        params_.manipulator_name+"/tcp_pose", 1,
+        [this](const geometry_msgs::msg::Pose::SharedPtr msg) {
+            this->current_tcp_pose_ = *msg;
+        }
+    );
+
     // --------------------- Kinematics client init ---------------------
     invKine_client_                      = node_->create_client<manipulator_interfaces::srv::InvKine>(params_.manipulator_name+"/get_invkine");
     pseudoInverse_client_                = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(params_.manipulator_name+"/get_pseudo_inverse");
@@ -784,14 +791,37 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTfOffset(const std::string& 
     return pose_stamped;
 }
 
+geometry_msgs::msg::Pose ManipulatorMenu::getOffsetPose(const geometry_msgs::msg::Pose &pose, 
+                                                        const geometry_msgs::msg::Pose &offset)
+{
+    // Convert base_pose to tf2::Transform
+    tf2::Transform tf_base;
+    tf2::fromMsg(pose, tf_base);
+
+    // Convert relative offset to tf2::Transform
+    tf2::Transform tf_offset;
+    tf2::fromMsg(offset, tf_offset);
+
+    // Compose the transforms: world_T_offset = world_T_base * base_T_offset
+    tf2::Transform result = tf_base * tf_offset;
+
+    // Convert back to geometry_msgs::Pose
+    geometry_msgs::msg::Transform result_transform_msg = tf2::toMsg(result);
+
+    geometry_msgs::msg::Pose result_pose;
+    result_pose.position.x = result_transform_msg.translation.x;
+    result_pose.position.y = result_transform_msg.translation.y;
+    result_pose.position.z = result_transform_msg.translation.z;
+    result_pose.orientation = result_transform_msg.rotation;
+
+    return result_pose;
+}
+
 
 // Get current EE pose
 geometry_msgs::msg::Pose ManipulatorMenu::getEEpose()
 {
-    // Compute the FKine between base_link and end-effector
-    current_tcp_pose_.header.frame_id = params_.base_link_name;
-    current_tcp_pose_.pose = getFKineClient();
-    return current_tcp_pose_.pose;
+    return current_tcp_pose_;
 }
 
 // Get EE pose as vector with RPY euler angles
@@ -1413,6 +1443,23 @@ std::vector<double> ManipulatorMenu::euler_from_quaternion(const geometry_msgs::
     }
 
     return euler_angles;
+}
+
+//Multiply two quaternions (apply rotation of q2 to q1)
+geometry_msgs::msg::Quaternion ManipulatorMenu::quaternion_multiply(const geometry_msgs::msg::Quaternion& q1, const geometry_msgs::msg::Quaternion& q2)
+{
+    // Convert geometry_msgs::msg::Quaternion to Eigen::Quaterniond
+    Eigen::Quaterniond quat1(q1.w, q1.x, q1.y, q1.z);
+    Eigen::Quaterniond quat2(q2.w, q2.x, q2.y, q2.z);   
+    // Perform quaternion multiplication
+    Eigen::Quaterniond result = quat1 * quat2;
+    // Convert back to geometry_msgs::msg::Quaternion
+    geometry_msgs::msg::Quaternion result_quat;
+    result_quat.w = result.w();
+    result_quat.x = result.x();
+    result_quat.y = result.y();
+    result_quat.z = result.z();
+    return result_quat;
 }
 
 // --------------------- DEG-RADIANS UTILS -------------------

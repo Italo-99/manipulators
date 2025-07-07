@@ -387,6 +387,12 @@ class ManipulatorMenu
                                                     const geometry_msgs::msg::Pose &offset);
 
         /*!
+            @brief Get a pose offset from the passed one (axis should be treated same way as a tf frame).
+        */
+       geometry_msgs::msg::Pose getOffsetPose(const geometry_msgs::msg::Pose &pose, 
+                                                const geometry_msgs::msg::Pose &offset);
+
+        /*!
             @brief Move the end effector x_step meters along the x axis.
             @param x_step: Distance to move along the x axis (in meters).
             @param cartesian: If true, the movement will be planned as a Cartesian path, otherwise it will be a simple TCP goal.
@@ -550,6 +556,7 @@ class ManipulatorMenu
         // Quaternions utils (rpy in degrees)
         geometry_msgs::msg::Quaternion quaternion_from_euler(double roll, double pitch, double yaw);
         std::vector<double> euler_from_quaternion(const geometry_msgs::msg::Quaternion quat); 
+        geometry_msgs::msg::Quaternion quaternion_multiply(const geometry_msgs::msg::Quaternion& q1, const geometry_msgs::msg::Quaternion& q2);
 
         // Degrees and radians conversions
         std::vector<double> deg_from_rad(const std::vector<double>);
@@ -708,6 +715,7 @@ class ManipulatorMenu
 
         //Subscriber to /joint_states topic
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr jointState_sub_;
+        rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr eePose_sub_; //Subscription to the end effector pose
 
         //Setter clients
         rclcpp::Client<manipulator_interfaces::srv::ChangePlannerScalingFactors>::SharedPtr changePlannerScalingFactors_client_;
@@ -746,7 +754,7 @@ class ManipulatorMenu
         bool traj_received_ = false; 
 
         // Robot state
-        geometry_msgs::msg::PoseStamped current_tcp_pose_;
+        geometry_msgs::msg::Pose current_tcp_pose_;
         std::unordered_map<std::string, double> joints_map_group_;
         std::vector<double> joints_values_group_;
 };

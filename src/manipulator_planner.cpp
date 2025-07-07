@@ -837,7 +837,10 @@ void ManipulatorPlannerNode::positionConstraint_callback(const moveit_msgs::msg:
     moveit_msgs::msg::Constraints current_constraints = dynamic_planner_->getPathConstraints();
 
     moveit_msgs::msg::PositionConstraint position_constraint = *msg.get();
-    position_constraint.header.frame_id = world_frame_; // Set the frame id to the world frame
+    if (position_constraint.header.frame_id.empty()) {
+        // If the frame_id is empty, set it to the world frame
+        position_constraint.header.frame_id = world_frame_;
+    }
 
     // Validate that primitive_poses match primitives in size
     if (position_constraint.constraint_region.primitives.size() != 
