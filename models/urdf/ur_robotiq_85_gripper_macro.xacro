@@ -1,21 +1,10 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
-
-    <!-- Robot URDF file-->
-    <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
-
     <!-- Robotiq 85 Gripper URDF file -->
     <xacro:include filename="$(find robotiq_85_description)/urdf/robotiq_85_gripper_macro.urdf.xacro"/>
 
     <!-- Gripper macro definition -->
-    <xacro:macro name="ur_robotiq_85_gripper" params="
-        robot_name
-        tf_prefix
-        ur_type
-        joint_limits_parameters_file
-        kinematics_parameters_file
-        "
-    >
+    <xacro:macro name="ur_robotiq_85_gripper" params="tf_prefix">
 
         <!-- Create a link for the 'tool0' as parent for the gripper -->
         <xacro:robotiq_85_gripper
@@ -35,21 +24,6 @@
             <parent link="${tf_prefix}tool0" />
             <child link="tcp_gripper" />
         </joint>
-
-        <!--This will create the specific robot-->
-        <link name="world"/>
-        <xacro:ur_robot
-            parent="world"
-            name="${robot_name}"
-            tf_prefix="${tf_prefix}"
-            joint_limits_parameters_file="${joint_limits_parameters_file}"
-            kinematics_parameters_file="${kinematics_parameters_file}"
-            physical_parameters_file="$(find ur_description)/config/${ur_type}/physical_parameters.yaml"
-            visual_parameters_file="$(find ur_description)/config/${ur_type}/visual_parameters.yaml"
-        >
-            <origin xyz="0 0 0" rpy="0 0 0" />
-        </xacro:ur_robot>
-
   </xacro:macro>
 
 </robot>
