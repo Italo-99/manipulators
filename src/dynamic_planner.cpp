@@ -272,6 +272,25 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
             space: Planning space (joint or operative)
     */
 
+    // PRE PLANNING CHECK
+    // 1. goal_pose is not too close to the current position
+
+    if (checkPoseDiff(goal_pose, ee_link))
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Goal pose is too close to the current position");
+        manipulator_interfaces::msg::TrajectoryResult result_msg;
+        result_msg.success = false;
+        result_msg.message = "Goal pose is too close to the current position";
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION;
+
+        moveit_msgs::msg::RobotTrajectory trajectory;
+        result_msg.trajectory = trajectory;
+
+        setTrajectory(trajectory);
+        trajectory_pub_->publish(result_msg);
+        return;
+    }
+
     manipulator_interfaces::msg::TrajectoryResult result_msg;
 
     //Sets the target pose
@@ -285,11 +304,10 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
     // Clear pose target
     move_group_->clearPoseTarget(ee_link);
 
-    // PAST PLANNING CHECKS
+    // POST PLANNING CHECKS
     // 1. Planning succeded
-    // 2. Trajectory end point matches with the target pose
-    // 3. Time optimal trajectory generation succeded
-    // 4. Trajectory respects the path constraints
+    // 2. Time optimal trajectory generation succeded
+    // 3. Trajectory respects the path constraints
 
     if (error != moveit::core::MoveItErrorCode::SUCCESS)
     {
@@ -307,19 +325,19 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
 
     moveit_msgs::msg::RobotTrajectory trajectory = plan.trajectory_;
 
-    trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
-    if(!checkPoseDiff(getFKine(last_point.positions, ee_link).pose, goal_pose)){
-        RCLCPP_ERROR(node_->get_logger(), "Trajectory end point does not match with the target pose");
-        moveit_msgs::msg::RobotTrajectory trajectory;
-        result_msg.success = false;
-        result_msg.message = "Trajectory end point does not match with the target pose";
-        result_msg.trajectory = trajectory;
-        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::END_POINT_MISMATCH;
+    // trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
+    // if(!checkPoseDiff(getFKine(last_point.positions, ee_link).pose, goal_pose)){
+    //     RCLCPP_ERROR(node_->get_logger(), "Trajectory end point does not match with the target pose");
+    //     moveit_msgs::msg::RobotTrajectory trajectory;
+    //     result_msg.success = false;
+    //     result_msg.message = "Trajectory end point does not match with the target pose";
+    //     result_msg.trajectory = trajectory;
+    //     result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::END_POINT_MISMATCH;
 
-        setTrajectory(trajectory);
-        trajectory_pub_->publish(result_msg);
-        return;
-    }
+    //     setTrajectory(trajectory);
+    //     trajectory_pub_->publish(result_msg);
+    //     return;
+    // }
 
     bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
 
@@ -1107,6 +1125,7 @@ bool DynamicPlanner::checkPoseDiff(const geometry_msgs::msg::Pose& pose_a, const
     //For now orientation is not considered
     // Set a reasonable threshold 
     double pos_th = params_.position_tolerance;
+    double angle_th = params_.orientation_tolerance;
     //double rot_th = params_.orientation_tolerance;
 
     bool check = true;
@@ -1114,6 +1133,25 @@ bool DynamicPlanner::checkPoseDiff(const geometry_msgs::msg::Pose& pose_a, const
     check = ((abs(pose_a.position.x - pose_b.position.x) < pos_th) && check);
     check = ((abs(pose_a.position.y - pose_b.position.y) < pos_th) && check);
     check = ((abs(pose_a.position.z - pose_b.position.z) < pos_th) && check);
+
+    //Compute angular distance between the two orientations
+    // Convert geometry_msgs::msg::Quaternion to Eigen::Quaterniond
+    Eigen::Quaterniond quat1(pose_a.orientation.w, pose_a.orientation.x, pose_a.orientation.y, pose_a.orientation.z);
+    Eigen::Quaterniond quat2(pose_b.orientation.w, pose_b.orientation.x, pose_b.orientation.y, pose_b.orientation.z);
+
+    // Compute the relative rotation
+    Eigen::Quaterniond relative_rotation = quat1.inverse() * quat2;
+
+    // Extract the angle of rotation
+    double angular_distance = 2 * std::acos(relative_rotation.w());
+
+    // Normalize the angle to the range [0, pi]
+    if (angular_distance > M_PI)
+    {
+        angular_distance = 2 * M_PI - angular_distance;
+    }
+
+    check = ((angular_distance < angle_th) && check);
 
     return check;
 }

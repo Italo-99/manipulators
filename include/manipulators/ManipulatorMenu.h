@@ -463,6 +463,13 @@ class ManipulatorMenu
                     uint                 operation);
 
         /*!
+            @brief Remove a collision object from the planning scene.
+            @param name: Name of the object to be removed.
+        */
+
+        void removeObj(const std::string& name);
+
+        /*!
             @brief Publish a collision object attached to the end effector to the planning scene.
             @param collisionAttachedObjectMsg: Attached collision object message to be published.
             @details This function is used to attach an object to a link in the planning scene.
@@ -488,6 +495,12 @@ class ManipulatorMenu
                             double              obj_pos[], 
                             double              rot_pos[],
                             uint                operation);
+
+        /*!
+            @brief Remove an attached collision object from the planning scene.
+            @param name: Name of the object to be removed.
+        */
+        void removeAttachedObj(const std::string& name); 
         
 
         // Path constraints

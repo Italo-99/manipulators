@@ -1069,6 +1069,21 @@ void ManipulatorMenu::addObj(const std::string &name,
     publishCollisionObject(obj);
 }
 
+void ManipulatorMenu::removeObj(const std::string &name)
+{
+    // Create a collision object message to remove the object
+    moveit_msgs::msg::CollisionObject collisionObjectMsg;
+    collisionObjectMsg.id = name;
+    collisionObjectMsg.primitives.resize(1);
+    collisionObjectMsg.primitives[0].type = 1; // Use a dummy primitive type
+    collisionObjectMsg.primitives[0].dimensions.resize(3, 0.0); // Set dummy dimensions
+    collisionObjectMsg.primitive_poses.resize(1); //Set dummy pose
+    collisionObjectMsg.operation = moveit_msgs::msg::CollisionObject::REMOVE;
+
+    // Publish the collision object
+    publishCollisionObject(collisionObjectMsg);
+}
+
 // Collision object publisher
 void ManipulatorMenu::publishCollisionObject(const moveit_msgs::msg::CollisionObject collisionObjectMsg)
 {
@@ -1154,6 +1169,31 @@ void ManipulatorMenu::addAttachedObj(const std::string &name,
     publishAttachedCollisionObject(attachedObj);
 }
 
+void ManipulatorMenu::removeAttachedObj(const std::string &name)
+{
+    // Create a collision object message to remove the object
+    moveit_msgs::msg::AttachedCollisionObject collisionAttachedObjectMsg;
+    collisionAttachedObjectMsg.object.id = name;
+    collisionAttachedObjectMsg.object.primitives.resize(1);
+    collisionAttachedObjectMsg.object.primitives[0].type = 1; // Use a dummy primitive type
+    collisionAttachedObjectMsg.object.primitives[0].dimensions.resize(3, 0.0); // Set dummy dimensions
+    collisionAttachedObjectMsg.object.primitive_poses.resize(1); //Set dummy pose
+    collisionAttachedObjectMsg.object.operation = moveit_msgs::msg::CollisionObject::REMOVE;
+
+    // Publish the collision object
+    publishAttachedCollisionObject(collisionAttachedObjectMsg);
+
+    rclcpp::sleep_for(std::chrono::milliseconds(300));
+
+    removeObj(name);
+}
+
+// Collision Attached object publisher
+void ManipulatorMenu::publishAttachedCollisionObject(const moveit_msgs::msg::AttachedCollisionObject collisionAttachedObjectMsg)
+{
+    attachedCollisionObject_pub_->publish(collisionAttachedObjectMsg);
+}
+
 void ManipulatorMenu::publishToolIOCmd(const size_t id, const bool value)
 {
     std_msgs::msg::Int8 msg;
@@ -1164,12 +1204,6 @@ void ManipulatorMenu::publishToolIOCmd(const size_t id, const bool value)
     }
 
     toolDigitalIO_pub_->publish(msg);
-}
-
-// Collision Attached object publisher
-void ManipulatorMenu::publishAttachedCollisionObject(const moveit_msgs::msg::AttachedCollisionObject collisionAttachedObjectMsg)
-{
-    attachedCollisionObject_pub_->publish(collisionAttachedObjectMsg);
 }
 
 // ------------------- CONSTRAINTS ---------------------
@@ -1969,30 +2003,6 @@ void ManipulatorMenu::userAddCollObj()
     addObj(name, obj_type, obj_dims, obj_pos, rot_pos_quat, 0);
 }
 
-// Function to delete a given collision object from the user menu
-void ManipulatorMenu::userDeleteCollObj()
-{
-    std::string obj_name_loc;
-    std::cout << "Insert the name of the object you want to delete:" << std::endl;
-    std::cin >> obj_name_loc;
-    std::cout << "Insert 1 if the object is attached to the robot, 0 otherwise:" << std::endl;
-    int attached;
-    std::cin >> attached;
-    std::vector<double> obj_dim_loc = {0., 0., 0.};
-    double obj_pos_loc[] = {0., 0., 0.};
-    double rot_pos_quat_loc[] = {0., 0., 0., 1.};
-    if (attached == 0)
-    {
-        addObj(obj_name_loc, 1, obj_dim_loc, obj_pos_loc, rot_pos_quat_loc, 1);
-    }
-    else
-    {
-        addAttachedObj(obj_name_loc, 1, obj_dim_loc, obj_pos_loc, rot_pos_quat_loc, 1);
-        rclcpp::sleep_for(std::chrono::milliseconds(500));
-        addObj(obj_name_loc, 1, obj_dim_loc, obj_pos_loc, rot_pos_quat_loc, 1);
-    }
-}
-
 // Function to add a collision object from the user menu
 void ManipulatorMenu::userAddAttachedObj()
 {
@@ -2025,16 +2035,16 @@ void ManipulatorMenu::userAddAttachedObj()
     else if (obj_type == 2)
     {
         obj_dims = {0.};
-        std::cout << "X dim: ";
+        std::cout << "Radius: ";
         std::cin >> obj_dims[0];
     }
     // Else
     else
     {
         obj_dims = {0., 0.};
-        std::cout << "X dim: ";
+        std::cout << "Height: ";
         std::cin >> obj_dims[0];
-        std::cout << "Y dim: ";
+        std::cout << "Radius: ";
         std::cin >> obj_dims[1];
     }
 
@@ -2057,6 +2067,24 @@ void ManipulatorMenu::userAddAttachedObj()
     double rot_pos_quat[4] = {rot_quat.x, rot_quat.y, rot_quat.z, rot_quat.w};
 
     addAttachedObj(name, obj_type, obj_dims, obj_pos, rot_pos_quat, 0);
+}
+
+// Function to delete a given collision object from the user menu
+void ManipulatorMenu::userDeleteCollObj()
+{
+    std::string obj_name_loc;
+    std::cout << "Insert the name of the object you want to delete:" << std::endl;
+    std::cin >> obj_name_loc;
+    std::cout << "Insert 1 if the object is attached to the robot, 0 otherwise:" << std::endl;
+    int attached;
+    std::cin >> attached;
+    if (attached == 1)
+    {
+        removeAttachedObj(obj_name_loc);
+    }
+    else {
+        removeObj(obj_name_loc);
+    }
 }
 
 // --------------------- CONSTRAINTS HANDLERS ---------------------

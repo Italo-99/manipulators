@@ -666,7 +666,7 @@ void ManipulatorPlannerNode::collisionObject_callback(const moveit_msgs::msg::Co
     RCLCPP_INFO(this->get_logger(), "Received collision object: %s, operation: %d", collision_object->id.c_str(), collision_object->operation);
     moveit_msgs::msg::CollisionObject object = *collision_object.get();
     object.header.frame_id = world_frame_; // Set the frame id to the world frame
-    
+
     dynamic_planner_->getPlanningScene()->applyCollisionObjects({object});
 }
 
@@ -680,13 +680,9 @@ void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs:
     RCLCPP_INFO(get_logger(), "Attaching object to link: %s", link_name.c_str());
     
     collision_object->object.header.frame_id = link_name;
+    collision_object->link_name = link_name; // Set the link name to the one specified in the message or the end effector name
 
-    dynamic_planner_->getPlanningScene()->applyCollisionObject(collision_object->object);
-    dynamic_planner_->getMoveGroup()->attachObject(
-        collision_object->object.id, 
-        link_name, 
-        gripper_links_
-    );
+    dynamic_planner_->getPlanningScene()->applyAttachedCollisionObject(*collision_object);
 }
 
 // Callback function for goals in the 3D cartesian space for the robot TCP
