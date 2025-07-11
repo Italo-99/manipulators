@@ -767,28 +767,10 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTfOffset(const std::string& 
                                                              const std::string& reference_frame,
                                                              const geometry_msgs::msg::Pose &offset)
 {
-    geometry_msgs::msg::PoseStamped offset_stamped;
-    offset_stamped.pose = offset;
-    offset_stamped.header.frame_id = target_frame;
-    offset_stamped.header.stamp = node_->get_clock()->now();
+    geometry_msgs::msg::PoseStamped pose = getTf(reference_frame, target_frame);
+    pose.pose = getOffsetPose(pose.pose, offset);
 
-    geometry_msgs::msg::PoseStamped pose_stamped;
-    bool received_transform = false;
-    for (size_t counter {0}; !received_transform && rclcpp::ok() && counter < 10; ++counter)
-    {
-        try {
-            pose_stamped = tf_buffer_->transform(offset_stamped, reference_frame, tf2::durationFromSec(0.5));
-            received_transform = true;
-        } catch (const tf2::TransformException & ex) {
-            rclcpp::sleep_for(std::chrono::milliseconds(100));
-        }
-    }
-
-    if (!received_transform)
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to transform pose from %s to %s", target_frame.c_str(), reference_frame.c_str());
-    }
-    return pose_stamped;
+    return pose;
 }
 
 geometry_msgs::msg::Pose ManipulatorMenu::getOffsetPose(const geometry_msgs::msg::Pose &pose, 
