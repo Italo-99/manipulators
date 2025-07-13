@@ -341,122 +341,6 @@ void ManipulatorPlannerNode::shutdown_handler(){
     RCLCPP_INFO(get_logger(), "Spinner mean time: %f s", spinner_mean_);
 }
 
-//COLLISION OBJECTS
-
-void ManipulatorPlannerNode::addCollisionObject(
-    const std::string &object_name,
-    const std::string &object_frame,
-    const shape_msgs::msg::SolidPrimitive &object_primitive,
-    const geometry_msgs::msg::Pose &object_pose
-) {
-    /*
-    Adds a collision object to the planning scene
-    Args:
-        object_name: Name of the object
-        object_frame: Frame in which the object must be placed
-        object_primitive: Object primitive (shape)
-        object_pose: Position of the object
-    */
-    moveit_msgs::msg::CollisionObject collision_object;
-    collision_object.header.frame_id = object_frame;
-    collision_object.id = object_name;
-
-    collision_object.primitives.push_back(object_primitive);
-    collision_object.primitive_poses.push_back(object_pose);
-    collision_object.operation = moveit_msgs::msg::CollisionObject::ADD;
-
-    dynamic_planner_->getPlanningScene()->applyCollisionObjects({collision_object});
-}
-
-void ManipulatorPlannerNode::addCollisionObject(
-    const std::string &object_name,
-    const std::string &object_frame,
-    const ShapeType object_type,
-    const std::vector<double> &object_dims,
-    const geometry_msgs::msg::Pose &object_pose
-) {
-    /*
-    Adds a collision object to the planning scene
-    Args:
-        object_name: Name of the object
-        object_frame: Frame in which the object must be placed
-        object_type: Type of the object (see ShapeType enum)
-        object_dims: Dimensions for the object, depends on the object type
-        object_pose: Position of the object
-    */
-    shape_msgs::msg::SolidPrimitive primitive;
-    primitive.type = object_type;
-
-    setPrimitiveDimensions(object_type, object_dims, primitive);
-
-    addCollisionObject(object_name, object_frame, primitive, object_pose); //Add the collision object to the planning scene
-}
-
-//ATTACHED COLLISION OBJECTS
-
-void ManipulatorPlannerNode::addAttachedCollisionObject(
-    const std::string &object_name,
-    const shape_msgs::msg::SolidPrimitive &object_primitive,
-    const geometry_msgs::msg::Pose &object_pose,
-    const std::string &link_name,
-    const std::vector<std::string> &disabled_collisions
-) {
-    /*
-    Args:
-        object_name: Name of the object
-        object_primitive: Object primitive (shape)
-        object_pose: Position of the object
-        link_name: Name of the link to attach the object (if left empty, the 'ee_name' parameter is used)
-        disabled_collisions: Array of links to disable collisions with the attached object
-    */
-    moveit_msgs::msg::CollisionObject attached_object;
-    attached_object.id = object_name;
-
-    std::string attached_link; //The link the object is attached to (end effector link by default, otherwise link_name)
-
-    if (link_name.empty()) {
-        attached_link = ee_name_;
-    } else {
-        attached_link = link_name;
-    }
-
-    //This is used so the pose of the object is relative to the link it is attached to
-    attached_object.header.frame_id = attached_link;
-
-    //Add primitive and pose
-    attached_object.primitives.push_back(object_primitive);
-    attached_object.primitive_poses.push_back(object_pose);
-    attached_object.operation = moveit_msgs::msg::CollisionObject::ADD;
-
-    dynamic_planner_->getPlanningScene()->applyCollisionObject(attached_object); //Add to planning scene
-    dynamic_planner_->getMoveGroup()->attachObject(object_name, attached_link, disabled_collisions); //Attach the object to the link
-}
-
-void ManipulatorPlannerNode::addAttachedCollisionObject(
-    const std::string &object_name,
-    const ShapeType object_type,
-    const std::vector<double> &object_dims,
-    const geometry_msgs::msg::Pose &object_pose,
-    const std::string &link_name,
-    const std::vector<std::string> &disabled_collisions
-) {
-    /*
-    Args:
-        object_name: Name of the object
-        object_type: Type of the object (see ShapeType enum)
-        object_dims: Dimensions for the object, depends on the object type
-        object_pose: Position of the object
-        link_name: Name of the link to attach the object (if left empty, the 'ee_name' parameter is used)
-        disabled_collisions: Array of links to disable collisions with the attached object
-    */
-    shape_msgs::msg::SolidPrimitive primitive;
-    primitive.type = object_type;
-
-    setPrimitiveDimensions(object_type, object_dims, primitive);
-
-    addAttachedCollisionObject(object_name, primitive, object_pose, link_name, disabled_collisions);
-}
-
 //KINEMATICS FUNCTIONS
 
 // Get the current tcp pose through forward kinematics
@@ -681,6 +565,8 @@ void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs:
     
     collision_object->object.header.frame_id = link_name;
     collision_object->link_name = link_name; // Set the link name to the one specified in the message or the end effector name
+
+    collision_object->touch_links = gripper_links_; // Set the touch links to the gripper links
 
     dynamic_planner_->getPlanningScene()->applyAttachedCollisionObject(*collision_object);
 }
@@ -1098,66 +984,6 @@ void ManipulatorPlannerNode::initializePlanner() {
                                                         planning_group_,
                                                         params,
                                                         false);
-}
-
-void ManipulatorPlannerNode::setPrimitiveDimensions(const ShapeType object_type, const std::vector<double> &object_dims, shape_msgs::msg::SolidPrimitive &primitive)
-{
-    /*
-    Sets the appropriate dimensions for the primitive object depending on the object type
-    Args:
-        object_type: Type of the object (see ShapeType enum)
-        object_dims: Dimensions for the object, depends on the object type
-        primitive: SolidPrimitive object to set the dimensions
-    */
-    switch(object_type) {
-        case ShapeType::BOX:
-            if (object_dims.size() != 3) {
-                RCLCPP_WARN(this->get_logger(), "Object dimensions array is not compatible with object type");
-                return;
-            }
-
-            primitive.dimensions.resize(3);
-            primitive.dimensions[0] = object_dims[0];
-            primitive.dimensions[1] = object_dims[1];
-            primitive.dimensions[2] = object_dims[2];
-            break;
-
-        case ShapeType::SPHERE:
-            if (object_dims.size() != 1) {
-                RCLCPP_WARN(this->get_logger(), "Object dimensions array is not compatible with object type");
-                return;
-            }
-
-            primitive.dimensions.resize(1);
-            primitive.dimensions[0] = object_dims[0];
-            break;
-
-        case ShapeType::CYLINDER:
-            if (object_dims.size() != 2) {
-                RCLCPP_WARN(this->get_logger(), "Object dimensions array is not compatible with object type");
-                return;
-            }
-
-            primitive.dimensions.resize(2);
-            primitive.dimensions[0] = object_dims[0];
-            primitive.dimensions[1] = object_dims[1];
-            break;
-
-        case ShapeType::CONE:
-            if (object_dims.size() != 2) {
-                RCLCPP_WARN(this->get_logger(), "Object dimensions array is not compatible with object type");
-                return;
-            }
-
-            primitive.dimensions.resize(2);
-            primitive.dimensions[0] = object_dims[0];
-            primitive.dimensions[1] = object_dims[1];
-            break;
-
-        default:
-            RCLCPP_WARN(this->get_logger(), "Invalid object type, check the ShapeType enum");
-            return;
-    }
 }
 
 bool ManipulatorPlannerNode::isPoseInsidePrimitive(

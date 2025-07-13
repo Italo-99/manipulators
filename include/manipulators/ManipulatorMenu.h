@@ -502,6 +502,12 @@ class ManipulatorMenu
                             double              rot_pos[],
                             uint                operation);
 
+        void addAttachedObj(const std::string&       name,
+                            const int                obj_type, 
+                            std::vector<double>      obj_dims, 
+                            geometry_msgs::msg::Pose obj_pos,
+                            uint                     operation);
+
         /*!
             @brief Remove an attached collision object from the planning scene.
             @param name: Name of the object to be removed.

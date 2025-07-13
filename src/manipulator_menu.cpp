@@ -1093,8 +1093,7 @@ void ManipulatorMenu::publishCollisionObject(const moveit_msgs::msg::CollisionOb
 void ManipulatorMenu::addAttachedObj(const std::string &name,
                                      const int obj_type,
                                      std::vector<double> obj_dims,
-                                     double obj_pos[],
-                                     double rot_pos[],
+                                     geometry_msgs::msg::Pose obj_pose,
                                      uint operation)
 {
     // Creation of the obj
@@ -1150,22 +1149,40 @@ void ManipulatorMenu::addAttachedObj(const std::string &name,
     // Set obj operation: ADD=0, REMOVE=1, APPEND=2, MOVE=3
     obj.operation = operation;
 
-    // Set obj position
-    obj.primitive_poses.resize(1);
-    obj.primitive_poses[0].position.x = obj_pos[0];
-    obj.primitive_poses[0].position.y = obj_pos[1];
-    obj.primitive_poses[0].position.z = obj_pos[2];
-
-    // Set obj orientation
-    obj.primitive_poses[0].orientation.x = rot_pos[0];
-    obj.primitive_poses[0].orientation.y = rot_pos[1];
-    obj.primitive_poses[0].orientation.z = rot_pos[2];
-    obj.primitive_poses[0].orientation.w = rot_pos[3];
+    obj.primitive_poses.push_back(obj_pose);
 
     // Set the attached object
     moveit_msgs::msg::AttachedCollisionObject attachedObj;
     attachedObj.object = obj;
     publishAttachedCollisionObject(attachedObj);
+}
+
+void ManipulatorMenu::addAttachedObj(const std::string &name,
+                                     const int obj_type,
+                                     std::vector<double> obj_dims,
+                                     double obj_pos[],
+                                     double rot_pos[],
+                                     uint operation)
+{
+    geometry_msgs::msg::Pose pose;
+    // Set obj position
+    pose.position.x = obj_pos[0];
+    pose.position.y = obj_pos[1];
+    pose.position.z = obj_pos[2];
+
+    // Set obj orientation
+    pose.orientation.x = rot_pos[0];
+    pose.orientation.y = rot_pos[1];
+    pose.orientation.z = rot_pos[2];
+    pose.orientation.w = rot_pos[3];
+
+    addAttachedObj(
+        name,
+        obj_type,
+        obj_dims,
+        pose,
+        operation
+    );
 }
 
 void ManipulatorMenu::removeAttachedObj(const std::string &name)

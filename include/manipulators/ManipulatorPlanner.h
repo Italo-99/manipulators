@@ -161,54 +161,12 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         // Execute the real time joints speed based control
         void jointsRealTimeControl();
 
-        // --------------- COLLISION OBJECTS ---------------
-
-        enum ShapeType {        //Shape type for shape_msgs::msg::SolidPrimitive
-            BOX = 1,            //Sizes: x, y, z
-            SPHERE = 2,         //Sizes: radius
-            CYLINDER = 3,       //Sizes: height, radius
-            CONE = 4            //Sizes: height, radius
-        };
-
-        void addCollisionObject( //UNUSED
-            const std::string &object_name,
-            const std::string &object_frame,
-            const ShapeType object_type,
-            const std::vector<double> &object_dims,
-            const geometry_msgs::msg::Pose &object_pose
-        );
-
-        void addCollisionObject( //UNUSED
-            const std::string &object_name,
-            const std::string &object_frame,
-            const shape_msgs::msg::SolidPrimitive &object_primitive,
-            const geometry_msgs::msg::Pose &object_pose
-        );
-
-        void addAttachedCollisionObject( //UNUSED
-            const std::string &object_name,
-            const shape_msgs::msg::SolidPrimitive &object_primitive,
-            const geometry_msgs::msg::Pose &object_pose,
-            const std::string &link_name="",
-            const std::vector<std::string> &disabled_collisions={}
-        );
-
-        void addAttachedCollisionObject( //UNUSED
-            const std::string &object_name,
-            const ShapeType object_type,
-            const std::vector<double> &object_dims,
-            const geometry_msgs::msg::Pose &object_pose,
-            const std::string &link_name="",
-            const std::vector<std::string> &disabled_collisions={}
-        );
-
         // --------------- HELPER FUNCTIONS ---------------
 
         void addPrefix(const std::string& prefix, std::vector<std::string>& vector) const; //Add a prefix to all elements of a vector
         
         void initializePlanner(); //Creates a node for the DynamicPlanner, adds it to the executor and initializes the planner_ object
         void declareParameters(); //Declare the parameters for the node
-        void setPrimitiveDimensions(const ShapeType object_type, const std::vector<double> &object_dims, shape_msgs::msg::SolidPrimitive &primitive); //Set the dimensions of the primitive object
         double sign(double val); //Returns the sign of a number or 0 (+1.0 or -1.0)
 
         bool isPoseInsidePrimitive(
