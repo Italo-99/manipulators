@@ -716,11 +716,9 @@ void ManipulatorPlannerNode::cartesianPlan_callback(const manipulator_interfaces
     }
 
     double fraction = dynamic_planner_->cartesianPlan(waypoints, ee_link_name, ref_frame);
-    if (fraction < 0.01) 
-    {
-        RCLCPP_WARN(get_logger(), "Cartesian trajectory unfeasible");
-    }
-    else if (msg->execute)
+    (void)fraction; // Suppress unused variable warning
+    
+    if (msg->execute)
     {
         dynamic_planner_->executeTrajectory();
     }
@@ -1063,6 +1061,7 @@ void ManipulatorPlannerNode::declareParameters() {
     this->declare_parameter("min_jacobian_determinant", 0.0); //Minimum determinant for the inverse jacobian (0 is disabled)
     this->declare_parameter("limit_joints_control", false);
     this->declare_parameter("limit_jacobian_control", false);
+    this->declare_parameter("cartesian_threshold", 0.1); //Minimum fraction for the cartesian plan to be considered successful
 
     //Dynamic planner params
     this->declare_parameter("planner_id", "geometric::RRTConnect");
@@ -1087,6 +1086,7 @@ void ManipulatorPlannerNode::initializePlanner() {
     params.orientation_tolerance = this->get_parameter("orientation_tolerance").as_double();
     params.joint_tolerance = this->get_parameter("joint_tolerance").as_double();
     params.planner_id = this->get_parameter("planner_id").as_string();
+    params.min_cartesian_fraction = this->get_parameter("cartesian_threshold").as_double();
     params.sample_time = 1 / ros_freq_;
     params.max_velocity = max_speed_ee_;
     params.world_frame = world_frame_;

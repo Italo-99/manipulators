@@ -44,6 +44,7 @@ struct DynamicPlannerParams
     double joint_tolerance          = 0.01;                      // tolerance for joint positions (rad)
     std::string world_frame         = "base_link";               // world frame
     std::string end_effector_link   = "tool0";                   // end effector link
+    double min_cartesian_fraction   = 0.1;                       // Minimum fraction for the cartesian plan to be considered successful
 
     // V1: empty struct
     DynamicPlannerParams() {}

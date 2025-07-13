@@ -455,12 +455,18 @@ class ManipulatorMenu
             - For a SPHERE, obj_dims should contain [radius (m)].
             - For a CYLINDER or CONE, obj_dims should contain [height (m), radius (m)].
         */
-        void addObj(const std::string& name,
+        void addObj(const std::string&   name,
                     const int            obj_type, 
                     std::vector<double>  obj_dims, 
                     double               obj_pos[], 
                     double               rot_pos[],
                     uint                 operation);
+
+        void addObj(const std::string&       name,
+                    const int                obj_type, 
+                    std::vector<double>      obj_dims, 
+                    geometry_msgs::msg::Pose obj_pos,
+                    uint                     operation);
 
         /*!
             @brief Remove a collision object from the planning scene.

@@ -239,8 +239,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         std::vector<std::string> gripper_links_;
         double min_jacobian_determinant_;
         Eigen::MatrixXd jacobian_var_;
-        bool limit_joints_control_ = false; // If true, the joints speed control is limited to the max_spd_jnts_ parameter
-        bool limit_jacobian_control_ = false; // If true, the jacobian speed control is limited to the max_speed_ee_ parameter
+        bool limit_joints_control_; // If true, the joints speed control is limited to the max_spd_jnts_ parameter
+        bool limit_jacobian_control_; // If true, the jacobian speed control is limited to the max_speed_ee_ parameter
 
         //Services
         rclcpp::Service<manipulator_interfaces::srv::FKine>::SharedPtr fkine_service_;

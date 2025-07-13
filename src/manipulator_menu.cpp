@@ -983,6 +983,32 @@ void ManipulatorMenu::addObj(const std::string &name,
                              double rot_pos[],
                              uint operation)
 {
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = obj_pos[0];
+    pose.position.y = obj_pos[1];
+    pose.position.z = obj_pos[2];
+
+    // Set obj orientation
+    pose.orientation.x = rot_pos[0];
+    pose.orientation.y = rot_pos[1];
+    pose.orientation.z = rot_pos[2];
+    pose.orientation.w = rot_pos[3];
+
+    addObj(
+        name,
+        obj_type,
+        obj_dims,
+        pose,
+        operation
+    );
+}
+
+void ManipulatorMenu::addObj(const std::string& name,
+                             const int obj_type, 
+                             std::vector<double> obj_dims, 
+                             geometry_msgs::msg::Pose obj_pos,
+                             uint operation)
+{
     // Creation of the obj
     moveit_msgs::msg::CollisionObject obj;
 
@@ -1037,16 +1063,7 @@ void ManipulatorMenu::addObj(const std::string &name,
     obj.operation = operation;
 
     // Set obj position
-    obj.primitive_poses.resize(1);
-    obj.primitive_poses[0].position.x = obj_pos[0];
-    obj.primitive_poses[0].position.y = obj_pos[1];
-    obj.primitive_poses[0].position.z = obj_pos[2];
-
-    // Set obj orientation
-    obj.primitive_poses[0].orientation.x = rot_pos[0];
-    obj.primitive_poses[0].orientation.y = rot_pos[1];
-    obj.primitive_poses[0].orientation.z = rot_pos[2];
-    obj.primitive_poses[0].orientation.w = rot_pos[3];
+    obj.primitive_poses.push_back(obj_pos);
 
     publishCollisionObject(obj);
 }
@@ -1982,7 +1999,7 @@ void ManipulatorMenu::userAddCollObj()
     geometry_msgs::msg::Quaternion rot_quat = quaternion_from_euler(rot_pos[0], rot_pos[1], rot_pos[2]);
     double rot_pos_quat[4] = {rot_quat.x, rot_quat.y, rot_quat.z, rot_quat.w};
 
-    addObj(name, obj_type, obj_dims, obj_pos, rot_pos_quat, 0);
+    addObj(name, obj_type, obj_dims, obj_pos, rot_pos_quat, moveit_msgs::msg::CollisionObject::ADD);
 }
 
 // Function to add a collision object from the user menu

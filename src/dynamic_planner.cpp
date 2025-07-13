@@ -295,7 +295,8 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
 
     //Sets the target pose
     move_group_->setPoseReferenceFrame(frame);
-    move_group_->setPoseTarget(goal_pose, ee_link);
+    // move_group_->setApproximateJointValueTarget(goal_pose, ee_link); //Use joint space planning
+    move_group_->setPoseTarget(goal_pose, ee_link); //Use cartesian space planning
 
     //Create the plan and execute
     moveit::planning_interface::MoveGroupInterface::Plan plan;
@@ -423,6 +424,19 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
         jump_treshold, 
         trajectory    
     );
+
+    if (fraction < params_.min_cartesian_fraction) //Check if the fraction is below the threshold
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Cartesian trajectory unfeasible, fraction: %.2f", fraction);
+        result_msg.success = false;
+        result_msg.message = "Cartesian trajectory unfeasible";
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::INVALID_MOTION_PLAN;
+        result_msg.trajectory = trajectory;
+
+        setTrajectory(moveit_msgs::msg::RobotTrajectory());
+        trajectory_pub_->publish(result_msg);
+        return -1.0; //Return -1 to indicate failure
+    }
 
     // Resample trajectory time
     bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
