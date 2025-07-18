@@ -66,6 +66,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
 
     setJacobianControl_client_           = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/jacobian_control_setter");
     setRealTimeControl_client_           = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
+    enableRealTimeConstraints_client_    = node_->create_client<manipulator_interfaces::srv::EnableRealTimeConstraints>(params_.manipulator_name+"/enable_real_time_constraints");
     changePlannerScalingFactors_client_  = node_->create_client<manipulator_interfaces::srv::ChangePlannerScalingFactors>(params_.manipulator_name+"/change_planner_scaling_factors");
     changePlannerTolerances_client_      = node_->create_client<manipulator_interfaces::srv::ChangePlannerTolerances>(params_.manipulator_name+"/change_planner_tolerances");
 
@@ -1356,6 +1357,35 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
     setRealTimeControl_client_->async_send_request(request, cb);
 }
 
+void ManipulatorMenu::setRealTimeConstraints(bool limit_joints, bool limit_jacobian){
+    auto request = std::make_shared<manipulator_interfaces::srv::EnableRealTimeConstraints::Request>();
+    request->limit_joints_control = limit_joints;
+    request->limit_jacobian_control = limit_jacobian;
+
+    // Check if service is available
+    if (!enableRealTimeConstraints_client_->wait_for_service(std::chrono::milliseconds(100)))
+    {
+        RCLCPP_INFO(node_->get_logger(), "Unable to connect to enable_real_time_constraints service");
+        return;
+    }
+
+    auto cb = [&, this](rclcpp::Client<manipulator_interfaces::srv::EnableRealTimeConstraints>::SharedFuture future){
+        auto result = future.get();
+        if (result->success)
+        {
+            RCLCPP_INFO(node_->get_logger(), "Set real time constraints: limit_joints_control = %s, limit_jacobian_control = %s",
+                        limit_joints ? "True" : "False", limit_jacobian ? "True" : "False");
+        }
+        else
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to set real time constraints.");
+        }
+    };
+
+    // Send the request asynchronously
+    enableRealTimeConstraints_client_->async_send_request(request, cb); 
+}
+
 // Set new dynamic planners vel/acc params
 void ManipulatorMenu::setPlannerScalingFactors(float new_vel, float new_acc)
 {
@@ -2305,6 +2335,17 @@ void ManipulatorMenu::userSetRealTimeControl()
     setJsRealTimeControl(set);
 }
 
+void ManipulatorMenu::userSetRealTimeConstraints(){
+    bool limit_joints, limit_jacobian;
+
+    std::cout << "Enter 1 to enable real time joints constraints, 0 to unset: \n";
+    std::cin >> limit_joints;
+    std::cout << "Enter 1 to enable real time jacobian constraints, 0 to unset: \n";
+    std::cin >> limit_jacobian;
+
+    setRealTimeConstraints(limit_joints, limit_jacobian);
+}
+
 void ManipulatorMenu::userSetPlannerScalingFactors()
 {
     float new_vel, new_acc;
@@ -2451,6 +2492,7 @@ void ManipulatorMenu::initializeMenu(){
     //Setters
     menu_->addChoice("Set Jacobian speed control", &ManipulatorMenu::userSetJacobianSpeedControl);
     menu_->addChoice("Set joints real time control", &ManipulatorMenu::userSetRealTimeControl);
+    menu_->addChoice("Set real time constraints", &ManipulatorMenu::userSetRealTimeConstraints);
     menu_->addChoice("Set new planner velocity and acceleration factors", &ManipulatorMenu::userSetPlannerScalingFactors);
     menu_->addChoice("Set new planner tolerances", &ManipulatorMenu::userSetPlannerTolerances);
     menu_->addSection("Setters", section_start, menu_->last_);

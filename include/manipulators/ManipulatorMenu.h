@@ -39,13 +39,14 @@
 #include "std_srvs/srv/set_bool.hpp"
 
 #include "motors_trajectory/srv/roboti_q_gripper_control.hpp"
-#include "manipulator_interfaces/srv/coppelia_menu.hpp"
 #include "manipulator_interfaces/srv/inv_kine.hpp"
 #include "manipulator_interfaces/srv/pseudo_inverse.hpp"
 #include "manipulator_interfaces/srv/f_kine.hpp"
 #include "manipulator_interfaces/srv/jacobian.hpp"
 #include "manipulator_interfaces/srv/change_planner_tolerances.hpp"
 #include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
+#include "manipulator_interfaces/srv/enable_real_time_constraints.hpp"
+
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
 #include "manipulator_interfaces/msg/cartesian_goal.hpp"
@@ -620,21 +621,31 @@ class ManipulatorMenu
             @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
         */
         void setJsRealTimeControl(bool);
+        
         /*!
             @brief Set the planner velocity and acceleration factors.
-            @param velocity_scaling_factor: Velocity scaling factor.
-            @param acceleration_scaling_factor: Acceleration scaling factor.
+            @param limit_joints: During real time control (both joints and jacobian) joints position will be limited according to limits and constraints.
+            @param limit_jacobian: During jacobian control ee pose will be limited to the area specified by position constraints.
             @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
         */
-        void setPlannerScalingFactors(float,float);
+        void setRealTimeConstraints(bool limit_joints, bool limit_jacobian);
+
         /*!
-            @brief Set the planner tolerances in the manipulator planner.
+            @brief Set the planner scaling factors.
+            @param velocity_factor: Joints speed of planned trajectories will be scaled according to this value.
+            @param acceleration_factor: Joints acceleration of planned trajectories will be scaled according to this value.
+            @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
+        */
+        void setPlannerScalingFactors(float vel_factor, float acc_factor);
+
+        /*!
+            @brief Set the tolerances in the manipulator planner.
             @param position_tolerance: Position tolerance for the end effector (in meters).
             @param orientation_tolerance: Orientation tolerance for the end effector (in radians).
             @param joint_tolerance: Joint tolerance for the manipulator (in radians).
             @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
         */
-        void setPlannerTolerances(float,float,float);
+        void setPlannerTolerances(float position_tolerance, float orientation_tolerance, float joint_tolerance);
 
         //Get parameter from manipulator_planner node
         template <typename T>
@@ -696,6 +707,7 @@ class ManipulatorMenu
         // Planner params
         void userSetPlannerScalingFactors(void);    // Set the planner velocity and acceleration factors
         void userSetPlannerTolerances(void);        // Set the planner tolerances
+        void userSetRealTimeConstraints(void);      // Enable/disable real time constraints
         void userSetJacobianSpeedControl(void);     // Set the jacobian speed control
         void userSetRealTimeControl(void);          // Set the real time control of the joints
 
@@ -745,6 +757,7 @@ class ManipulatorMenu
         //Setter clients
         rclcpp::Client<manipulator_interfaces::srv::ChangePlannerScalingFactors>::SharedPtr changePlannerScalingFactors_client_;
         rclcpp::Client<manipulator_interfaces::srv::ChangePlannerTolerances>::SharedPtr changePlannerTolerances_client_;
+        rclcpp::Client<manipulator_interfaces::srv::EnableRealTimeConstraints>::SharedPtr enableRealTimeConstraints_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControl_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setRealTimeControl_client_;
         

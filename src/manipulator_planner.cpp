@@ -114,6 +114,16 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         cb_group
     );
 
+    realTimeConstraintsSetter_service_ = this->create_service<manipulator_interfaces::srv::EnableRealTimeConstraints>(
+        manipulator_name_ + "/enable_real_time_constraints",
+        [this](const std::shared_ptr<manipulator_interfaces::srv::EnableRealTimeConstraints::Request> request,
+               std::shared_ptr<manipulator_interfaces::srv::EnableRealTimeConstraints::Response> response) {
+            this->realTimeConstraintsSetter_callback(request, response);
+        },
+        rmw_qos_profile_services_default,
+        cb_group
+    );
+
     jointsRealTimeSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
         manipulator_name_ + "/joints_real_time_setter",
         [this](const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -610,6 +620,21 @@ void ManipulatorPlannerNode::cartesianPlan_callback(const manipulator_interfaces
     }
 }
 
+// Enable or disable the real time constraints for the planner
+// (limit_joints_control_ and limit_jacobian_control_ parameters)
+void ManipulatorPlannerNode::realTimeConstraintsSetter_callback(const std::shared_ptr<manipulator_interfaces::srv::EnableRealTimeConstraints::Request> req, 
+                                                                std::shared_ptr<manipulator_interfaces::srv::EnableRealTimeConstraints::Response> res)
+{
+    // Set the real time constraints
+    limit_joints_control_ = req->limit_joints_control;
+    limit_jacobian_control_ = req->limit_jacobian_control;
+    RCLCPP_INFO(get_logger(), "Real time constraints set as: limit_joints_control = %s, limit_jacobian_control = %s", 
+                limit_joints_control_ ? "True" : "False", limit_jacobian_control_ ? "True" : "False");
+
+    // Return success
+    res->success = true;
+}
+
 // Set the jacobian speed based control
 void ManipulatorPlannerNode::jointsRealTimeSetter_callback(const std_srvs::srv::SetBool::Request::SharedPtr req, std_srvs::srv::SetBool::Response::SharedPtr res)
 {
@@ -795,7 +820,8 @@ void ManipulatorPlannerNode::jacobianControl()
     }
 
     bool jac_check = true;
-    bool constraints_check = true;
+    bool pos_constraints_check = true;
+    bool joint_constraints_check = true;
 
     if (min_jacobian_determinant_ > 0.0){
         Eigen::MatrixXd jacobian = getJacobian(js.position, ee_name_); // Compute the jacobian matrix for the new position
@@ -811,13 +837,21 @@ void ManipulatorPlannerNode::jacobianControl()
                 constraints_primitives_[k], 
                 constraints_poses_[k]
             )) {
-                constraints_check = false;
+                pos_constraints_check = false;
                 break; // Exit the loop if a constraint is violated
             }
         }
     }
 
-    if (!jac_check || !constraints_check) {
+    if (limit_joints_control_) {
+        // If the joint control is limited, check if the joint constraints are violated
+        if (!dynamic_planner_->checkJointConstraints(js.position)) {
+            joint_constraints_check = false;
+        }
+    }
+
+
+    if (!jac_check || !pos_constraints_check || !joint_constraints_check) {
         js.position = dynamic_planner_->joints_values_group_; // Set the position to the current one
         js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
     }
@@ -905,7 +939,7 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
     if (limit_joints_control_) {
         // If the joint control is limited, check if the joint constraints are violated
         if (!dynamic_planner_->checkJointConstraints(js.position)) {
-            RCLCPP_WARN(get_logger(), "Joint constraints violated, stopping the robot");
+            // RCLCPP_WARN(get_logger(), "Joint constraints violated, stopping the robot");
             js.position = dynamic_planner_->joints_values_group_; // Set the position to the current one
             js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
         }

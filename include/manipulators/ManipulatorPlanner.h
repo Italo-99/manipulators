@@ -21,6 +21,7 @@
 #include "manipulator_interfaces/srv/change_planner_tolerances.hpp"
 #include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
 #include "manipulator_interfaces/srv/pseudo_inverse.hpp"
+#include "manipulator_interfaces/srv/enable_real_time_constraints.hpp"
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
 #include "manipulator_interfaces/msg/cartesian_goal.hpp"
@@ -129,6 +130,11 @@ class ManipulatorPlannerNode : public rclcpp::Node {
             manipulator_interfaces::srv::ChangePlannerTolerances::Response::SharedPtr response
         );
 
+        void realTimeConstraintsSetter_callback(
+            const manipulator_interfaces::srv::EnableRealTimeConstraints::Request::SharedPtr request,
+            manipulator_interfaces::srv::EnableRealTimeConstraints::Response::SharedPtr response
+        );
+
         void jointsRealTimeSetter_callback( // Set the real time joints speed based control
             const std_srvs::srv::SetBool::Request::SharedPtr req, 
             std_srvs::srv::SetBool::Response::SharedPtr res
@@ -207,6 +213,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Service<manipulator_interfaces::srv::PseudoInverse>::SharedPtr pseudoInverse_service_;
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jointsRealTimeSetter_service_;
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jacobianControlSetter_service_;
+        rclcpp::Service<manipulator_interfaces::srv::EnableRealTimeConstraints>::SharedPtr realTimeConstraintsSetter_service_;
         rclcpp::Service<manipulator_interfaces::srv::ChangePlannerTolerances>::SharedPtr changePlannerTolerances_service_;
         rclcpp::Service<manipulator_interfaces::srv::ChangePlannerScalingFactors>::SharedPtr changePlannerScalingFactors_service_;
 
