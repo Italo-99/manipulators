@@ -17,7 +17,8 @@ def get_ur_moveit_launch_params(context,
                                 moveit_config_package_: LaunchConfiguration | None = None,
                                 joint_limits_file_: LaunchConfiguration | None = None,
                                 kinematics_file_: LaunchConfiguration | None = None,
-                                description_semantic_path_: LaunchConfiguration | None = None):
+                                description_semantic_path_: LaunchConfiguration | None = None,
+                                xacro_args: LaunchConfiguration | None = None):
     """
         This function returns a list of dictionaries with all the parameters needed to launch move_group node for UR robots.
         A launch context must be provided by using OpaqueFunction, see manipulators/launch/planning_context.launch.py or 
@@ -44,6 +45,7 @@ def get_ur_moveit_launch_params(context,
     joint_limits_file         = joint_limits_file_ if joint_limits_file_ else                 LaunchConfiguration("joint_limits_file")
     kinematics_file           = kinematics_file_ if kinematics_file_ else                     LaunchConfiguration("kinematics_file")
     description_semantic_path = description_semantic_path_ if description_semantic_path_ else LaunchConfiguration("description_semantic_path")
+    xacro_args                = xacro_args if xacro_args else                                 LaunchConfiguration("xacro_args")
 
     joint_limit_params = PathJoinSubstitution(
         [FindPackageShare(description_package), "config", ur_type, joint_limits_file]
@@ -70,7 +72,9 @@ def get_ur_moveit_launch_params(context,
             joint_limit_params,
             " ",
             "kinematics_params:=",
-            kinematics_params
+            kinematics_params,
+            " ",
+            xacro_args.perform(context)
         ]
     )
 
@@ -90,6 +94,7 @@ def get_ur_moveit_launch_params(context,
             "prefix:=",
             prefix,
             " ",
+            xacro_args.perform(context)
         ]
     )
 

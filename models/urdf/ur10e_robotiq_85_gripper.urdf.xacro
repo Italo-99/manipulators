@@ -52,7 +52,7 @@
             <origin xyz="0 -0.0775 0.024" rpy="0 -1.57 1.57"/>
         </joint>
 
-        <xacro:sensor_d435i parent="d435i_base_link" name="camera">
+        <xacro:sensor_d435i parent="d435i_base_link" name="ee_cam">
             <origin xyz="0 0 0" rpy="0 0 0" />
         </xacro:sensor_d435i>
     </xacro:if>

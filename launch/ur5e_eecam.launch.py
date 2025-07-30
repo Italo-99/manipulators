@@ -83,6 +83,7 @@ def launch_setup(context, *args, **kwargs):
                 ("kinematics_file", LaunchConfiguration("kinematics_file")),
                 ("moveit_config_package", LaunchConfiguration("moveit_config_package")),
                 ("publish_joint_states", LaunchConfiguration("publish_joint_states")),
+                ("xacro_args", LaunchConfiguration("xacro_args")),
             ]
         )
     )
@@ -229,6 +230,15 @@ def generate_launch_description():
             default_value="robotiq_85",
             choices=["robotiq_85", "no_gripper"],
             description="What gripper to use with the robot."
+        )
+    )
+
+    # ADDITIONAL XACRO ARGUMENTS
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "xacro_args",
+            default_value="",
+            description="Additional arguments for xacro processing, e.g. 'camera:=true gripper:=true'."
         )
     )
 

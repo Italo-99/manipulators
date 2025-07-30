@@ -222,6 +222,15 @@ def generate_launch_description():
         )
     )
 
+    # ADDITIONAL XACRO ARGUMENTS
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "xacro_args",
+            default_value="",
+            description="Additional arguments for xacro processing, e.g. 'camera:=true gripper:=true'."
+        )
+    )
+
     return LaunchDescription(
         declared_arguments + [
             OpaqueFunction(function=launch_setup_ur)
