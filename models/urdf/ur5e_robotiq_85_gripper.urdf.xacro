@@ -112,7 +112,7 @@
         <joint name="tool0-tcp_gripper" type="fixed">
             <parent link="tool0"/>
             <child link="tcp_gripper"/>
-            <origin xyz="0 0 0.145" rpy="0 0 0"/>
+            <origin xyz="0 0 0.145" rpy="0 0 0.21"/>
         </joint>
     </xacro:if>
 </robot>

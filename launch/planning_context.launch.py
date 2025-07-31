@@ -75,7 +75,7 @@ def launch_setup_ur(context, *args, **kwargs):
         output="screen",
         namespace=get_namespace(context),
         parameters=moveit_params,
-        arguments=['--ros-args', '--log-level', 'moveit_core.constraint_samplers:=debug', '--log-level', 'ompl:=debug'],
+        arguments=[],
             # robot_description,
             # robot_description_semantic,
             # robot_description_kinematics,
