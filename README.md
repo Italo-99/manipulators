@@ -50,10 +50,11 @@ Install the realsense package:
 
     sudo apt install ros-humble-realsense2-*
 
-Install rviz and moveit visual tools:
+Install additional dependencies:
 
     sudo apt install ros-humble-rviz-visual-tools
     sudo apt install ros-humble-moveit-visual-tools
+    sudo apt install ros-humble-xacro
 
 ### 4. Fix known issues
 
