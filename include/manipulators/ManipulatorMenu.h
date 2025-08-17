@@ -55,6 +55,9 @@
 
 #include "manipulators/MenuUserInterface.hpp"
 
+#define DEFAULT_PLANNING_TIMEOUT 2
+#define DEFAULT_EXECUTION_TIMEOUT 20 
+
 /*! @struct ManipulatorMenuParams
         @brief Struct to hold the parameters for the ManipulatorMenu class.
 
@@ -254,7 +257,7 @@ class ManipulatorMenu
         manipulator_interfaces::msg::TrajectoryResult planAndWait(
             const sensor_msgs::msg::JointState joint_goal, 
             const std::vector<double> start_state = std::vector<double>(),
-            uint timeout=2);
+            uint timeout=DEFAULT_PLANNING_TIMEOUT);
         
         /*!
             @brief Send a TCP goal to the manipulator planner and wait for the result.
@@ -268,7 +271,7 @@ class ManipulatorMenu
             const geometry_msgs::msg::Pose tcp_goal, 
             const std::vector<double> start_state = std::vector<double>(), 
             const std::string& frame = "", //Leave empty for default frame
-            uint timeout=2);
+            uint timeout=DEFAULT_PLANNING_TIMEOUT);
 
         /*!
             @brief Send a Cartesian goal to the manipulator planner and wait for the result.
@@ -280,9 +283,9 @@ class ManipulatorMenu
         */
         manipulator_interfaces::msg::TrajectoryResult cartesianPlanAndWait(
             const std::vector<geometry_msgs::msg::Pose> waypoints, 
-            const std::vector<double> start_state = std::vector<double>(), 
+            const std::vector<double> start_state = std::vector<double>(),
             const std::string& frame = "", //Leave empty for default frame
-            uint timeout=2);
+            uint timeout=DEFAULT_PLANNING_TIMEOUT);
 
         /*!
             @brief Execute a trajectory, blocks until the trajectory is executed or timeout is reached.
@@ -291,13 +294,12 @@ class ManipulatorMenu
             @return True if the trajectory was executed successfully, false otherwise.
             @note This function will block until the trajectory is executed or the timeout is reached.
         */
-        bool executeAndWait(const moveit_msgs::msg::RobotTrajectory joint_trajectory, uint timeout=20);
+        bool executeAndWait(const moveit_msgs::msg::RobotTrajectory joint_trajectory, uint timeout=DEFAULT_EXECUTION_TIMEOUT);
 
         /*!
             @brief Plan a joint goal, execute it and wait for the result.
             @details This function combines the two functions planAndWait() and executeAndWait().
             @param joint_goal: Joint goal to be published (in radians).
-            @param start_state: Start state of the manipulator (in degrees).
             @param timeout_planning: Timeout for the planning operation (in seconds).
             @param timeout_execution: Timeout for the execution operation (in seconds).
             @return True if the trajectory was executed successfully, false otherwise.
@@ -305,16 +307,44 @@ class ManipulatorMenu
         */
        bool planExecuteAndWait(
             const sensor_msgs::msg::JointState joint_goal, 
-            const std::vector<double> start_state = std::vector<double>(),
-            uint timeout_planning=2,
-            uint timeout_execution=20
+            uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
+            uint timeout_execution=DEFAULT_EXECUTION_TIMEOUT
+        );
+        
+        /*!
+            @brief Plan a joint goal, execute it and wait for the result.
+            @details This function combines the two functions planAndWait() and executeAndWait().
+            @param joint_goal: Joint goal to be published (in degrees).
+            @param timeout_planning: Timeout for the planning operation (in seconds).
+            @param timeout_execution: Timeout for the execution operation (in seconds).
+            @return True if the trajectory was executed successfully, false otherwise.
+            @note This function will block until the trajectory is executed or the timeout is reached.
+        */
+        bool planExecuteAndWait(
+            const std::vector<double> joint_goal, 
+            uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
+            uint timeout_execution=DEFAULT_EXECUTION_TIMEOUT
+        );
+
+         /*!
+            @brief Plan a joint goal, execute it and wait for the result.
+            @details This function combines the two functions planAndWait() and executeAndWait().
+            @param known_pose: Name of the known pose to plan to.
+            @param timeout_planning: Timeout for the planning operation (in seconds).
+            @param timeout_execution: Timeout for the execution operation (in seconds).
+            @return True if the trajectory was executed successfully, false otherwise.
+            @note This function will block until the trajectory is executed or the timeout is reached.
+        */
+        bool planExecuteAndWait(
+            const std::string& known_pose,
+            uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
+            uint timeout_execution=DEFAULT_EXECUTION_TIMEOUT
         );
 
         /*!
             @brief Plan a TCP goal, execute it and wait for the result.
             @details This function combines planning and execution for a TCP goal position.
             @param tcp_goal: TCP goal position to be published.
-            @param start_state: Start state of the manipulator (in degrees).
             @param frame: Frame in which the position is expressed (leave empty for default frame).
             @param timeout_planning: Timeout for the planning operation (in seconds).
             @param timeout_execution: Timeout for the execution operation (in seconds).
@@ -323,17 +353,15 @@ class ManipulatorMenu
         */
         bool planExecuteAndWait(
             const geometry_msgs::msg::Pose tcp_goal, 
-            const std::vector<double> start_state = std::vector<double>(), 
             const std::string& frame = "", //Leave empty for default frame
-            uint timeout_planning=2,
-            uint timeout_execution=20
+            uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
+            uint timeout_execution=DEFAULT_EXECUTION_TIMEOUT
         );
 
         /*!
             @brief Plan a Cartesian path through waypoints, execute it and wait for the result.
             @details This function combines planning and execution for a Cartesian trajectory through multiple waypoints.
             @param waypoints: Vector of waypoint poses defining the Cartesian path.
-            @param start_state: Start state of the manipulator (in degrees).
             @param frame: Frame in which the positions are expressed (leave empty for default frame).
             @param timeout_planning: Timeout for the planning operation (in seconds).
             @param timeout_execution: Timeout for the execution operation (in seconds).
@@ -342,10 +370,9 @@ class ManipulatorMenu
         */
         bool cartesianPlanExecuteAndWait(
             const std::vector<geometry_msgs::msg::Pose> waypoints, 
-            const std::vector<double> start_state = std::vector<double>(), 
             const std::string& frame = "", //Leave empty for default frame
-            uint timeout_planning=2,
-            uint timeout_execution=20
+            uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
+            uint timeout_execution=DEFAULT_EXECUTION_TIMEOUT
         );
 
         /*!
@@ -446,11 +473,11 @@ class ManipulatorMenu
         /*!
             @brief Add a collision object to the planning scene in form of a primitive shape.
             @param name: Name of the object.
-            @param obj_type: Type of the object (1: BOX, 2: SPHERE, 3: CYLINDER, 4: CONE).
+            @param obj_type: Type of the object (1: BOX, DEFAULT_PLANNING_TIMEOUT: SPHERE, 3: CYLINDER, 4: CONE).
             @param obj_dims: Dimensions of the object (depends on the type, see below).
             @param obj_pos: Position of the object in the form [x (m), y (m), z (m)].
             @param rot_pos: Orientation of the object in the form [x (rad), y (rad), z (rad)].
-            @param operation: Operation to be performed on the object (0: ADD, 1: REMOVE, 2: MOVE).
+            @param operation: Operation to be performed on the object (0: ADD, 1: REMOVE, DEFAULT_PLANNING_TIMEOUT: MOVE).
             @details
             - For a BOX, obj_dims should contain [length (m), width (m), height (m)].
             - For a SPHERE, obj_dims should contain [radius (m)].
@@ -486,11 +513,11 @@ class ManipulatorMenu
         /*!
             @brief Add an attached collision object to the planning scene.
             @param name: Name of the object.
-            @param obj_type: Type of the object (1: BOX, 2: SPHERE, 3: CYLINDER, 4: CONE).
+            @param obj_type: Type of the object (1: BOX, DEFAULT_PLANNING_TIMEOUT: SPHERE, 3: CYLINDER, 4: CONE).
             @param obj_dims: Dimensions of the object (depends on the type, see below).
             @param obj_pos: Position of the object in the form [x (m), y (m), z (m)].
             @param rot_pos: Orientation of the object in the form [x (rad), y (rad), z (rad), w (rad)].
-            @param operation: Operation to be performed on the object (0: ADD, 1: REMOVE, 2: APPEND, 3: MOVE).
+            @param operation: Operation to be performed on the object (0: ADD, 1: REMOVE, DEFAULT_PLANNING_TIMEOUT: APPEND, 3: MOVE).
             @details
             - For a BOX, obj_dims should contain [length (m), width (m), height (m)].
             - For a SPHERE, obj_dims should contain [radius (m)].
@@ -540,7 +567,7 @@ class ManipulatorMenu
             @details The specified link will stay inside that primitive.
             @param link_name: Name of the link to be constrained.
             @param shape_pose: Pose of the primitive in the form of a geometry_msgs::msg::Pose (relative to world).
-            @param shape_type: Type of the primitive (1: BOX, 2: SPHERE, 3: CYLINDER, 4: CONE).
+            @param shape_type: Type of the primitive (1: BOX, DEFAULT_PLANNING_TIMEOUT: SPHERE, 3: CYLINDER, 4: CONE).
             @param shape_dims: Dimensions of the primitive (depends on the type, see below).
             @param weight: Weight of the constraint (default is 1.0).
             @details
@@ -724,7 +751,7 @@ class ManipulatorMenu
         ManipulatorMenuParams params_;
         std::map<std::string, std::vector<double>> known_poses_; //Map of known poses
 
-        rclcpp::executors::SingleThreadedExecutor executor_;
+        rclcpp::executors::MultiThreadedExecutor executor_;
         rclcpp::Node::SharedPtr node_;
 
         MenuUserInterface<ManipulatorMenu> *menu_;

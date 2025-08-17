@@ -75,11 +75,17 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
     // ---------------------- Planning ----------------------
+    
+    auto cb_group = node_->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.callback_group = cb_group;
+
     plannedTrajectory_sub_ = node_->create_subscription<manipulator_interfaces::msg::TrajectoryResult>(
         params_.planning_group+"/planned_trajectory", 1,
         [this](const manipulator_interfaces::msg::TrajectoryResult::SharedPtr msg) {
             trajectoryCallback(msg);
-        }
+        },
+        sub_options
     );
 
     trajectory_pub_ = node_->create_publisher<moveit_msgs::msg::RobotTrajectory>(params_.planning_group+"/trajectory", 1);
@@ -656,12 +662,11 @@ bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajector
 
 bool ManipulatorMenu::planExecuteAndWait(
     const sensor_msgs::msg::JointState joint_goal, 
-    const std::vector<double> start_state,
     uint timeout_planning,
     uint timeout_execution
 ){
     // Plan the trajectory
-    manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(joint_goal, start_state, timeout_planning);
+    manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(joint_goal, std::vector<double>(), timeout_planning);
 
     if (traj_result.success)
     {
@@ -677,14 +682,36 @@ bool ManipulatorMenu::planExecuteAndWait(
 }
 
 bool ManipulatorMenu::planExecuteAndWait(
+    const std::vector<double> joint_goal, 
+    uint timeout_planning,
+    uint timeout_execution
+){
+    return planExecuteAndWait(joint_state_from_vector(joint_goal), timeout_planning, timeout_execution);
+}
+
+bool ManipulatorMenu::planExecuteAndWait(
+    const std::string& known_pose, 
+    uint timeout_planning,
+    uint timeout_execution
+){
+    // Get the known pose
+    std::vector<double> joint_goal = getKnownPose(known_pose);
+    if (joint_goal.empty()) {
+        RCLCPP_ERROR(node_->get_logger(), "Known pose %s not found.", known_pose.c_str());
+        return false;
+    }
+
+    return planExecuteAndWait(joint_goal, timeout_planning, timeout_execution);
+}
+
+bool ManipulatorMenu::planExecuteAndWait(
     const geometry_msgs::msg::Pose tcp_goal, 
-    const std::vector<double> start_state, 
     const std::string& frame, //Leave empty for default frame
     uint timeout_planning,
     uint timeout_execution
 ){
     // Plan the trajectory
-    manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(tcp_goal, start_state, frame, timeout_planning);
+    manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(tcp_goal, std::vector<double>(), frame, timeout_planning);
 
     if (traj_result.success)
     {
@@ -701,13 +728,12 @@ bool ManipulatorMenu::planExecuteAndWait(
 
 bool ManipulatorMenu::cartesianPlanExecuteAndWait(
     const std::vector<geometry_msgs::msg::Pose> waypoints, 
-    const std::vector<double> start_state, 
     const std::string& frame, //Leave empty for default frame
     uint timeout_planning,
     uint timeout_execution
 ){
     // Plan the trajectory
-    manipulator_interfaces::msg::TrajectoryResult traj_result = cartesianPlanAndWait(waypoints, start_state, frame, timeout_planning);
+    manipulator_interfaces::msg::TrajectoryResult traj_result = cartesianPlanAndWait(waypoints, std::vector<double>(), frame, timeout_planning);
 
     if (traj_result.success)
     {
@@ -1316,7 +1342,7 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
         auto result = future.get();
         if (result->success)
         {
-            RCLCPP_INFO(node_->get_logger(), "Jacobian control set to %s", set ? "true" : "false");
+            RCLCPP_INFO(node_->get_logger(), "Jacobian control set to %s", set ? "false" : "true");
         }
         else
         {
@@ -1345,7 +1371,7 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
         auto result = future.get();
         if (result->success)
         {
-            RCLCPP_INFO(node_->get_logger(), "Real time joints control set to %s", set ? "true" : "false");
+            RCLCPP_INFO(node_->get_logger(), "Real time joints control set to %s", set ? "false" : "true");
         }
         else
         {

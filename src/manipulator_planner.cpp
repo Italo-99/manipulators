@@ -246,6 +246,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
 }
 
 ManipulatorPlannerNode::~ManipulatorPlannerNode() {
+    RCLCPP_INFO(get_logger(), "Destroying ManipulatorPlannerNode...");
     // Stop the spinner thread
     if (mainloop_timer_) {
         mainloop_timer_->cancel();
@@ -340,8 +341,6 @@ void ManipulatorPlannerNode::spinner() {
     );
 
     executor_.spin(); // Start the executor
-
-    rclcpp::shutdown();
 }
 
 // ------------------------------------- PRIVATE METHODS -------------------------------------

@@ -128,15 +128,13 @@ void JoystickController::publishCmd()
 }
 
 void JoystickController::spinnerJoystick(){
+
     cmd_pub_timer_ = node_->create_wall_timer(
         std::chrono::milliseconds(int(1000 / params_.ros_freq)),
         [this]() -> void {
             publishCmd();
-        }
+        } 
     );
 
     spinner();
-
-    // Shutdown ROS
-    rclcpp::shutdown();
 }
