@@ -295,8 +295,40 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
 
     //Sets the target pose
     move_group_->setPoseReferenceFrame(frame);
-    // move_group_->setApproximateJointValueTarget(goal_pose, ee_link); //Use joint space planning
-    move_group_->setPoseTarget(goal_pose, ee_link); //Use cartesian space planning
+    
+    moveit_msgs::msg::Constraints path_constraints = move_group_->getPathConstraints();
+    if (!path_constraints.joint_constraints.empty()){
+        //If there are joint constraints plan in joint space
+        const size_t max_attempts = 20;
+        RCLCPP_INFO(node_->get_logger(), "Planning in joint space due to path constraints");
+        for (size_t attempt_n {0}; attempt_n < max_attempts; ++attempt_n)
+        {
+            std::vector<double> joint_positions = invKine(goal_pose, ee_link);
+            //Check if it respects path constraints and goal
+            if (checkJointConstraints(joint_positions) && checkPoseDiff(getFKine(joint_positions, ee_link).pose, goal_pose))
+            {
+                move_group_->setJointValueTarget(joint_positions);
+                break; //If the joint positions are valid, break the loop
+            }
+            else if (attempt_n == max_attempts - 1) //If we reached the maximum number of attempts
+            {
+                RCLCPP_ERROR(node_->get_logger(), "Failed to find a valid joint configuration for the goal pose after %zu attempts", attempt_n + 1);
+                result_msg.success = false;
+                result_msg.message = "Failed to find a valid joint configuration for the goal pose";
+                result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::INVALID_MOTION_PLAN;
+
+                moveit_msgs::msg::RobotTrajectory trajectory;
+                result_msg.trajectory = trajectory;
+
+                setTrajectory(trajectory);
+                trajectory_pub_->publish(result_msg);
+                return;
+            }
+        }
+    }
+    else {
+        move_group_->setPoseTarget(goal_pose, ee_link); //Use cartesian space planning
+    }
 
     //Create the plan and execute
     moveit::planning_interface::MoveGroupInterface::Plan plan;
@@ -326,19 +358,19 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
 
     moveit_msgs::msg::RobotTrajectory trajectory = plan.trajectory_;
 
-    // trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
-    // if(!checkPoseDiff(getFKine(last_point.positions, ee_link).pose, goal_pose)){
-    //     RCLCPP_ERROR(node_->get_logger(), "Trajectory end point does not match with the target pose");
-    //     moveit_msgs::msg::RobotTrajectory trajectory;
-    //     result_msg.success = false;
-    //     result_msg.message = "Trajectory end point does not match with the target pose";
-    //     result_msg.trajectory = trajectory;
-    //     result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::END_POINT_MISMATCH;
-
-    //     setTrajectory(trajectory);
-    //     trajectory_pub_->publish(result_msg);
-    //     return;
-    // }
+//    trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
+//    if(!checkPoseDiff(getFKine(last_point.positions, ee_link).pose, goal_pose)){
+//        RCLCPP_ERROR(node_->get_logger(), "Trajectory end point does not match with the target pose");
+//        moveit_msgs::msg::RobotTrajectory trajectory;
+//        result_msg.success = false;
+//        result_msg.message = "Trajectory end point does not match with the target pose";
+//        result_msg.trajectory = trajectory;
+//        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::END_POINT_MISMATCH;
+//
+//        setTrajectory(trajectory);
+//        trajectory_pub_->publish(result_msg);
+//        return;
+//    }
 
     bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
 
@@ -552,7 +584,7 @@ bool DynamicPlanner::isReady() const
 
 void DynamicPlanner::stop()
 {
-    is_moving_ = false;
+    force_stop_ = true;
 }
 
 std::shared_ptr<moveit::planning_interface::MoveGroupInterface> DynamicPlanner::getMoveGroup() const
@@ -888,6 +920,21 @@ void DynamicPlanner::trajectoryExecution_callback(){
     /*
     Callback for trajectory execution from traj_timer_
     */
+    if(force_stop_){
+        RCLCPP_INFO(node_->get_logger(), "Force stop received, stopping trajectory execution.");
+        is_moving_ = false;
+        trajpoint_ = 0UL; // Reset trajectory point index
+        force_stop_ = false; // Reset force stop flag
+        
+        //Construct a joint state message with the final joint positions
+        sensor_msgs::msg::JointState joint_state;
+        joint_state.name = joint_names_;
+        joint_state.position = joints_values_group_;
+        joint_state.velocity = std::vector<double>(joint_names_.size(), 0.0);
+        moveRobot(joint_state);
+
+        return;
+    }
 
     if (is_moving_ && isReady() && rclcpp::ok()){
         trajectory_msgs::msg::JointTrajectoryPoint traj_pt;

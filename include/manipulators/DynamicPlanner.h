@@ -266,6 +266,7 @@ class DynamicPlanner
         std::string traj_end_effector_link_;                    //End effector link of the planned trajectory
         unsigned long trajpoint_;                               //Index of the current trajectory point
         bool is_moving_ = false;                                 //Whether the robot is moving or not, can be set to false to stop execution of trajectory
+        bool force_stop_ = false;                                //Force stop the execution of the trajectory
 
         //Time optimal trajectory generation 
         trajectory_processing::TimeOptimalTrajectoryGenerationPtr time_optimal_traj_gen;

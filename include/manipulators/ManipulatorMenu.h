@@ -694,7 +694,7 @@ class ManipulatorMenu
         // --------------------- USER ACTIONS ---------------------
         
         void userJointGoal(void);            // to perform a joint goal set by the user 
-        void userOneJointMove();        // to move only a single joint
+        void userOneJointMove();             // to move only a single joint
         
         void userTcpGoal(void);              // to perform a tcp goal set by the user 
 
@@ -710,6 +710,7 @@ class ManipulatorMenu
         //Known positions
         void userGoHomeDown(void);           // to go to the home position gripper facing down
         void userGoHomeFront(void);          // to go to the home position gripper facing front
+        void userGoToKnownPose(void);        // to go to a known pose specified in the yaml file by providing its id
 
         //Visualization
         void userJointStateVisualizer();

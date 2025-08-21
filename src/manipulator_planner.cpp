@@ -645,13 +645,9 @@ void ManipulatorPlannerNode::jointsRealTimeSetter_callback(const std_srvs::srv::
     for (unsigned int k = 0; k < joint_names_.size(); k++)
     {
         current_js_vel_[k]  = 0.;
+        js_vel_cmd_[k] = 0.;
     }
-    for (unsigned int k = 0; k<6; k++)
-    {
-        current_ee_vel_[k] = 0.;
-    }
-    // Publish the msg to the robot
-    jacobianControl();
+    
     // Return success
     res->success = true;
     res->message = js_rt_control_ ? "Joints real time control mode enabled":"Joints real time control mode disabled";
@@ -679,9 +675,10 @@ void ManipulatorPlannerNode::jacobianControlSetter_callback(const std_srvs::srv:
     }
 
     // Stop the robot to prevent bad behaviours during mode switch
-    for (unsigned int k = 0; k<6; k++) {current_ee_vel_(k) = 0.;}
-    // Publish the msg to the robot
-    jacobianControl();
+    for (unsigned int k = 0; k<6; k++) {
+        current_ee_vel_(k) = 0.;
+        ee_vel_cmd_(k) = 0.;
+    }
 
     // Return success
     res->success = true;

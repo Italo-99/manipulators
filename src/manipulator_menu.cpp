@@ -60,7 +60,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     // --------------------- Kinematics client init ---------------------
     invKine_client_                      = node_->create_client<manipulator_interfaces::srv::InvKine>(params_.manipulator_name+"/get_invkine");
     pseudoInverse_client_                = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(params_.manipulator_name+"/get_pseudo_inverse");
-    fKine_client_                        = node_->create_client<manipulator_interfaces::srv::FKine>(params_.manipulator_name+"/get_fkine");
+    fKine_client_                = node_->create_client<manipulator_interfaces::srv::FKine>(params_.manipulator_name+"/get_fkine");
     jacobian_client_                     = node_->create_client<manipulator_interfaces::srv::Jacobian>(params_.manipulator_name+"/get_jacobian");
 
 
@@ -712,6 +712,17 @@ bool ManipulatorMenu::planExecuteAndWait(
 ){
     // Plan the trajectory
     manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(tcp_goal, std::vector<double>(), frame, timeout_planning);
+    
+    std::vector<double> last_point = traj_result.trajectory.joint_trajectory.points.back().positions;
+    RCLCPP_INFO(node_->get_logger(), "Last point joint values: [%f, %f, %f, %f, %f, %f]", 
+        last_point[0], last_point[1], last_point[2], last_point[3], last_point[4], last_point[5]);
+    for (unsigned long k = 0; k < last_point.size(); k++)
+    {
+        last_point[k] = last_point[k] * 180 / M_PI; //Convert rad to deg
+    }
+    geometry_msgs::msg::Pose goal_pose = getFKineClient(joint_state_from_vector(last_point));
+    RCLCPP_INFO(node_->get_logger(), "Planned goal pose: [%f, %f, %f]", 
+        goal_pose.position.x, goal_pose.position.y, goal_pose.position.z); 
 
     if (traj_result.success)
     {
@@ -1342,7 +1353,7 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
         auto result = future.get();
         if (result->success)
         {
-            RCLCPP_INFO(node_->get_logger(), "Jacobian control set to %s", set ? "false" : "true");
+            RCLCPP_INFO(node_->get_logger(), "Jacobian control set to %s", set ? "true" : "false");
         }
         else
         {
@@ -1371,7 +1382,7 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
         auto result = future.get();
         if (result->success)
         {
-            RCLCPP_INFO(node_->get_logger(), "Real time joints control set to %s", set ? "false" : "true");
+            RCLCPP_INFO(node_->get_logger(), "Real time joints control set to %s", set ? "true" : "false");
         }
         else
         {
@@ -1983,12 +1994,21 @@ void ManipulatorMenu::userRotateAroundZ()
 
 void ManipulatorMenu::userGoHomeDown()
 {
-    publishJointGoal(getKnownPose("home_gripper_down"));
+    planExecuteAndWait("home_gripper_down");
 }
 
 void ManipulatorMenu::userGoHomeFront()
 {
-    publishJointGoal(getKnownPose("home_gripper_front"));
+    planExecuteAndWait("home_gripper_front");
+}
+
+void ManipulatorMenu::userGoToKnownPose()
+{
+    std::string pose_name;
+    std::cout << "Enter the name of the known pose: ";
+    std::cin >> pose_name;
+    
+    planExecuteAndWait(pose_name);
 }
 
 // --------------------- VISUALIZATION HANDLERS ---------------------
@@ -2484,6 +2504,7 @@ void ManipulatorMenu::initializeMenu(){
     //Known positions
     menu_->addChoice("Go to home position with gripper facing down", &ManipulatorMenu::userGoHomeDown);
     menu_->addChoice("Go to home position with gripper facing front", &ManipulatorMenu::userGoHomeFront);
+    menu_->addChoice("Move to known position by id", &ManipulatorMenu::userGoToKnownPose);
     menu_->addSection("Known positions", section_start, menu_->last_);
     section_start = menu_->last_ + 1;
 
