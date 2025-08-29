@@ -2004,11 +2004,27 @@ void ManipulatorMenu::userGoHomeFront()
 
 void ManipulatorMenu::userGoToKnownPose()
 {
-    std::string pose_name;
-    std::cout << "Enter the name of the known pose: ";
-    std::cin >> pose_name;
-    
-    planExecuteAndWait(pose_name);
+    size_t choice = 0;
+
+    std::cout << "Enter the known pose you want to move to:" << std::endl;
+
+    auto it = known_poses_.begin();
+    size_t index = 0;
+    for (auto it_print = it; it_print != known_poses_.end(); it_print++){
+        std::cout << index << " - " << it_print->first << std::endl;
+        index++;
+    }
+
+    std::cout << "Your choice:";
+    std::cin >> choice;
+
+    if (choice < known_poses_.size()){
+        std::advance(it, choice);
+        std::vector<double> pose = it->second;
+        publishJointGoal(pose);
+    } else {
+        std::cout << "Invalid choice!" << std::endl;
+    }
 }
 
 // --------------------- VISUALIZATION HANDLERS ---------------------
