@@ -25,11 +25,11 @@ int main(int argc, char* argv[]) {
     params.base_link_name     = prefix + "base_link";
 
     // Set the path to the known poses YAML file
-    //std::string package_share_directory = ament_index_cpp::get_package_share_directory("manipulators");
-    //params.known_poses_path = package_share_directory + "/config/known_poses.yaml";
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory("manipulators");
+    params.known_poses_path = package_share_directory + "/config/known_poses.yaml";
     
-    std::string package_share_directory = ament_index_cpp::get_package_share_directory("sirio_manipulator");
-    params.known_poses_path = package_share_directory + "/config/menu/known_poses_ur.yaml";
+    // std::string package_share_directory = ament_index_cpp::get_package_share_directory("sirio_manipulator");
+    // params.known_poses_path = package_share_directory + "/config/menu/known_poses_ur.yaml";
 
     rclcpp::init(argc, argv);
 
