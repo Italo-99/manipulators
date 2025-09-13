@@ -1272,8 +1272,8 @@ void ManipulatorMenu::publishJointConstraint(const uint &joint_index,
     moveit_msgs::msg::JointConstraint constraint;
     constraint.joint_name = params_.joint_names[joint_index];
     constraint.position = position / 180.0 * M_PI; // Convert to radians
-    constraint.tolerance_above = tolerance_above / 180.0 * M_PI;
     constraint.tolerance_below = tolerance_below / 180.0 * M_PI;
+    constraint.tolerance_above = tolerance_above / 180.0 * M_PI;
     constraint.weight = weight;
 
     RCLCPP_INFO(node_->get_logger(), "Joint constraint for joint: %s˚, position: %f˚, tolerance_above: %f˚, tolerance_below: %f˚", constraint.joint_name.c_str(), position, tolerance_above, tolerance_below);
@@ -2209,14 +2209,14 @@ void ManipulatorMenu::userAddJointConstraint(){
     std::cin >> joint_index;
     std::cout << "Enter the joint position: ";
     std::cin >> position;
-    std::cout << "Enter the tolerance above: ";
-    std::cin >> tolerance_above;
     std::cout << "Enter the tolerance below: ";
     std::cin >> tolerance_below;
+    std::cout << "Enter the tolerance above: ";
+    std::cin >> tolerance_above;
     std::cout << "Enter the weight: ";
     std::cin >> weight;
 
-    publishJointConstraint(joint_index, position, tolerance_above, tolerance_below, weight);
+    publishJointConstraint(joint_index, position, tolerance_below, tolerance_above, weight);
 }
 
 void ManipulatorMenu::userAddPositionConstraint(){

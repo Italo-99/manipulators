@@ -21,7 +21,7 @@
     <xacro:property name="gripper_collision_box" value="$(arg gripper_collision_box)"/>
 
     <!-- Virtual base joint -->
-    <virtual_joint name="fixed_base" type="fixed" parent_frame="world" child_link="base_link" />
+    <virtual_joint name="fixed_base" type="fixed" parent_frame="world_ur" child_link="base_link" />
 
     <!-- Disable collisions for Robotiq 85 gripper if enabled -->
     <xacro:if value="${gripper}">

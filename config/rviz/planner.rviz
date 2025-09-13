@@ -7,10 +7,6 @@ Panels:
         - /Global Options1
         - /RobotModel1/Description Topic1
         - /PlanningScene1/Scene Robot1
-        - /TF1/Tree1/world_ur1
-        - /TF1/Tree1/world_ur1/base_link1
-        - /TF1/Tree1/world_ur1/base_link1/base_link_inertia1
-        - /TF1/Tree1/world_ur1/base_link1/base_link_inertia1/shoulder_link1
       Splitter Ratio: 0.5
     Tree Height: 805
   - Class: rviz_common/Selection
@@ -445,25 +441,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 1.535872220993042
+      Distance: 1.6469300985336304
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.3385370373725891
-        Y: -0.2696438729763031
-        Z: 0.24317145347595215
+        X: 0.16886311769485474
+        Y: 0.15598691999912262
+        Z: 0.23553363978862762
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.1453985571861267
+      Pitch: 0.5203983187675476
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.053560256958008
+      Yaw: 5.068559646606445
     Saved: ~
 Window Geometry:
   Displays:

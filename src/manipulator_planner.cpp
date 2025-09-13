@@ -233,6 +233,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         [this](const std_msgs::msg::Empty::SharedPtr msg) {
             msg.get();
             dynamic_planner_->clearPathConstraints();
+            // dynamic_planner_->clearJointConstraints(); TODO
         },
         sub_options
     );
@@ -935,7 +936,7 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
     if (limit_joints_control_) {
         // If the joint control is limited, check if the joint constraints are violated
         if (!dynamic_planner_->checkJointConstraints(js.position)) {
-            // RCLCPP_WARN(get_logger(), "Joint constraints violated, stopping the robot");
+            RCLCPP_WARN(get_logger(), "Joint constraints violated, stopping the robot");
             js.position = dynamic_planner_->joints_values_group_; // Set the position to the current one
             js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
         }

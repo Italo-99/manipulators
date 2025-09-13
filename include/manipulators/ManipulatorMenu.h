@@ -556,8 +556,8 @@ class ManipulatorMenu
         */
         void publishJointConstraint(const uint &joint_num, 
                                     const double &position, 
-                                    const double &tolerance_above, 
                                     const double &tolerance_below, 
+                                    const double &tolerance_above, 
                                     const double &weight  = 1.0);
 
 
