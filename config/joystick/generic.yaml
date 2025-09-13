@@ -9,6 +9,6 @@ gripper_group:    "robotiq_85_gripper"
 gripper_IO_cmds:  [1, 0]  # For gripper type "toolIO", IO commands to close/open the gripper
 
 #Parameters for joystick
-vel_step:         0.05   # Multiplier factor for joy axes [m/s]   to move the tcp
-rot_step:         0.05   # Multiplier factor for joy axes [rad/s] to rotate around the tcp 
-js_step:          0.2    # Multiplier factor for joy axes [rad/s] to move joints
+vel_step:         0.2   # Multiplier factor for joy axes [m/s]   to move the tcp
+rot_step:         0.2   # Multiplier factor for joy axes [rad/s] to rotate around the tcp 
+js_step:          0.4    # Multiplier factor for joy axes [rad/s] to move joints
