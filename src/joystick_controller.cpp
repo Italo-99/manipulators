@@ -68,12 +68,24 @@ void JoystickController::joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy
         real_time_control_ = !real_time_control_;
         setJacobianSpeedControl(jacobian_control_);
         setJsRealTimeControl(real_time_control_);
+        // Log setting
+        if(real_time_control_){
+            RCLCPP_INFO(node_->get_logger(), "Real-time joint speed control enabled BY JOY.");
+        } else {
+            RCLCPP_INFO(node_->get_logger(), "Real-time joint speed control disabled BY JOY.");
+        }
     // Set jacobian control
     } else if(joy->buttons[ButtonsMap::RIGHTSTICK]){
         jacobian_control_ = !jacobian_control_;
         real_time_control_ = false;
         setJacobianSpeedControl(jacobian_control_);
         setJsRealTimeControl(real_time_control_);
+        // Log setting
+        if(jacobian_control_){
+            RCLCPP_INFO(node_->get_logger(), "Jacobian speed control enabled BY JOY.");
+        } else {
+            RCLCPP_INFO(node_->get_logger(), "Jacobian speed control disabled BY JOY.");
+        }
     }
 
     if(jacobian_control_){
