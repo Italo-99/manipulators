@@ -62,16 +62,18 @@ void JoystickController::joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy
 
     bool rotation_control = joy->buttons[ButtonsMap::RIGHTSHOULDER];
 
-    if(joy->buttons[ButtonsMap::LEFTSTICK] && !real_time_control_){
+    // Set real time js control
+    if(joy->buttons[ButtonsMap::LEFTSTICK]){
         jacobian_control_ = false;
-        real_time_control_ = true;
-        setJacobianSpeedControl(false);
-        setJsRealTimeControl(true);
-    } else if(joy->buttons[ButtonsMap::RIGHTSTICK] && !jacobian_control_){
-        jacobian_control_ = true;
+        real_time_control_ = !real_time_control_;
+        setJacobianSpeedControl(jacobian_control_);
+        setJsRealTimeControl(real_time_control_);
+    // Set jacobian control
+    } else if(joy->buttons[ButtonsMap::RIGHTSTICK]){
+        jacobian_control_ = !jacobian_control_;
         real_time_control_ = false;
-        setJacobianSpeedControl(true);
-        setJsRealTimeControl(false);
+        setJacobianSpeedControl(jacobian_control_);
+        setJsRealTimeControl(real_time_control_);
     }
 
     if(jacobian_control_){
