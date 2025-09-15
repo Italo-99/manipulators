@@ -163,6 +163,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         // Execute the jacobian based control
         void jacobianControl();
         void updateJacobianSpeedCmd(); //Fit ee_vel_cmd_ to the acceleration limits for the end effector and assign the value to current_ee_vel_
+        void updateJacobianConstraintPrimitives(); //Update the list of constraint primitives for the jacobian control
 
         // Execute the real time joints speed based control
         void jointsRealTimeControl();

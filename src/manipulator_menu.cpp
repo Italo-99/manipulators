@@ -1340,7 +1340,7 @@ void ManipulatorMenu::publishClearConstraints()
 void ManipulatorMenu::setJacobianSpeedControl(bool set)
 {
     auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-    request->data = set;
+    request->data  = set;
 
     // Check if service is available
     if (!setJacobianControl_client_->wait_for_service(std::chrono::milliseconds(100)))
@@ -1349,7 +1349,7 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
         return;
     }
 
-    auto cb = [&, this](rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture future){
+    auto cb = [set, this](rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture future){
         auto result = future.get();
         if (result->success)
         {
@@ -1369,7 +1369,7 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
 void ManipulatorMenu::setJsRealTimeControl(bool set)
 {
     auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-    request->data = set;
+    request->data  = set;
 
     // Check if service is available
     if (!setRealTimeControl_client_->wait_for_service(std::chrono::milliseconds(100)))
@@ -1378,7 +1378,7 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
         return;
     }
 
-    auto cb = [&, this](rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture future){
+    auto cb = [set, this](rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture future){
         auto result = future.get();
         if (result->success)
         {

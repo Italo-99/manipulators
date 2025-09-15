@@ -1303,7 +1303,6 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
     marker.ns = ns;
     marker.pose = primitive_pose;
     marker.color = color;
-    marker.id = int32_t(node_->now().seconds());
 
     switch(primitive.type)
     {
@@ -1313,22 +1312,25 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
             marker.scale.x = primitive.dimensions[0];
             marker.scale.y = primitive.dimensions[1];
             marker.scale.z = primitive.dimensions[2];
+            marker.id = 10e6 + rviz_visual_tools_->getCuboidId();
             break;
         }
         case shape_msgs::msg::SolidPrimitive::SPHERE:
         {
             marker.type = visualization_msgs::msg::Marker::SPHERE;
-            marker.scale.x = primitive.dimensions[0];
-            marker.scale.y = primitive.dimensions[0];
-            marker.scale.z = primitive.dimensions[0];
+            marker.scale.x = primitive.dimensions[0] * 2;
+            marker.scale.y = primitive.dimensions[0] * 2;
+            marker.scale.z = primitive.dimensions[0] * 2;
+            marker.id = 2 * 10e6 + rviz_visual_tools_->getSphereId();
             break;
         }
         case shape_msgs::msg::SolidPrimitive::CYLINDER:
         {
             marker.type = visualization_msgs::msg::Marker::CYLINDER;
-            marker.scale.x = primitive.dimensions[0];
-            marker.scale.y = primitive.dimensions[0];
-            marker.scale.z = primitive.dimensions[1];
+            marker.scale.x = primitive.dimensions[1] * 2;
+            marker.scale.y = primitive.dimensions[1] * 2;
+            marker.scale.z = primitive.dimensions[0];
+            marker.id = 3 * 10e6 + rviz_visual_tools_->getCylinderId();
             break;
         }
         case shape_msgs::msg::SolidPrimitive::CONE:
