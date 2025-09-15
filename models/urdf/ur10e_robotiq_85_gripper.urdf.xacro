@@ -21,9 +21,9 @@
     <xacro:property name="gfloor"   value="$(arg gfloor)"/>
 
     <!-- Create the manipulator -->
-    <link name="world"/>
+    <link name="world_ur"/>
     <xacro:ur_robot
-        parent="world"
+        parent="world_ur"
         name="$(arg name)"
         tf_prefix="$(arg tf_prefix)"
         joint_limits_parameters_file="$(arg joint_limits_parameters_file)"

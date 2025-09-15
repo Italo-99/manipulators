@@ -233,6 +233,8 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         [this](const std_msgs::msg::Empty::SharedPtr msg) {
             msg.get();
             dynamic_planner_->clearPathConstraints();
+            constraints_poses_.clear();
+            constraints_primitives_.clear();
             // dynamic_planner_->clearJointConstraints(); TODO
         },
         sub_options
@@ -661,20 +663,6 @@ void ManipulatorPlannerNode::jacobianControlSetter_callback(const std_srvs::srv:
     jac_control_ = req->data;
     RCLCPP_INFO(get_logger(), "Jacobian control mode set as %s", jac_control_ ? "True":"False");
 
-    if (limit_jacobian_control_){
-        constraints_primitives_.clear(); // Clear the constraints if the jacobian control is enabled
-        constraints_poses_.clear(); // Clear the poses if the jacobian control is enabled
-        moveit_msgs::msg::Constraints current_constraints = dynamic_planner_->getPathConstraints();
-        for (auto &constraint : current_constraints.position_constraints) {
-            for (size_t i {0}; i < constraint.constraint_region.primitives.size(); ++i) {
-                // Store the primitives for later use
-                constraints_primitives_.push_back(constraint.constraint_region.primitives[i]);
-                // Store the poses for later use
-                constraints_poses_.push_back(constraint.constraint_region.primitive_poses[i]);
-            }
-        }
-    }
-
     // Stop the robot to prevent bad behaviours during mode switch
     for (unsigned int k = 0; k<6; k++) {
         current_ee_vel_(k) = 0.;
@@ -755,6 +743,8 @@ void ManipulatorPlannerNode::positionConstraint_callback(const moveit_msgs::msg:
 
     current_constraints.position_constraints.push_back(position_constraint);
     dynamic_planner_->setPathConstraints(current_constraints);
+
+    updateJacobianConstraintPrimitives();
 }
 
 void ManipulatorPlannerNode::orientationConstraint_callback(const moveit_msgs::msg::OrientationConstraint::SharedPtr msg)
@@ -843,6 +833,7 @@ void ManipulatorPlannerNode::jacobianControl()
     if (limit_joints_control_) {
         // If the joint control is limited, check if the joint constraints are violated
         if (!dynamic_planner_->checkJointConstraints(js.position)) {
+            RCLCPP_WARN(get_logger(), "Joint constraints violated, stopping the robot");
             joint_constraints_check = false;
         }
     }
@@ -893,6 +884,22 @@ void ManipulatorPlannerNode::updateJacobianSpeedCmd(){
 
     // Set a lower limit to velocities to avoid noises
     for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(current_ee_vel_[k]);}
+}
+
+void ManipulatorPlannerNode::updateJacobianConstraintPrimitives()
+{
+    constraints_primitives_.clear(); // Clear the constraints if the jacobian control is enabled
+    constraints_poses_.clear(); // Clear the poses if the jacobian control is enabled
+    moveit_msgs::msg::Constraints current_constraints = dynamic_planner_->getPathConstraints();
+    for (auto &constraint : current_constraints.position_constraints) {
+        for (size_t i {0}; i < constraint.constraint_region.primitives.size(); ++i) {
+            // Store the primitives for later use
+            constraints_primitives_.push_back(constraint.constraint_region.primitives[i]);
+            // Store the poses for later use
+            constraints_poses_.push_back(constraint.constraint_region.primitive_poses[i]);
+        }
+    }
+
 }
 
 // Execute the jacobian based control
