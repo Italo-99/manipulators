@@ -22,7 +22,8 @@ def get_node(context, *args, **kwargs):
         parameters=[
             params,
             {'profile': LaunchConfiguration('profile')}
-        ]
+        ],
+        remappings=[('/manipulator/cmd_vel', '/cmd_vel')] # /mobile_manipulator/cmd_vel for the mobile control
     ))
 
     #Edit this to specify which profiles should use the game controller node, others will use the joy node
@@ -33,7 +34,7 @@ def get_node(context, *args, **kwargs):
             package="joy",
             executable="game_controller_node",
             parameters=[{
-                'autorepeat_rate' : 0.0
+                'autorepeat_rate' : 30.0
             }]
         ))
     else:

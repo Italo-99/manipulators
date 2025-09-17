@@ -46,6 +46,7 @@
 #include "manipulator_interfaces/srv/change_planner_tolerances.hpp"
 #include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
 #include "manipulator_interfaces/srv/enable_real_time_constraints.hpp"
+#include "manipulator_interfaces/srv/roboti_q_gripper_control.hpp"
 
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
