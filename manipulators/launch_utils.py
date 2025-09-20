@@ -148,8 +148,12 @@ def get_ur_moveit_launch_params(context,
         robot_description_kinematics,
         robot_description_planning,
         ompl_planning_pipeline_config,
+        moveit_controllers,
         trajectory_execution,
-        moveit_controllers
+        # {
+        #     'planning_pipelines': ['ompl', 'pilz_industrial_motion_planner'],
+        #     'default_planning_pipeline': 'ompl',
+        # },
     ]
 
     return params

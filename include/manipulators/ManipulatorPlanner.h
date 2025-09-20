@@ -14,6 +14,8 @@
 #include "std_srvs/srv/set_bool.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "std_msgs/msg/empty.hpp"
+#include "geometry_msgs/msg/pose.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 #include "manipulator_interfaces/srv/f_kine.hpp"
 #include "manipulator_interfaces/srv/inv_kine.hpp"
@@ -173,7 +175,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         void addPrefix(const std::string& prefix, std::vector<std::string>& vector) const; //Add a prefix to all elements of a vector
         
         void initializePlanner(); //Creates a node for the DynamicPlanner, adds it to the executor and initializes the planner_ object
-        void declareParameters(); //Declare the parameters for the node
+        void checkParams(); //Declare the parameters for the node
         double sign(double val); //Returns the sign of a number or 0 (+1.0 or -1.0)
 
         bool isPoseInsidePrimitive(

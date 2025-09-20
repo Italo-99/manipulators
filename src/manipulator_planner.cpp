@@ -5,29 +5,7 @@
 ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, const rclcpp::NodeOptions &options) 
 : rclcpp::Node(node_name, options), node_name_(node_name) {
 
-    declareParameters();
-
-    std::string prefix = this->get_parameter("prefix").as_string();    
-
-    manipulator_name_ = this->get_parameter("manipulator_name").as_string();
-    planning_group_ = prefix + this->get_parameter("planning_group").as_string();
-    joint_names_ = this->get_parameter("joint_names").as_string_array();
-    ee_name_ = prefix + this->get_parameter("ee_name").as_string();
-    ros_freq_ = this->get_parameter("ros_freq").as_int();
-    max_speed_ee_ = this->get_parameter("max_speed_ee").as_double();
-    max_accel_ee_ = this->get_parameter("max_accel_ee").as_double();
-    max_rot_speed_ee_ = this->get_parameter("max_rot_speed_ee").as_double();
-    max_rot_accel_ee_ = this->get_parameter("max_rot_accel_ee").as_double();
-    max_spd_jnts_ = this->get_parameter("max_spd_jnts").as_double();
-    max_acc_jnts_ = this->get_parameter("max_acc_jnts").as_double();
-    gripper_links_ = this->get_parameter("gripper_links").as_string_array();
-    world_frame_ = prefix + this->get_parameter("world_frame").as_string();
-    min_jacobian_determinant_ = this->get_parameter("min_jacobian_determinant").as_double();
-    limit_joints_control_ = this->get_parameter("limit_joints_control").as_bool();
-    limit_jacobian_control_ = this->get_parameter("limit_jacobian_control").as_bool();
-
-    addPrefix(prefix, joint_names_);
-    addPrefix(prefix, gripper_links_);
+    checkParams();
 
     //Initialize velocity variables
     NUM_JOINTS = joint_names_.size();
@@ -145,7 +123,9 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     rclcpp::SubscriptionOptions sub_options;
-    sub_options.callback_group = cb_group;
+    sub_options.callback_group = this->create_callback_group(
+        rclcpp::CallbackGroupType::MutuallyExclusive
+    );
 
     // Initialize subscribers
     tcpGoal_sub_ = this->create_subscription<manipulator_interfaces::msg::TcpGoal>(
@@ -563,7 +543,7 @@ void ManipulatorPlannerNode::collisionObject_callback(const moveit_msgs::msg::Co
     moveit_msgs::msg::CollisionObject object = *collision_object.get();
     object.header.frame_id = world_frame_; // Set the frame id to the world frame
 
-    dynamic_planner_->getPlanningScene()->applyCollisionObjects({object});
+    // dynamic_planner_->getPlanningScene()->applyCollisionObjects({object});
 }
 
 void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs::msg::AttachedCollisionObject::SharedPtr collision_object) 
@@ -580,7 +560,7 @@ void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs:
 
     collision_object->touch_links = gripper_links_; // Set the touch links to the gripper links
 
-    dynamic_planner_->getPlanningScene()->applyAttachedCollisionObject(*collision_object);
+    // dynamic_planner_->getPlanningScene()->applyAttachedCollisionObject(*collision_object);
 }
 
 // Callback function for goals in the 3D cartesian space for the robot TCP
@@ -967,61 +947,33 @@ void ManipulatorPlannerNode::addPrefix(const std::string &prefix, std::vector<st
     }
 }
 
-void ManipulatorPlannerNode::declareParameters() {
-    this->declare_parameter("manipulator_name", std::string());
-    this->declare_parameter("planning_group", std::string());
-    this->declare_parameter("joint_names", std::vector<std::string>());
-    this->declare_parameter("ee_name", std::string());
-    this->declare_parameter("world_frame", "base_link");
-    this->declare_parameter("ros_freq", 500);
-    this->declare_parameter("max_speed_ee", 1.0);
-    this->declare_parameter("max_accel_ee", 1.0);
-    this->declare_parameter("max_rot_speed_ee", 1.0);
-    this->declare_parameter("max_rot_accel_ee", 1.0);
-    this->declare_parameter("max_spd_jnts", 1.0);
-    this->declare_parameter("max_acc_jnts", 1.0);
-    this->declare_parameter("gripper_links", std::vector<std::string>()); //This is used to disable collision with the fingers when attaching objects
-    this->declare_parameter("prefix", std::string()); //Prefix for the joint and link names
-    this->declare_parameter("min_jacobian_determinant", 0.0); //Minimum determinant for the inverse jacobian (0 is disabled)
-    this->declare_parameter("limit_joints_control", false);
-    this->declare_parameter("limit_jacobian_control", false);
-    this->declare_parameter("cartesian_threshold", 0.1); //Minimum fraction for the cartesian plan to be considered successful
+void ManipulatorPlannerNode::checkParams() {
+    std::string prefix = this->get_parameter_or("prefix", std::string());
 
-    //Dynamic planner params
-    this->declare_parameter("planner_id", "geometric::RRTConnect");
-    this->declare_parameter("vel_factor", 0.1); //MUTABLE
-    this->declare_parameter("acc_factor", 0.1); //MUTABLE
-    this->declare_parameter("max_planning_time", 2.0);
-    this->declare_parameter("max_planning_attempts", 2);
-    this->declare_parameter("position_tolerance", 0.01);
-    this->declare_parameter("orientation_tolerance", 0.01);
-    this->declare_parameter("joint_tolerance", 0.01);
+    manipulator_name_         = this->get_parameter_or("manipulator_name", std::string());
+    planning_group_           = prefix + this->get_parameter_or("planning_group", std::string());
+    joint_names_              = this->get_parameter_or("joint_names", std::vector<std::string>());
+    ee_name_                  = prefix + this->get_parameter_or("ee_name", std::string());
+    ros_freq_                 = this->get_parameter_or("ros_freq", 500);
+    max_speed_ee_             = this->get_parameter_or("max_speed_ee", 1.0);
+    max_accel_ee_             = this->get_parameter_or("max_accel_ee", 1.0);
+    max_rot_speed_ee_         = this->get_parameter_or("max_rot_speed_ee", 1.0);
+    max_rot_accel_ee_         = this->get_parameter_or("max_rot_accel_ee", 1.0);
+    max_spd_jnts_             = this->get_parameter_or("max_spd_jnts", 1.0);
+    max_acc_jnts_             = this->get_parameter_or("max_acc_jnts", 1.0);
+    gripper_links_            = this->get_parameter_or("gripper_links", std::vector<std::string>());
+    world_frame_              = prefix + this->get_parameter_or("world_frame", std::string("base_link"));
+    min_jacobian_determinant_ = this->get_parameter_or("min_jacobian_determinant", 0.0);
+    limit_joints_control_     = this->get_parameter_or("limit_joints_control", false);
+    limit_jacobian_control_   = this->get_parameter_or("limit_jacobian_control", false);
+
+    addPrefix(prefix, joint_names_);
+    addPrefix(prefix, gripper_links_);
 }
  
 void ManipulatorPlannerNode::initializePlanner() {
     //Initialize the dynamic planner
-    DynamicPlannerParams params;
-
-    params.vel_factor = this->get_parameter("vel_factor").as_double();
-    params.acc_factor = this->get_parameter("acc_factor").as_double();
-    params.planning_time = this->get_parameter("max_planning_time").as_double();
-    params.num_attempts = this->get_parameter("max_planning_attempts").as_int();
-    params.position_tolerance = this->get_parameter("position_tolerance").as_double();
-    params.orientation_tolerance = this->get_parameter("orientation_tolerance").as_double();
-    params.joint_tolerance = this->get_parameter("joint_tolerance").as_double();
-    params.planner_id = this->get_parameter("planner_id").as_string();
-    params.min_cartesian_fraction = this->get_parameter("cartesian_threshold").as_double();
-    params.sample_time = 1 / ros_freq_;
-    params.max_velocity = max_speed_ee_;
-    params.world_frame = world_frame_;
-    params.end_effector_link = ee_name_;
-    
-    auto sub_node = rclcpp::Node::make_shared("dynamic_planner_node");
-    executor_.add_node(sub_node->get_node_base_interface());
-    dynamic_planner_ = std::make_shared<DynamicPlanner>(sub_node,
-                                                        planning_group_,
-                                                        params,
-                                                        false);
+    dynamic_planner_ = std::make_shared<DynamicPlanner>(shared_from_this(), planning_group_, false);
 }
 
 bool ManipulatorPlannerNode::isPoseInsidePrimitive(
