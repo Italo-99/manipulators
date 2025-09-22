@@ -887,7 +887,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_x(const double x_step, bool
 
     if (linear)
     {
-        publishCartesianGoal({goal_pose});
+        // publishCartesianGoal({goal_pose});
+        cartesianPlanAndWait({goal_pose});
         return goal_pose;
     }
     else
@@ -906,7 +907,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_y(const double y_step, bool
 
     if (linear)
     {
-        publishCartesianGoal({goal_pose});
+        // publishCartesianGoal({goal_pose});
+        cartesianPlanAndWait({goal_pose});
         return goal_pose;
     }
     else
@@ -925,7 +927,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_z(const double z_step, bool
 
     if (linear)
     {
-        publishCartesianGoal({goal_pose});
+        // publishCartesianGoal({goal_pose});
+        cartesianPlanAndWait({goal_pose});
         return goal_pose;
     }
     else

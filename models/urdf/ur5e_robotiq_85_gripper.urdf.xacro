@@ -77,8 +77,8 @@
                     <color rgba="0.8 0.1 0.1 0.4"/>
                 </material>
             </visual>
-            <origin xyz="0.0 0.0 -0.40" rpy="0 0 0"/>
             <collision>
+                <origin xyz="0.0 0.0 -0.40" rpy="0 0 0"/>
                 <geometry>
                     <box size="10 10 0.01"/>
                 </geometry>
