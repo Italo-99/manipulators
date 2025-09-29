@@ -5,8 +5,7 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch.conditions import IfCondition
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from ur_moveit_config.launch_common import load_yaml
-from manipulators.launch_utils import get_ur_moveit_launch_params, get_namespace
+from manipulators.launch_utils import get_ur_moveit_launch_params, get_namespace, load_yaml
 import os
 
 def launch_setup(context, *args, **kwargs):

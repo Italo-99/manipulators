@@ -1923,6 +1923,76 @@ void ManipulatorMenu::userTcpGoal()
     }
 }
 
+// --------------------- CARTESIAN PLAN HANDLER ---------------------
+
+void ManipulatorMenu::userCartesianGoal(){
+    std::cout << "Enter the number of waypoints for the Cartesian path: ";
+    size_t num_waypoints = 0;
+    std::cin >> num_waypoints;
+    
+    std::vector<geometry_msgs::msg::Pose> waypoints;
+
+    for (size_t i = 0; i < num_waypoints; i++){
+        std::cout << "Waypoint " << i+1 << ":\n";
+        // Declare the empty vector of joints goals
+        std::vector<double> position = {0., 0., 0., 0., 0., 0.};
+
+        // Take user degree angle for each joint
+        std::cout << "Enter the values of the tcp goal, with rotation angles in degrees:\n";
+
+        // X position input
+        std::cout << "X position:  ";
+        std::cin >> position[0];
+        // Y position input
+        std::cout << "Y position:  ";
+        std::cin >> position[1];
+        // Z position input
+        std::cout << "Z position:  ";
+        std::cin >> position[2];
+
+        // Deg RPY angles input
+        std::cout << "Rx: ";
+        std::cin >> position[3];
+        std::cout << "Ry: ";
+        std::cin >> position[4];
+        std::cout << "Rz: ";
+        std::cin >> position[5];
+
+        geometry_msgs::msg::Pose goal;
+        goal.position.x = position[0];
+        goal.position.y = position[1];
+        goal.position.z = position[2];
+        goal.orientation = quaternion_from_euler(position[3], position[4], position[5]);
+        waypoints.push_back(goal);
+    }
+
+    manipulator_interfaces::msg::TrajectoryResult traj = cartesianPlanAndWait(waypoints);
+
+    if(traj.success)
+    {
+        int execute = 0;
+        std::cout << "Trajectory planned successfully." << std::endl;
+        std::cout << "Trajectory points count: " << traj.trajectory.joint_trajectory.points.size() << std::endl;
+        std::cout << "Trajectory duration: " << traj.trajectory.joint_trajectory.points.back().time_from_start.sec << "s" << std::endl;
+        std::cout << "Do you want to execute the trajectory? 1 for yes: ";
+        std::cin >> execute;
+
+        if (execute == 1)
+        {
+            std::cout << "Executing trajectory..." << std::endl;
+            bool success = executeAndWait(traj.trajectory);
+            if (success)
+            {
+                std::cout << "Trajectory executed successfully." << std::endl;
+            }
+            else
+            {
+                std::cout << "Trajectory execution failed." << std::endl;
+            }
+        }
+    }
+}
+
 // --------------------- LINEAR MOVEMENTS HANDLER ---------------------
 //For now the ee will move to the corresponding path but it won't follow a linear path
 
@@ -2499,6 +2569,7 @@ void ManipulatorMenu::initializeMenu(){
     menu_->addChoice("Plan and execute joint goal", &ManipulatorMenu::userJointGoal);
     menu_->addChoice("Plan and execute one joint move", &ManipulatorMenu::userOneJointMove);
     menu_->addChoice("Plan and execute TCP goal", &ManipulatorMenu::userTcpGoal);
+    menu_->addChoice("Plan and execute Cartesian path", &ManipulatorMenu::userCartesianGoal);
     menu_->addSection("Joint/TCP Goals", section_start, menu_->last_);
     section_start = menu_->last_ + 1;
 

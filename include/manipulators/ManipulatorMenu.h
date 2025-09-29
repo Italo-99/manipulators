@@ -697,6 +697,8 @@ class ManipulatorMenu
         void userOneJointMove();             // to move only a single joint
         
         void userTcpGoal(void);              // to perform a tcp goal set by the user 
+        
+        void userCartesianGoal(void);        // to perform a cartesian goal of multiple waypoints set by the user
 
         void userMoveAlongX(void);           // to move the end effector along the x axis
         void userMoveAlongY(void);           // to move the end effector along the y axis

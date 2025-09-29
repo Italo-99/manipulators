@@ -4,7 +4,7 @@ from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitut
 from launch.conditions import IfCondition
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from ur_moveit_config.launch_common import load_yaml
+from manipulators.launch_utils import load_yaml
 import os
 
 def get_node(context, *args, **kwargs):

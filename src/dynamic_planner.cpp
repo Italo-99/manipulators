@@ -141,15 +141,15 @@ void DynamicPlanner::initialize()
         cb_group
     );
 
-    // Service Clients
-    auto service_cb_group = node_->create_callback_group(
-        rclcpp::CallbackGroupType::MutuallyExclusive
+    //Action clients
+    plan_action_client_ = rclcpp_action::create_client<moveit_msgs::action::MoveGroup>(
+        node_,
+        move_group::MOVE_ACTION
     );
 
-    motion_plan_client_ = node_->create_client<moveit_msgs::srv::GetMotionPlan>(
-        "plan_kinematic_path",
-        rmw_qos_profile_services_default,
-        service_cb_group 
+    //Service clients
+    cartesian_motion_sequence_client_ = node_->create_client<moveit_msgs::srv::GetMotionSequence>(
+        "plan_sequence_path"
     );
 }
 
@@ -209,12 +209,11 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions, const movei
 
     //Create the plan
     
-    moveit_msgs::srv::GetMotionPlan::Request req;
-    req.motion_plan_request = createMotionPlanRequest();
-    moveit::core::robotStateToRobotStateMsg(*start_state, req.motion_plan_request.start_state);
-    req.motion_plan_request.goal_constraints.push_back(createJointGoalConstraints(joint_positions));
+    moveit_msgs::msg::MotionPlanRequest motion_plan_request = createMotionPlanRequest();
+    moveit::core::robotStateToRobotStateMsg(*start_state, motion_plan_request.start_state);
+    motion_plan_request.goal_constraints.push_back(createJointGoalConstraints(joint_positions));
 
-    moveit_msgs::msg::MotionPlanResponse plan = computeMotionPlan(req.motion_plan_request);
+    moveit_msgs::action::MoveGroup::Result plan = computeMotionPlan(motion_plan_request);
 
     // PAST PLANNING CHECKS
     // 1. Planning succeded
@@ -236,7 +235,7 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions, const movei
         return;
     }
 
-    moveit_msgs::msg::RobotTrajectory trajectory = plan.trajectory;
+    moveit_msgs::msg::RobotTrajectory trajectory = plan.planned_trajectory;
 
     trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
     if(!checkJointDiff(last_point.positions, joint_positions)){
@@ -305,156 +304,117 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
 
 void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link, const std::string& frame)
 {
-//     /*
-//     Plan: pose goal
-//         Args:
-//             goal_pose: Target position
-//             ee_link: End effector link
-//             frame: Reference frame
-//             space: Planning space (joint or operative)
-//     */
+    /*
+    Plan: pose goal
+        Args:
+            goal_pose: Target position
+            ee_link: End effector link
+            frame: Reference frame
+            space: Planning space (joint or operative)
+    */
+
+    // PRE PLANNING CHECK
+    // 1. goal_pose is not too close to the current position
+
+    if (checkPoseDiff(goal_pose, ee_link))
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Goal pose is too close to the current position");
+        manipulator_interfaces::msg::TrajectoryResult result_msg;
+        result_msg.success = false;
+        result_msg.message = "Goal pose is too close to the current position";
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION;
+
+        moveit_msgs::msg::RobotTrajectory trajectory;
+        result_msg.trajectory = trajectory;
+
+        setTrajectory(trajectory);
+        trajectory_pub_->publish(result_msg);
+        return;
+    }
+
+    manipulator_interfaces::msg::TrajectoryResult result_msg;
+    
+    //Create the plan and execute
+    moveit_msgs::msg::MotionPlanRequest motion_plan_request = createMotionPlanRequest();
+    moveit::core::robotStateToRobotStateMsg(*kinematic_state_, motion_plan_request.start_state);
+    motion_plan_request.goal_constraints.push_back(createTcpGoalConstraints(goal_pose, ee_link));
+
+    moveit_msgs::action::MoveGroup::Result plan = computeMotionPlan(motion_plan_request);
+
+
+    // POST PLANNING CHECKS
+    // 1. Planning succeded
+    // 2. Time optimal trajectory generation succeded
+    // 3. Trajectory respects the path constraints
+
+    if (plan.error_code.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Planning failed with error code: %d", plan.error_code.val);
+        moveit_msgs::msg::RobotTrajectory trajectory;
+        result_msg.success = false;
+        result_msg.message = "Planning failed";
+        result_msg.trajectory = trajectory;
+        result_msg.error_code = plan.error_code.val;
+
+        setTrajectory(trajectory);
+        trajectory_pub_->publish(result_msg);
+        return;
+    }
+
+    moveit_msgs::msg::RobotTrajectory trajectory = plan.planned_trajectory;
+
+//    trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
+//    if(!checkPoseDiff(getFKine(last_point.positions, ee_link).pose, goal_pose)){
+//        RCLCPP_ERROR(node_->get_logger(), "Trajectory end point does not match with the target pose");
+//        moveit_msgs::msg::RobotTrajectory trajectory;
+//        result_msg.success = false;
+//        result_msg.message = "Trajectory end point does not match with the target pose";
+//        result_msg.trajectory = trajectory;
+//        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::END_POINT_MISMATCH;
 //
-//     // PRE PLANNING CHECK
-//     // 1. goal_pose is not too close to the current position
-//
-//     if (checkPoseDiff(goal_pose, ee_link))
-//     {
-//         RCLCPP_ERROR(node_->get_logger(), "Goal pose is too close to the current position");
-//         manipulator_interfaces::msg::TrajectoryResult result_msg;
-//         result_msg.success = false;
-//         result_msg.message = "Goal pose is too close to the current position";
-//         result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION;
-//
-//         moveit_msgs::msg::RobotTrajectory trajectory;
-//         result_msg.trajectory = trajectory;
-//
-//         setTrajectory(trajectory);
-//         trajectory_pub_->publish(result_msg);
-//         return;
-//     }
-//
-//     manipulator_interfaces::msg::TrajectoryResult result_msg;
-//
-//     //Sets the target pose
-//     move_group_->setPoseReferenceFrame(frame);
-//     
-//     moveit_msgs::msg::Constraints path_constraints = move_group_->getPathConstraints();
-//     if (!path_constraints.joint_constraints.empty()){
-//         //If there are joint constraints plan in joint space
-//         const size_t max_attempts = 20;
-//         RCLCPP_INFO(node_->get_logger(), "Planning in joint space due to path constraints");
-//         for (size_t attempt_n {0}; attempt_n < max_attempts; ++attempt_n)
-//         {
-//             std::vector<double> joint_positions = invKine(goal_pose, ee_link);
-//             //Check if it respects path constraints and goal
-//             if (checkJointConstraints(joint_positions) && checkPoseDiff(getFKine(joint_positions, ee_link).pose, goal_pose))
-//             {
-//                 move_group_->setJointValueTarget(joint_positions);
-//                 break; //If the joint positions are valid, break the loop
-//             }
-//             else if (attempt_n == max_attempts - 1) //If we reached the maximum number of attempts
-//             {
-//                 RCLCPP_ERROR(node_->get_logger(), "Failed to find a valid joint configuration for the goal pose after %zu attempts", attempt_n + 1);
-//                 result_msg.success = false;
-//                 result_msg.message = "Failed to find a valid joint configuration for the goal pose";
-//                 result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::INVALID_MOTION_PLAN;
-//
-//                 moveit_msgs::msg::RobotTrajectory trajectory;
-//                 result_msg.trajectory = trajectory;
-//
-//                 setTrajectory(trajectory);
-//                 trajectory_pub_->publish(result_msg);
-//                 return;
-//             }
-//         }
-//     }
-//     else {
-//         move_group_->setPoseTarget(goal_pose, ee_link); //Use cartesian space planning
-//     }
-//
-//     //Create the plan and execute
-//     moveit::planning_interface::MoveGroupInterface::Plan plan;
-//     moveit::core::MoveItErrorCode error = move_group_->plan(plan);
-//
-//     // Clear pose target
-//     move_group_->clearPoseTarget(ee_link);
-//
-//     // POST PLANNING CHECKS
-//     // 1. Planning succeded
-//     // 2. Time optimal trajectory generation succeded
-//     // 3. Trajectory respects the path constraints
-//
-//     if (error != moveit::core::MoveItErrorCode::SUCCESS)
-//     {
-//         RCLCPP_ERROR(node_->get_logger(), "Planning failed with error code: %d", error.val);
-//         moveit_msgs::msg::RobotTrajectory trajectory;
-//         result_msg.success = false;
-//         result_msg.message = "Planning failed";
-//         result_msg.trajectory = trajectory;
-//         result_msg.error_code = error.val;
-//
-//         setTrajectory(trajectory);
-//         trajectory_pub_->publish(result_msg);
-//         return;
-//     }
-//
-//     moveit_msgs::msg::RobotTrajectory trajectory = plan.trajectory_;
-//
-// //    trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
-// //    if(!checkPoseDiff(getFKine(last_point.positions, ee_link).pose, goal_pose)){
-// //        RCLCPP_ERROR(node_->get_logger(), "Trajectory end point does not match with the target pose");
-// //        moveit_msgs::msg::RobotTrajectory trajectory;
-// //        result_msg.success = false;
-// //        result_msg.message = "Trajectory end point does not match with the target pose";
-// //        result_msg.trajectory = trajectory;
-// //        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::END_POINT_MISMATCH;
-// //
-// //        setTrajectory(trajectory);
-// //        trajectory_pub_->publish(result_msg);
-// //        return;
-// //    }
-//
-//     bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
-//
-//     if (!totg_success){ //Check time opetimal trajectory generation success
-//         result_msg.success = false;
-//         result_msg.message = "Time optimal trajectory generation failed";
-//         result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
-//         result_msg.trajectory = trajectory;
-//         
-//         setTrajectory(moveit_msgs::msg::RobotTrajectory());
-//         trajectory_pub_->publish(result_msg);
-//         return;
-//     }
-//
-//     if (!checkTrajectoryConstraints(trajectory)){ //Check that the trajectory respects the path constraints
-//         result_msg.success = false;
-//         result_msg.message = "Trajectory violates path constraints";
-//         result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::CONSTRAINTS_VIOLATED;
-//         result_msg.trajectory = trajectory;
-//
-//         setTrajectory(moveit_msgs::msg::RobotTrajectory());
-//         trajectory_pub_->publish(result_msg);
-//         return;
-//     }
-//
-//
-//     //Trajectory meets all the requirements
-//     setTrajectory(trajectory);
-//
-//     //Visualize trajectory line
-//     auto robot_model = move_group_->getRobotModel();
-//     moveit_visual_tools_->publishTrajectoryLine(trajectory, 
-//                                                 robot_model->getLinkModel(ee_link),
-//                                                 robot_model->getJointModelGroup(planning_group_));
-//
-//     result_msg.success = true;
-//     result_msg.message = "Trajectory planned successfully";
-//     result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
-//     result_msg.trajectory = trajectory;
-//     trajectory_pub_->publish(result_msg);
-//
-//     updatePlannerParams(); //Reset the planner parameters with values stored in params_
+//        setTrajectory(trajectory);
+//        trajectory_pub_->publish(result_msg);
+//        return;
+//    }
+
+    bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
+
+    if (!totg_success){ //Check time opetimal trajectory generation success
+        result_msg.success = false;
+        result_msg.message = "Time optimal trajectory generation failed";
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
+        result_msg.trajectory = trajectory;
+        
+        setTrajectory(moveit_msgs::msg::RobotTrajectory());
+        trajectory_pub_->publish(result_msg);
+        return;
+    }
+
+    if (!checkTrajectoryConstraints(trajectory)){ //Check that the trajectory respects the path constraints
+        result_msg.success = false;
+        result_msg.message = "Trajectory violates path constraints";
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::CONSTRAINTS_VIOLATED;
+        result_msg.trajectory = trajectory;
+
+        setTrajectory(moveit_msgs::msg::RobotTrajectory());
+        trajectory_pub_->publish(result_msg);
+        return;
+    }
+
+
+    //Trajectory meets all the requirements
+    setTrajectory(trajectory);
+
+    //Visualize trajectory line
+    moveit_visual_tools_->publishTrajectoryLine(trajectory, 
+                                                kinematic_model_->getLinkModel(ee_link),
+                                                kinematic_model_->getJointModelGroup(planning_group_));
+
+    result_msg.success = true;
+    result_msg.message = "Trajectory planned successfully";
+    result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
+    result_msg.trajectory = trajectory;
+    trajectory_pub_->publish(result_msg);
 }
 
 void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link)
@@ -469,99 +429,112 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose)
 
 double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints, const std::string& ee_link, const std::string& frame)
 {
-  //   /*
-  //   Plan: cartesian goal
-  //       Args:
-  //           waypoints: Array of target positions to follow
-  //           ee_link: End effector link
-  //           frame: Reference frame
-  //       Returns:
-  //           fraction: Fraction of the trajectory that was planned
-  //   */
-  //
-  //   //Sets the target pose
-  //   move_group_->setPoseReferenceFrame(frame);
-  //   move_group_->setEndEffectorLink(ee_link);
-  //
-  //   // Setup cartesian planner
-  //   double eef_step = params_.max_velocity*params_.sample_time * 10;
-  //   double jump_treshold = 0.0;
-  //   double fraction = 0.0;
-  //   std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-  //
-  //   manipulator_interfaces::msg::TrajectoryResult result_msg;
-  //   moveit_msgs::msg::RobotTrajectory trajectory;
-  //
-  //   fraction = move_group_->computeCartesianPath(
-  //       waypoints, 
-  //       eef_step, 
-  //       jump_treshold, 
-  //       trajectory    
-  //   );
-  //
-  //   if (fraction < params_.min_cartesian_fraction) //Check if the fraction is below the threshold
-  //   {
-  //       RCLCPP_ERROR(node_->get_logger(), "Cartesian trajectory unfeasible, fraction: %.2f", fraction);
-  //       result_msg.success = false;
-  //       result_msg.message = "Cartesian trajectory unfeasible";
-  //       result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::INVALID_MOTION_PLAN;
-  //       result_msg.trajectory = trajectory;
-  //
-  //       setTrajectory(moveit_msgs::msg::RobotTrajectory());
-  //       trajectory_pub_->publish(result_msg);
-  //       return -1.0; //Return -1 to indicate failure
-  //   }
-  //
-  //   // Resample trajectory time
-  //   bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
-  //
-  //   if (!totg_success){
-  //       result_msg.success = false;
-  //       result_msg.message = "Time optimal trajectory generation failed";
-  //       result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
-  //       result_msg.trajectory = trajectory;
-  //       
-  //       setTrajectory(moveit_msgs::msg::RobotTrajectory());
-  //       trajectory_pub_->publish(result_msg);
-  //       return -1.0;
-  //   }
-  //
-  //   if (!checkTrajectoryConstraints(trajectory)){ //Check that the trajectory respects the path constraints
-  //       result_msg.success = false;
-  //       result_msg.message = "Trajectory violates path constraints";
-  //       result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::CONSTRAINTS_VIOLATED;
-  //       result_msg.trajectory = trajectory;
-  //
-  //       setTrajectory(moveit_msgs::msg::RobotTrajectory());
-  //       trajectory_pub_->publish(result_msg);
-  //       return -1.0;
-  //   }
-  //
-  //   // Display results
-  //   RCLCPP_INFO(node_->get_logger(), 
-  //               "Computed cartesian path of %.2f%% fraction achieved, in time %.6f s", 
-  //               fraction * 100.0,
-  //               std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start).count());
-  // 
-  //   
-  //   setTrajectory(trajectory);
-  //
-  //   //Visualize trajectory line
-  //   auto robot_model = move_group_->getRobotModel();
-  //   moveit_visual_tools_->publishTrajectoryLine(trajectory, 
-  //                                               robot_model->getLinkModel(end_effector_link_),
-  //                                               robot_model->getJointModelGroup(planning_group_));
-  //
-  //   result_msg.success = true;
-  //   result_msg.message = "Trajectory planned successfully";
-  //   result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
-  //   result_msg.trajectory = trajectory;
-  //   result_msg.fraction = fraction;
-  //   trajectory_pub_->publish(result_msg);
-  //
-  //   updatePlannerParams(); //Reset the planner parameters with values stored in params_
-  //
-  //   return fraction;
+    /*
+    Plan: cartesian goal
+        Args:
+            waypoints: Array of target positions to follow
+            ee_link: End effector link
+            frame: Reference frame
+        Returns:
+            fraction: Fraction of the trajectory that was planned
+    */
+
+    manipulator_interfaces::msg::TrajectoryResult result_msg;
+    
+    //Create the motion sequence request
+    moveit_msgs::msg::MotionSequenceRequest motion_sequence_request;
+
+    for (size_t i {0}; i < waypoints.size(); i++)
+    {
+        geometry_msgs::msg::Pose wp = waypoints[i]; 
+        moveit_msgs::msg::MotionSequenceItem item;
+        item.req = createMotionPlanRequest("pilz_industrial_motion_planner", "LIN");
+
+        if (i != 0) {
+            item.blend_radius = params_.caresian_blend_radius;
+            item.req.start_state = moveit_msgs::msg::RobotState(); //Start state is ignored for subsequent waypoints
+        } else {
+            moveit::core::robotStateToRobotStateMsg(*kinematic_state_, item.req.start_state);
+        }
+        item.req.goal_constraints.push_back(createTcpGoalConstraints(wp, ee_link));
+        motion_sequence_request.items.push_back(item);
+    }
+
+    moveit_msgs::msg::MotionSequenceResponse plan = computeMotionSequence(motion_sequence_request);
+    moveit_msgs::msg::RobotTrajectory trajectory = plan.planned_trajectories.front();
+
+    // POST PLANNING CHECKS
+    // 1. Planning succeded
+    // 2. Time optimal trajectory generation succeded
+    // 3. Trajectory respects the path constraints
+
+    if (plan.error_code.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Planning failed with error code: %d", plan.error_code.val);
+        moveit_msgs::msg::RobotTrajectory trajectory;
+        result_msg.success = false;
+        result_msg.message = "Planning failed";
+        result_msg.trajectory = trajectory;
+        result_msg.error_code = plan.error_code.val;
+
+        setTrajectory(trajectory);
+        trajectory_pub_->publish(result_msg);
+        return 0.0;
+    }
+
+//    trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
+//    if(!checkPoseDiff(getFKine(last_point.positions, ee_link).pose, goal_pose)){
+//        RCLCPP_ERROR(node_->get_logger(), "Trajectory end point does not match with the target pose");
+//        moveit_msgs::msg::RobotTrajectory trajectory;
+//        result_msg.success = false;
+//        result_msg.message = "Trajectory end point does not match with the target pose";
+//        result_msg.trajectory = trajectory;
+//        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::END_POINT_MISMATCH;
+//
+//        setTrajectory(trajectory);
+//        trajectory_pub_->publish(result_msg);
+//        return;
+//    }
+
+    bool totg_success = processTrajectory(trajectory); //Apply time optimal trajectory generation
+
+    if (!totg_success){ //Check time opetimal trajectory generation success
+        result_msg.success = false;
+        result_msg.message = "Time optimal trajectory generation failed";
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::TIME_OPTIMAL_FAILED;
+        result_msg.trajectory = trajectory;
+        
+        setTrajectory(moveit_msgs::msg::RobotTrajectory());
+        trajectory_pub_->publish(result_msg);
+        return 0.0;
+    }
+
+    if (!checkTrajectoryConstraints(trajectory)){ //Check that the trajectory respects the path constraints
+        result_msg.success = false;
+        result_msg.message = "Trajectory violates path constraints";
+        result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::CONSTRAINTS_VIOLATED;
+        result_msg.trajectory = trajectory;
+
+        setTrajectory(moveit_msgs::msg::RobotTrajectory());
+        trajectory_pub_->publish(result_msg);
+        return 0.0;
+    }
+
+
+    //Trajectory meets all the requirements
+    setTrajectory(trajectory);
+
+    //Visualize trajectory line
+    moveit_visual_tools_->publishTrajectoryLine(trajectory, 
+                                                kinematic_model_->getLinkModel(ee_link),
+                                                kinematic_model_->getJointModelGroup(planning_group_));
+
+    result_msg.success = true;
+    result_msg.message = "Trajectory planned successfully";
+    result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
+    result_msg.trajectory = trajectory;
+    trajectory_pub_->publish(result_msg);
+
     return 0.0;
 }
 
@@ -671,9 +644,14 @@ DynamicPlanner::PlanningSpace DynamicPlanner::getPlanningSpace() const
     return planning_space_;
 }
 
-moveit::core::RobotStatePtr DynamicPlanner::getRobotState()
+moveit::core::RobotStatePtr DynamicPlanner::getRobotState() const
 {
     return kinematic_state_;
+}
+
+const moveit::core::JointModelGroup* DynamicPlanner::getJointModelGroup() const
+{
+    return kinematic_model_->getJointModelGroup(planning_group_);
 }
 
 std::vector<double> DynamicPlanner::getNamedTarget(const std::string &target_name)
@@ -703,33 +681,17 @@ std::vector<double> DynamicPlanner::getNamedTarget(const std::string &target_nam
 
 void DynamicPlanner::setPathConstraints(const moveit_msgs::msg::Constraints &constraints)
 {
-    //move_group_->setPathConstraints(constraints);
-
-    rviz_visual_tools_->deleteAllMarkers("pos_constraints");
-
-    for (const auto &constraint : constraints.position_constraints)
-    {
-        for(size_t i {0}; i < constraint.constraint_region.primitives.size(); i++)
-        {
-            const auto &primitive = constraint.constraint_region.primitives[i];
-            const auto &pose = constraint.constraint_region.primitive_poses[i];
-            visualizePrimitive(primitive, pose, {0.0, 0.9, 0.1, 0.3}, "pos_constraints");
-        }
-    }
-
-    rviz_visual_tools_->trigger();
+    path_constraints_ = constraints;
 }
 
 moveit_msgs::msg::Constraints DynamicPlanner::getPathConstraints() const
 {
-    return moveit_msgs::msg::Constraints();
+    return path_constraints_;
 }
 
 void DynamicPlanner::clearPathConstraints()
 {
-    //move_group_->clearPathConstraints();
-    rviz_visual_tools_->deleteAllMarkers("pos_constraints");
-    rviz_visual_tools_->trigger();
+    path_constraints_ = moveit_msgs::msg::Constraints();
 }
 
 bool DynamicPlanner::checkJointConstraints(const std::vector<double> &joint_positions)
@@ -1132,67 +1094,100 @@ bool DynamicPlanner::checkTrajectoryConstraints(const moveit_msgs::msg::RobotTra
 
 // ------------------------------------- PLANNING METHODS -------------------------------------
 
-moveit_msgs::msg::MotionPlanRequest DynamicPlanner::createMotionPlanRequest()
+moveit_msgs::msg::MotionPlanRequest DynamicPlanner::createMotionPlanRequest(const std::string &planning_pipeline, const std::string &planner_id)
 {
     moveit_msgs::msg::MotionPlanRequest req;
 
     req.group_name = planning_group_;
-    req.planner_id = params_.planner_id;
-    req.pipeline_id = params_.planning_pipeline;
+    req.planner_id = planner_id;
+    req.pipeline_id = planning_pipeline;
     req.num_planning_attempts = params_.num_attempts;
     req.allowed_planning_time = params_.planning_time;
     req.max_velocity_scaling_factor = params_.vel_factor;
     req.max_acceleration_scaling_factor = params_.acc_factor;
 
+    req.path_constraints = getPathConstraints();
+
     return req;
+
+}
+
+moveit_msgs::msg::MotionPlanRequest DynamicPlanner::createMotionPlanRequest()
+{
+    return createMotionPlanRequest(params_.planning_pipeline, params_.planner_id);
 }
 
 moveit_msgs::msg::Constraints DynamicPlanner::createJointGoalConstraints(const std::vector<double> &joint_positions)
 {
-    moveit_msgs::msg::Constraints constraints;
+    moveit::core::RobotState robot_state = *getRobotState();
+    robot_state.setJointGroupPositions(planning_group_, joint_positions);
+    robot_state.update();
 
-    for (size_t i {0}; i < joints_names_group_.size(); i++)
-    {
-        moveit_msgs::msg::JointConstraint joint_constraint;
-        joint_constraint.joint_name = joints_names_group_[i];
-        joint_constraint.position = joint_positions[i];
-        joint_constraint.tolerance_above = params_.joint_tolerance;
-        joint_constraint.tolerance_below = params_.joint_tolerance;
-        joint_constraint.weight = 1.0;
-
-        constraints.joint_constraints.push_back(joint_constraint);
-    }
-
-    return constraints;
+    return kinematic_constraints::constructGoalConstraints(robot_state, getJointModelGroup(), params_.joint_tolerance);
 }
 
-moveit_msgs::msg::MotionPlanResponse DynamicPlanner::computeMotionPlan(const moveit_msgs::msg::MotionPlanRequest &motion_plan_request)
+moveit_msgs::msg::Constraints DynamicPlanner::createTcpGoalConstraints(const geometry_msgs::msg::Pose &pose, const std::string &end_effector_link)
 {
-    auto req = std::make_shared<moveit_msgs::srv::GetMotionPlan::Request>();
-    req->motion_plan_request = motion_plan_request;
-    moveit_msgs::msg::MotionPlanResponse res;
+    geometry_msgs::msg::PoseStamped pose_stamped;
+    pose_stamped.header.frame_id = params_.world_frame;
+    pose_stamped.pose = pose;
+
+    return kinematic_constraints::constructGoalConstraints(end_effector_link, pose_stamped, params_.position_tolerance, params_.orientation_tolerance);
+}
+
+moveit_msgs::action::MoveGroup::Result DynamicPlanner::computeMotionPlan(const moveit_msgs::msg::MotionPlanRequest &motion_plan_request)
+{
+    auto req = moveit_msgs::action::MoveGroup::Goal();
+    req.request = motion_plan_request;
+    req.planning_options.plan_only = true;
+    auto res = std::make_shared<moveit_msgs::action::MoveGroup::Result>();
 
     //Check that service is available
-    if (!motion_plan_client_->wait_for_service(std::chrono::seconds(1))){
-        RCLCPP_ERROR(node_->get_logger(), "Motion plan service not available");
-        res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
-        return res;
+    if (!plan_action_client_->wait_for_action_server(std::chrono::seconds(1))){
+        RCLCPP_ERROR(node_->get_logger(), "Motion plan action service not available");
+        res->error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
+        return *res;
+    }
+
+    if (!plan_action_client_->action_server_is_ready()){
+        RCLCPP_ERROR(node_->get_logger(), "Motion plan action server not ready.");
+        res->error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
+        return *res;
+    }
+
+    //Check that planner is ready
+    if (!isReady()){
+        RCLCPP_ERROR(node_->get_logger(), "Unable to compute motion plan: joints group not received.");
+        res->error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
+        return *res;
     }
     
+    //Send the request
     bool done = false;
-    auto cb = [&res, &done](rclcpp::Client<moveit_msgs::srv::GetMotionPlan>::SharedFuture future){
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Motion plan received");
-        done = true;
-        auto result = future.get();
-        res = result->motion_plan_response;
-    };
+    auto goal_opts = rclcpp_action::Client<moveit_msgs::action::MoveGroup>::SendGoalOptions();
 
-    auto future = motion_plan_client_->async_send_request(req, cb);
+    goal_opts.goal_response_callback = [&](const rclcpp_action::ClientGoalHandle<moveit_msgs::action::MoveGroup>::SharedPtr& goal_handle) {
+        if (!goal_handle) {
+            done = true;
+            RCLCPP_INFO(node_->get_logger(), "Planning request rejected");
+        }
+        else {
+            RCLCPP_INFO(node_->get_logger(), "Planning request accepted");
+        }
+    };
+    goal_opts.result_callback = [&](const rclcpp_action::ClientGoalHandle<moveit_msgs::action::MoveGroup>::WrappedResult& result) {
+        RCLCPP_INFO(node_->get_logger(), "Motion plan completed in %f seconds", result.result->planning_time);
+        res = result.result;
+        done = true;
+    };
+    goal_opts.feedback_callback = [](auto, auto) {};
+
+    plan_action_client_->async_send_goal(req, goal_opts);
     
     auto start_time = node_->now();
 
     while (!done && rclcpp::ok()){
-        rclcpp::sleep_for(std::chrono::milliseconds((int)params_.sample_time * 1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds((int)params_.sample_time * 1000));
         if ((node_->now() - start_time).seconds() > params_.planning_time + 1.0){ //Add a second of tolerance
             break;
         }
@@ -1200,10 +1195,58 @@ moveit_msgs::msg::MotionPlanResponse DynamicPlanner::computeMotionPlan(const mov
 
     if (!done){
         RCLCPP_ERROR(node_->get_logger(), "Motion plan service call timed out");
-        res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
+        res->error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
     }
 
-    return res;
+    return *res;
+}
+
+moveit_msgs::msg::MotionSequenceResponse DynamicPlanner::computeMotionSequence(const moveit_msgs::msg::MotionSequenceRequest &motion_sequence_request)
+{
+    auto req = std::make_shared<moveit_msgs::srv::GetMotionSequence::Request>();
+    req->request = motion_sequence_request;
+    auto res = std::make_shared<moveit_msgs::msg::MotionSequenceResponse>();
+
+    //Check that service is available
+    if (!cartesian_motion_sequence_client_->wait_for_service(std::chrono::seconds(1))){
+        RCLCPP_ERROR(node_->get_logger(), "Motion sequence service not available");
+        res->error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
+        return *res;
+    }
+
+    //Check that planner is ready
+    if (!isReady()){
+        RCLCPP_ERROR(node_->get_logger(), "Unable to compute motion sequence: joints group not received.");
+        res->error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
+        return *res;
+    }
+    
+    //Send the request
+    bool done = false;
+
+    auto cb = [&](rclcpp::Client<moveit_msgs::srv::GetMotionSequence>::SharedFuture future) {
+        RCLCPP_INFO(node_->get_logger(), "Motion sequence completed in %f seconds", future.get()->response.planning_time);
+        res = std::make_shared<moveit_msgs::msg::MotionSequenceResponse>(future.get()->response);
+        done = true;
+    };
+
+    cartesian_motion_sequence_client_->async_send_request(req, cb);
+    
+    auto start_time = node_->now();
+
+    while (!done && rclcpp::ok()){
+        std::this_thread::sleep_for(std::chrono::milliseconds((int)params_.sample_time * 1000));
+        if ((node_->now() - start_time).seconds() > params_.planning_time + 1.0){ //Add a second of tolerance
+            break;
+        }
+    }
+
+    if (!done){
+        RCLCPP_ERROR(node_->get_logger(), "Motion plan service call timed out");
+        res->error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
+    }
+
+    return *res;
 }
 
 // ------------------------------------- HELPER METHODS -------------------------------------

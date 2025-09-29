@@ -8,6 +8,7 @@
 
 //ROS Imports
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <trajectory_msgs/msg/joint_trajectory.hpp>
@@ -16,6 +17,7 @@
 #include <tf2/convert.h>
 #include "rviz_visual_tools/rviz_visual_tools.hpp"
 //MoveIt2 Imports
+#include <moveit/move_group/capability_names.h>
 #include <moveit/common_planning_interface_objects/common_objects.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
 #include <moveit/planning_scene/planning_scene.h>
@@ -24,10 +26,14 @@
 #include <moveit_msgs/msg/robot_trajectory.hpp>
 #include <moveit_msgs/msg/motion_plan_request.hpp>
 #include <moveit_msgs/msg/motion_plan_response.hpp>
+#include <moveit_msgs/srv/get_motion_sequence.hpp>
 #include <moveit/robot_state/conversions.h>
 #include <moveit_msgs/srv/get_motion_plan.hpp>
+#include <moveit_msgs/action/move_group.hpp>
+#include <moveit/kinematic_constraints/utils.h>
 
 // Struct definition of the parameters of the Dynamic Planner
+
 struct DynamicPlannerParams
 {
     std::string planning_pipeline   = "ompl";                    // planning pipeline (check moveit_config package for available pipelines)
@@ -44,6 +50,7 @@ struct DynamicPlannerParams
     std::string world_frame         = "base_link";               // world frame
     std::string end_effector_link   = "tool0";                   // end effector link
     double min_cartesian_fraction   = 0.1;                       // Minimum fraction for the cartesian plan to be considered successful
+    double caresian_blend_radius    = 0.0;                       // Blend radius for the cartesian plan
 
     DynamicPlannerParams() {}
 
@@ -138,7 +145,9 @@ class DynamicPlanner
         std::vector<double> getNamedTarget(const std::string& target_name);
 
         void setRobotState(moveit::core::RobotStatePtr& robot_state); //Set the state of the robot (subsequent planning will start from this state)
-        moveit::core::RobotStatePtr getRobotState(); //Get the current state of the robot
+        moveit::core::RobotStatePtr getRobotState() const; //Get the current state of the robot
+        
+        const moveit::core::JointModelGroup* getJointModelGroup() const; //Get the joint model group of the planning group
 
         // --------------- PATH CONSTRAINTS ----------------
         void setPathConstraints(const moveit_msgs::msg::Constraints& position_constraint); //Set constraints for the path
@@ -212,12 +221,16 @@ class DynamicPlanner
         bool checkTrajectoryConstraints(const moveit_msgs::msg::RobotTrajectory &trajectory); //Check if the trajectory respects the path constraints
     
         // --------------- PLANNING METHODS ----------------
-        
-        moveit_msgs::msg::MotionPlanRequest createMotionPlanRequest(); //Create a motion plan request with the current parameters
-        
+     
+        //Create a motion plan request with the current parameters
+        moveit_msgs::msg::MotionPlanRequest createMotionPlanRequest();
+        moveit_msgs::msg::MotionPlanRequest createMotionPlanRequest(const std::string &planning_pipeline, const std::string &planner_id); 
+
         moveit_msgs::msg::Constraints createJointGoalConstraints(const std::vector<double> &joint_positions); //Create goal constraints for joint positions
+        moveit_msgs::msg::Constraints createTcpGoalConstraints(const geometry_msgs::msg::Pose &pose, const std::string &ee_link); //Create goal constraints for a pose
     
-        moveit_msgs::msg::MotionPlanResponse computeMotionPlan(const moveit_msgs::msg::MotionPlanRequest &motion_plan_request); //Call the motion planning service and return the response
+        moveit_msgs::action::MoveGroup::Result computeMotionPlan(const moveit_msgs::msg::MotionPlanRequest &motion_plan_request); //Call the motion planning service and return the response
+        moveit_msgs::msg::MotionSequenceResponse computeMotionSequence(const moveit_msgs::msg::MotionSequenceRequest &motion_plan_request); //Call the cartesian motion sequence service and return the response
 
         // --------------- HELPER METHODS ----------------
         
@@ -257,6 +270,7 @@ class DynamicPlanner
         std::string planning_group_;
         moveit::core::RobotModelConstPtr kinematic_model_;      //this holds all the kinematic information about the robot (eg: links, joints, limits, etc.)
         moveit::core::RobotStatePtr kinematic_state_;           //this holds the current position of the robot at any given time
+        moveit_msgs::msg::Constraints path_constraints_;
 
         //Trajectory variables
         moveit_msgs::msg::RobotTrajectory robot_trajectory_;    //Planned trajectory
@@ -283,7 +297,8 @@ class DynamicPlanner
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr execution_ctrl_sub_;               //Subscriber for moving and stopping the robot
         
         //Service Clients
-        rclcpp::Client<moveit_msgs::srv::GetMotionPlan>::SharedPtr motion_plan_client_; //Client for motion planning
+        rclcpp_action::Client<moveit_msgs::action::MoveGroup>::SharedPtr plan_action_client_; //Client for motion planning
+        rclcpp::Client<moveit_msgs::srv::GetMotionSequence>::SharedPtr cartesian_motion_sequence_client_; //Client for the cartesian motion sequence service
 
         //Timers
         rclcpp::TimerBase::SharedPtr traj_timer_; //Timer to execute trajectory points

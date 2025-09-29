@@ -1,7 +1,19 @@
 from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution, FindExecutable
 from launch_ros.substitutions import FindPackageShare
-from ur_moveit_config.launch_common import load_yaml
 import os
+import yaml
+from ament_index_python.packages import get_package_share_directory
+
+def load_yaml(package_name, file_path):
+    package_path = get_package_share_directory(package_name)
+    absolute_file_path = os.path.join(package_path, file_path)
+
+    try:
+        with open(absolute_file_path) as file:
+            return yaml.safe_load(file)
+    except OSError:  # parent of IOError, OSError *and* WindowsError where available
+        return None
+
 
 def get_namespace(context):
     pre = LaunchConfiguration("prefix").perform(context)
@@ -100,8 +112,9 @@ def get_ur_moveit_launch_params(context,
 
     robot_description_semantic = {"robot_description_semantic": robot_description_semantic_content}
 
-    robot_description_kinematics = PathJoinSubstitution(
-        [FindPackageShare(moveit_config_package), "config", "kinematics.yaml"]
+    robot_description_kinematics = load_yaml(
+        str(moveit_config_package.perform(context)),
+        os.path.join("config", "kinematics.yaml"),
     )
 
     robot_description_planning = {
@@ -111,22 +124,17 @@ def get_ur_moveit_launch_params(context,
         )
     }
 
-
-    # Planning Configuration
-    ompl_planning_pipeline_config = {
-        "move_group": {
-            "planning_plugin": "ompl_interface/OMPLPlanner",
-            "request_adapters": """default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints""",
-            "start_state_max_bounds_error": 0.1,
-        }
-    }
-
+    # PIPELINES
     ompl_planning_yaml = load_yaml(
         str(moveit_config_package.perform(context)),
         os.path.join("config", "ompl_planning.yaml"),
     )
 
-    ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
+    pilz_planner_config_yaml = load_yaml(
+        str(moveit_config_package.perform(context)),
+        os.path.join("config", "pilz_industrial_motion_planner.yaml"),
+    )
+
 
     trajectory_execution = {
         "moveit_manage_controllers": False,
@@ -142,18 +150,24 @@ def get_ur_moveit_launch_params(context,
         "moveit_controller_manager": "moveit_simple_controller_manager/MoveItSimpleControllerManager"
     }
 
+    capabilities = {
+        "capabilities": "pilz_industrial_motion_planner/MoveGroupSequenceService"
+    }
+
     params = [
         robot_description,
         robot_description_semantic,
         robot_description_kinematics,
         robot_description_planning,
-        ompl_planning_pipeline_config,
+        {"ompl": ompl_planning_yaml},
+        {"pilz_industrial_motion_planner": pilz_planner_config_yaml},
         moveit_controllers,
         trajectory_execution,
-        # {
-        #     'planning_pipelines': ['ompl', 'pilz_industrial_motion_planner'],
-        #     'default_planning_pipeline': 'ompl',
-        # },
+        {
+            'planning_pipelines': ['ompl', 'pilz_industrial_motion_planner'],
+            'default_planning_pipeline': 'ompl',
+        },
+        capabilities
     ]
 
     return params

@@ -251,8 +251,6 @@ void ManipulatorPlannerNode::spinner() {
 
     initializePlanner(); //Initialize dynamic_planner_
 
-    executor_.add_node(this->get_node_base_interface()); //Add the dynamic planner node to the executor
-
     rclcpp::Clock steady_clock(RCL_STEADY_TIME);
 
     auto main_cb_group = this->create_callback_group(
@@ -323,6 +321,7 @@ void ManipulatorPlannerNode::spinner() {
         tcp_vel_cb_group
     );
 
+    executor_.add_node(this->shared_from_this()); //Add the dynamic planner node to the executor
     executor_.spin(); // Start the executor
 }
 
@@ -973,7 +972,10 @@ void ManipulatorPlannerNode::checkParams() {
  
 void ManipulatorPlannerNode::initializePlanner() {
     //Initialize the dynamic planner
-    dynamic_planner_ = std::make_shared<DynamicPlanner>(shared_from_this(), planning_group_, false);
+    dynamic_planner_ = std::make_shared<DynamicPlanner>(
+        shared_from_this(),
+        planning_group_,
+        false);
 }
 
 bool ManipulatorPlannerNode::isPoseInsidePrimitive(

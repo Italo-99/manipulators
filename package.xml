@@ -5,7 +5,7 @@
     <version>1.0.0</version>
     <description>High-level control for easy use of manipulators.</description>
     <author email="italo.almirante@unimore.it">italo</author>
-    <maintainer email="3xxxxx@studenti.unimore.it">matteo</maintainer>
+    <maintainer email="354861@studenti.unimore.it">matteo</maintainer>
     <license>Apache License</license>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
