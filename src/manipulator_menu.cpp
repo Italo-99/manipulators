@@ -60,15 +60,18 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     // --------------------- Kinematics client init ---------------------
     invKine_client_                      = node_->create_client<manipulator_interfaces::srv::InvKine>(params_.manipulator_name+"/get_invkine");
     pseudoInverse_client_                = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(params_.manipulator_name+"/get_pseudo_inverse");
-    fKine_client_                = node_->create_client<manipulator_interfaces::srv::FKine>(params_.manipulator_name+"/get_fkine");
+    fKine_client_                        = node_->create_client<manipulator_interfaces::srv::FKine>(params_.manipulator_name+"/get_fkine");
     jacobian_client_                     = node_->create_client<manipulator_interfaces::srv::Jacobian>(params_.manipulator_name+"/get_jacobian");
-
 
     setJacobianControl_client_           = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/jacobian_control_setter");
     setRealTimeControl_client_           = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
     enableRealTimeConstraints_client_    = node_->create_client<manipulator_interfaces::srv::EnableRealTimeConstraints>(params_.manipulator_name+"/enable_real_time_constraints");
     changePlannerScalingFactors_client_  = node_->create_client<manipulator_interfaces::srv::ChangePlannerScalingFactors>(params_.manipulator_name+"/change_planner_scaling_factors");
     changePlannerTolerances_client_      = node_->create_client<manipulator_interfaces::srv::ChangePlannerTolerances>(params_.manipulator_name+"/change_planner_tolerances");
+
+    // --------------------- Admittace control clients ---------------------
+    setAdmittanceControl_client_         = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/enable_admittance");
+    setAdmittanceVelMode_client_         = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/admittance_vel_mode");
 
     // ---------------------- TF ----------------------
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
@@ -1492,6 +1495,64 @@ void ManipulatorMenu::setPlannerTolerances(float position, float orientation, fl
     changePlannerTolerances_client_->async_send_request(request, cb);
 }
 
+// --------------------- ADMITTANCE CONTROL ---------------------
+
+void ManipulatorMenu::setAdmittanceControl(bool set)
+{
+    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
+    request->data  = set;
+
+    // Check if service is available
+    while (!setAdmittanceControl_client_->wait_for_service(std::chrono::milliseconds(100)))
+    {
+        RCLCPP_INFO(node_->get_logger(), "Unable to connect to enable_admittance_control service");
+        return;
+    }
+
+    auto cb = [&, this](rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture future){
+        auto result = future.get();
+        if (result->success)
+        {
+            RCLCPP_INFO(node_->get_logger(), "Admittance control %s", set ? "ENABLED" : "DISABLED");
+        }
+        else
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to set admittance control");
+        }
+    };
+
+    // Send the request asynchronously
+    setAdmittanceControl_client_->async_send_request(request, cb);
+}
+
+void ManipulatorMenu::setAdmittanceVelMode(bool set)
+{
+    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
+    request->data  = set;
+
+    // Check if service is available
+    while (!setAdmittanceVelMode_client_->wait_for_service(std::chrono::milliseconds(100)))
+    {
+        RCLCPP_INFO(node_->get_logger(), "Unable to connect to admittance_vel_mode service");
+        return;
+    }
+
+    auto cb = [&, this](rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture future){
+        auto result = future.get();
+        if (result->success)
+        {
+            RCLCPP_INFO(node_->get_logger(), "Admittance control mode set to %s", set ? "VELOCITY" : "POSITION");
+        }
+        else
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to set admittance control mode");
+        }
+    };
+
+    // Send the request asynchronously
+    setAdmittanceVelMode_client_->async_send_request(request, cb);
+}
+
 // --------------------- MATRIX UTILS ------------------------
 
 void ManipulatorMenu::printMatrix(const Eigen::MatrixXd &matrix)
@@ -2433,6 +2494,24 @@ void ManipulatorMenu::userSetPlannerTolerances()
     setPlannerTolerances(positon, orientation, joint);
 }
 
+// --------------------- ADMITTANCE CONTROL ---------------------
+
+void ManipulatorMenu::userSetAdmittanceControl()
+{
+    bool set;
+    std::cout << "Enter 1 to set admittance control, 0 to unset: \n";
+    std::cin >> set;
+    setAdmittanceControl(set);
+}
+
+void ManipulatorMenu::userSetAdmittanceControlMode()
+{
+    bool vel_mode;
+    std::cout << "Enter 1 to set velocity mode, 0 to set position mode: \n";
+    std::cin >> vel_mode;
+    setAdmittanceVelMode(vel_mode);
+}
+
 // --------------------- GRIPPER HANDLERS ------------------------
 
 void ManipulatorMenu::userGripperMove()
@@ -2564,14 +2643,17 @@ void ManipulatorMenu::initializeMenu(){
     menu_->addSection("Setters", section_start, menu_->last_);
     section_start = menu_->last_ + 1;
 
+    //Admittance control
+    menu_->addChoice("Enable/disable admittance control", &ManipulatorMenu::userSetAdmittanceControl);
+    menu_->addChoice("Set admittance control mode", &ManipulatorMenu::userSetAdmittanceControlMode);
+    menu_->addSection("Admittance control", section_start, menu_->last_);
+    section_start = menu_->last_ + 1;
+
     //Gripper
     menu_->addChoice("Move gripper", &ManipulatorMenu::userGripperMove);
     menu_->addSection("Gripper", section_start, menu_->last_);
     section_start = menu_->last_ + 1;
 
-    menu_->addChoice("Example routine", &ManipulatorMenu::userRunTest);
-    menu_->addSection("Routines", section_start, menu_->last_);
-    section_start = menu_->last_ + 1;
 }
 
 // Menu constructor to retrieve parameters from the node
