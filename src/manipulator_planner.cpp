@@ -495,6 +495,8 @@ void ManipulatorPlannerNode::tcpGoal_callback(const manipulator_interfaces::msg:
     std::string ee_link_name;
     std::string ref_frame;
 
+    // RCLCPP_INFO(this->get_logger(), "Frame: %s, EE: %s", msg->frame.c_str(), msg->end_effector.c_str());
+
     if(msg->end_effector == manipulator_interfaces::msg::TcpGoal::DEFAULT){
         ee_link_name = ee_name_;
     } else {
@@ -592,8 +594,7 @@ void ManipulatorPlannerNode::cartesianPlan_callback(const manipulator_interfaces
         robot_state->setJointGroupPositions(planning_group_, msg->start_state.position);
     }
 
-    double fraction = dynamic_planner_->cartesianPlan(waypoints, ee_link_name, ref_frame);
-    (void)fraction; // Suppress unused variable warning
+    dynamic_planner_->cartesianPlan(waypoints, ee_link_name, ref_frame);
     
     if (msg->execute)
     {

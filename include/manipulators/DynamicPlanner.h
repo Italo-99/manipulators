@@ -15,6 +15,9 @@
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/u_int32.hpp>
 #include <tf2/convert.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include "rviz_visual_tools/rviz_visual_tools.hpp"
 //MoveIt2 Imports
 #include <moveit/move_group/capability_names.h>
@@ -37,7 +40,7 @@
 struct DynamicPlannerParams
 {
     std::string planning_pipeline   = "ompl";                    // planning pipeline (check moveit_config package for available pipelines)
-    std::string planner_id          = "geometric::RRTConnect";   // name of the planner method (look up from list in <planning_pipeline>.yaml)
+    std::string planner_id          = "RRTConnectkConfigDefault";   // name of the planner method (look up from list in <planning_pipeline>.yaml)
     int num_attempts                = 2;                         // max number of attempts to find a trajectory
     double planning_time            = 2;                         // maximum planning time in seconds (0: no limit)
     double vel_factor               = 1.;                        // velocity factor
@@ -51,6 +54,7 @@ struct DynamicPlannerParams
     std::string end_effector_link   = "tool0";                   // end effector link
     double min_cartesian_fraction   = 0.1;                       // Minimum fraction for the cartesian plan to be considered successful
     double caresian_blend_radius    = 0.0;                       // Blend radius for the cartesian plan
+    double joint_states_timeout     = 1.0;                       // Timeout after which planner is blocked if no joint states are received (seconds)
 
     DynamicPlannerParams() {}
 
@@ -93,7 +97,8 @@ class DynamicPlanner
             
             Overloads use default values specified in the class definition and params
         */
-
+        
+        void plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link, const std::string& frame, const moveit::core::RobotStatePtr start_state);
         void plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link, const std::string& frame);
         void plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link);
         void plan(const geometry_msgs::msg::Pose& goal_pose);
@@ -106,14 +111,14 @@ class DynamicPlanner
             Returns:
                 fraction: Fraction of the trajectory that was planned
         */
-        double cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints,
-                             const std::string& ee_link,
-                             const std::string& frame);
+        void cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints,
+                           const std::string& ee_link,
+                           const std::string& frame);
 
-        double cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints,
-                             const std::string& ee_link);
+        void cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints,
+                           const std::string& ee_link);
 
-        double cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints);
+        void cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints);
 
         void moveRobot(const sensor_msgs::msg::JointState &joint_state); //Single trajectory point
         void moveRobot(const trajectory_msgs::msg::JointTrajectoryPoint &traj_pt); //Single trajectory point
@@ -141,8 +146,6 @@ class DynamicPlanner
                 
         std::shared_ptr<planning_scene::PlanningScene> getPlanningScene() const; //Get the PlanningSceneInterface
         std::shared_ptr<moveit_visual_tools::MoveItVisualTools> getVisualTools() const; //Get the MoveItVisualTools
-
-        std::vector<double> getNamedTarget(const std::string& target_name);
 
         void setRobotState(moveit::core::RobotStatePtr& robot_state); //Set the state of the robot (subsequent planning will start from this state)
         moveit::core::RobotStatePtr getRobotState() const; //Get the current state of the robot
@@ -196,7 +199,6 @@ class DynamicPlanner
         std::vector<std::string> joints_names_group_;               // Joints group names
         std::vector<double> joints_values_group_;                   // Current joint values of the group
         std::vector<double> joints_speed_group_;                    // Current joint speeds of the group
-        bool joints_group_received_ = false;                        // Check if joints group was received
 
     private:
         // --------------- CALLBACK METHODS ----------------
@@ -227,7 +229,7 @@ class DynamicPlanner
         moveit_msgs::msg::MotionPlanRequest createMotionPlanRequest(const std::string &planning_pipeline, const std::string &planner_id); 
 
         moveit_msgs::msg::Constraints createJointGoalConstraints(const std::vector<double> &joint_positions); //Create goal constraints for joint positions
-        moveit_msgs::msg::Constraints createTcpGoalConstraints(const geometry_msgs::msg::Pose &pose, const std::string &ee_link); //Create goal constraints for a pose
+        moveit_msgs::msg::Constraints createTcpGoalConstraints(const geometry_msgs::msg::Pose &pose, const std::string &ee_link, const std::string &frame); //Create goal constraints for a pose
     
         moveit_msgs::action::MoveGroup::Result computeMotionPlan(const moveit_msgs::msg::MotionPlanRequest &motion_plan_request); //Call the motion planning service and return the response
         moveit_msgs::msg::MotionSequenceResponse computeMotionSequence(const moveit_msgs::msg::MotionSequenceRequest &motion_plan_request); //Call the cartesian motion sequence service and return the response
@@ -244,6 +246,12 @@ class DynamicPlanner
     
         void updatePlannerParams();                                     //Update the planner parameters with values stored in params_
         geometry_msgs::msg::PoseStamped toPoseStamped(const Eigen::Isometry3d& pose, const std::string &frame_id=""); //Converts an Eigen pose to a PoseStamped message
+    
+        // --------------- TF2 METHODS ----------------
+        
+        geometry_msgs::msg::TransformStamped getTransform(const std::string &target_frame, const std::string &source_frame); //Get the transform between two frames
+        geometry_msgs::msg::Pose transformPose(const geometry_msgs::msg::Pose &pose, const std::string &target_frame, const std::string &src_frame); //Transform a pose from source_frame to target_frame
+        geometry_msgs::msg::Pose transformPoseToWorld(const geometry_msgs::msg::Pose &pose, const std::string &src_frame);  //Transform a pose from source_frame to world_frame_
 
         // --------------- VISUALIZATION ----------------
         //Visualize a primitive
@@ -271,7 +279,11 @@ class DynamicPlanner
         moveit::core::RobotModelConstPtr kinematic_model_;      //this holds all the kinematic information about the robot (eg: links, joints, limits, etc.)
         moveit::core::RobotStatePtr kinematic_state_;           //this holds the current position of the robot at any given time
         moveit_msgs::msg::Constraints path_constraints_;
-
+        
+        //Status
+        bool joints_group_received_ = false;                        // Check if joints group was received
+        rclcpp::Time last_joint_state_time_;                        // Time when the last joint state was received
+    
         //Trajectory variables
         moveit_msgs::msg::RobotTrajectory robot_trajectory_;    //Planned trajectory
         std::vector<double> final_joint_positions_;             //End joint positions of the planned trajectory
@@ -299,13 +311,13 @@ class DynamicPlanner
         //Service Clients
         rclcpp_action::Client<moveit_msgs::action::MoveGroup>::SharedPtr plan_action_client_; //Client for motion planning
         rclcpp::Client<moveit_msgs::srv::GetMotionSequence>::SharedPtr cartesian_motion_sequence_client_; //Client for the cartesian motion sequence service
+        
+        //TF2
+        std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
+        std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
         //Timers
         rclcpp::TimerBase::SharedPtr traj_timer_; //Timer to execute trajectory points
-
-        //Default values for the 'plan' function
-        std::string end_effector_link_ = "tool0";
-        std::string world_frame_ = "base_link";
 };
 
 #endif //DYNAMIC_PLANNER_H

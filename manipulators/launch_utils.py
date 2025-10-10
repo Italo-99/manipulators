@@ -135,6 +135,12 @@ def get_ur_moveit_launch_params(context,
         os.path.join("config", "pilz_industrial_motion_planner.yaml"),
     )
 
+    pilz_cartesian_limits_yaml = load_yaml(
+        str(moveit_config_package.perform(context)),
+        os.path.join("config", "pilz_cartesian_limits.yaml"),
+    )
+
+    robot_description_planning["robot_description_planning"].update(pilz_cartesian_limits_yaml)
 
     trajectory_execution = {
         "moveit_manage_controllers": False,
@@ -165,7 +171,7 @@ def get_ur_moveit_launch_params(context,
         trajectory_execution,
         {
             'planning_pipelines': ['ompl', 'pilz_industrial_motion_planner'],
-            'default_planning_pipeline': 'ompl',
+            'default_planning_pipeline': 'pilz_industrial_motion_planner',
         },
         capabilities
     ]

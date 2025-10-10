@@ -455,8 +455,6 @@ geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(
         tcp_goal_msg.frame = manipulator_interfaces::msg::TcpGoal::DEFAULT;
     }
 
-    tcp_goal_msg.frame = manipulator_interfaces::msg::TcpGoal::DEFAULT;
-
     tcpGoal_pub_->publish(tcp_goal_msg);
     return tcp_pose;
 }

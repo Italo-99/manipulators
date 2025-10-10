@@ -1,5 +1,4 @@
 #include <manipulators/DynamicPlanner.h>
-#include <moveit_msgs/srv/detail/get_motion_plan__struct.hpp>
 
 DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
                                const std::string &planning_group,
@@ -58,12 +57,12 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
     //Initialize visual tools
     //Moveit
     moveit_visual_tools_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(node_,
-                                                                                    world_frame_, 
+                                                                                    params_.world_frame, 
                                                                                     "moveit_visual_markers", 
                                                                                     kinematic_model_);
 
     //Rviz
-    rviz_visual_tools_.reset(new rviz_visual_tools::RvizVisualTools(world_frame_, "moveit_visual_markers", node_));
+    rviz_visual_tools_.reset(new rviz_visual_tools::RvizVisualTools(params_.world_frame, "moveit_visual_markers", node_));
 
     //Initialize time optimal trajectory generation
     time_optimal_traj_gen = std::make_shared<trajectory_processing::TimeOptimalTrajectoryGeneration>(
@@ -71,6 +70,9 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
         params_.sample_time,
         totg_min_angle_change
     );
+
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
     updatePlannerParams();
     initialize();
@@ -82,7 +84,6 @@ DynamicPlanner::~DynamicPlanner()
 {
     RCLCPP_INFO(node_->get_logger(), "Destroying DynamicPlanner...");
     // move_group_.reset();
-    // planning_scene_interface_.reset();
     planning_scene_.reset();
     moveit_visual_tools_.reset();
     rviz_visual_tools_.reset();
@@ -278,7 +279,7 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions, const movei
 
     //Visualize trajectory line
     moveit_visual_tools_->publishTrajectoryLine(trajectory, 
-                                                kinematic_model_->getLinkModel(end_effector_link_),
+                                                kinematic_model_->getLinkModel(params_.end_effector_link),
                                                 kinematic_model_->getJointModelGroup(planning_group_));
 
     result_msg.success = true;
@@ -302,7 +303,7 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions)
 
 //PLAN: Cartesian space
 
-void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link, const std::string& frame)
+void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link, const std::string& frame, const moveit::core::RobotStatePtr start_state)
 {
     /*
     Plan: pose goal
@@ -336,8 +337,8 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
     
     //Create the plan and execute
     moveit_msgs::msg::MotionPlanRequest motion_plan_request = createMotionPlanRequest();
-    moveit::core::robotStateToRobotStateMsg(*kinematic_state_, motion_plan_request.start_state);
-    motion_plan_request.goal_constraints.push_back(createTcpGoalConstraints(goal_pose, ee_link));
+    moveit::core::robotStateToRobotStateMsg(*start_state, motion_plan_request.start_state);
+    motion_plan_request.goal_constraints.push_back(createTcpGoalConstraints(goal_pose, ee_link, frame));
 
     moveit_msgs::action::MoveGroup::Result plan = computeMotionPlan(motion_plan_request);
 
@@ -417,17 +418,22 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
     trajectory_pub_->publish(result_msg);
 }
 
+void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link, const std::string& frame)
+{
+    plan(goal_pose, ee_link, frame, kinematic_state_);
+}
+
 void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link)
 {
-    plan(goal_pose, ee_link, world_frame_);
+    plan(goal_pose, ee_link, params_.world_frame, kinematic_state_);
 }
 
 void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose)
 {
-    plan(goal_pose, params_.end_effector_link, world_frame_);
+    plan(goal_pose, params_.end_effector_link, params_.world_frame, kinematic_state_);
 }
 
-double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints, const std::string& ee_link, const std::string& frame)
+void DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints, const std::string& ee_link, const std::string& frame)
 {
     /*
     Plan: cartesian goal
@@ -456,7 +462,7 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
         } else {
             moveit::core::robotStateToRobotStateMsg(*kinematic_state_, item.req.start_state);
         }
-        item.req.goal_constraints.push_back(createTcpGoalConstraints(wp, ee_link));
+        item.req.goal_constraints.push_back(createTcpGoalConstraints(wp, ee_link, frame));
         motion_sequence_request.items.push_back(item);
     }
 
@@ -479,7 +485,7 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
 
         setTrajectory(trajectory);
         trajectory_pub_->publish(result_msg);
-        return 0.0;
+        return;
     }
 
 //    trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
@@ -506,7 +512,7 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
         
         setTrajectory(moveit_msgs::msg::RobotTrajectory());
         trajectory_pub_->publish(result_msg);
-        return 0.0;
+        return;
     }
 
     if (!checkTrajectoryConstraints(trajectory)){ //Check that the trajectory respects the path constraints
@@ -517,7 +523,7 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
 
         setTrajectory(moveit_msgs::msg::RobotTrajectory());
         trajectory_pub_->publish(result_msg);
-        return 0.0;
+        return;
     }
 
 
@@ -535,17 +541,17 @@ double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>
     result_msg.trajectory = trajectory;
     trajectory_pub_->publish(result_msg);
 
-    return 0.0;
+    return;
 }
 
-double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints, const std::string& ee_link)
+void DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints, const std::string& ee_link)
 {
-    return cartesianPlan(waypoints, ee_link, world_frame_);
+    cartesianPlan(waypoints, ee_link, params_.world_frame);
 }
 
-double DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints)
+void DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints)
 {
-    return cartesianPlan(waypoints, params_.end_effector_link, world_frame_);
+    cartesianPlan(waypoints, params_.end_effector_link, params_.world_frame);
 }
 
 void DynamicPlanner::moveRobot(const sensor_msgs::msg::JointState& joint_state)
@@ -652,29 +658,6 @@ moveit::core::RobotStatePtr DynamicPlanner::getRobotState() const
 const moveit::core::JointModelGroup* DynamicPlanner::getJointModelGroup() const
 {
     return kinematic_model_->getJointModelGroup(planning_group_);
-}
-
-std::vector<double> DynamicPlanner::getNamedTarget(const std::string &target_name)
-{
-    // /*
-    // Returns the joint positions from a named target (either remembered or predefined in srdf)
-    // Args:
-    //     target_name: Name of the target
-    // Returns:
-    //     Array of joint positions
-    // */
-    //
-    // std::map<std::string, double> named_target = move_group_->getNamedTargetValues(target_name);
-    // std::vector<double> joint_states;
-    //
-    // std::vector<std::pair<std::string, double>> named_targets_pair;
-    // for (auto iterator = named_target.begin(); iterator != named_target.end(); iterator++)
-    // {
-    //     joint_states.push_back(iterator->second);
-    // }
-    //
-    // return joint_states;
-    return std::vector<double>();
 }
 
 // ------------------------------------- PATH CONSTRAINTS ------------------------------------
@@ -882,9 +865,11 @@ void DynamicPlanner::jointsState_callback(const sensor_msgs::msg::JointState::Sh
             }
         }
     }
+
+    last_joint_state_time_ = node_->now();
     
-    // kinematic_state_->setJointGroupPositions(planning_group_, joints_values_group_);
-    // kinematic_state_->update();
+    //kinematic_state_->setJointGroupPositions(planning_group_, joints_values_group_);
+    //kinematic_state_->update();
 
     if (!isReady()) {
         RCLCPP_INFO(node_->get_logger(), "Joint states for planning group %s received.", planning_group_.c_str());
@@ -896,6 +881,16 @@ void DynamicPlanner::trajectoryExecution_callback(){
     /*
     Callback for trajectory execution from traj_timer_
     */
+
+    //Check that joint states are being received
+    if (isReady() && (node_->now() - last_joint_state_time_ > rclcpp::Duration::from_seconds(params_.joint_states_timeout))){
+        RCLCPP_ERROR(node_->get_logger(), "No joint states received for more than %.2f seconds, blocking planner.", params_.joint_states_timeout);
+        is_moving_ = false;
+        trajpoint_ = 0UL; // Reset trajectory point index
+        force_stop_ = false; // Reset force stop flag
+        joints_group_received_ = false;
+    }
+
     if(force_stop_){
         RCLCPP_INFO(node_->get_logger(), "Force stop received, stopping trajectory execution.");
         is_moving_ = false;
@@ -976,7 +971,7 @@ void DynamicPlanner::setTrajectory(const moveit_msgs::msg::RobotTrajectory &traj
 
 bool DynamicPlanner::processTrajectory(moveit_msgs::msg::RobotTrajectory &trajectory_msg) {
     robot_trajectory::RobotTrajectory robot_trajectory(
-        planning_scene_->getRobotModel(),
+        kinematic_model_,
         planning_group_
     );
 
@@ -1109,7 +1104,6 @@ moveit_msgs::msg::MotionPlanRequest DynamicPlanner::createMotionPlanRequest(cons
     req.path_constraints = getPathConstraints();
 
     return req;
-
 }
 
 moveit_msgs::msg::MotionPlanRequest DynamicPlanner::createMotionPlanRequest()
@@ -1126,11 +1120,17 @@ moveit_msgs::msg::Constraints DynamicPlanner::createJointGoalConstraints(const s
     return kinematic_constraints::constructGoalConstraints(robot_state, getJointModelGroup(), params_.joint_tolerance);
 }
 
-moveit_msgs::msg::Constraints DynamicPlanner::createTcpGoalConstraints(const geometry_msgs::msg::Pose &pose, const std::string &end_effector_link)
+moveit_msgs::msg::Constraints DynamicPlanner::createTcpGoalConstraints(const geometry_msgs::msg::Pose &pose, const std::string &end_effector_link, const std::string &frame)
 {
     geometry_msgs::msg::PoseStamped pose_stamped;
+    pose_stamped.header.stamp = node_->now();
     pose_stamped.header.frame_id = params_.world_frame;
-    pose_stamped.pose = pose;
+
+    if (frame != params_.world_frame){
+        pose_stamped.pose = transformPoseToWorld(pose, frame);
+    } else {
+        pose_stamped.pose = pose;
+    }
 
     return kinematic_constraints::constructGoalConstraints(end_effector_link, pose_stamped, params_.position_tolerance, params_.orientation_tolerance);
 }
@@ -1360,6 +1360,68 @@ geometry_msgs::msg::PoseStamped DynamicPlanner::toPoseStamped(const Eigen::Isome
     return pose_stamped;
 }
 
+// ------------------------------------- TF2 METHODS -------------------------------------
+
+geometry_msgs::msg::TransformStamped DynamicPlanner::getTransform(const std::string &target_frame, const std::string &source_frame)
+{
+    /*
+    Looks up the transform between two frames
+    Args:
+        target_frame: The target frame
+        source_frame: The source frame
+    Returns:
+        The transform between the two frames
+    */
+    geometry_msgs::msg::TransformStamped transform_stamped;
+    try {
+        transform_stamped = tf_buffer_->lookupTransform(
+            target_frame,
+            source_frame,
+            tf2::TimePointZero,
+            tf2::durationFromSec(0.5)
+        );
+    }
+    catch (tf2::TransformException &ex) {
+        RCLCPP_ERROR(node_->get_logger(), "Could not get transform from %s to %s: %s", source_frame.c_str(), target_frame.c_str(), ex.what());
+    }
+    return transform_stamped;
+}
+
+geometry_msgs::msg::Pose DynamicPlanner::transformPose(const geometry_msgs::msg::Pose &pose, const std::string &target_frame, const std::string &source_frame)
+{
+    /*
+    Transforms a pose from one frame to another
+    Args:
+        pose: The pose to transform
+        target_frame: The target frame
+        source_frame: The source frame
+    Returns:
+        The transformed pose
+    */
+    geometry_msgs::msg::PoseStamped pose_stamped;
+    pose_stamped.header.frame_id = source_frame;
+    pose_stamped.header.stamp = node_->now();
+    pose_stamped.pose = pose;
+
+    geometry_msgs::msg::PoseStamped transformed_pose_stamped;
+    try {
+        transformed_pose_stamped = tf_buffer_->transform(
+            pose_stamped,
+            target_frame,
+            tf2::durationFromSec(0.5)
+        );
+    }
+    catch (tf2::TransformException &ex) {
+        RCLCPP_ERROR(node_->get_logger(), "Could not transform pose from %s to %s: %s", source_frame.c_str(), target_frame.c_str(), ex.what());
+    }
+    return transformed_pose_stamped.pose;
+}
+
+geometry_msgs::msg::Pose DynamicPlanner::transformPoseToWorld(const geometry_msgs::msg::Pose &pose, const std::string &src_frame)
+{
+    return transformPose(pose, params_.world_frame, src_frame);
+}
+
 // ------------------------------------- VISUALIZATION METHODS -------------------------------------
 
 void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &primitive, 
@@ -1393,7 +1455,7 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
     //Iterate over each primitive and add publish the shape through rviz visual tools
 
     visualization_msgs::msg::Marker marker;
-    marker.header.frame_id = world_frame_;
+    marker.header.frame_id = params_.world_frame;
     marker.header.stamp = node_->now();
     marker.action = visualization_msgs::msg::Marker::ADD;
     marker.ns = ns;
@@ -1448,20 +1510,21 @@ DynamicPlannerParams DynamicPlannerParams::fromNode(const rclcpp::Node::SharedPt
 {
     DynamicPlannerParams params;
 
-    params.planning_pipeline     = node->get_parameter_or("planning_pipeline", params.planning_pipeline);
-    params.planner_id            = node->get_parameter_or("planner_id", params.planner_id);
-    params.num_attempts          = node->get_parameter_or("num_attempts", params.num_attempts);
-    params.planning_time         = node->get_parameter_or("planning_time", params.planning_time);
-    params.vel_factor            = node->get_parameter_or("vel_factor", params.vel_factor);
-    params.acc_factor            = node->get_parameter_or("acc_factor", params.acc_factor);
-    params.sample_time           = node->get_parameter_or("sample_time", params.sample_time);
-    params.max_velocity          = node->get_parameter_or("max_velocity", params.max_velocity);
-    params.position_tolerance    = node->get_parameter_or("position_tolerance", params.position_tolerance);
-    params.orientation_tolerance = node->get_parameter_or("orientation_tolerance", params.orientation_tolerance);
-    params.joint_tolerance       = node->get_parameter_or("joint_tolerance", params.joint_tolerance);
-    params.world_frame           = node->get_parameter_or("world_frame", params.world_frame);
-    params.end_effector_link     = node->get_parameter_or("ee_name", params.end_effector_link);
-    params.min_cartesian_fraction= node->get_parameter_or("min_cartesian_fraction", params.min_cartesian_fraction);
+    params.planning_pipeline        = node->get_parameter_or("planning_pipeline", params.planning_pipeline);
+    params.planner_id               = node->get_parameter_or("planner_id", params.planner_id);
+    params.num_attempts             = node->get_parameter_or("num_attempts", params.num_attempts);
+    params.planning_time            = node->get_parameter_or("planning_time", params.planning_time);
+    params.vel_factor               = node->get_parameter_or("vel_factor", params.vel_factor);
+    params.acc_factor               = node->get_parameter_or("acc_factor", params.acc_factor);
+    params.sample_time              = node->get_parameter_or("sample_time", params.sample_time);
+    params.max_velocity             = node->get_parameter_or("max_velocity", params.max_velocity);
+    params.position_tolerance       = node->get_parameter_or("position_tolerance", params.position_tolerance);
+    params.orientation_tolerance    = node->get_parameter_or("orientation_tolerance", params.orientation_tolerance);
+    params.joint_tolerance          = node->get_parameter_or("joint_tolerance", params.joint_tolerance);
+    params.world_frame              = node->get_parameter_or("world_frame", params.world_frame);
+    params.end_effector_link        = node->get_parameter_or("ee_name", params.end_effector_link);
+    params.min_cartesian_fraction   = node->get_parameter_or("min_cartesian_fraction", params.min_cartesian_fraction);
+    params.joint_states_timeout     = node->get_parameter_or("joint_states_timeout", params.joint_states_timeout);
 
     return params;
 }
