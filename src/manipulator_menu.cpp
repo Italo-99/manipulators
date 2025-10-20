@@ -489,7 +489,7 @@ void ManipulatorMenu::publishCartesianGoal(
     cartesian_goal_msg.execute = execute;
     cartesian_goal_msg.start_state = joint_state_from_vector(start_state);
 
-    if (frame.empty())
+    if (!frame.empty())
     {
         cartesian_goal_msg.frame = frame;
     }

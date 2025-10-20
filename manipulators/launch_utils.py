@@ -3,6 +3,18 @@ from launch_ros.substitutions import FindPackageShare
 import os
 import yaml
 from ament_index_python.packages import get_package_share_directory
+from launch import LaunchContext
+from launch.substitution import Substitution
+from typing import Optional, Union
+
+class GetURTypeSubstitution(Substitution):
+    def __init__(self, robot_launch_config: Union[str, Substitution]):
+        self.robot_launch_config = robot_launch_config
+
+    def perform(self, context: LaunchContext) -> str:
+        robot_name = self.robot_launch_config.perform(context)
+        ur_type = robot_name.split("_")[0]  # Assumes UR type is the prefix before the first underscore
+        return ur_type
 
 def load_yaml(package_name, file_path):
     package_path = get_package_share_directory(package_name)
@@ -21,16 +33,18 @@ def get_namespace(context):
         pre = pre[:-1]
     return pre
 
-def get_ur_moveit_launch_params(context,
-                                ur_type_: LaunchConfiguration | None = None,
-                                description_path_: LaunchConfiguration | None = None,
-                                prefix_: LaunchConfiguration | None = None,
-                                description_package_: LaunchConfiguration | None = None,
-                                moveit_config_package_: LaunchConfiguration | None = None,
-                                joint_limits_file_: LaunchConfiguration | None = None,
-                                kinematics_file_: LaunchConfiguration | None = None,
-                                description_semantic_path_: LaunchConfiguration | None = None,
-                                xacro_args: LaunchConfiguration | None = None):
+def get_ur_moveit_launch_params(
+    context: LaunchContext,
+    ur_type_: Optional[Union[str, Substitution]] = None,
+    description_path_: Optional[Union[str, Substitution]] = None,
+    prefix_: Optional[Union[str, Substitution]] = None,
+    description_package_: Optional[Union[str, Substitution]] = None,
+    moveit_config_package_: Optional[Union[str, Substitution]] = None,
+    joint_limits_file_: Optional[Union[str, Substitution]] = None,
+    kinematics_file_: Optional[Union[str, Substitution]] = None,
+    description_semantic_path_: Optional[Union[str, Substitution]] = None,
+    xacro_args: Optional[Union[str, Substitution]] = None,
+):
     """
         This function returns a list of dictionaries with all the parameters needed to launch move_group node for UR robots.
         A launch context must be provided by using OpaqueFunction, see manipulators/launch/planning_context.launch.py or 
@@ -39,14 +53,15 @@ def get_ur_moveit_launch_params(context,
         case all the necessary parameters must be declared in the launch file.
 
         Args:
-            ur_type:                   Type/series of used UR robot.
-            description_path:          Full path to the URDF/XACRO description file.
-            prefix:                 Prefix for tf, useful for multi-robot setup.
-            description_package:       Name of the package containing the robot description.
-            moveit_config_package:     Name of the package containing the MoveIt configuration.
-            joint_limits_file:  Name of the file containing the joint limits configuration.
-            kinematics_file:    Name of the file containing the kinematics configuration.
-            description_semantic_path: Full path for the file containing the semantic description.
+            ur_type:                    Type/series of used UR robot.
+            description_path:           Full path to the URDF/XACRO description file.
+            prefix:                     Prefix for tf, useful for multi-robot setup.
+            description_package:        Name of the package containing the robot description.
+            moveit_config_package:      Name of the package containing the MoveIt configuration.
+            joint_limits_file:          Name of the file containing the joint limits configuration.
+            kinematics_file:            Name of the file containing the kinematics configuration.
+            description_semantic_path:  Full path for the file containing the semantic description.
+            xacro_args:                 Additional arguments for xacro parsing.
     """
 
     ur_type                   = ur_type_ if ur_type_ else                                     LaunchConfiguration("ur_type")
@@ -124,6 +139,14 @@ def get_ur_moveit_launch_params(context,
         )
     }
 
+    # Load cartesian limits and update planning parameters
+    pilz_cartesian_limits_yaml = load_yaml(
+        str(moveit_config_package.perform(context)),
+        os.path.join("config", "pilz_cartesian_limits.yaml"),
+    )
+
+    robot_description_planning["robot_description_planning"].update(pilz_cartesian_limits_yaml)
+
     # PIPELINES
     ompl_planning_yaml = load_yaml(
         str(moveit_config_package.perform(context)),
@@ -135,29 +158,20 @@ def get_ur_moveit_launch_params(context,
         os.path.join("config", "pilz_industrial_motion_planner.yaml"),
     )
 
-    pilz_cartesian_limits_yaml = load_yaml(
-        str(moveit_config_package.perform(context)),
-        os.path.join("config", "pilz_cartesian_limits.yaml"),
-    )
-
-    robot_description_planning["robot_description_planning"].update(pilz_cartesian_limits_yaml)
-
-    trajectory_execution = {
-        "moveit_manage_controllers": False,
-        "trajectory_execution.allowed_execution_duration_scaling": 1.2,
-        "trajectory_execution.allowed_goal_duration_margin": 0.5,
-        "trajectory_execution.allowed_start_tolerance": 0.01,
-        # Execution time monitoring can be incompatible with the scaled JTC
-        "trajectory_execution.execution_duration_monitoring": False,
+    pipelines = {
+        "planning_pipelines": ["ompl", "pilz_industrial_motion_planner"],
+        "default_planning_pipeline": "pilz_industrial_motion_planner", # If pilz is not default it won't work at all (???)
+        "ompl": ompl_planning_yaml,
+        "pilz_industrial_motion_planner": pilz_planner_config_yaml
     }
 
+    # BOILERPLATE
     moveit_controllers = {
-        #"moveit_simple_controller_manager" : controllers_yaml, 
-        "moveit_controller_manager": "moveit_simple_controller_manager/MoveItSimpleControllerManager"
+        "moveit_controller_manager": "moveit_simple_controller_manager/MoveItSimpleControllerManager" #This is just to make the move_group node not crash
     }
 
     capabilities = {
-        "capabilities": "pilz_industrial_motion_planner/MoveGroupSequenceService"
+        "capabilities": "pilz_industrial_motion_planner/MoveGroupSequenceService" # Enable Pilz capabilities
     }
 
     params = [
@@ -165,14 +179,8 @@ def get_ur_moveit_launch_params(context,
         robot_description_semantic,
         robot_description_kinematics,
         robot_description_planning,
-        {"ompl": ompl_planning_yaml},
-        {"pilz_industrial_motion_planner": pilz_planner_config_yaml},
         moveit_controllers,
-        trajectory_execution,
-        {
-            'planning_pipelines': ['ompl', 'pilz_industrial_motion_planner'],
-            'default_planning_pipeline': 'pilz_industrial_motion_planner',
-        },
+        pipelines,
         capabilities
     ]
 

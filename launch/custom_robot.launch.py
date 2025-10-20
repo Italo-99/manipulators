@@ -5,26 +5,33 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch.conditions import IfCondition
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from manipulators.launch_utils import get_ur_moveit_launch_params, get_namespace, load_yaml
+from manipulators.launch_utils import *
 import os
+
 
 def launch_setup(context, *args, **kwargs):
 
     # ---------------------------------------- ACTIONS ----------------------------------------
 
+    nodes_to_start = []
+    robot = LaunchConfiguration("robot").perform(context)
+
+    print(f"[MANIPULATOR PLANNER LAUNCH] Launching manipulator planner for robot: {robot}")
+
     # LOAD MANIPULATOR PLANNER PARAMETERS
     mp_params = load_yaml(
         "manipulators",
         os.path.join(
-            "config", "ur10e_eecam.yaml",
+            "config",
+            robot + ".yaml"
         )
     )
+    rate = mp_params.get("rate", 500)
 
     # LOAD UR MOVEIT PARAMETERS
     moveit_params = get_ur_moveit_launch_params(context)
-    # ---------------------------------------- NODES ----------------------------------------
 
-    nodes_to_start = []
+    # ---------------------------------------- NODES ----------------------------------------
 
     # MANIPULATOR PLANNER NODE
     nodes_to_start.append(
@@ -33,11 +40,7 @@ def launch_setup(context, *args, **kwargs):
             executable="manipulator_planner",
             output="both",
             namespace=get_namespace(context),
-            parameters=[
-                mp_params
-            ] + moveit_params + [
-                {"prefix" : LaunchConfiguration("prefix")},
-            ],
+            parameters=[mp_params, {"prefix" : LaunchConfiguration("prefix")}, *moveit_params]
         )
     )
 
@@ -72,18 +75,9 @@ def launch_setup(context, *args, **kwargs):
                 FindPackageShare("manipulators").perform(context) + "/launch/planning_context.launch.py"
             ),
             launch_arguments=[
-                ("ur_type", LaunchConfiguration("ur_type")),
-                ("description_package", LaunchConfiguration("description_package")),
-                ("description_semantic_path", LaunchConfiguration("description_semantic_path")),
-                ("description_path", LaunchConfiguration("description_path")),
-                ("prefix", LaunchConfiguration("prefix")),
-                ("joint_limits_file", LaunchConfiguration("joint_limits_file")),
-                ("kinematics_file", LaunchConfiguration("kinematics_file")),
-                ("moveit_config_package", LaunchConfiguration("moveit_config_package")),
-                ("publish_joint_states", LaunchConfiguration("publish_joint_states")),
-                ("xacro_args", LaunchConfiguration("xacro_args")),
+                ("rate", str(rate)),
             ]
-        )
+        ),
     )
 
     return nodes_to_start
@@ -94,42 +88,12 @@ def generate_launch_description():
 
     declared_arguments = []
 
-    # RATE
+    # ROBOT 
     declared_arguments.append(
         DeclareLaunchArgument(
-            "rate",
-            description="Rate for the joint_state_publisher (hz).",
-            default_value="500",
-        )
-    )
-
-    # GUI
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "gui",
-            default_value="False",
-            choices=["True", "False"],
-            description="Whether to run joint_state_publisher with gui or not.",
-        )
-    )
-
-    # PUBLISH JOINT STATES
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "publish_joint_states",
-            default_value="True",
-            choices=["True", "False"],
-            description="Whether to run joint state publisher node or not (Disable for real control).",
-        )
-    )
-
-    # RVIZ
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "rviz",
-            default_value="True",
-            choices=["True", "False"],
-            description="Whether to run rviz or not.",
+            "robot",
+            description="The name of the robot model",
+            default_value="ur5e",
         )
     )
 
@@ -139,7 +103,7 @@ def generate_launch_description():
             "ur_type",
             description="Type/series of used UR robot.",
             choices=["ur3", "ur3e", "ur5", "ur5e", "ur10", "ur10e", "ur16e", "ur20", "ur30"],
-            default_value="ur10e",
+            default_value=GetURTypeSubstitution(LaunchConfiguration("robot")),
         )
     )
 
@@ -152,39 +116,27 @@ def generate_launch_description():
         )
     )
     
-    # Declare the SRDF path
     declared_arguments.append(
         DeclareLaunchArgument(
             "description_semantic_path",
-            default_value=PathJoinSubstitution([
-                FindPackageShare("manipulators"), "models", "srdf", "ur10e_robotiq_85_gripper.srdf.xacro"
-            ]),
+            default_value=PathJoinSubstitution(
+                [FindPackageShare("manipulators"), "models/srdf", [LaunchConfiguration("robot"), ".srdf.xacro"]]
+            ),
             description="MoveIt SRDF/XACRO description file of the robot (full path).",
         )
     )
 
-    # Declare the URDF/XACRO path
+    # DESCRIPTION PATH URDF/XACRO
     declared_arguments.append(
         DeclareLaunchArgument(
             "description_path",
-            default_value=PathJoinSubstitution([
-                FindPackageShare("manipulators"), "models", "urdf", "ur10e_robotiq_85_gripper.urdf.xacro"
-            ]),
+            default_value=PathJoinSubstitution(
+                [FindPackageShare("manipulators"), "models/urdf", [LaunchConfiguration("robot"), ".urdf.xacro"]]
+            ),
             description="URDF/XACRO description file (absolute path) of the robot.",
         )
     )
 
-    # RVIZ CONFIG
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "rviz_config_path",
-            default_value=PathJoinSubstitution(
-                [FindPackageShare("manipulators"), "config", "rviz", "planner.rviz"]
-            ),
-            description="RViz config file (absolute path) to use when launching rviz.",
-        )
-    )
-    
     # PREFIX
     declared_arguments.append(
         DeclareLaunchArgument(
@@ -225,8 +177,8 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "gripper",
-            default_value="robotiq_85",
-            choices=["robotiq_85", "no_gripper"],
+            default_value="no_gripper",
+            choices=["no_gripper", "robotiq_85"],
             description="What gripper to use with the robot."
         )
     )

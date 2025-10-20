@@ -50,18 +50,12 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
 
     //RCLCPP_INFO(node_->get_logger(), "Found [%s] joints for planning group %s", std::string{joints_names_group_.begin(), joints_names_group_.end()}.c_str(), planning_group_.c_str());
 
-    //planning_scene_interface_ = std::make_shared<moveit::planning_interface::PlanningSceneInterface>();
+    planning_scene_monitor_ = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>(node_, "robot_description");
+    planning_scene_monitor_->startSceneMonitor();
+    planning_scene_monitor_->startWorldGeometryMonitor();
+    planning_scene_monitor_->startStateMonitor();
 
-    planning_scene_ = std::make_shared<planning_scene::PlanningScene>(kinematic_model_);
-
-    //Initialize visual tools
-    //Moveit
-    moveit_visual_tools_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(node_,
-                                                                                    params_.world_frame, 
-                                                                                    "moveit_visual_markers", 
-                                                                                    kinematic_model_);
-
-    //Rviz
+    //Rviz visual tools
     rviz_visual_tools_.reset(new rviz_visual_tools::RvizVisualTools(params_.world_frame, "moveit_visual_markers", node_));
 
     //Initialize time optimal trajectory generation
@@ -83,9 +77,7 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
 DynamicPlanner::~DynamicPlanner()
 {
     RCLCPP_INFO(node_->get_logger(), "Destroying DynamicPlanner...");
-    // move_group_.reset();
-    planning_scene_.reset();
-    moveit_visual_tools_.reset();
+    planning_scene_monitor_.reset();
     rviz_visual_tools_.reset();
     node_.reset();
 }
@@ -107,6 +99,13 @@ void DynamicPlanner::initialize()
     
     auto sub_options = rclcpp::SubscriptionOptions();
     sub_options.callback_group = cb_group;
+
+    collision_object_pub_ = node_->create_publisher<moveit_msgs::msg::CollisionObject>(
+        "collision_object", 1
+    );
+    attached_collision_object_pub_ = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(
+        "attached_collision_object", 1
+    );
 
     // Subscribers
     trajectory_sub_ = node_->create_subscription<moveit_msgs::msg::RobotTrajectory>(
@@ -173,7 +172,7 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions, const movei
     moveit::core::RobotState goal_state(*kinematic_state_);
     goal_state.setJointGroupPositions(planning_group_, joint_positions);
 
-    bool goal_valid = planning_scene_->isStateValid(goal_state, "", false);
+    bool goal_valid = getPlanningScene()->isStateValid(goal_state, "", false);
 
     manipulator_interfaces::msg::TrajectoryResult result_msg;
 
@@ -276,11 +275,6 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions, const movei
     }
 
     setTrajectory(trajectory);
-
-    //Visualize trajectory line
-    moveit_visual_tools_->publishTrajectoryLine(trajectory, 
-                                                kinematic_model_->getLinkModel(params_.end_effector_link),
-                                                kinematic_model_->getJointModelGroup(planning_group_));
 
     result_msg.success = true;
     result_msg.message = "Trajectory planned successfully";
@@ -406,10 +400,6 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
     //Trajectory meets all the requirements
     setTrajectory(trajectory);
 
-    //Visualize trajectory line
-    moveit_visual_tools_->publishTrajectoryLine(trajectory, 
-                                                kinematic_model_->getLinkModel(ee_link),
-                                                kinematic_model_->getJointModelGroup(planning_group_));
 
     result_msg.success = true;
     result_msg.message = "Trajectory planned successfully";
@@ -530,11 +520,6 @@ void DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& 
     //Trajectory meets all the requirements
     setTrajectory(trajectory);
 
-    //Visualize trajectory line
-    moveit_visual_tools_->publishTrajectoryLine(trajectory, 
-                                                kinematic_model_->getLinkModel(ee_link),
-                                                kinematic_model_->getJointModelGroup(planning_group_));
-
     result_msg.success = true;
     result_msg.message = "Trajectory planned successfully";
     result_msg.error_code = manipulator_interfaces::msg::TrajectoryResult::SUCCESS;
@@ -609,9 +594,9 @@ void DynamicPlanner::stop()
     force_stop_ = true;
 }
 
-std::shared_ptr<planning_scene::PlanningScene> DynamicPlanner::getPlanningScene() const
+const planning_scene_monitor::LockedPlanningSceneRO DynamicPlanner::getPlanningScene() const
 {
-    return planning_scene_;
+    return planning_scene_monitor::LockedPlanningSceneRW(planning_scene_monitor_);
 }
 
 DynamicPlannerParams DynamicPlanner::getParams() const
@@ -665,6 +650,27 @@ const moveit::core::JointModelGroup* DynamicPlanner::getJointModelGroup() const
 void DynamicPlanner::setPathConstraints(const moveit_msgs::msg::Constraints &constraints)
 {
     path_constraints_ = constraints;
+
+    //Visualize path constraints
+    for (const auto &pc : path_constraints_.position_constraints)
+    {
+        for (size_t i {0}; i < pc.constraint_region.primitives.size(); i++)
+        {
+            geometry_msgs::msg::PoseStamped pose_stamped;
+            pose_stamped.header.frame_id = pc.header.frame_id;
+            pose_stamped.pose = pc.constraint_region.primitive_poses[i];
+
+            visualizePrimitive(
+                pc.constraint_region.primitives[i],
+                pose_stamped,
+                std::vector<double>{0.26, 0.72, 0.25, 0.5},
+                "PATH_CONSTRAINTS",
+                marker_id_
+            );
+            marker_id_++;
+        }
+    }
+    rviz_visual_tools_->trigger();
 }
 
 moveit_msgs::msg::Constraints DynamicPlanner::getPathConstraints() const
@@ -675,6 +681,8 @@ moveit_msgs::msg::Constraints DynamicPlanner::getPathConstraints() const
 void DynamicPlanner::clearPathConstraints()
 {
     path_constraints_ = moveit_msgs::msg::Constraints();
+
+    rviz_visual_tools_->deleteAllMarkers("PATH_CONSTRAINTS");
 }
 
 bool DynamicPlanner::checkJointConstraints(const std::vector<double> &joint_positions)
@@ -695,7 +703,7 @@ bool DynamicPlanner::checkJointConstraints(const std::vector<double> &joint_posi
     path_constraints.position_constraints.clear();
     path_constraints.orientation_constraints.clear();
 
-    return planning_scene_->isStateConstrained(*robot_state, path_constraints) && robot_state->satisfiesBounds();
+    return getPlanningScene()->isStateConstrained(*robot_state, path_constraints) && robot_state->satisfiesBounds();
 }
 
 bool DynamicPlanner::checkPoseConstraints(const std::vector<double> &joint_positions)
@@ -716,7 +724,70 @@ bool DynamicPlanner::checkPoseConstraints(const std::vector<double> &joint_posit
     path_constraints.joint_constraints.clear();
     path_constraints.orientation_constraints.clear();
 
-    return planning_scene_->isStateConstrained(*robot_state, path_constraints);
+    return getPlanningScene()->isStateConstrained(*robot_state, path_constraints);
+}
+
+// ------------------------------------- COLLISION OBJECTS -------------------------------------
+
+void DynamicPlanner::processCollisionObject(const moveit_msgs::msg::CollisionObject &collision_object)
+{
+    collision_object_pub_->publish(collision_object);
+
+    //Visualize collision object
+    if (collision_object.operation == moveit_msgs::msg::CollisionObject::ADD)
+    {
+        for (size_t i {0}; i < collision_object.primitives.size(); i++)
+        {
+            geometry_msgs::msg::PoseStamped pose_stamped; 
+            pose_stamped.header.frame_id = collision_object.header.frame_id;
+            pose_stamped.pose = collision_object.primitive_poses[i];
+
+            visualizePrimitive(
+                collision_object.primitives[i],
+                pose_stamped,
+                std::vector<double>{0.92, 0.25, 0.2, 0.5},
+                "COLLISION_OBJECTS_" + collision_object.id,
+                marker_id_
+            );
+            marker_id_++;
+        }
+    }
+    else if (collision_object.operation == moveit_msgs::msg::CollisionObject::REMOVE)
+    {
+        rviz_visual_tools_->deleteAllMarkers("COLLISION_OBJECTS_" + collision_object.id);
+    }
+    rviz_visual_tools_->trigger();
+}
+
+void DynamicPlanner::processAttachedCollisionObject(const moveit_msgs::msg::AttachedCollisionObject &attached_collision_object)
+{
+    attached_collision_object_pub_->publish(attached_collision_object);
+
+    //Visualize attached collision object
+    if (attached_collision_object.object.operation == moveit_msgs::msg::CollisionObject::ADD)
+    {
+        for (size_t i {0}; i < attached_collision_object.object.primitives.size(); i++)
+        {
+            geometry_msgs::msg::PoseStamped pose_stamped;
+            pose_stamped.header.frame_id = attached_collision_object.link_name;
+            pose_stamped.pose = attached_collision_object.object.primitive_poses[i];
+
+            visualizePrimitive(
+                attached_collision_object.object.primitives[i],
+                pose_stamped,
+                std::vector<double>{0.47, 0.06, 0.41, 0.5},
+                "ATTACHED_OBJECTS_" + attached_collision_object.object.id,
+                marker_id_,
+                true //Move with the link frame
+            );
+            marker_id_++;
+        }
+    }
+    else if (attached_collision_object.object.operation == moveit_msgs::msg::CollisionObject::REMOVE)
+    {
+        rviz_visual_tools_->deleteAllMarkers("ATTACHED_OBJECTS_" + attached_collision_object.object.id);
+    }
+    rviz_visual_tools_->trigger();
 }
 
 // ------------------------------------- FORWARD KINEMATICS ------------------------------------
@@ -1005,7 +1076,7 @@ bool DynamicPlanner::checkTrajectory()
         trajectory_msgs::msg::JointTrajectoryPoint traj_pt = robot_trajectory_.joint_trajectory.points[i];
         robot_state.setJointGroupPositions(planning_group_, traj_pt.positions);
         //robot_state.update();
-        if (!planning_scene_->isStateColliding(robot_state)) {
+        if (!getPlanningScene()->isStateColliding(robot_state)) {
             RCLCPP_INFO(node_->get_logger(), "Obstacle detected at point %ld", i);
             return false;
         }
@@ -1078,7 +1149,7 @@ bool DynamicPlanner::checkTrajectoryConstraints(const moveit_msgs::msg::RobotTra
         robot_state.update();
 
         // Check if the trajectory is within the constraints
-        if (!planning_scene_->isStateConstrained(robot_state, constraints))
+        if (!getPlanningScene()->isStateConstrained(robot_state, constraints))
         {
             return false;
         }
@@ -1425,9 +1496,11 @@ geometry_msgs::msg::Pose DynamicPlanner::transformPoseToWorld(const geometry_msg
 // ------------------------------------- VISUALIZATION METHODS -------------------------------------
 
 void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &primitive, 
-                                        const geometry_msgs::msg::Pose &primitive_pose,
+                                        const geometry_msgs::msg::PoseStamped &primitive_pose,
                                         const std::vector<double> rgba_color,
-                                        const std::string &ns)
+                                        const std::string &ns,
+                                        const int &id,
+                                        const bool frame_locked)
 {
     /*
     Visualizes the primitive
@@ -1455,12 +1528,13 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
     //Iterate over each primitive and add publish the shape through rviz visual tools
 
     visualization_msgs::msg::Marker marker;
-    marker.header.frame_id = params_.world_frame;
-    marker.header.stamp = node_->now();
+    marker.header.frame_id = primitive_pose.header.frame_id;
+    marker.header.stamp = rclcpp::Time(0);
     marker.action = visualization_msgs::msg::Marker::ADD;
     marker.ns = ns;
-    marker.pose = primitive_pose;
+    marker.pose = primitive_pose.pose;
     marker.color = color;
+    marker.id = id;
 
     switch(primitive.type)
     {
@@ -1470,7 +1544,6 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
             marker.scale.x = primitive.dimensions[0];
             marker.scale.y = primitive.dimensions[1];
             marker.scale.z = primitive.dimensions[2];
-            marker.id = 10e6 + rviz_visual_tools_->getCuboidId();
             break;
         }
         case shape_msgs::msg::SolidPrimitive::SPHERE:
@@ -1479,7 +1552,6 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
             marker.scale.x = primitive.dimensions[0] * 2;
             marker.scale.y = primitive.dimensions[0] * 2;
             marker.scale.z = primitive.dimensions[0] * 2;
-            marker.id = 2 * 10e6 + rviz_visual_tools_->getSphereId();
             break;
         }
         case shape_msgs::msg::SolidPrimitive::CYLINDER:
@@ -1488,7 +1560,6 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
             marker.scale.x = primitive.dimensions[1] * 2;
             marker.scale.y = primitive.dimensions[1] * 2;
             marker.scale.z = primitive.dimensions[0];
-            marker.id = 3 * 10e6 + rviz_visual_tools_->getCylinderId();
             break;
         }
         case shape_msgs::msg::SolidPrimitive::CONE:
@@ -1503,7 +1574,14 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
         }
     }
 
-    rviz_visual_tools_->publishMarker(marker);    
+    if (frame_locked)
+    {
+        rviz_visual_tools_->enableFrameLocking(true);
+        rviz_visual_tools_->publishMarker(marker);
+        rviz_visual_tools_->enableFrameLocking(false);
+    } else {
+        rviz_visual_tools_->publishMarker(marker);
+    }
 }
 
 DynamicPlannerParams DynamicPlannerParams::fromNode(const rclcpp::Node::SharedPtr &node)

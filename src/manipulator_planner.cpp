@@ -539,29 +539,38 @@ void ManipulatorPlannerNode::jointGoal_callback(const manipulator_interfaces::ms
 
 void ManipulatorPlannerNode::collisionObject_callback(const moveit_msgs::msg::CollisionObject::SharedPtr collision_object) 
 {
-    // Add the collision object to the planning scene
-    RCLCPP_INFO(this->get_logger(), "Received collision object: %s, operation: %d", collision_object->id.c_str(), collision_object->operation);
-    moveit_msgs::msg::CollisionObject object = *collision_object.get();
-    object.header.frame_id = world_frame_; // Set the frame id to the world frame
+    RCLCPP_INFO(this->get_logger(), "Received collision object: %s", collision_object->id.c_str());
 
-    // dynamic_planner_->getPlanningScene()->applyCollisionObjects({object});
+    //Set defaults
+    if (collision_object->header.frame_id == "")
+    {
+        collision_object->header.frame_id = world_frame_;
+    }
+
+    dynamic_planner_->processCollisionObject(*collision_object);
 }
 
 void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs::msg::AttachedCollisionObject::SharedPtr collision_object) 
 {
-    // Add the collision object to the planning scene and attach it to a link
-    // If link_name is empty, the 'ee_name' parameter is used
-    RCLCPP_INFO(this->get_logger(), "Received attached collision object: %s, operation: %d", collision_object->object.id.c_str(), collision_object->object.operation);
-    std::string link_name = collision_object->link_name.empty() ? ee_name_ : collision_object->link_name;
+    RCLCPP_INFO(this->get_logger(), "Received attached collision object: %s", collision_object->object.id.c_str());
 
-    RCLCPP_INFO(get_logger(), "Attaching object to link: %s", link_name.c_str());
-    
-    collision_object->object.header.frame_id = link_name;
-    collision_object->link_name = link_name; // Set the link name to the one specified in the message or the end effector name
+    //Set defaults
+    if (collision_object->link_name == "")
+    {
+        collision_object->link_name = ee_name_;
+    }
+    if (collision_object->object.header.frame_id == "")
+    {
+        collision_object->object.header.frame_id = ee_name_;
+    }
 
-    collision_object->touch_links = gripper_links_; // Set the touch links to the gripper links
+    // Gripper links are always in touch with the object, this will ignore collisions between them
+    for (const std::string& link_name : gripper_links_)
+    {
+        collision_object->touch_links.push_back(link_name);
+    }
 
-    // dynamic_planner_->getPlanningScene()->applyAttachedCollisionObject(*collision_object);
+    dynamic_planner_->processAttachedCollisionObject(*collision_object);
 }
 
 // Callback function for goals in the 3D cartesian space for the robot TCP

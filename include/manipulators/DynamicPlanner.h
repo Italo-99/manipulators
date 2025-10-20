@@ -23,7 +23,7 @@
 #include <moveit/move_group/capability_names.h>
 #include <moveit/common_planning_interface_objects/common_objects.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
-#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/planning_scene_monitor/planning_scene_monitor.hpp>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 #include <manipulator_interfaces/msg/trajectory_result.hpp> 
 #include <moveit_msgs/msg/robot_trajectory.hpp>
@@ -144,8 +144,7 @@ class DynamicPlanner
         void setPlanningSpace(PlanningSpace space); //Set the planning space (joint or operative)
         PlanningSpace getPlanningSpace() const; //Get the current planning space
                 
-        std::shared_ptr<planning_scene::PlanningScene> getPlanningScene() const; //Get the PlanningSceneInterface
-        std::shared_ptr<moveit_visual_tools::MoveItVisualTools> getVisualTools() const; //Get the MoveItVisualTools
+        const planning_scene_monitor::LockedPlanningSceneRO getPlanningScene() const; //Get the current planning scen as a read-only lock object
 
         void setRobotState(moveit::core::RobotStatePtr& robot_state); //Set the state of the robot (subsequent planning will start from this state)
         moveit::core::RobotStatePtr getRobotState() const; //Get the current state of the robot
@@ -159,6 +158,10 @@ class DynamicPlanner
 
         bool checkJointConstraints(const std::vector<double>& joint_positions); //Check if the joint positions respect the constraints
         bool checkPoseConstraints(const std::vector<double> &joint_positions); //Check if the pose respects the constraints
+        
+        // --------------- COLLISION OBJECTS ----------------
+        void processCollisionObject(const moveit_msgs::msg::CollisionObject& collision_object); //Add a collision object to the planning scene
+        void processAttachedCollisionObject(const moveit_msgs::msg::AttachedCollisionObject& collision_object); //Add an attached collision object to the planning scene
 
         // --------------- FORWARD KINEMATICS ----------------
         /* \: computes forward kinematics
@@ -256,10 +259,13 @@ class DynamicPlanner
         // --------------- VISUALIZATION ----------------
         //Visualize a primitive
         void visualizePrimitive(const shape_msgs::msg::SolidPrimitive &primitive, 
-                                const geometry_msgs::msg::Pose &pose, 
+                                const geometry_msgs::msg::PoseStamped &pose, 
                                 const std::vector<double> rgba_color = {0.0, 0.0, 0.0, 0.1},
-                                const std::string &ns = "rviz"); 
+                                const std::string &ns = "rviz",
+                                const int &id = 0,
+                                const bool frame_locked = false);
 
+        // --------------- PRIVATE VARIABLES ----------------
         //ROS Node
         //NOTE: It's critical for this node to be always spinning!
         rclcpp::Node::SharedPtr node_;
@@ -270,9 +276,8 @@ class DynamicPlanner
         PlanningSpace planning_space_ = JOINTS_SPACE;   //When recalculating trajectories, the space in which the planning is done
 
         //MoveIt2 interfaces
-        std::shared_ptr<planning_scene::PlanningScene> planning_scene_;              //this holds all the information about the world
-        std::shared_ptr<moveit_visual_tools::MoveItVisualTools> moveit_visual_tools_;
         rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;
+        planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor_; //Planning scene monitor
 
         //Dynamic planner variables
         std::string planning_group_;
@@ -301,6 +306,8 @@ class DynamicPlanner
         //Publishers
         rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_cmd_pub_;                    //Joint state publisher for the fake controller
         rclcpp::Publisher<manipulator_interfaces::msg::TrajectoryResult>::SharedPtr trajectory_pub_;    //Trajectory result publisher see manipulator_interfaces/TrajectoryResult
+        rclcpp::Publisher<moveit_msgs::msg::CollisionObject>::SharedPtr collision_object_pub_; //Collision object publisher for planning scene
+        rclcpp::Publisher<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr attached_collision_object_pub_; //Attached collision object publisher for planning scene
         
         //Subscribers
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joints_state_sub_;        //Subscriber for updating the joint states
@@ -318,6 +325,10 @@ class DynamicPlanner
 
         //Timers
         rclcpp::TimerBase::SharedPtr traj_timer_; //Timer to execute trajectory points
+        
+        //Visualization
+        size_t marker_id_ = 0; //ID for the next marker to be published
 };
 
 #endif //DYNAMIC_PLANNER_H
+
