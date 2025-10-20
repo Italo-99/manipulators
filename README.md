@@ -33,15 +33,15 @@ Inside the src folder of your workspace:
 
     git clone https://github.com/Italo-99/manipulators.git -b ros2-humble
     git clone https://github.com/Italo-99/motors_trajectory.git -b ros2-devel
-    git clone https://github.com/UniversalRobots/Universal_Robots_ROS2_Description.git -b humble ur_description
     git clone https://github.com/Projectredunimore/manipulator_interfaces.git
 
-Download the ur drivers repository to wherever you want on your system, then only the ur_moveit_config package will be needed:
+Download the custom ur packages:
 
-    git clone https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver -b humble
-    mv Universal_Robots_ROS2_Driver/ur_moveit_config <WORKSPACE_PATH>/src/ur_moveit_config
+    git clone https://github.com/M4tt3/Universal_Robots_ROS2_Driver.git
+    cd Universal_Robots_ROS2_Driver
+    git submodule init && git submodule update
 
-Do the same with this package and use only the robotiq_85_description package:
+Clone the drivers for the robotiq85 gripper and move only the description package in the src directory:
 
     git clone https://github.com/PickNikRobotics/robotiq_85_gripper.git
     mv robotiq_85_gripper/robotiq_85_description <WORKSPACE_PATH>/src/robotiq_85_description
@@ -53,68 +53,8 @@ Install the realsense package:
 Install additional dependencies:
 
     sudo apt install ros-humble-rviz-visual-tools
-    sudo apt install ros-humble-moveit-visual-tools
     sudo apt install ros-humble-xacro
-
-### 4. Fix known issues
-
-1) The URDF files in the ur_description package have some links that are rotated 180 degrees which will make the manipulator work in unexpected ways, to fix this issues go to `ur_description/urdf/ur_macro.xacro` and make the following changes:
-
-    At lines 153, 159, 343:
-
-    ```diff
-    - <origin xyz="0 0 0" rpy="0 0 ${pi}"/>
-
-    + <origin xyz="0 0 0" rpy="0 0 0"/>
-    ```
-
-2) The default values for the RRTConnect planner are not optimized and make the manipulator move in very strange paths, to fix the issue go to `ur_moveit_config/config/ompl_planning.yaml` and make the following changes:
-
-    At line 33:
-
-    ```diff
-    - range: 0.0
-
-    + range: 0.1
-    + max_num_iterations: 1000
-    + goal_bias: 0.05
-    ```
-
-3) Further optimization for planning can be done by using a different kinematic solver and changing joint limits:
-
-    In `ur_moveit_config/config/kinematics.yaml`:
-
-    ```yaml
-    /**:
-      ros__parameters:
-        robot_description_kinematics:
-          ur_manipulator:
-            kinematics_solver: pick_ik/PickIkPlugin
-            kinematics_solver_timeout: 0.05
-            kinematics_solver_attempts: 3
-            mode: global
-            position_scale: 1.0
-            rotation_scale: 0.5
-            position_threshold: 0.001
-            orientation_threshold: 0.01
-            cost_threshold: 0.001
-            minimal_displacement_weight: 0.0
-            gd_step_size: 0.0001
-    ```
-
-    In `ur_moveit_config/config/joint_limits.yaml` add the following limits to each joint:
-
-    ```yaml
-    min_position: -3.14
-    max_position: 3.14
-    ```
-
-    Then intall pick_ik solver via apt:
-
-        sudo apt install ros-humble-pick-ik
-
-    More information can be found at [Pick ik kinematics solver](https://moveit.picknik.ai/main/doc/how_to_guides/pick_ik/pick_ik_tutorial.html)
-
+    
 ## Install Coppelia
 
 1. Download coppelia [here](https://www.coppeliarobotics.com/)
@@ -290,8 +230,28 @@ The real control driver parameters for each ur type can be found in `config/driv
 
 ## Planner
 
-To implement the planner on a custom robot creating a custom launch file is advised, most of the setup will remain the same, what changes is mostly how different files (such as rdf descriptions and moveit configurations) will be retrieved, so you can create a function similar to `get_ur_moveit_params` from `manipulators/launch_utils.py` and maintain the rest of the launch file mostly unchanged.
+To implement the planner on a custom robot you can create the **urdf** model and **srdf** models respectively in the models/urdf and models/srdf folders, then create the **yaml file** for the manipulator_planner parameters.
 
+The convention is that all the files should have the same name except for the file extension which should be `.urdf.xacro`, `.srdf.xacro` and `.yaml`.
+
+Also if you don't want to specify the `ur_type` launch argument the filename should be like this: `<ur_type>_custom_robot`.
+
+Once all these files are created you should have a file structure such as this:
+
+```
+manipulator_planner/
+├─ config/
+│  ├─ ur5e_custom_robot.yaml
+│  └─ ...
+├─ models/
+│  ├─ urdf/
+│  │  ├─ ur5e_custom_robot.urdf.xacro
+│  │  └─ ...
+│  └─ srdf/
+│     ├─ ur5e_custom_robot.srdf.xacro
+│     └─ ...
+...
+```
 ## Menu
 
 ### Implementation with inheritance
