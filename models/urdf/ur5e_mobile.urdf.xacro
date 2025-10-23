@@ -56,7 +56,6 @@
         <joint name="tool0-d435i_base_link" type="fixed">
             <parent link="tool0"/>
             <child link="d435i_base_link"/>
-            <!-- <origin xyz="0 -0.0775 0.024" rpy="0 -1.57 1.57"/> -->
             <origin xyz="0.08 0 -0.04" rpy="0 -1.57 3.14"/>
         </joint>
 
@@ -118,7 +117,6 @@
         <joint name="world_floor" type="fixed">
             <parent link="base_link"/>
             <child link="floor"/>
-            <!-- <origin xyz="0 0 -0.005" rpy="0 0 0"/> -->
             <origin xyz="0 0 0" rpy="0 0 0"/>
         </joint>
     </xacro:if>
@@ -129,7 +127,7 @@
             <visual>
                 <origin xyz="0 0 0" rpy="0 0 0"/>
                 <geometry>
-                    <box size="0.130 0.170 $(arg tcp_offset)"/>  <!-- 0.130 0.170 0.160 or 0.270 0.180 $(arg tcp_offset)-->
+                    <box size="0.130 0.170 $(arg tcp_offset)"/>
                 </geometry>
                 <material name="">
                     <color rgba="0.8 0.1 0.1 0.4"/>
@@ -138,7 +136,7 @@
             <collision>
                 <origin xyz="0 0 0" rpy="0 0 0"/>
                 <geometry>
-                    <box size="0.130 0.170 $(arg tcp_offset)"/>  <!-- 0.130 0.170 0.160 or 0.270 0.180 $(arg tcp_offset) -->
+                    <box size="0.130 0.170 $(arg tcp_offset)"/>
                 </geometry>
             </collision>
         </link>
@@ -146,7 +144,7 @@
         <joint name="tool0-ee_collision_box" type="fixed">
             <parent link="tool0"/>
             <child link="ee_collision_box"/>
-            <origin xyz="0 0.0 0.080 " rpy="0 0 0"/> <!-- 0 0.0 0.080  0.05 0.0 0.040 -->
+            <origin xyz="0 0.0 0.080 " rpy="0 0 0"/>
         </joint>
 
         <link name="tcp_gripper" />
