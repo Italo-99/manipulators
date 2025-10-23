@@ -46,6 +46,7 @@
 #include "manipulator_interfaces/srv/change_planner_tolerances.hpp"
 #include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
 #include "manipulator_interfaces/srv/enable_real_time_constraints.hpp"
+#include "manipulator_interfaces/srv/roboti_q_gripper_control.hpp"
 
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
@@ -648,6 +649,20 @@ class ManipulatorMenu
             @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
         */
         void setJsRealTimeControl(bool);
+
+        /*!
+            @brief Set the admittance control parameter in the manipulator planner.
+            @param enable: If true, the admittance control will be enabled.
+            @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
+        */
+        void setAdmittanceControl(bool);
+
+        /*!
+            @brief Set the admittance control parameter in the manipulator planner.
+            @param enable: If true, the admittance control will be enabled.
+            @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
+        */
+        void setAdmittanceVelMode(bool);
         
         /*!
             @brief Set the planner velocity and acceleration factors.
@@ -738,8 +753,12 @@ class ManipulatorMenu
         void userSetPlannerScalingFactors(void);    // Set the planner velocity and acceleration factors
         void userSetPlannerTolerances(void);        // Set the planner tolerances
         void userSetRealTimeConstraints(void);      // Enable/disable real time constraints
-        void userSetJacobianSpeedControl(void);     // Set the jacobian speed control
-        void userSetRealTimeControl(void);          // Set the real time control of the joints
+        void userSetJacobianSpeedControl(void);     // Enable/disable the jacobian speed control
+        void userSetRealTimeControl(void);          // Enable/disable the real time control of the joints
+        
+        // Admittance control
+        void userSetAdmittanceControl(void);            // Enable/disable admittance control
+        void userSetAdmittanceControlMode(void);        // Switch between admittance control modes
 
         // Gripper
         void userGripperMove(void);                 // Move the gripper
@@ -790,6 +809,10 @@ class ManipulatorMenu
         rclcpp::Client<manipulator_interfaces::srv::EnableRealTimeConstraints>::SharedPtr enableRealTimeConstraints_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControl_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setRealTimeControl_client_;
+
+        //Admittance control
+        rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setAdmittanceControl_client_;
+        rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setAdmittanceVelMode_client_;
         
         //Gripper clients for robotiq85 gripper
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripperGrab_client_; //Not implemented for now

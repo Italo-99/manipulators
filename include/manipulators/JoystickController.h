@@ -59,6 +59,8 @@ class JoystickController : public ManipulatorMenu
 
         rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velJacSetpoint_pub_;        //Publish end effector velocity commands to manipulator
         rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr velJsRtSetpoint_pub_;    //Publish joint velocity commands to manipulator
+        
+        rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velAdmSetpoint_pub_;        //Publish velocity commands to admittance controller
 
         sensor_msgs::msg::JointState js_cmd_vel_;
         geometry_msgs::msg::Twist arm_cmd_vel_;
@@ -66,7 +68,7 @@ class JoystickController : public ManipulatorMenu
         double vel_step_, rot_step_, js_step_;
         std::string joy_topic_;
 
-        bool jacobian_control_, real_time_control_;
+        bool jacobian_control_, real_time_control_, admittance_control_;
 
         rclcpp::TimerBase::SharedPtr cmd_pub_timer_;
 };

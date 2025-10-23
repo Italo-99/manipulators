@@ -6,6 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /RobotModel1/Description Topic1
+        - /TF1/Frames1
+        - /TF1/Tree1
       Splitter Ratio: 0.5
     Tree Height: 805
   - Class: rviz_common/Selection
@@ -73,6 +75,19 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        d435i_base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        ee_cam_bottom_screw_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        ee_cam_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         ee_collision_box:
           Alpha: 1
           Show Axes: false
@@ -82,6 +97,11 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+        floor:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         forearm_link:
           Alpha: 1
           Show Axes: false
@@ -159,6 +179,19 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        d435i_base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        ee_cam_bottom_screw_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        ee_cam_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         ee_collision_box:
           Alpha: 1
           Show Axes: false
@@ -168,6 +201,11 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+        floor:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         forearm_link:
           Alpha: 1
           Show Axes: false
@@ -261,6 +299,19 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
+          d435i_base_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          ee_cam_bottom_screw_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          ee_cam_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
           ee_collision_box:
             Alpha: 1
             Show Axes: false
@@ -270,6 +321,11 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
+          floor:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
           forearm_link:
             Alpha: 1
             Show Axes: false
@@ -343,18 +399,34 @@ Visualization Manager:
           Value: false
         base_link_inertia:
           Value: false
+        camera_color_frame:
+          Value: false
+        camera_color_optical_frame:
+          Value: false
+        camera_depth_frame:
+          Value: false
+        camera_depth_optical_frame:
+          Value: false
+        camera_link:
+          Value: false
+        d435i_base_link:
+          Value: false
+        ee_cam_bottom_screw_frame:
+          Value: false
+        ee_cam_link:
+          Value: false
         ee_collision_box:
           Value: false
         flange:
           Value: false
+        floor:
+          Value: true
         forearm_link:
           Value: false
         ft_frame:
           Value: false
-        map:
-          Value: true
-        mobile_base:
-          Value: true
+        odom:
+          Value: false
         shoulder_link:
           Value: false
         tcp_gripper:
@@ -375,29 +447,35 @@ Visualization Manager:
       Name: TF
       Show Arrows: false
       Show Axes: true
-      Show Names: true
+      Show Names: false
       Tree:
-        map:
-          mobile_base:
-            world_ur:
-              base_link:
-                base:
-                  {}
-                base_link_inertia:
-                  shoulder_link:
-                    upper_arm_link:
-                      forearm_link:
-                        wrist_1_link:
-                          wrist_2_link:
-                            wrist_3_link:
-                              flange:
-                                tool0:
-                                  ee_collision_box:
+        odom:
+          {}
+        world_ur:
+          base_link:
+            base:
+              {}
+            base_link_inertia:
+              shoulder_link:
+                upper_arm_link:
+                  forearm_link:
+                    wrist_1_link:
+                      wrist_2_link:
+                        wrist_3_link:
+                          flange:
+                            tool0:
+                              d435i_base_link:
+                                ee_cam_bottom_screw_frame:
+                                  ee_cam_link:
                                     {}
-                                  tcp_gripper:
-                                    {}
-                              ft_frame:
+                              ee_collision_box:
                                 {}
+                              tcp_gripper:
+                                {}
+                          ft_frame:
+                            {}
+            floor:
+              {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -423,7 +501,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: world_ur
+    Fixed Frame: base_link
     Frame Rate: 30
   Name: root
   Tools:
@@ -466,25 +544,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 2.0659091472625732
+      Distance: 1.4410899877548218
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.16886311769485474
-        Y: 0.15598691999912262
-        Z: 0.23553363978862762
+        X: 0.1767381727695465
+        Y: 0.06094744801521301
+        Z: 0.20048725605010986
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.525398313999176
+      Pitch: 0.39539843797683716
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.233560562133789
+      Yaw: 6.163560390472412
     Saved: ~
 Window Geometry:
   Displays:
