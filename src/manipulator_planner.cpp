@@ -27,7 +27,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     ee_vel_cmd_.resize(6, 1);
     ee_vel_cmd_.setZero();
 
-    auto cb_group = this->create_callback_group(
+    services_cb_group_ = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive
     );
 
@@ -39,7 +39,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->getFKine_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        cb_group
+        services_cb_group_
     );
 
     invkine_service_ = this->create_service<manipulator_interfaces::srv::InvKine>(
@@ -49,7 +49,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->getInvKine_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        cb_group
+        services_cb_group_
     );
 
     jacobian_service_ = this->create_service<manipulator_interfaces::srv::Jacobian>(
@@ -59,7 +59,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->getJacobian_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        cb_group
+        services_cb_group_
     );
 
     pseudoInverse_service_ = this->create_service<manipulator_interfaces::srv::PseudoInverse>(
@@ -69,7 +69,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->getPseudoInverseJacobian_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        cb_group
+        services_cb_group_
     );
 
     changePlannerScalingFactors_service_ = this->create_service<manipulator_interfaces::srv::ChangePlannerScalingFactors>(
@@ -79,7 +79,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->changePlannerScalingFactors_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        cb_group
+        services_cb_group_
     );
 
     changePlannerTolerances_service_ = this->create_service<manipulator_interfaces::srv::ChangePlannerTolerances>(
@@ -89,7 +89,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->changePlannerTolerances_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        cb_group
+        services_cb_group_
     );
 
     realTimeConstraintsSetter_service_ = this->create_service<manipulator_interfaces::srv::EnableRealTimeConstraints>(
@@ -99,7 +99,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->realTimeConstraintsSetter_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        cb_group
+        services_cb_group_
     );
 
     jointsRealTimeSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
@@ -109,7 +109,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->jointsRealTimeSetter_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        cb_group
+        services_cb_group_
     );
 
     jacobianControlSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
@@ -119,13 +119,14 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->jacobianControlSetter_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        cb_group
+        services_cb_group_
     );
 
     rclcpp::SubscriptionOptions sub_options;
-    sub_options.callback_group = this->create_callback_group(
+    subscribers_cb_group_ = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive
     );
+    sub_options.callback_group = subscribers_cb_group_;
 
     // Initialize subscribers
     tcpGoal_sub_ = this->create_subscription<manipulator_interfaces::msg::TcpGoal>(
@@ -253,7 +254,7 @@ void ManipulatorPlannerNode::spinner() {
 
     rclcpp::Clock steady_clock(RCL_STEADY_TIME);
 
-    auto main_cb_group = this->create_callback_group(
+    timers_cb_group_ = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive
     );
 
@@ -292,11 +293,7 @@ void ManipulatorPlannerNode::spinner() {
 
             rate.sleep();
         },
-        main_cb_group
-    );
-
-    auto tcp_pose_cb_group = this->create_callback_group(
-        rclcpp::CallbackGroupType::MutuallyExclusive
+        timers_cb_group_
     );
     
     tcpPose_timer_ = this->create_wall_timer(
@@ -305,11 +302,7 @@ void ManipulatorPlannerNode::spinner() {
             // Publish tcp pose
             tcpPose_pub_->publish(getFKine());
         },
-        tcp_pose_cb_group
-    );
-
-    auto tcp_vel_cb_group = this->create_callback_group(
-        rclcpp::CallbackGroupType::MutuallyExclusive
+        timers_cb_group_ 
     );
 
     tcpVel_timer_ = this->create_wall_timer(
@@ -318,7 +311,7 @@ void ManipulatorPlannerNode::spinner() {
             // Publish tcp vel
             tcpVel_pub_->publish(getTcpVel());
         },
-        tcp_vel_cb_group
+        timers_cb_group_
     );
 
     executor_.add_node(this->shared_from_this()); //Add the dynamic planner node to the executor

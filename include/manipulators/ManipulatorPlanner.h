@@ -245,6 +245,10 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::TimerBase::SharedPtr mainloop_timer_;           //Timer for the main loop
         rclcpp::TimerBase::SharedPtr tcpPose_timer_;            //Timer for publishing tcp pose
         rclcpp::TimerBase::SharedPtr tcpVel_timer_;             //Timer for publishing tcp velocity
+        
+        std::shared_ptr<rclcpp::CallbackGroup> services_cb_group_;       // Callback group for services
+        std::shared_ptr<rclcpp::CallbackGroup> subscribers_cb_group_;    // Callback group for subscribers
+        std::shared_ptr<rclcpp::CallbackGroup> timers_cb_group_;         // Callback group for timers
 
         //Real time control variables
         bool   jac_control_ = false;            // True if the speed control through inverse Jacobian has been enabled

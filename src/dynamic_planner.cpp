@@ -89,7 +89,7 @@ void DynamicPlanner::initialize()
 
     RCLCPP_INFO(node_->get_logger(), "Node namespace: %s", ns.c_str());
 
-    auto cb_group = node_->create_callback_group(
+    cb_group_ = node_->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive
     );
 
@@ -98,7 +98,7 @@ void DynamicPlanner::initialize()
     trajectory_pub_ = node_->create_publisher<manipulator_interfaces::msg::TrajectoryResult>(planning_group_ + "/planned_trajectory", 1);
     
     auto sub_options = rclcpp::SubscriptionOptions();
-    sub_options.callback_group = cb_group;
+    sub_options.callback_group = cb_group_;
 
     collision_object_pub_ = node_->create_publisher<moveit_msgs::msg::CollisionObject>(
         "collision_object", 1
@@ -138,7 +138,7 @@ void DynamicPlanner::initialize()
         [this]() {
             this->trajectoryExecution_callback();
         },
-        cb_group
+        cb_group_
     );
 
     //Action clients

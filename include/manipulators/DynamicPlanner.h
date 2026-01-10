@@ -326,6 +326,9 @@ class DynamicPlanner
         //Timers
         rclcpp::TimerBase::SharedPtr traj_timer_; //Timer to execute trajectory points
         
+        //Callback group
+        rclcpp::CallbackGroup::SharedPtr cb_group_;
+        
         //Visualization
         size_t marker_id_ = 0; //ID for the next marker to be published
 };
