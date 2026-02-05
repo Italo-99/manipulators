@@ -27,9 +27,9 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     ee_vel_cmd_.resize(6, 1);
     ee_vel_cmd_.setZero();
 
-    services_cb_group_ = this->create_callback_group(
-        rclcpp::CallbackGroupType::MutuallyExclusive
-    );
+    // services_cb_group_ = this->create_callback_group(
+    //     rclcpp::CallbackGroupType::MutuallyExclusive
+    // );
 
     // Initialize service servers
     fkine_service_ = this->create_service<manipulator_interfaces::srv::FKine>(
@@ -39,7 +39,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->getFKine_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        services_cb_group_
+        main_cb_group_
     );
 
     invkine_service_ = this->create_service<manipulator_interfaces::srv::InvKine>(
@@ -49,7 +49,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->getInvKine_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        services_cb_group_
+        main_cb_group_
     );
 
     jacobian_service_ = this->create_service<manipulator_interfaces::srv::Jacobian>(
@@ -59,7 +59,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->getJacobian_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        services_cb_group_
+        main_cb_group_
     );
 
     pseudoInverse_service_ = this->create_service<manipulator_interfaces::srv::PseudoInverse>(
@@ -69,7 +69,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->getPseudoInverseJacobian_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        services_cb_group_
+        main_cb_group_
     );
 
     changePlannerScalingFactors_service_ = this->create_service<manipulator_interfaces::srv::ChangePlannerScalingFactors>(
@@ -79,7 +79,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->changePlannerScalingFactors_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        services_cb_group_
+        main_cb_group_
     );
 
     changePlannerTolerances_service_ = this->create_service<manipulator_interfaces::srv::ChangePlannerTolerances>(
@@ -89,7 +89,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->changePlannerTolerances_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        services_cb_group_
+        main_cb_group_
     );
 
     realTimeConstraintsSetter_service_ = this->create_service<manipulator_interfaces::srv::EnableRealTimeConstraints>(
@@ -99,7 +99,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->realTimeConstraintsSetter_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        services_cb_group_
+        main_cb_group_
     );
 
     jointsRealTimeSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
@@ -109,7 +109,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->jointsRealTimeSetter_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        services_cb_group_
+        main_cb_group_
     );
 
     jacobianControlSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
@@ -119,7 +119,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             this->jacobianControlSetter_callback(request, response);
         },
         rmw_qos_profile_services_default,
-        services_cb_group_
+        main_cb_group_
     );
 
     rclcpp::SubscriptionOptions sub_options;
@@ -216,7 +216,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
             dynamic_planner_->clearPathConstraints();
             constraints_poses_.clear();
             constraints_primitives_.clear();
-            // dynamic_planner_->clearJointConstraints(); TODO
+            // dynamic_planner_->clearJointConstraints();
         },
         sub_options
     );
@@ -254,7 +254,7 @@ void ManipulatorPlannerNode::spinner() {
 
     rclcpp::Clock steady_clock(RCL_STEADY_TIME);
 
-    timers_cb_group_ = this->create_callback_group(
+    main_cb_group_ = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive
     );
 
@@ -265,6 +265,12 @@ void ManipulatorPlannerNode::spinner() {
                 RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 20000, "Spinner mean time is too high: %f s", spinner_mean_);
             }
 
+            if (dynamic_planner_->isReady() == false) {
+                return;
+            }
+
+            jacobian_var_ = getJacobian(); // Assign jacobian
+
             if (jac_control_) {
 
                 // This is the main loop for the node
@@ -272,7 +278,7 @@ void ManipulatorPlannerNode::spinner() {
 
                 // Jacobian control
                 jacobianControl();    
-            
+
                 // Calculate the mean time for each iteration of the spinner
                 double elapsed_time = (steady_clock.now() - start_time).seconds();
                 spinner_mean_ = (spinner_mean_ * static_cast<double>(num_samples) + elapsed_time) / static_cast<double>(num_samples + 1);
@@ -284,34 +290,19 @@ void ManipulatorPlannerNode::spinner() {
 
                 // Real-time joint speed control
                 jointsRealTimeControl();
-            
+
                 // Calculate the mean time for each iteration of the spinner
                 double elapsed_time = (steady_clock.now() - start_time).seconds();
                 spinner_mean_ = (spinner_mean_ * static_cast<double>(num_samples) + elapsed_time) / static_cast<double>(num_samples + 1);
                 num_samples++;
             }
 
+            tcpPose_pub_->publish(getFKine());
+            tcpVel_pub_->publish(getTcpVel());
+
             rate.sleep();
         },
-        timers_cb_group_
-    );
-    
-    tcpPose_timer_ = this->create_wall_timer(
-        std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
-        [&, this]() {
-            // Publish tcp pose
-            tcpPose_pub_->publish(getFKine());
-        },
-        timers_cb_group_ 
-    );
-
-    tcpVel_timer_ = this->create_wall_timer(
-        std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
-        [&, this]() {
-            // Publish tcp vel
-            tcpVel_pub_->publish(getTcpVel());
-        },
-        timers_cb_group_
+        main_cb_group_
     );
 
     executor_.add_node(this->shared_from_this()); //Add the dynamic planner node to the executor
@@ -337,13 +328,14 @@ const geometry_msgs::msg::Twist ManipulatorPlannerNode::getTcpVel()
 {
     // Initialize dq with the appropriate size and assign values
     Eigen::VectorXd dq(NUM_JOINTS);
+    std::vector<double> current_joint_speeds = dynamic_planner_->getJointSpeeds();
+
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
-        dq(k) = dynamic_planner_->joints_speed_group_[k];
+        dq(k) = current_joint_speeds[k];
     }
 
     // Compute the end-effector twist (linear and angular velocities) using the Jacobian
-    jacobian_var_ = getJacobian();
     Eigen::VectorXd twist = jacobian_var_ * dq;
 
     // Create a Twist message to hold the result
@@ -766,9 +758,10 @@ void ManipulatorPlannerNode::jacobianControl()
     
     // Convert joints state into Eigen::VectorXd
     Eigen::VectorXd q(NUM_JOINTS);
+    std::vector<double> current_joint_values = dynamic_planner_->getJointValues();
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
-        q(k) = dynamic_planner_->joints_values_group_[k];
+        q(k) = current_joint_values[k];
     }
 
     // Update joint position setpoint
@@ -822,7 +815,7 @@ void ManipulatorPlannerNode::jacobianControl()
 
 
     if (!jac_check || !pos_constraints_check || !joint_constraints_check) {
-        js.position = dynamic_planner_->joints_values_group_; // Set the position to the current one
+        js.position = dynamic_planner_->getJointValues(); // Set the position to the current one
         js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
     }
     
@@ -897,9 +890,11 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
 
     // Convert joints state into Eigen::MatrixXd
     Eigen::VectorXd q(NUM_JOINTS);
+
+    std::vector<double> current_joint_values = dynamic_planner_->getJointValues();
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
-        q[k] = dynamic_planner_->joints_values_group_[k];
+        q[k] = current_joint_values[k];
     }
         
     // Set a lower limit to joint velocities to avoid noises
@@ -926,7 +921,7 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
         // If the joint control is limited, check if the joint constraints are violated
         if (!dynamic_planner_->checkJointConstraints(js.position)) {
             RCLCPP_WARN(get_logger(), "Joint constraints violated, stopping the robot");
-            js.position = dynamic_planner_->joints_values_group_; // Set the position to the current one
+            js.position = dynamic_planner_->getJointValues(); // Set the position to the current one
             js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
         }
     }
@@ -977,8 +972,7 @@ void ManipulatorPlannerNode::initializePlanner() {
     //Initialize the dynamic planner
     dynamic_planner_ = std::make_shared<DynamicPlanner>(
         shared_from_this(),
-        planning_group_,
-        false);
+        planning_group_);
 }
 
 bool ManipulatorPlannerNode::isPoseInsidePrimitive(

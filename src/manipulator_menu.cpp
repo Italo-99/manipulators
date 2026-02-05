@@ -2760,8 +2760,12 @@ ManipulatorMenuParams::ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node
     node->get_parameter("tcp_position_tolerance", tcp_position_tolerance);
     node->get_parameter("tcp_orientation_tolerance", tcp_orientation_tolerance);
     node->get_parameter("joint_tolerance", joint_tolerance);
-    node->get_parameter("known_poses_path", known_poses_path);
     node->get_parameter("gripper", gripper);
     node->get_parameter("gripper_group", gripper_group);
     node->get_parameter("gripper_IO_cmds", gripper_IO_cmds);
+
+    std::string known_poses_path_rel;
+    std::string share_dir = ament_index_cpp::get_package_share_directory("manipulators");
+    node->get_parameter("known_poses_path", known_poses_path_rel);
+    known_poses_path = share_dir + "/" + known_poses_path_rel;
 }

@@ -1,10 +1,8 @@
 #include <manipulators/DynamicPlanner.h>
 
 DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
-                               const std::string &planning_group,
-                               bool dynamic_behavior)
+                               const std::string &planning_group)
     : node_(node),
-      dynamic_behavior_(dynamic_behavior),
       planning_group_(planning_group),
       trajpoint_(0UL)
 {
@@ -13,7 +11,6 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
     params_ = DynamicPlannerParams::fromNode(node_);
 
     RCLCPP_INFO(node_->get_logger(), "Planning group: %s", planning_group_.c_str());
-    RCLCPP_INFO(node_->get_logger(), "Dynamic behavior: %s", dynamic_behavior_ ? "true" : "false");
     RCLCPP_INFO(node_->get_logger(), "Velocity factor: %f", params_.vel_factor);
     RCLCPP_INFO(node_->get_logger(), "Acceleration factor: %f", params_.acc_factor);
     RCLCPP_INFO(node_->get_logger(), "Position tolerance: %f", params_.position_tolerance);
@@ -59,7 +56,7 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
     rviz_visual_tools_.reset(new rviz_visual_tools::RvizVisualTools(params_.world_frame, "moveit_visual_markers", node_));
 
     //Initialize time optimal trajectory generation
-    time_optimal_traj_gen = std::make_shared<trajectory_processing::TimeOptimalTrajectoryGeneration>(
+    time_optimal_traj_gen_ = std::make_shared<trajectory_processing::TimeOptimalTrajectoryGeneration>(
         totg_tolerance,
         params_.sample_time,
         totg_min_angle_change
@@ -68,7 +65,6 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-    updatePlannerParams();
     initialize();
 
     RCLCPP_INFO(node_->get_logger(), "DynamicPlanner initialized");
@@ -166,6 +162,8 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions, const movei
         joint_positions: Array of target joint positions
         start_state: Robot state to start the planning from
     */
+
+    stop(); // Stop any ongoing trajectory execution
 
     //Sets the target joint positions
     
@@ -308,6 +306,8 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
             space: Planning space (joint or operative)
     */
 
+    stop(); // Stop any ongoing trajectory execution
+
     // PRE PLANNING CHECK
     // 1. goal_pose is not too close to the current position
 
@@ -435,6 +435,8 @@ void DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& 
             fraction: Fraction of the trajectory that was planned
     */
 
+    stop(); // Stop any ongoing trajectory execution
+    
     manipulator_interfaces::msg::TrajectoryResult result_msg;
     
     //Create the motion sequence request
@@ -560,6 +562,11 @@ void DynamicPlanner::moveRobot(const trajectory_msgs::msg::JointTrajectoryPoint&
 
 void DynamicPlanner::executeTrajectory()
 {
+    if (isMoving()) {
+        RCLCPP_WARN(node_->get_logger(), "Robot is already moving");
+        return;
+    }
+
     //Asynchronous execution of the last planned trajectory
     if (robot_trajectory_.joint_trajectory.points.empty())
     {
@@ -567,7 +574,7 @@ void DynamicPlanner::executeTrajectory()
         return;
     }
 
-    is_moving_ = true; //Set moving state to true
+    is_moving_.store(true); //Set moving state to true
 }
 
 void DynamicPlanner::executeTrajectory(moveit_msgs::msg::RobotTrajectory& robot_trajectory)
@@ -579,19 +586,19 @@ void DynamicPlanner::executeTrajectory(moveit_msgs::msg::RobotTrajectory& robot_
 bool DynamicPlanner::isMoving()
 {
     //Check if the robot is moving
-    return is_moving_;
+    return is_moving_.load();
 }
 
 // Check if the planner has received group definition, so the dynamic planner can start working
 bool DynamicPlanner::isReady() const
 {
   // The following booleans are true when the three subs have read something from active pubs 
-  return joints_group_received_;
+  return joints_group_received_.load();
 }
 
 void DynamicPlanner::stop()
 {
-    force_stop_ = true;
+    force_stop_.store(true);
 }
 
 const planning_scene_monitor::LockedPlanningSceneRO DynamicPlanner::getPlanningScene() const
@@ -607,32 +614,6 @@ DynamicPlannerParams DynamicPlanner::getParams() const
 void DynamicPlanner::setParams(const DynamicPlannerParams &params)
 {
     params_ = params;
-    updatePlannerParams();
-}
-
-void DynamicPlanner::setDynamicBehavior(bool dynamic_behavior)
-{
-    dynamic_behavior_ = dynamic_behavior;
-}
-
-bool DynamicPlanner::isDynamic() const
-{
-    return dynamic_behavior_;
-}
-
-void DynamicPlanner::setPlanningSpace(PlanningSpace space)
-{
-    if (isMoving())
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Cannot change planning space while the robot is moving");
-        return;
-    }
-    planning_space_ = space;
-}
-
-DynamicPlanner::PlanningSpace DynamicPlanner::getPlanningSpace() const
-{
-    return planning_space_;
 }
 
 moveit::core::RobotStatePtr DynamicPlanner::getRobotState() const
@@ -814,6 +795,13 @@ geometry_msgs::msg::PoseStamped DynamicPlanner::getFKine(const std::vector<doubl
 
 geometry_msgs::msg::PoseStamped DynamicPlanner::getFKine(const std::string &end_effector_link)
 {
+    if (!isReady()) {
+        RCLCPP_ERROR(node_->get_logger(), "Cannot compute forward kinematics, joint states not received yet");
+        return geometry_msgs::msg::PoseStamped();
+    }
+
+    std::lock_guard<std::mutex> lock(joint_val_mutex_);
+
     return getFKine(
         // move_group_->getCurrentJointValues(),
         joints_values_group_,
@@ -886,6 +874,13 @@ const Eigen::MatrixXd DynamicPlanner::getJacobian(const std::vector<double> &joi
 
 const Eigen::MatrixXd DynamicPlanner::getJacobian(const std::string &end_effector_link)
 {
+    if (!isReady()) {
+        RCLCPP_ERROR(node_->get_logger(), "Cannot compute jacobian, joint states not received yet");
+        return Eigen::MatrixXd();
+    }
+
+    std::lock_guard<std::mutex> lock(joint_val_mutex_);
+
     return getJacobian(
         joints_values_group_,
         end_effector_link
@@ -904,6 +899,13 @@ const Eigen::MatrixXd DynamicPlanner::getPseudoInverseJacobian(const std::vector
 
 const Eigen::MatrixXd DynamicPlanner::getPseudoInverseJacobian(const std::string &end_effector_link)
 {
+    if (!isReady()) {
+        RCLCPP_ERROR(node_->get_logger(), "Cannot compute pseudo-inverse jacobian, joint states not received yet");
+        return Eigen::MatrixXd();
+    }
+
+    std::lock_guard<std::mutex> lock(joint_val_mutex_);
+
     return getPseudoInverseJacobian(
         joints_values_group_,
         end_effector_link
@@ -915,6 +917,37 @@ const Eigen::MatrixXd DynamicPlanner::getPseudoInverseJacobian()
     return getPseudoInverseJacobian(params_.end_effector_link);
 }
 
+// ------------------------------------- JOINT STATE -------------------------------------
+
+std::vector<double> DynamicPlanner::getJointValues()
+{
+    if (!isReady()) {
+        RCLCPP_ERROR(node_->get_logger(), "Cannot get current joint values, joint states not received yet");
+        return std::vector<double>();
+    }
+
+    std::lock_guard<std::mutex> lock(joint_val_mutex_);
+
+    return joints_values_group_;
+}
+
+std::vector<double> DynamicPlanner::getJointSpeeds()
+{
+    if (!isReady()) {
+        RCLCPP_ERROR(node_->get_logger(), "Cannot get current joint speeds, joint states not received yet");
+        return std::vector<double>();
+    }
+
+    std::lock_guard<std::mutex> lock(joint_speed_mutex_);
+
+    return joints_speed_group_;
+}
+
+std::vector<std::string> DynamicPlanner::getJointNames()
+{
+    return joints_names_group_;
+}
+
 // -------------------------------------------------------------------------------------------
 // ------------------------------------- PRIVATE METHODS -------------------------------------
 // -------------------------------------------------------------------------------------------
@@ -924,6 +957,10 @@ const Eigen::MatrixXd DynamicPlanner::getPseudoInverseJacobian()
 
 void DynamicPlanner::jointsState_callback(const sensor_msgs::msg::JointState::SharedPtr &joint_state)
 {
+    // Lock joint state mutexes
+    std::lock_guard<std::mutex> lock_val(joint_val_mutex_);
+    std::lock_guard<std::mutex> lock_speed(joint_speed_mutex_);
+
     for (size_t i {0}; i < joint_state->name.size(); i++)
     {
         auto it = std::find(joints_names_group_.begin(), joints_names_group_.end(), joint_state->name[i]);
@@ -937,14 +974,14 @@ void DynamicPlanner::jointsState_callback(const sensor_msgs::msg::JointState::Sh
         }
     }
 
-    last_joint_state_time_ = node_->now();
+    last_joint_state_time_.store(node_->now().seconds());
     
     //kinematic_state_->setJointGroupPositions(planning_group_, joints_values_group_);
     //kinematic_state_->update();
 
     if (!isReady()) {
         RCLCPP_INFO(node_->get_logger(), "Joint states for planning group %s received.", planning_group_.c_str());
-        joints_group_received_ = true;
+        joints_group_received_.store(true);
     }
 }
 
@@ -953,20 +990,27 @@ void DynamicPlanner::trajectoryExecution_callback(){
     Callback for trajectory execution from traj_timer_
     */
 
-    //Check that joint states are being received
-    if (isReady() && (node_->now() - last_joint_state_time_ > rclcpp::Duration::from_seconds(params_.joint_states_timeout))){
-        RCLCPP_ERROR(node_->get_logger(), "No joint states received for more than %.2f seconds, blocking planner.", params_.joint_states_timeout);
-        is_moving_ = false;
-        trajpoint_ = 0UL; // Reset trajectory point index
-        force_stop_ = false; // Reset force stop flag
-        joints_group_received_ = false;
+    if (rclcpp::ok() == false || !isReady()){
+        return;
     }
 
-    if(force_stop_){
-        RCLCPP_INFO(node_->get_logger(), "Force stop received, stopping trajectory execution.");
-        is_moving_ = false;
+    //Check that joint states are being received
+    if (node_->now().seconds() - last_joint_state_time_.load() > params_.joint_states_timeout){
+        RCLCPP_ERROR(node_->get_logger(), "No joint states received for more than %.2f seconds, blocking planner.", params_.joint_states_timeout);
+        is_moving_.store(false);
+        force_stop_.store(false); // Reset force stop flag
         trajpoint_ = 0UL; // Reset trajectory point index
-        force_stop_ = false; // Reset force stop flag
+        joints_group_received_.store(false);
+    }
+
+
+    if(force_stop_.load()){
+        std::lock_guard<std::mutex> joint_val_lock(joint_val_mutex_);
+
+        RCLCPP_INFO(node_->get_logger(), "Force stop received, stopping trajectory execution.");
+        is_moving_.store(false);
+        force_stop_.store(false); // Reset force stop flag
+        trajpoint_ = 0UL; // Reset trajectory point index
         
         //Construct a joint state message with the final joint positions
         sensor_msgs::msg::JointState joint_state;
@@ -978,7 +1022,9 @@ void DynamicPlanner::trajectoryExecution_callback(){
         return;
     }
 
-    if (is_moving_ && isReady() && rclcpp::ok()){
+    if (isMoving()){
+        std::lock_guard<std::mutex> joint_val_lock(joint_val_mutex_);
+
         trajectory_msgs::msg::JointTrajectoryPoint traj_pt;
         if (trajpoint_ < robot_trajectory_.joint_trajectory.points.size())
         {
@@ -990,7 +1036,7 @@ void DynamicPlanner::trajectoryExecution_callback(){
         {
             // If the trajectory is finished, stop the execution
             RCLCPP_INFO(node_->get_logger(), "Trajectory executed.");
-            is_moving_ = false;
+            is_moving_.store(false);
             trajpoint_ = 0UL; // Reset trajectory point index
         }
     }
@@ -1011,33 +1057,28 @@ void DynamicPlanner::executionControl_callback(const std_msgs::msg::Bool::Shared
 
 // ------------------------------------- TRAJECTORY METHODS -------------------------------------
 
-void DynamicPlanner::setTrajectory(const moveit_msgs::msg::RobotTrajectory &trajectory, const std::string &end_effector_link)
+void DynamicPlanner::setTrajectory(const moveit_msgs::msg::RobotTrajectory &trajectory)
 {
     /*
     Set the planned trajectory as well as other information used for dynamic planning
     Args:
         trajectory: The trajectory
-        end_effector_link: The end effector link the planning must be relative to in case planning_space_ is set to OPERATIVE_SPACE
     */
+
+    if (isMoving()){
+        // Memory safety check
+        RCLCPP_ERROR(node_->get_logger(), "Cannot set trajectory while robot is moving");
+        throw std::runtime_error("Cannot set trajectory while robot is moving");
+    }
+
+
     robot_trajectory_ = trajectory;
     if (trajectory.joint_trajectory.points.empty())
     {
         RCLCPP_WARN(node_->get_logger(), "Empty trajectory");
         return;
     }
-    traj_end_effector_link_ = end_effector_link;
     trajpoint_ = 0UL;
-    trajectory_msgs::msg::JointTrajectoryPoint final_traj_pt = robot_trajectory_.joint_trajectory.points.back();
-    final_joint_positions_ = final_traj_pt.positions;
-
-    if (planning_space_ == PlanningSpace::OPERATIVE_SPACE){
-        if (end_effector_link == ""){
-            traj_end_effector_link_ = end_effector_link;
-            RCLCPP_WARN(node_->get_logger(), "End effector link not specified for trajectory. Using default link: %s.", params_.end_effector_link.c_str());
-        }
-        //This might be a redundant calculation in some cases but it allows for safe access to the final pose
-        final_pose_ = getFKine(final_joint_positions_, traj_end_effector_link_).pose;
-    }
 }
 
 bool DynamicPlanner::processTrajectory(moveit_msgs::msg::RobotTrajectory &trajectory_msg) {
@@ -1048,7 +1089,7 @@ bool DynamicPlanner::processTrajectory(moveit_msgs::msg::RobotTrajectory &trajec
 
     robot_trajectory.setRobotTrajectoryMsg(*getRobotState(), trajectory_msg.joint_trajectory);
 
-    bool success = time_optimal_traj_gen->computeTimeStamps(
+    bool success = time_optimal_traj_gen_->computeTimeStamps(
         robot_trajectory,
         params_.vel_factor,
         params_.acc_factor
@@ -1062,70 +1103,6 @@ bool DynamicPlanner::processTrajectory(moveit_msgs::msg::RobotTrajectory &trajec
     robot_trajectory.getRobotTrajectoryMsg(trajectory_msg);
 
     return success;
-}
-
-bool DynamicPlanner::checkTrajectory()
-{
-    //Check if the trajectory is still clear of obstacles
-    size_t traj_size = robot_trajectory_.joint_trajectory.points.size();
-    size_t bound = std::min(traj_size, trajpoint_ + traj_size / 3);
-    moveit::core::RobotState robot_state = *getRobotState();
-
-    for (size_t i = trajpoint_; i < bound; i++)
-    {
-        trajectory_msgs::msg::JointTrajectoryPoint traj_pt = robot_trajectory_.joint_trajectory.points[i];
-        robot_state.setJointGroupPositions(planning_group_, traj_pt.positions);
-        //robot_state.update();
-        if (!getPlanningScene()->isStateColliding(robot_state)) {
-            RCLCPP_INFO(node_->get_logger(), "Obstacle detected at point %ld", i);
-            return false;
-        }
-    }
-
-    return true;
-}
-
-void DynamicPlanner::recalculateTrajectory(size_t start_index)
-{
-}
-
-void DynamicPlanner::mergeTrajectory(moveit_msgs::msg::RobotTrajectory &new_traj, size_t start_index)
-{
-    /*
-    Merge new_traj with trajectory_ from start_index onwards
-    Args:
-        new_traj: The new trajectory
-        start_index: The index from which trajectory_ will be deleted and new_traj will be inserted
-
-    NOTE:
-        For optimization purposes if the size of new_traj is smaller than trajectory_ the function 
-        will append new_traj to trajectory_, otherwise it will replace trajectory_ and the points
-        before start_index will be inserted ate the start
-    */
-
-    if (new_traj.joint_trajectory.points.size() <= robot_trajectory_.joint_trajectory.points.size())
-    {
-        //Append new_traj to trajectory_
-        robot_trajectory_.joint_trajectory.points.erase(
-            robot_trajectory_.joint_trajectory.points.begin() + start_index,
-            robot_trajectory_.joint_trajectory.points.end()
-        );
-        robot_trajectory_.joint_trajectory.points.insert(
-            robot_trajectory_.joint_trajectory.points.begin() + start_index,
-            new_traj.joint_trajectory.points.begin(),
-            new_traj.joint_trajectory.points.end()
-        );
-    }
-    else
-    {
-        //Replace trajectory_ with new_traj
-        new_traj.joint_trajectory.points.insert(
-            new_traj.joint_trajectory.points.begin(),
-            robot_trajectory_.joint_trajectory.points.begin(),
-            robot_trajectory_.joint_trajectory.points.begin() + start_index
-        );
-        robot_trajectory_ = new_traj;
-    }
 }
 
 bool DynamicPlanner::checkTrajectoryConstraints(const moveit_msgs::msg::RobotTrajectory &trajectory)
@@ -1329,6 +1306,8 @@ bool DynamicPlanner::checkJointDiff(const std::vector<double>& joint_positions)
         return false;
     }
 
+    std::lock_guard<std::mutex> lock(joint_val_mutex_);
+
     return checkJointDiff(joint_positions, joints_values_group_);
 }
 
@@ -1398,10 +1377,6 @@ bool DynamicPlanner::checkPoseDiff(const geometry_msgs::msg::Pose& pose_a, const
     check = ((angular_distance < angle_th) && check);
 
     return check;
-}
-
-void DynamicPlanner::updatePlannerParams()
-{
 }
 
 geometry_msgs::msg::PoseStamped DynamicPlanner::toPoseStamped(const Eigen::Isometry3d &pose, const std::string &frame_id)

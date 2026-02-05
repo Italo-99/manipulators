@@ -248,7 +248,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         
         std::shared_ptr<rclcpp::CallbackGroup> services_cb_group_;       // Callback group for services
         std::shared_ptr<rclcpp::CallbackGroup> subscribers_cb_group_;    // Callback group for subscribers
-        std::shared_ptr<rclcpp::CallbackGroup> timers_cb_group_;         // Callback group for timers
+        std::shared_ptr<rclcpp::CallbackGroup> main_cb_group_;           // Callback group for mainloop timer 
 
         //Real time control variables
         bool   jac_control_ = false;            // True if the speed control through inverse Jacobian has been enabled

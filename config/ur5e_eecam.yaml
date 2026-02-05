@@ -20,7 +20,7 @@ inst_kine:              true      # True if the motors instantaneously reach the
 
 max_speed_ee:           0.5       # Maximum velocity     of the end-effector in [m/s]  in cartesian planning/jacobian real time control
 
-max_accel_ee:           0.5       # Maximum acceleration of the end-effector in [m/s2] in cartesian planning/jacobian real time control
+max_accel_ee:           5.0       # Maximum acceleration of the end-effector in [m/s2] in cartesian planning/jacobian real time control
 
 max_spd_jnts:           3.14      # Maximum velocity     of the joints in [rad/s]  in real time speed control
 

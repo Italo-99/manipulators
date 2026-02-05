@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 #include <Eigen/Geometry>
+#include <mutex>
+#include <atomic>
+#include <stdexcept>
 
 //ROS Imports
 #include <rclcpp/rclcpp.hpp>
@@ -65,20 +68,13 @@ class DynamicPlanner
 {
     public:
         DynamicPlanner(const rclcpp::Node::SharedPtr& node,
-                       const std::string& planning_group,
-                       bool dynamic_behavior = true);
+                       const std::string& planning_group);
 
         ~DynamicPlanner();
 
         void initialize(); //Initialize the dynamic planner (vars, subscribers, publishers, ...)
 
         // --------------- CONTROL METHODS ---------------
-        
-        enum PlanningSpace : bool
-        {
-            JOINTS_SPACE = 0,
-            OPERATIVE_SPACE = 1
-        };
 
         /*plan: joint goal
             NOTE: This is a blocking function, it will stop execution until the planning is done
@@ -140,9 +136,6 @@ class DynamicPlanner
 
         void setDynamicBehavior(bool dynamic_behavior); //Set the dynamic_behavior_ variable
         bool isDynamic() const; //Check if dynamic_behaviour_ is true
-
-        void setPlanningSpace(PlanningSpace space); //Set the planning space (joint or operative)
-        PlanningSpace getPlanningSpace() const; //Get the current planning space
                 
         const planning_scene_monitor::LockedPlanningSceneRO getPlanningScene() const; //Get the current planning scen as a read-only lock object
 
@@ -198,12 +191,13 @@ class DynamicPlanner
         const Eigen::MatrixXd getPseudoInverseJacobian(const std::string &end_effector_link);
         const Eigen::MatrixXd getPseudoInverseJacobian(); //end_effector_link_ is used as default
         
-        // --------------- PUBLIC VARIABLES ----------------
-        std::vector<std::string> joints_names_group_;               // Joints group names
-        std::vector<double> joints_values_group_;                   // Current joint values of the group
-        std::vector<double> joints_speed_group_;                    // Current joint speeds of the group
+        // --------------- JOINT STATES ---------------
+        std::vector<std::string> getJointNames(); //Get the names of the joints
+        std::vector<double> getJointValues(); //Get the current joint values
+        std::vector<double> getJointSpeeds(); //Get the current joint speeds
 
     private:
+
         // --------------- CALLBACK METHODS ----------------
 
         void jointsState_callback(const sensor_msgs::msg::JointState::SharedPtr &joints_state);     //Update the joint states
@@ -212,16 +206,11 @@ class DynamicPlanner
 
         // --------------- TRAJECTORY METHODS ----------------
 
-        void setTrajectory(const moveit_msgs::msg::RobotTrajectory& trajectory, const std::string &end_effector_link=""); //Set the planned trajectory
+        void setTrajectory(const moveit_msgs::msg::RobotTrajectory& trajectory); //Set the planned trajectory
 
         //Computes the passed trajectory to make waypoints spaced equally in time
         //Returns true if successfull
         bool processTrajectory(moveit_msgs::msg::RobotTrajectory &trajectory); 
-
-        bool checkTrajectory();                             //Check if trajectory_ is still clear of obstacles
-        void recalculateTrajectory(size_t start_index);     //Recalculates the trajectory from the point at start_index onwards
-
-        void mergeTrajectory(moveit_msgs::msg::RobotTrajectory &new_traj, size_t start_index); //Merge the old trajectory with the new one from start_index onwards
 
         bool checkTrajectoryConstraints(const moveit_msgs::msg::RobotTrajectory &trajectory); //Check if the trajectory respects the path constraints
     
@@ -247,7 +236,6 @@ class DynamicPlanner
         bool checkPoseDiff(const geometry_msgs::msg::Pose &pose, const std::string& ee_link);               //Check if the difference between pose and current pose of ee_link is negligible
         bool checkPoseDiff(const geometry_msgs::msg::Pose &pose_a, const geometry_msgs::msg::Pose &pose_b); //Check if the difference between pose_a and pose_b is negligible
     
-        void updatePlannerParams();                                     //Update the planner parameters with values stored in params_
         geometry_msgs::msg::PoseStamped toPoseStamped(const Eigen::Isometry3d& pose, const std::string &frame_id=""); //Converts an Eigen pose to a PoseStamped message
     
         // --------------- TF2 METHODS ----------------
@@ -266,40 +254,46 @@ class DynamicPlanner
                                 const bool frame_locked = false);
 
         // --------------- PRIVATE VARIABLES ----------------
+
+        // --------------- JOINTS STATE ----------------
+ 
+        std::vector<std::string> joints_names_group_;               // Joints group names
+        std::vector<double> joints_values_group_;                   // Current joint values of the group
+        std::vector<double> joints_speed_group_;                    // Current joint speeds of the group
+        // Mutex
+        std::mutex joint_val_mutex_;
+        std::mutex joint_speed_mutex_;
+        
         //ROS Node
         //NOTE: It's critical for this node to be always spinning!
         rclcpp::Node::SharedPtr node_;
 
         //Parameters for planning
         DynamicPlannerParams params_;                   //Dynamic planner parameters
-        bool dynamic_behavior_;                         //Whether or not the planner should recalculate its paths based on updates of collision objects
-        PlanningSpace planning_space_ = JOINTS_SPACE;   //When recalculating trajectories, the space in which the planning is done
 
         //MoveIt2 interfaces
-        rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;
         planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor_; //Planning scene monitor
 
         //Dynamic planner variables
-        std::string planning_group_;
+        const std::string planning_group_;
         moveit::core::RobotModelConstPtr kinematic_model_;      //this holds all the kinematic information about the robot (eg: links, joints, limits, etc.)
         moveit::core::RobotStatePtr kinematic_state_;           //this holds the current position of the robot at any given time
         moveit_msgs::msg::Constraints path_constraints_;
         
         //Status
-        bool joints_group_received_ = false;                        // Check if joints group was received
-        rclcpp::Time last_joint_state_time_;                        // Time when the last joint state was received
+        std::atomic<bool> joints_group_received_{false};            // Check if joints group was received (protected access)
+        std::atomic<double> last_joint_state_time_{0.0};            // Time when the last joint state was received
     
         //Trajectory variables
+        // NOTE: For memory safery reasons robot_trajectory_ and trajpoint_ should be only accessed through setTrajectory() method
+        //       which will stop any attempt to modify them while is_moving_ is true
         moveit_msgs::msg::RobotTrajectory robot_trajectory_;    //Planned trajectory
-        std::vector<double> final_joint_positions_;             //End joint positions of the planned trajectory
-        geometry_msgs::msg::Pose final_pose_;                   //End effector pose of the planned trajectory
-        std::string traj_end_effector_link_;                    //End effector link of the planned trajectory
         unsigned long trajpoint_;                               //Index of the current trajectory point
-        bool is_moving_ = false;                                 //Whether the robot is moving or not, can be set to false to stop execution of trajectory
-        bool force_stop_ = false;                                //Force stop the execution of the trajectory
+        std::atomic<bool> is_moving_{false};                    //Whether the robot is moving or not, can be set to false to stop execution of trajectory (protected access)
+        std::atomic<bool> force_stop_{false};                   //Force stop the execution of the trajectory (protected access)
 
         //Time optimal trajectory generation 
-        trajectory_processing::TimeOptimalTrajectoryGenerationPtr time_optimal_traj_gen;
+        trajectory_processing::TimeOptimalTrajectoryGenerationPtr time_optimal_traj_gen_;
         const double totg_tolerance = 0.1;
         const double totg_min_angle_change = 0.001;
 
@@ -330,6 +324,7 @@ class DynamicPlanner
         rclcpp::CallbackGroup::SharedPtr cb_group_;
         
         //Visualization
+        rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;
         size_t marker_id_ = 0; //ID for the next marker to be published
 };
 
