@@ -10,22 +10,29 @@
 
     <buildtool_depend>ament_cmake</buildtool_depend>
     <buildtool_depend>ament_cmake_python</buildtool_depend>
-
     <depend>rclcpp</depend>
+
     <depend>std_msgs</depend>
-    <depend>eigen_stl_containers</depend>
+    <depend>std_srvs</depend>
     <depend>geometry_msgs</depend>
     <depend>sensor_msgs</depend>
+    <depend>graph_msgs</depend>
     <depend>trajectory_msgs</depend>
+    <depend>manipulator_interfaces</depend>
+    <depend>detection_interfaces</depend>
+    <depend>moveit_msgs</depend>
+    <depend>tf2_geometry_msgs</depend>
+
+    <depend>moveit_common</depend>
     <depend>moveit_core</depend>
     <depend>moveit_ros_planning</depend>
     <depend>moveit_ros_planning_interface</depend>
-    <depend>manipulator_interfaces</depend>
-    <depend>motors_trajectory</depend>
-    <depend>yaml-cpp</depend>
 
-    <depend>ur_description</depend>
-    <depend>ur_moveit_config</depend>
+    <depend>tf2_ros</depend>
+    <depend>motors_trajectory</depend>
+    <depend>rviz_visual_tools</depend>
+    <depend>Eigen3</depend>
+    <depend>yaml_cpp_vendor</depend>
 
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>

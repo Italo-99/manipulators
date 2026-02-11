@@ -8,7 +8,7 @@ joint_names:            [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, w
 
 ee_name:                tcp_gripper
 
-base_name:              base_link
+world_frame:            base_link
 
 vel_factor:             0.2
 
@@ -16,11 +16,13 @@ acc_factor:             0.2
 
 ros_freq:               500        # ROS loop frequency (update rate of callbacks)
 
-inst_kine:              true      # True if the motors instantaneously reach the goal after an invKine computation
-
 max_speed_ee:           0.5       # Maximum velocity     of the end-effector in [m/s]  in cartesian planning/jacobian real time control
 
 max_accel_ee:           0.5       # Maximum acceleration of the end-effector in [m/s2] in cartesian planning/jacobian real time control
+
+max_rot_speed_ee:       0.3       # Maximum angular velocity of the end-effector in [rad/s] jacobian real time control
+
+max_rot_accel_ee:       0.3       # Maximum angular acceleration of the end-effector in [rad/s2] jacobian real time control
 
 max_spd_jnts:           3.14      # Maximum velocity     of the joints in [rad/s]  in real time speed control
 

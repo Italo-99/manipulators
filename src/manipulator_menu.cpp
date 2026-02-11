@@ -21,7 +21,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
 
     for (unsigned long k = 0; k < params_.joint_names.size(); k++)
     {
-        RCLCPP_INFO(node_->get_logger(), "Joint %ld name: %s", k, params_.joint_names[k].c_str());
+        RCLCPP_DEBUG(node_->get_logger(), "Joint %ld name: %s", k, params_.joint_names[k].c_str());
     }
 
     // Init arrays
@@ -136,7 +136,7 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
     while (!invKine_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if(num_tries > clients_wait_timeout_) {
-            RCLCPP_INFO(node_->get_logger(), "Unable to connect to invKine service");
+            RCLCPP_ERROR(node_->get_logger(), "Unable to connect to invKine service");
             return {};
         }
         num_tries++;
@@ -145,7 +145,6 @@ std::vector<double> ManipulatorMenu::invKineClient(const geometry_msgs::msg::Pos
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return joint_values;
         }
-        RCLCPP_INFO(node_->get_logger(), "invKine service not available, waiting again...");
     }
 
     // Send the request asynchronously
@@ -179,7 +178,7 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
     while (!pseudoInverse_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if(num_tries > clients_wait_timeout_) {
-            RCLCPP_INFO(node_->get_logger(), "Unable to connect to pseudoInverse service");
+            RCLCPP_ERROR(node_->get_logger(), "Unable to connect to pseudoInverse service");
             return {};
         }
         num_tries++;
@@ -188,7 +187,6 @@ Eigen::MatrixXd ManipulatorMenu::pseudoInverseClient()
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return matrix;
         }
-        RCLCPP_INFO(node_->get_logger(), "pseudoInverse service not available, waiting again...");
     }
 
     // Send the request asynchronously
@@ -220,7 +218,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::getFKineClient(const sensor_msgs::msg:
     while (!fKine_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if(num_tries > clients_wait_timeout_) {
-            RCLCPP_INFO(node_->get_logger(), "Unable to connect to fKine service");
+            RCLCPP_ERROR(node_->get_logger(), "Unable to connect to fKine service");
             return geometry_msgs::msg::Pose();
         }
         num_tries++;
@@ -229,7 +227,6 @@ geometry_msgs::msg::Pose ManipulatorMenu::getFKineClient(const sensor_msgs::msg:
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return pose;
         }
-        RCLCPP_INFO(node_->get_logger(), "fKine service not available, waiting again...");
     }
 
     // Send the request asynchronously
@@ -260,7 +257,7 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
     while (!jacobian_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if(num_tries > clients_wait_timeout_) {
-            RCLCPP_INFO(node_->get_logger(), "Unable to connect to jacobian service");
+            RCLCPP_ERROR(node_->get_logger(), "Unable to connect to jacobian service");
             return {};
         }
         num_tries++;
@@ -269,7 +266,6 @@ Eigen::MatrixXd ManipulatorMenu::getJacobianClient()
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return matrix;
         }
-        RCLCPP_INFO(node_->get_logger(), "Jacobian service not available, waiting again...");
     }
 
     // Send the request asynchronously and get the response
@@ -308,7 +304,7 @@ bool ManipulatorMenu::gripperMoveClient(const bool close){
     while (!gripperMove_client_->wait_for_service(std::chrono::seconds(1)))
     {
         if(num_tries > clients_wait_timeout_) {
-            RCLCPP_INFO(node_->get_logger(), "Unable to connect to gripper service");
+            RCLCPP_ERROR(node_->get_logger(), "Unable to connect to gripper service");
             return {};
         }
         num_tries++;
@@ -317,7 +313,6 @@ bool ManipulatorMenu::gripperMoveClient(const bool close){
             RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for the service. Exiting.");
             return false;
         }
-        RCLCPP_INFO(node_->get_logger(), "gripperMove service not available, waiting again...");
     }
 
     // Send the request asynchronously and get the response
@@ -625,6 +620,7 @@ manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::cartesianPlanAndW
 bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajectory, uint timeout)
 {
     trajectory_pub_->publish(trajectory);
+    rclcpp::sleep_for(std::chrono::milliseconds(100)); // Sleep for a short time to ensure the trajectory is received before starting to check execution
     rclcpp::Rate rate(params_.ros_freq);
 
     sensor_msgs::msg::JointState goal_state;
@@ -715,15 +711,11 @@ bool ManipulatorMenu::planExecuteAndWait(
     manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(tcp_goal, std::vector<double>(), frame, timeout_planning);
     
     std::vector<double> last_point = traj_result.trajectory.joint_trajectory.points.back().positions;
-    RCLCPP_INFO(node_->get_logger(), "Last point joint values: [%f, %f, %f, %f, %f, %f]", 
-        last_point[0], last_point[1], last_point[2], last_point[3], last_point[4], last_point[5]);
     for (unsigned long k = 0; k < last_point.size(); k++)
     {
         last_point[k] = last_point[k] * 180 / M_PI; //Convert rad to deg
     }
     geometry_msgs::msg::Pose goal_pose = getFKineClient(joint_state_from_vector(last_point));
-    RCLCPP_INFO(node_->get_logger(), "Planned goal pose: [%f, %f, %f]", 
-        goal_pose.position.x, goal_pose.position.y, goal_pose.position.z); 
 
     if (traj_result.success)
     {
@@ -771,12 +763,12 @@ void ManipulatorMenu::stopTrajectory(){
 // -------------------- TF END EFFECTOR LISTENER -----------------------
 
 // Listen a TF between two given frames
-geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &reference_frame, const std::string &target_frame)
+geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &reference_frame, const std::string &target_frame, uint num_tries)
 {
 
     geometry_msgs::msg::TransformStamped transform;
     bool received_transform = false;
-    for (size_t counter {0}; !received_transform && rclcpp::ok() && counter < 10; ++counter)
+    for (size_t counter {0}; !received_transform && rclcpp::ok() && counter < num_tries; ++counter)
     {
         try {
             transform = tf_buffer_->lookupTransform(reference_frame, target_frame, tf2::TimePointZero, tf2::durationFromSec(0.5));
@@ -796,7 +788,7 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &refere
         pose_stamped.pose.position.z = transform.transform.translation.z;
         pose_stamped.pose.orientation = transform.transform.rotation;
     } else {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to get transform from %s to %s", reference_frame.c_str(), target_frame.c_str());
+        RCLCPP_DEBUG(node_->get_logger(), "Failed to receive transform from %s to %s after %zu attempts.", reference_frame.c_str(), target_frame.c_str(), num_tries);
     }
 
     return pose_stamped;
@@ -1067,7 +1059,7 @@ void ManipulatorMenu::addObj(const std::string& name,
     case 1: // BOX: Rectangular shape setting
         if (size_obj_dims != 3)
         {
-            RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 3000, "obj_dims array is not compatible with obj_type");
+            RCLCPP_ERROR(node_->get_logger(), "obj_dims array is not compatible with obj_type");
         }
         else
         { // Set the three dimensions of the parallelepiped
@@ -1080,7 +1072,7 @@ void ManipulatorMenu::addObj(const std::string& name,
     case 2: // SPHERE
         if (size_obj_dims != 1)
         {
-            RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 3000, "obj_dims array is not compatible with obj_type");
+            RCLCPP_ERROR(node_->get_logger(), "obj_dims array is not compatible with obj_type");
         }
         else
         { // Set the sphere radius
@@ -1091,7 +1083,7 @@ void ManipulatorMenu::addObj(const std::string& name,
     default: // CYLINDER OR CONE
         if (size_obj_dims != 2)
         {
-            RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 3000, "obj_dims array is not compatible with obj_type");
+            RCLCPP_ERROR(node_->get_logger(), "obj_dims array is not compatible with obj_type");
         }
         else
         { // Set height and radius of the cylinder/cone
@@ -1267,24 +1259,27 @@ void ManipulatorMenu::publishToolIOCmd(const size_t id, const bool value)
 // ------------------- CONSTRAINTS ---------------------
 
 void ManipulatorMenu::publishJointConstraint(const uint &joint_index,
-                                             const double &position,
-                                             const double &tolerance_below,
-                                             const double &tolerance_above,
+                                             const double &min_position,
+                                             const double &max_position,
                                              const double &weight)
 {
+
+    double middle_pos = (min_position + max_position) / 2.0 + min_position;
+    double tolerance_below = middle_pos - min_position;
+    double tolerance_above = max_position - middle_pos;
+
     // Create a joint constraint
     moveit_msgs::msg::JointConstraint constraint;
     constraint.joint_name = params_.joint_names[joint_index];
-    constraint.position = position / 180.0 * M_PI; // Convert to radians
+    constraint.position = middle_pos / 180.0 * M_PI; // Convert to radians
     constraint.tolerance_below = tolerance_below / 180.0 * M_PI;
     constraint.tolerance_above = tolerance_above / 180.0 * M_PI;
     constraint.weight = weight;
 
-    RCLCPP_INFO(node_->get_logger(), "Joint constraint for joint: %s˚, position: %f˚, tolerance_above: %f˚, tolerance_below: %f˚", constraint.joint_name.c_str(), position, tolerance_above, tolerance_below);
+    RCLCPP_INFO(node_->get_logger(), "Joint constraint for joint: %s in range [%f, %f]", constraint.joint_name.c_str(), min_position, max_position);
     
     jointConstraints_pub_->publish(constraint);
 }
-
 void ManipulatorMenu::publishPositionConstraint(const std::string& link_name, 
                                                 const geometry_msgs::msg::Pose& shape_pose, 
                                                 const uint &shape_type, 
@@ -1349,7 +1344,7 @@ void ManipulatorMenu::setJacobianSpeedControl(bool set)
     // Check if service is available
     if (!setJacobianControl_client_->wait_for_service(std::chrono::milliseconds(100)))
     {
-        RCLCPP_INFO(node_->get_logger(), "Unable to connect to jacobian_control_setter service");
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to jacobian_control_setter service");
         return;
     }
 
@@ -1378,7 +1373,7 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
     // Check if service is available
     if (!setRealTimeControl_client_->wait_for_service(std::chrono::milliseconds(100)))
     {
-        RCLCPP_INFO(node_->get_logger(), "Unable to connect to set_real_time_control service");
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to set_real_time_control service");
         return;
     }
 
@@ -1406,7 +1401,7 @@ void ManipulatorMenu::setRealTimeConstraints(bool limit_joints, bool limit_jacob
     // Check if service is available
     if (!enableRealTimeConstraints_client_->wait_for_service(std::chrono::milliseconds(100)))
     {
-        RCLCPP_INFO(node_->get_logger(), "Unable to connect to enable_real_time_constraints service");
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to enable_real_time_constraints service");
         return;
     }
 
@@ -1437,7 +1432,7 @@ void ManipulatorMenu::setPlannerScalingFactors(float new_vel, float new_acc)
     // Check if service is available
     if (!changePlannerScalingFactors_client_->wait_for_service(std::chrono::milliseconds(100)))
     {
-        RCLCPP_INFO(node_->get_logger(), "Unable to connect to set_planner_scaling_factors service");
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to set_planner_scaling_factors service");
         return;
     }
 
@@ -1473,7 +1468,7 @@ void ManipulatorMenu::setPlannerTolerances(float position, float orientation, fl
     // Check if service is available
     while (!changePlannerTolerances_client_->wait_for_service(std::chrono::milliseconds(100)))
     {
-        RCLCPP_INFO(node_->get_logger(), "Unable to connect to set_planner_tolerances service");
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to set_planner_tolerances service");
         return;
     }
 
@@ -1503,7 +1498,7 @@ void ManipulatorMenu::setAdmittanceControl(bool set)
     // Check if service is available
     while (!setAdmittanceControl_client_->wait_for_service(std::chrono::milliseconds(100)))
     {
-        RCLCPP_INFO(node_->get_logger(), "Unable to connect to enable_admittance_control service");
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to enable_admittance_control service");
         return;
     }
 
@@ -1531,7 +1526,7 @@ void ManipulatorMenu::setAdmittanceVelMode(bool set)
     // Check if service is available
     while (!setAdmittanceVelMode_client_->wait_for_service(std::chrono::milliseconds(100)))
     {
-        RCLCPP_INFO(node_->get_logger(), "Unable to connect to admittance_vel_mode service");
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to admittance_vel_mode service");
         return;
     }
 
@@ -1776,7 +1771,7 @@ void ManipulatorMenu::loadKnownPoses(){
             std::string name = pose.first.as<std::string>();
             std::vector<double> position = pose.second.as<std::vector<double>>();
             known_poses_[name] = position;
-            RCLCPP_INFO(node_->get_logger(), "Pose %s loaded: (%f, %f, %f, %f, %f, %f)", name.c_str(), position[0], position[1], position[2], position[3], position[4], position[5]);
+            RCLCPP_DEBUG(node_->get_logger(), "Pose %s loaded: (%f, %f, %f, %f, %f, %f)", name.c_str(), position[0], position[1], position[2], position[3], position[4], position[5]);
         }
     } catch (const YAML::Exception & e) {
         RCLCPP_ERROR(node_->get_logger(), "Error parsing YAML file %s: %s", path.c_str(), e.what());
@@ -1795,7 +1790,7 @@ void ManipulatorMenu::waitManipulatorParameters(){
 
 void ManipulatorMenu::shutdown_handler()
 {
-    RCLCPP_INFO(node_->get_logger(), "Shutting down manipulator menu.");
+    RCLCPP_DEBUG(node_->get_logger(), "Shutting down manipulator menu.");
 }
 
 void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr &joints_state)
@@ -2332,23 +2327,20 @@ void ManipulatorMenu::userDeleteCollObj()
 void ManipulatorMenu::userAddJointConstraint(){
 
     uint joint_index = 0;
-    double position = 0.0;
-    double tolerance_above = 0.0;
-    double tolerance_below = 0.0;
+    double min_position = 0.0;
+    double max_position = 0.0;
     double weight = 0.0;
 
-    std::cout << "Enter the joint index: ";
+    std::cout << "Enter the joint index [0-5]:";
     std::cin >> joint_index;
-    std::cout << "Enter the joint position: ";
-    std::cin >> position;
-    std::cout << "Enter the tolerance below: ";
-    std::cin >> tolerance_below;
-    std::cout << "Enter the tolerance above: ";
-    std::cin >> tolerance_above;
-    std::cout << "Enter the weight: ";
+    std::cout << "Enter the minimum position (degrees): ";
+    std::cin >> min_position;
+    std::cout << "Enter the max_position (degrees): ";
+    std::cin >> max_position;
+    std::cout << "Enter the weight [0-1]: ";
     std::cin >> weight;
 
-    publishJointConstraint(joint_index, position, tolerance_below, tolerance_above, weight);
+    publishJointConstraint(joint_index, min_position, max_position, weight);
 }
 
 void ManipulatorMenu::userAddPositionConstraint(){

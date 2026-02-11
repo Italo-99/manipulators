@@ -406,7 +406,7 @@ class ManipulatorMenu
         /*!
             @brief Get the pose of target_frame relative to reference_frame.
         */
-        geometry_msgs::msg::PoseStamped getTf(const std::string& target_frame, const std::string& reference_frame);
+        geometry_msgs::msg::PoseStamped getTf(const std::string& target_frame, const std::string& reference_frame, uint num_tries=10);
 
         /*!
             @brief Get the pose of a point offset from target_frame according to its own frame, relative to reference frame.
@@ -550,17 +550,14 @@ class ManipulatorMenu
             @brief Publish a joint constraint to the manipulator planner.
             @details The specified joint will be constrained to [position - tolerance_below, position + tolerance_above]
             @param joint_num: Index of the joint to be constrained (0-based).
-            @param position: Position of the joint in radians.
-            @param tolerance_above: Tolerance above the position (in radians).
-            @param tolerance_below: Tolerance below the position (in radians).
+            @param min_position: Minimum position of the joint (in degrees).
+            @param max_position: Maximum position of the joint (in degrees).
             @param weight: Weight of the constraint (default is 1.0).
         */
         void publishJointConstraint(const uint &joint_num, 
-                                    const double &position, 
-                                    const double &tolerance_below, 
-                                    const double &tolerance_above, 
+                                    const double &min_position, 
+                                    const double &max_position, 
                                     const double &weight  = 1.0);
-
 
         //Publish a primitive as a position constraint, the specified link will stay inside that primitive
         /*!
