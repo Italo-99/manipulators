@@ -715,7 +715,6 @@ bool ManipulatorMenu::planExecuteAndWait(
     {
         last_point[k] = last_point[k] * 180 / M_PI; //Convert rad to deg
     }
-    geometry_msgs::msg::Pose goal_pose = getFKineClient(joint_state_from_vector(last_point));
 
     if (traj_result.success)
     {
@@ -788,7 +787,7 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &refere
         pose_stamped.pose.position.z = transform.transform.translation.z;
         pose_stamped.pose.orientation = transform.transform.rotation;
     } else {
-        RCLCPP_DEBUG(node_->get_logger(), "Failed to receive transform from %s to %s after %zu attempts.", reference_frame.c_str(), target_frame.c_str(), num_tries);
+        RCLCPP_DEBUG(node_->get_logger(), "Failed to receive transform from %s to %s after %u attempts.", reference_frame.c_str(), target_frame.c_str(), num_tries);
     }
 
     return pose_stamped;
