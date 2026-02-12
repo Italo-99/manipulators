@@ -41,7 +41,6 @@ find_package(motors_trajectory REQUIRED)
 find_package(rviz_visual_tools REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(yaml_cpp_vendor REQUIRED)
-find_package(detection_interfaces REQUIRED)
 
 # ---------------- VARIABLES -----------------
 
@@ -58,7 +57,6 @@ set(MANIPULATOR_MENU_DEPENDS
     motors_trajectory
     yaml_cpp_vendor
     manipulator_interfaces
-    detection_interfaces
     tf2_ros
     tf2_geometry_msgs
 )

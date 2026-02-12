@@ -19,7 +19,6 @@
     <depend>graph_msgs</depend>
     <depend>trajectory_msgs</depend>
     <depend>manipulator_interfaces</depend>
-    <depend>detection_interfaces</depend>
     <depend>moveit_msgs</depend>
     <depend>tf2_geometry_msgs</depend>
 
