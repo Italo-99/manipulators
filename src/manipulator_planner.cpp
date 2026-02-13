@@ -27,6 +27,8 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     ee_vel_cmd_.resize(6, 1);
     ee_vel_cmd_.setZero();
 
+    jacobian_sigma_threshold_ = min_sigma_factor_ * std::max(max_speed_ee_, max_rot_speed_ee_) / max_spd_jnts_;
+
     // services_cb_group_ = this->create_callback_group(
     //     rclcpp::CallbackGroupType::MutuallyExclusive
     // );
@@ -750,11 +752,36 @@ void ManipulatorPlannerNode::jacobianControl()
     updateJacobianSpeedCmd(); // Update the speed setpoint of the arm
 
     // Compute the speed
-    Eigen::VectorXd dq(NUM_JOINTS);
-    dq = jacobian_var_.completeOrthogonalDecomposition().pseudoInverse() * current_ee_vel_;
+    Eigen::VectorXd qdot(NUM_JOINTS);
+
+    // Compute the SVD of the jacobian then use adaptive damped least squares to compute the joint velocities, 
+    // this will help to mitigate the effect of singularities
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(jacobian_var_, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::VectorXd sigma = svd.singularValues();
+    double sigma_min = sigma.minCoeff();
+    double lambda = 0.0;
+
+    if (sigma_min < jacobian_sigma_threshold_) {
+        // If the smallest singular value is below the threshold, we are close to a singularity
+        // damping is applied
+        lambda = (1 - sigma_min / jacobian_sigma_threshold_) * max_damping_factor_;
+    }
+
+    RCLCPP_INFO(get_logger(), "Sigma min: %f, Lambda: %f", sigma_min, lambda);
+
+    Eigen::VectorXd sigma_damped(sigma.size());
+    for(int i=0; i<sigma.size(); ++i)
+        sigma_damped(i) = sigma(i) / (sigma(i)*sigma(i) + lambda*lambda);
+   
+    Eigen::MatrixXd invJ_damped =
+        svd.matrixV() *
+        sigma_damped.asDiagonal() *
+        svd.matrixU().transpose();
+
+    qdot = invJ_damped * current_ee_vel_;
     
-    // Set a lower limit to joint velocities to avoid noises
-    for (unsigned int k = 0; k < NUM_JOINTS; k++) {setToZeroIfSmall(dq[k]);}
+    // Set a lower limit to joint velocities to avoid noise
+    for (unsigned int k = 0; k < NUM_JOINTS; k++) {setToZeroIfSmall(qdot[k]);}
     
     // Convert joints state into Eigen::VectorXd
     Eigen::VectorXd q(NUM_JOINTS);
@@ -765,30 +792,30 @@ void ManipulatorPlannerNode::jacobianControl()
     }
 
     // Update joint position setpoint
-    Eigen::VectorXd qd(NUM_JOINTS);
-    qd = q + dq / ros_freq_;
+    Eigen::VectorXd dq(NUM_JOINTS);
+    dq = q + qdot / ros_freq_;
 
     // Build the msg for the joints setpoint
     sensor_msgs::msg::JointState js;
     js.name     = joint_names_;
-    js.position.resize(qd.size());
-    js.velocity.resize(dq.size());
+    js.position.resize(dq.size());
+    js.velocity.resize(qdot.size());
     
     // Insert positions and velocity setpoints
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
-        js.position[k] = qd[k];
-        js.velocity[k] = dq[k];
+        js.position[k] = dq[k];
+        js.velocity[k] = qdot[k];
     }
 
     bool jac_check = true;
     bool pos_constraints_check = true;
     bool joint_constraints_check = true;
 
-    if (min_jacobian_determinant_ > 0.0){
-        Eigen::MatrixXd jacobian = getJacobian(js.position, ee_name_); // Compute the jacobian matrix for the new position
-        jac_check = abs(jacobian.determinant()) >= min_jacobian_determinant_; // Jacobian check failed
-    }
+    // if (min_jacobian_determinant_ > 0.0){
+    //     Eigen::MatrixXd jacobian = getJacobian(js.position, ee_name_); // Compute the jacobian matrix for the new position
+    //     jac_check = abs(jacobian.determinant()) >= min_jacobian_determinant_; // Jacobian check failed
+    // }
 
     if (limit_jacobian_control_) {
         // If the jacobian control is limited, check if the joint constraints are violated
@@ -901,19 +928,19 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
     for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(current_js_vel_[k]);}
 
     // Update joint position setpoint
-    Eigen::VectorXd qd(NUM_JOINTS);
-    qd = q + current_js_vel_ / ros_freq_;
+    Eigen::VectorXd dq(NUM_JOINTS);
+    dq = q + current_js_vel_ / ros_freq_;
 
     // Build the msg for the joints setpoint
     sensor_msgs::msg::JointState js;
     js.name = joint_names_;
-    js.position.resize(qd.size());
+    js.position.resize(dq.size());
     js.velocity.resize(current_js_vel_.size());
 
     // Insert positions and velocity setpoints
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
-        js.position[k] = qd[k];
+        js.position[k] = dq[k];
         js.velocity[k] = current_js_vel_[k];
     }
 
@@ -963,6 +990,8 @@ void ManipulatorPlannerNode::checkParams() {
     min_jacobian_determinant_ = this->get_parameter_or("min_jacobian_determinant", 0.0);
     limit_joints_control_     = this->get_parameter_or("limit_joints_control", false);
     limit_jacobian_control_   = this->get_parameter_or("limit_jacobian_control", false);
+    max_damping_factor_       = this->get_parameter_or("max_damping_factor", 0.1);
+    min_sigma_factor_         = this->get_parameter_or("min_sigma_factor_", 1.0);
 
     addPrefix(prefix, joint_names_);
     addPrefix(prefix, gripper_links_);

@@ -208,6 +208,9 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         Eigen::MatrixXd jacobian_var_;
         bool limit_joints_control_; // If true, the joints speed control is limited to the max_spd_jnts_ parameter
         bool limit_jacobian_control_; // If true, the jacobian speed control is limited to the max_speed_ee_ parameter
+        double min_sigma_factor_; // Minimum value for the sigma factor used in the damped least squares pseudo-inverse of the jacobian
+        double jacobian_sigma_threshold_;
+        double max_damping_factor_;
 
         //Services
         rclcpp::Service<manipulator_interfaces::srv::FKine>::SharedPtr fkine_service_;
