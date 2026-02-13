@@ -208,9 +208,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         Eigen::MatrixXd jacobian_var_;
         bool limit_joints_control_; // If true, the joints speed control is limited to the max_spd_jnts_ parameter
         bool limit_jacobian_control_; // If true, the jacobian speed control is limited to the max_speed_ee_ parameter
-        double min_sigma_factor_; // Minimum value for the sigma factor used in the damped least squares pseudo-inverse of the jacobian
-        double jacobian_sigma_threshold_;
-        double max_damping_factor_;
+        double jac_sigma_threshold_;
+        double jac_max_damping_factor_;
 
         //Services
         rclcpp::Service<manipulator_interfaces::srv::FKine>::SharedPtr fkine_service_;
@@ -256,9 +255,9 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         //Real time control variables
         bool   jac_control_ = false;            // True if the speed control through inverse Jacobian has been enabled
         bool js_rt_control_ = false;            // True if the speed control through direct real time joints cmd has been enabled
-        Eigen::VectorXd current_ee_vel_;           // Command of speed to the end_effector
-        Eigen::VectorXd  current_js_vel_;           // Command of speed to the joints
-        Eigen::VectorXd ee_vel_cmd_;           // New command of speed to the ee
+        Eigen::VectorXd current_ee_vel_;        // Command of cartesian speed to ee
+        Eigen::VectorXd current_js_vel_;        // Command of speed to the joints
+        Eigen::VectorXd ee_vel_cmd_;            // New command of speed to the ee
         Eigen::VectorXd js_vel_cmd_;            // New command of joints speed
         std::vector<shape_msgs::msg::SolidPrimitive> constraints_primitives_; // List of contraints for jacobian control
         std::vector<geometry_msgs::msg::Pose> constraints_poses_; // List of poses for jacobian control

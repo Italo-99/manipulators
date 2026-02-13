@@ -22,10 +22,12 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     current_js_vel_.setZero();
     js_vel_cmd_.resize(NUM_JOINTS, 1);
     js_vel_cmd_.setZero();
-    current_ee_vel_.resize(6, 1);
-    current_ee_vel_.setZero();
+    current_ee_vel_norm_.resize(6, 1);
+    current_ee_vel_norm_.setZero();
     ee_vel_cmd_.resize(6, 1);
     ee_vel_cmd_.setZero();
+
+    jacobian_sigma_threshold_ = min_sigma_factor_ * std::max(max_speed_ee_, max_rot_speed_ee_) / max_spd_jnts_;
 
     // services_cb_group_ = this->create_callback_group(
     //     rclcpp::CallbackGroupType::MutuallyExclusive
@@ -645,7 +647,7 @@ void ManipulatorPlannerNode::jacobianControlSetter_callback(const std_srvs::srv:
 
     // Stop the robot to prevent bad behaviours during mode switch
     for (unsigned int k = 0; k<6; k++) {
-        current_ee_vel_(k) = 0.;
+        current_ee_vel_norm_(k) = 0.;
         ee_vel_cmd_(k) = 0.;
     }
 
@@ -756,36 +758,20 @@ void ManipulatorPlannerNode::jacobianControl()
     updateJacobianSpeedCmd(); // Update the speed setpoint of the arm
 
     // Compute the speed
+<<<<<<< HEAD
     Eigen::VectorXd qdot(NUM_JOINTS);
-
-    // Scale jacobian
-    // The process of normalization for the velocity setpoint is done to have a common
-    // scale between the translational and rotational components of the velocity.
-    // Jacobian rows are scaled accordingly.
-    
-    Eigen::MatrixXd jacobian_normalized = jacobian_var_;
-    for (unsigned int i = 0; i < 3; i++) {
-        jacobian_normalized.row(i) /= max_speed_ee_;
-    }
-    for (unsigned int i = 3; i < 6; i++) {
-        jacobian_normalized.row(i) /= max_rot_speed_ee_;
-    }
-
-    Eigen::VectorXd v_scaled = current_ee_vel_;
-    v_scaled.head<3>() /= max_speed_ee_;
-    v_scaled.tail<3>() /= max_rot_speed_ee_;
 
     // Compute the SVD of the jacobian then use adaptive damped least squares to compute the joint velocities, 
     // this will help to mitigate the effect of singularities
-    Eigen::JacobiSVD<Eigen::MatrixXd> svd(jacobian_normalized, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(jacobian_var_, Eigen::ComputeFullU | Eigen::ComputeFullV);
     Eigen::VectorXd sigma = svd.singularValues();
     double sigma_min = sigma.minCoeff();
     double lambda = 0.0;
 
-    if (sigma_min < jac_sigma_threshold_) {
+    if (sigma_min < jacobian_sigma_threshold_) {
         // If the smallest singular value is below the threshold, we are close to a singularity
         // damping is applied
-        lambda = (1 - sigma_min / jac_sigma_threshold_) * jac_max_damping_factor_;
+        lambda = (1 - sigma_min / jacobian_sigma_threshold_) * max_damping_factor_;
     }
 
     RCLCPP_INFO(get_logger(), "Sigma min: %f, Lambda: %f", sigma_min, lambda);
@@ -799,7 +785,11 @@ void ManipulatorPlannerNode::jacobianControl()
         sigma_damped.asDiagonal() *
         svd.matrixU().transpose();
 
-    qdot = invJ_damped * v_scaled;
+    qdot = invJ_damped * current_ee_vel_;
+=======
+    Eigen::VectorXd dq(NUM_JOINTS);
+    dq = jacobian_var_.completeOrthogonalDecomposition().pseudoInverse() * current_ee_vel_norm_;
+>>>>>>> 65c1ae9 (Jacobian control improvements)
     
     // Set a lower limit to joint velocities to avoid noise
     for (unsigned int k = 0; k < NUM_JOINTS; k++) {setToZeroIfSmall(qdot[k]);}
@@ -811,9 +801,10 @@ void ManipulatorPlannerNode::jacobianControl()
     {
         q(k) = current_joint_values[k];
     }
-     
+
     // Update joint position setpoint
-    Eigen::VectorXd dq = q + qdot / ros_freq_;
+    Eigen::VectorXd dq(NUM_JOINTS);
+    dq = q + qdot / ros_freq_;
 
     // Build the msg for the joints setpoint
     sensor_msgs::msg::JointState js;
@@ -872,7 +863,7 @@ void ManipulatorPlannerNode::jacobianControl()
 
 void ManipulatorPlannerNode::updateJacobianSpeedCmd(){
     // Compute the difference between the new and old velocity commands
-    Eigen::VectorXd delta = ee_vel_cmd_ - current_ee_vel_;
+    Eigen::VectorXd delta = ee_vel_cmd_ - current_ee_vel_norm_;
     for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(delta[k]);}
 
     double delta_linear_norm = delta.head<3>().norm();
@@ -880,32 +871,36 @@ void ManipulatorPlannerNode::updateJacobianSpeedCmd(){
 
     if (delta_linear_norm * ros_freq_ < max_accel_ee_){
         // Delta is small enough to set the new velocity directly (or the robot is not moving)
-        current_ee_vel_.head<3>() = ee_vel_cmd_.head<3>();
+        current_ee_vel_norm_.head<3>() = ee_vel_cmd_.head<3>();
     }
     else {
         for (unsigned int k = 0; k < 3; k++)
         {
             // Compute the acceleration for each component mutiplying acceleration max by the component of the delta versor
             double acc = max_accel_ee_ * abs(delta[k]) / delta_linear_norm;
-            current_ee_vel_(k) = current_ee_vel_(k) + sign(delta[k]) * acc / ros_freq_;
+            current_ee_vel_norm_(k) = current_ee_vel_norm_(k) + sign(delta[k]) * acc / ros_freq_;
         }
     }
 
+    current_ee_vel_norm_.head<3>() /= max_speed_ee_; //Normalize
+
     if (delta_angular_norm * ros_freq_ < max_rot_accel_ee_){
         // Delta is small enough to set the new velocity directly (or the robot is not moving)
-        current_ee_vel_.tail<3>() = ee_vel_cmd_.tail<3>();
+        current_ee_vel_norm_.tail<3>() = ee_vel_cmd_.tail<3>();
     }
     else {
         for (unsigned int k = 3; k < 6; k++)
         {
             // Compute the acceleration for each component mutiplying acceleration max by the component of the delta versor
             double acc = max_rot_accel_ee_ * abs(delta[k]) / delta_angular_norm;
-            current_ee_vel_(k) = current_ee_vel_(k) + sign(delta[k]) * acc / ros_freq_;
+            current_ee_vel_norm_(k) = current_ee_vel_norm_(k) + sign(delta[k]) * acc / ros_freq_;
         }
     }
 
+    current_ee_vel_norm_.tail<3>() /= max_rot_speed_ee_; //Normalize
+
     // Set a lower limit to velocities to avoid noises
-    for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(current_ee_vel_[k]);}
+    for (unsigned int k = 0; k < 6; k++) {setToZeroIfSmall(current_ee_vel_norm_[k]);}
 }
 
 void ManipulatorPlannerNode::updateJacobianConstraintPrimitives()
@@ -1010,8 +1005,8 @@ void ManipulatorPlannerNode::checkParams() {
     min_jacobian_determinant_ = this->get_parameter_or("min_jacobian_determinant", 0.0);
     limit_joints_control_     = this->get_parameter_or("limit_joints_control", false);
     limit_jacobian_control_   = this->get_parameter_or("limit_jacobian_control", false);
-    jac_max_damping_factor_   = this->get_parameter_or("jacobian_max_damping_factor", 0.1);
-    jac_sigma_threshold_      = this->get_parameter_or("jacobian_sigma_threshold", 0.1);
+    max_damping_factor_       = this->get_parameter_or("max_damping_factor", 0.1);
+    min_sigma_factor_         = this->get_parameter_or("min_sigma_factor_", 1.0);
 
     addPrefix(prefix, joint_names_);
     addPrefix(prefix, gripper_links_);
