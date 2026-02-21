@@ -1263,7 +1263,7 @@ void ManipulatorMenu::publishJointConstraint(const uint &joint_index,
                                              const double &weight)
 {
 
-    double middle_pos = (min_position + max_position) / 2.0 + min_position;
+    double middle_pos = (min_position + max_position) / 2.0;
     double tolerance_below = middle_pos - min_position;
     double tolerance_above = max_position - middle_pos;
 
@@ -1279,6 +1279,7 @@ void ManipulatorMenu::publishJointConstraint(const uint &joint_index,
     
     jointConstraints_pub_->publish(constraint);
 }
+
 void ManipulatorMenu::publishPositionConstraint(const std::string& link_name, 
                                                 const geometry_msgs::msg::Pose& shape_pose, 
                                                 const uint &shape_type, 

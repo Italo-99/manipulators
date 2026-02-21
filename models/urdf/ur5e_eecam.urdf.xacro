@@ -19,7 +19,7 @@
 
     <xacro:arg name="tcp_offset"                    default="0.160"/>
     <xacro:arg name="tcp_z_rot"                     default="1.866"/>
-    <xacro:arg name="camera_pitch"                  default="0.0"/>
+    <xacro:arg name="camera_pitch"                  default="0.41"/>
 
     <xacro:property name="camera"                   value="$(arg camera)"/>
     <xacro:property name="gripper"                  value="$(arg gripper)"/>

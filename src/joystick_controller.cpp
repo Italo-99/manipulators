@@ -26,6 +26,8 @@ JoystickController::JoystickController(ManipulatorMenuParams params, rclcpp::Nod
         joy_sub_options
     );
 
+    RCLCPP_INFO(node_->get_logger(), "Manipulator name: %s", params_.manipulator_name.c_str());
+
     velJacSetpoint_pub_ = node_->create_publisher<geometry_msgs::msg::Twist>(
         params_.manipulator_name + "/cmd_vel", 1
     );

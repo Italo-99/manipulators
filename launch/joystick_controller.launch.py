@@ -23,7 +23,7 @@ def get_node(context, *args, **kwargs):
             params,
             {'profile': LaunchConfiguration('profile')}
         ],
-        remappings=[('/manipulator/cmd_vel', '/cmd_vel')] # /mobile_manipulator/cmd_vel for the mobile control
+        #remappings=[('/manipulator/cmd_vel', '/cmd_vel')] # /mobile_manipulator/cmd_vel for the mobile control
     ))
 
     #Edit this to specify which profiles should use the game controller node, others will use the joy node

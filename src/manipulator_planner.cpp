@@ -788,8 +788,6 @@ void ManipulatorPlannerNode::jacobianControl()
         lambda = (1 - sigma_min / jac_sigma_threshold_) * jac_max_damping_factor_;
     }
 
-    RCLCPP_INFO(get_logger(), "Sigma min: %f, Lambda: %f", sigma_min, lambda);
-
     Eigen::VectorXd sigma_damped(sigma.size());
     for(int i=0; i<sigma.size(); ++i)
         sigma_damped(i) = sigma(i) / (sigma(i)*sigma(i) + lambda*lambda);
