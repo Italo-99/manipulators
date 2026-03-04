@@ -761,21 +761,33 @@ void ManipulatorMenu::stopTrajectory(){
 
 // -------------------- TF END EFFECTOR LISTENER -----------------------
 
-// Listen a TF between two given frames
-geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &reference_frame, const std::string &target_frame, uint num_tries)
+geometry_msgs::msg::TransformStamped ManipulatorMenu::getTf(const std::string &src_frame, const std::string &dest_frame, uint num_tries)
 {
-
     geometry_msgs::msg::TransformStamped transform;
     bool received_transform = false;
     for (size_t counter {0}; !received_transform && rclcpp::ok() && counter < num_tries; ++counter)
     {
         try {
-            transform = tf_buffer_->lookupTransform(reference_frame, target_frame, tf2::TimePointZero, tf2::durationFromSec(0.5));
+            transform = tf_buffer_->lookupTransform(dest_frame, src_frame, tf2::TimePointZero, tf2::durationFromSec(0.5));
             received_transform = true;
         } catch (const tf2::TransformException & ex) {
             rclcpp::sleep_for(std::chrono::milliseconds(100));
         }
     }
+
+    if (!received_transform)
+    {
+        RCLCPP_DEBUG(node_->get_logger(), "Failed to receive transform from %s to %s after %u attempts.", src_frame.c_str(), dest_frame.c_str(), num_tries);
+    }
+
+    return transform;
+}
+
+// Listen a TF between two given frames
+geometry_msgs::msg::PoseStamped ManipulatorMenu::getTfPose(const std::string &reference_frame, const std::string &target_frame, uint num_tries)
+{
+    geometry_msgs::msg::TransformStamped transform = getTf(reference_frame, target_frame, num_tries);
+    bool received_transform = !transform.header.frame_id.empty();
 
     geometry_msgs::msg::PoseStamped pose_stamped;
     if (received_transform)
@@ -793,14 +805,43 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &refere
     return pose_stamped;
 }
 
-geometry_msgs::msg::PoseStamped ManipulatorMenu::getTfOffset(const std::string& target_frame, 
-                                                             const std::string& reference_frame,
-                                                             const geometry_msgs::msg::Pose &offset)
+geometry_msgs::msg::PoseStamped ManipulatorMenu::transformPose(const std::string& src_frame, 
+                                                               const std::string& dest_frame,
+                                                               const geometry_msgs::msg::Pose &pose)
 {
-    geometry_msgs::msg::PoseStamped pose = getTf(reference_frame, target_frame);
-    pose.pose = getOffsetPose(pose.pose, offset);
+    geometry_msgs::msg::PoseStamped result;
+    
+    // Get the transform from src_frame to dest_frame
+    geometry_msgs::msg::TransformStamped transform = getTf(src_frame, dest_frame);
+    
+    if (transform.header.frame_id.empty())
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to get transform from %s to %s", src_frame.c_str(), dest_frame.c_str());
+        return result;
+    }
 
-    return pose;
+    // Convert the input pose to tf2::Transform
+    tf2::Transform tf_pose;
+    tf2::fromMsg(pose, tf_pose);
+
+    // Convert the TransformStamped to tf2::Transform
+    tf2::Transform tf_transform;
+    tf2::fromMsg(transform.transform, tf_transform);
+
+    // Apply the transform: dest_T_pose = dest_T_src * src_T_pose
+    tf2::Transform tf_result = tf_transform * tf_pose;
+
+    // Convert back to geometry_msgs::PoseStamped
+    result.header.stamp = transform.header.stamp;
+    result.header.frame_id = dest_frame;
+
+    geometry_msgs::msg::Transform result_transform_msg = tf2::toMsg(tf_result);
+    result.pose.position.x = result_transform_msg.translation.x;
+    result.pose.position.y = result_transform_msg.translation.y;
+    result.pose.position.z = result_transform_msg.translation.z;
+    result.pose.orientation = result_transform_msg.rotation;
+
+    return result;
 }
 
 geometry_msgs::msg::Pose ManipulatorMenu::getOffsetPose(const geometry_msgs::msg::Pose &pose, 
@@ -880,7 +921,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_x(const double x_step, bool
     if (linear)
     {
         // publishCartesianGoal({goal_pose});
-        cartesianPlanAndWait({goal_pose});
+        cartesianPlanExecuteAndWait({goal_pose});
         return goal_pose;
     }
     else
@@ -900,7 +941,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_y(const double y_step, bool
     if (linear)
     {
         // publishCartesianGoal({goal_pose});
-        cartesianPlanAndWait({goal_pose});
+        cartesianPlanExecuteAndWait({goal_pose});
         return goal_pose;
     }
     else
@@ -920,7 +961,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_z(const double z_step, bool
     if (linear)
     {
         // publishCartesianGoal({goal_pose});
-        cartesianPlanAndWait({goal_pose});
+        cartesianPlanExecuteAndWait({goal_pose});
         return goal_pose;
     }
     else

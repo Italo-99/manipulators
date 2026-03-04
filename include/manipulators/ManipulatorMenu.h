@@ -403,23 +403,33 @@ class ManipulatorMenu
         */
         std::vector<double> getJointStateDegrees();
 
+
+        /*!
+            @brief Get the transformation from src_frame to dest_frame.
+        */
+        geometry_msgs::msg::TransformStamped getTf(const std::string& src_frame, const std::string& dest_frame, uint num_tries=10);
+
         /*!
             @brief Get the pose of target_frame relative to reference_frame.
         */
-        geometry_msgs::msg::PoseStamped getTf(const std::string& target_frame, const std::string& reference_frame, uint num_tries=10);
+        geometry_msgs::msg::PoseStamped getTfPose(const std::string& target_frame, const std::string& reference_frame, uint num_tries=10);
 
         /*!
-            @brief Get the pose of a point offset from target_frame according to its own frame, relative to reference frame.
+            @brief Transform a pose from src_frame to dest_frame.
+            @param src_frame: The frame in which the pose is currently expressed.
+            @param dest_frame: The frame in which the pose should be expressed.
+            @param pose: The pose to transform (relative to src_frame).
+            @return The transformed pose expressed in dest_frame.
         */
-        geometry_msgs::msg::PoseStamped getTfOffset(const std::string& target_frame, 
-                                                    const std::string& reference_frame,
-                                                    const geometry_msgs::msg::Pose &offset);
+        geometry_msgs::msg::PoseStamped transformPose(const std::string& src_frame, 
+                                                      const std::string& dest_frame,
+                                                      const geometry_msgs::msg::Pose &pose);
 
         /*!
             @brief Get a pose offset from the passed one (axis should be treated same way as a tf frame).
         */
        geometry_msgs::msg::Pose getOffsetPose(const geometry_msgs::msg::Pose &pose, 
-                                                const geometry_msgs::msg::Pose &offset);
+                                              const geometry_msgs::msg::Pose &offset);
 
         /*!
             @brief Move the end effector x_step meters along the x axis.

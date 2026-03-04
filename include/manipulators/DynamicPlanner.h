@@ -58,6 +58,7 @@ struct DynamicPlannerParams
     double min_cartesian_fraction   = 0.1;                       // Minimum fraction for the cartesian plan to be considered successful
     double caresian_blend_radius    = 0.0;                       // Blend radius for the cartesian plan
     double joint_states_timeout     = 1.0;                       // Timeout after which planner is blocked if no joint states are received (seconds)
+    double tf_timeout               = 2.0;                       // TF lookups will fail if last received transfoms are older than this threshold (seconds)
 
     DynamicPlannerParams() {}
 

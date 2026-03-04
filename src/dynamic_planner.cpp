@@ -310,8 +310,16 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
 
     // PRE PLANNING CHECK
     // 1. goal_pose is not too close to the current position
+    
+    geometry_msgs::msg::Pose pose_world;
+    if (frame != params_.world_frame)
+    {
+        pose_world = transformPoseToWorld(goal_pose, frame);
+    } else {
+        pose_world = goal_pose;
+    }
 
-    if (checkPoseDiff(goal_pose, ee_link))
+    if (checkPoseDiff(pose_world, ee_link))
     {
         RCLCPP_ERROR(node_->get_logger(), "Goal pose is too close to the current position");
         manipulator_interfaces::msg::TrajectoryResult result_msg;
@@ -332,7 +340,7 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
     //Create the plan and execute
     moveit_msgs::msg::MotionPlanRequest motion_plan_request = createMotionPlanRequest();
     moveit::core::robotStateToRobotStateMsg(*start_state, motion_plan_request.start_state);
-    motion_plan_request.goal_constraints.push_back(createTcpGoalConstraints(goal_pose, ee_link, frame));
+    motion_plan_request.goal_constraints.push_back(createTcpGoalConstraints(pose_world, ee_link, params_.world_frame));
 
     moveit_msgs::action::MoveGroup::Result plan = computeMotionPlan(motion_plan_request);
 
@@ -1454,7 +1462,7 @@ geometry_msgs::msg::Pose DynamicPlanner::transformPose(const geometry_msgs::msg:
         transformed_pose_stamped = tf_buffer_->transform(
             pose_stamped,
             target_frame,
-            tf2::durationFromSec(0.5)
+            tf2::durationFromSec(params_.tf_timeout)
         );
     }
     catch (tf2::TransformException &ex) {
@@ -1578,6 +1586,7 @@ DynamicPlannerParams DynamicPlannerParams::fromNode(const rclcpp::Node::SharedPt
     params.end_effector_link        = node->get_parameter_or("ee_name", params.end_effector_link);
     params.min_cartesian_fraction   = node->get_parameter_or("min_cartesian_fraction", params.min_cartesian_fraction);
     params.joint_states_timeout     = node->get_parameter_or("joint_states_timeout", params.joint_states_timeout);
+    params.tf_timeout               = node->get_parameter_or("tf_timeout", params.tf_timeout);
 
     return params;
 }
