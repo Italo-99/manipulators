@@ -52,15 +52,22 @@
     <!-- Camera inclusion -->
     <xacro:if value="${camera}">
         <xacro:include filename="$(find realsense2_description)/urdf/_d435i.urdf.xacro"/>
+        <link name="camera_mount" />
+        <joint name="tcp_gripper-camera_mount" type="fixed">
+            <parent link="tcp_gripper"/>
+            <child link="camera_mount"/>
+            <origin xyz="-0.070 0 -0.135" rpy="0 $(arg camera_pitch) 0"/>
+        </joint>
+
         <link name="d435i_base_link" />
-        <joint name="tool0-d435i_base_link" type="fixed">
-            <parent link="tool0"/>
+        <joint name="camera_mount-d435i_base_link" type="fixed">
+            <parent link="camera_mount"/>
             <child link="d435i_base_link"/>
-            <origin xyz="0.08 0 -0.04" rpy="0 -1.57 3.14"/>
+            <origin xyz="0 0 0.021" rpy="0 0 0"/>
         </joint>
 
         <xacro:sensor_d435i parent="d435i_base_link" name="ee_cam">
-            <origin xyz="0 0 0" rpy="0 0 0" />
+            <origin xyz="0 0 0" rpy="0 -1.57 0" />
         </xacro:sensor_d435i>
     </xacro:if>
 
@@ -117,7 +124,7 @@
         <joint name="world_floor" type="fixed">
             <parent link="base_link"/>
             <child link="floor"/>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <origin xyz="0 0 -0.005" rpy="0 0 0"/>
         </joint>
     </xacro:if>
 
@@ -139,20 +146,23 @@
                     <box size="0.130 0.170 $(arg tcp_offset)"/>
                 </geometry>
             </collision>
+
+            <joint name="tool0-ee_collision_box" type="fixed">
+                <parent link="tool0"/>
+                <child link="ee_collision_box"/>
+                <origin xyz="0 0.0 0.080 " rpy="0 0 0"/>
+            </joint>
+
         </link>
 
-        <joint name="tool0-ee_collision_box" type="fixed">
-            <parent link="tool0"/>
-            <child link="ee_collision_box"/>
-            <origin xyz="0 0.0 0.080 " rpy="0 0 0"/>
-        </joint>
-
-        <link name="tcp_gripper" />
-
-        <joint name="tool0-tcp_gripper" type="fixed">
-            <parent link="tool0"/>
-            <child link="tcp_gripper"/>
-            <origin xyz="0 0 $(arg tcp_offset)" rpy="0 0 $(arg tcp_z_rot)"/>
-        </joint>
     </xacro:if>
+
+    <link name="tcp_gripper" />
+
+    <joint name="tool0-tcp_gripper" type="fixed">
+        <parent link="tool0"/>
+        <child link="tcp_gripper"/>
+        <origin xyz="0 0 $(arg tcp_offset)" rpy="0 0 $(arg tcp_z_rot)"/>
+    </joint>
+
 </robot>

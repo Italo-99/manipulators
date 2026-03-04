@@ -2,6 +2,7 @@
 #define DRIVERTRAJECTORYCONVERTER_H
 // Import libraries
 #include <signal.h>
+#include <chrono>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
@@ -21,6 +22,7 @@ private:
     // ROS objects
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr   joint_state_sub_;
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr   joint_cmd_sub_;
+    rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr      joint_state_publisher_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr  velocity_publisher_;
 
     void declareParameters();
@@ -34,6 +36,8 @@ private:
 
     // Controller implementation
     void computeVel();
+    void pubZOH_JointState();
+    bool isJointStateTimeout() const;
 
     // Joint states
     Eigen::Matrix<double,6,1> joints_values_;       // Pos status
@@ -41,22 +45,32 @@ private:
     Eigen::Matrix<double,6,1> qd_cmd_;              // Position command
     Eigen::Matrix<double,6,1> real_vel_;            // Velocity output of the position
     std_msgs::msg::Float64MultiArray vel_msg_;      // Final multi array vel msg to publish
+    std_msgs::msg::Float64MultiArray zero_vel_msg_; // Zero velocity command
 
     // Joints mapping
     std::unordered_map<std::string, size_t> joint_name_to_index_;  // Map for joint names to indices
 
-    bool joint_map_initialized_;  // Flag to check if the joint state map is initialized
-    bool cmd_map_initialized_;    // Flag to check if the command state map is initialized
-    
+    bool joint_map_initialized_;     // Flag to check if the joint state map is initialized
+    bool cmd_map_initialized_;       // Flag to check if the command state map is initialized
+    bool timeout_active_;            // Current timeout state
+    bool real_joint_state_received_; // First real joint state received
+
+    sensor_msgs::msg::JointState last_real_joint_state_;
+    rclcpp::Time last_joint_state_rx_time_;
+
     // Parameters
     std::vector<std::string> joints_names_group_;
     std::string velocity_topic_;
+    std::string real_joint_state_topic_;
     double kp_;
     double min_motor_speed_;
+    double joint_state_timeout_s_;
     int spinner_rate_;
 
-    // Create a single-threaded executor
-    rclcpp::executors::SingleThreadedExecutor executor;
+    rclcpp::CallbackGroup::SharedPtr subscribers_callback_group_;
+
+    // Create a multi-threaded executor
+    rclcpp::executors::MultiThreadedExecutor executor_;
     rclcpp::TimerBase::SharedPtr timer_;    // Main loop timer
     unsigned long long int k = 0;           // Loop counter
     double mean_ = 0.0;                     // Mean execution time

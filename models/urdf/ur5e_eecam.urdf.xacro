@@ -11,15 +11,17 @@
     <xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/ur5e/default_kinematics.yaml"/>
 
     <!-- Additional objects Arguments -->
-    <xacro:arg name="camera"                        default="true"/>
+    <xacro:arg name="camera"                        default="false"/>
     <xacro:arg name="gripper"                       default="false"/>
-    <xacro:arg name="gfloor"                        default="true"/>
-    <xacro:arg name="gripper_collision_box"         default="true"/>
+    <xacro:arg name="gfloor"                        default="false"/>
+    <xacro:arg name="gripper_collision_box"         default="false"/>
     <xacro:arg name="back_wall"                     default="false"/>
 
-    <xacro:arg name="tcp_offset"                    default="0.160"/>
-    <xacro:arg name="tcp_z_rot"                     default="1.866"/>
+    <!-- <xacro:arg name="tcp_offset"                    default="0.148"/> -->
+    <xacro:arg name="tcp_offset"                    default="0.0"/>
+    <xacro:arg name="tcp_z_rot"                     default="0.0"/>
     <xacro:arg name="camera_pitch"                  default="0.41"/>
+    <!-- <xacro:arg name="tcp_z_rot"                     default="1.866"/> -->
 
     <xacro:property name="camera"                   value="$(arg camera)"/>
     <xacro:property name="gripper"                  value="$(arg gripper)"/>
@@ -50,6 +52,15 @@
             tf_prefix="$(arg tf_prefix)"
         />
     </xacro:if>
+
+    <!-- TCP gripper inclusion -->
+    <link name="tcp_gripper" />
+
+    <joint name="tool0-tcp_gripper" type="fixed">
+        <parent link="tool0"/>
+        <child link="tcp_gripper"/>
+        <origin xyz="0 0 $(arg tcp_offset)" rpy="0 0 $(arg tcp_z_rot)"/>
+    </joint>
 
     <!-- Camera inclusion -->
     <xacro:if value="${camera}">
@@ -144,20 +155,22 @@
                     <box size="0.130 0.170 $(arg tcp_offset)"/> 
                 </geometry>
             </collision>
+
+            <joint name="tool0-ee_collision_box" type="fixed">
+                <parent link="tool0"/>
+                <child link="ee_collision_box"/>
+                <origin xyz="0 0.0 0.080 " rpy="0 0 0"/>
+            </joint>
+
         </link>
-
-        <joint name="tool0-ee_collision_box" type="fixed">
-            <parent link="tool0"/>
-            <child link="ee_collision_box"/>
-            <origin xyz="0 0.0 0.080 " rpy="0 0 0"/> 
-        </joint>
-
-        <link name="tcp_gripper" />
-
-        <joint name="tool0-tcp_gripper" type="fixed">
-            <parent link="tool0"/>
-            <child link="tcp_gripper"/>
-            <origin xyz="0 0 $(arg tcp_offset)" rpy="0 0 $(arg tcp_z_rot)"/>
-        </joint>
     </xacro:if>
+    
+    <link name="tcp_gripper" />
+
+    <joint name="tool0-ee_collision_box" type="fixed">
+        <parent link="tool0"/>
+        <child link="ee_collision_box"/>
+        <origin xyz="0 0.0 0.080 " rpy="0 0 0"/> 
+    </joint>
+
 </robot>
