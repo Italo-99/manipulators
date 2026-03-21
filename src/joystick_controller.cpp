@@ -1,7 +1,7 @@
 #include "manipulators/JoystickController.h"
 
 JoystickController::JoystickController(ManipulatorMenuParams params, rclcpp::Node::SharedPtr node, const bool sync_parameters)
-    : ManipulatorMenu(params, node, sync_parameters), jacobian_control_(false), real_time_control_(false), admittance_control_(false)
+    : ManipulatorMenu(params, node, sync_parameters), control_mode_(ControlMode::NONE), control_frame_(params.base_link_name)
 {
     declareParameters();
 
@@ -27,16 +27,6 @@ JoystickController::JoystickController(ManipulatorMenuParams params, rclcpp::Nod
     );
 
     RCLCPP_INFO(node_->get_logger(), "Manipulator name: %s", params_.manipulator_name.c_str());
-
-    velJacSetpoint_pub_ = node_->create_publisher<geometry_msgs::msg::Twist>(
-        params_.manipulator_name + "/cmd_vel", 1
-    );
-    velJsRtSetpoint_pub_ = node_->create_publisher<sensor_msgs::msg::JointState>(
-        params_.manipulator_name + "/js_cmd_vel", 1
-    );
-    velAdmSetpoint_pub_ = node_->create_publisher<geometry_msgs::msg::Twist>(
-        params_.manipulator_name + "/adm_vd", 1
-    );
 
     rclcpp::contexts::get_global_default_context()->add_pre_shutdown_callback(
         std::bind(&JoystickController::shutdown_handler, this) // Register shutdown handler
@@ -68,41 +58,24 @@ void JoystickController::joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy
     bool rotation_control = joy->buttons[ButtonsMap::RIGHTSHOULDER];
 
     // Set real time js control
-    if(joy->buttons[ButtonsMap::LEFTSTICK] && !real_time_control_){ //Enable js real time control
-        jacobian_control_ = false;
-        real_time_control_ = true;
-        setJacobianSpeedControl(jacobian_control_);
-        setJsRealTimeControl(real_time_control_);
-    } else if(joy->buttons[ButtonsMap::RIGHTSTICK] && !jacobian_control_){ //Enable jacobian control
-        jacobian_control_ = true;
-        real_time_control_ = false;
-        setJacobianSpeedControl(jacobian_control_);
-        setJsRealTimeControl(real_time_control_);
-    } else if (joy->buttons[ButtonsMap::START]){ //Toggle admittance control
-        admittance_control_ = !admittance_control_;
-        setAdmittanceControl(admittance_control_);
-        if (admittance_control_) {
-            jacobian_control_ = false;
-            real_time_control_ = false;
-            setJacobianSpeedControl(jacobian_control_);
-            setJsRealTimeControl(real_time_control_);
-        }
-    } else if(joy->buttons[ButtonsMap::SELECT] && (jacobian_control_ || real_time_control_)){ //Disable all real time control modes
-        if (admittance_control_) {
-            admittance_control_ = false;
-            setAdmittanceControl(admittance_control_);
-        }
-        if (jacobian_control_) {
-            jacobian_control_ = false;
-            setJacobianSpeedControl(jacobian_control_);
-        }
-        if (real_time_control_) {
-            real_time_control_ = false;
-            setJsRealTimeControl(real_time_control_);
-        }
-    }
+    if(joy->buttons[ButtonsMap::LEFTSTICK] && control_mode_ != ControlMode::JOINTS){ //Enable real time control
+        joySetJointsControlMode();
+    } else if(joy->buttons[ButtonsMap::RIGHTSTICK] && control_mode_ != ControlMode::JACOBIAN){ //Enable jacobian control
+        joySetJacobainControlMode();
+    } else if (joy->buttons[ButtonsMap::START] && control_mode_ != ControlMode::ADMITTANCE){ //Toggle admittance control
+        joySetAdmittanceControlMode();
+    } else if(joy->buttons[ButtonsMap::SELECT] && control_mode_ != ControlMode::NONE){ //Disable control
+        joyDisableControl();
+    } 
 
-    if(jacobian_control_ || admittance_control_){
+    if(control_mode_ == ControlMode::JACOBIAN || control_mode_ == ControlMode::ADMITTANCE){
+        // Enable relative control
+        if (joy->buttons[ButtonsMap::LEFTSHOULDER]){ //Relative control
+            control_frame_ = params_.ee_link_name;
+        } else { //Absolute control
+            control_frame_ = params_.base_link_name;
+        }
+
         if(rotation_control){
             arm_cmd_vel_.angular.x = x_axis * rot_step_;
             arm_cmd_vel_.angular.y = y_axis * rot_step_;
@@ -112,7 +85,7 @@ void JoystickController::joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy
             arm_cmd_vel_.linear.y = y_axis * vel_step_;
             arm_cmd_vel_.linear.z = z_axis * vel_step_;
         }
-    } else if(real_time_control_){
+    } else if(control_mode_ == ControlMode::JOINTS){
         if(joy->axes[AxesMap::TRIGGERLEFT] < -0.3){          //Unlock j1 and j2
             js_cmd_vel_.velocity[0] = -y_axis * js_step_;
             js_cmd_vel_.velocity[1] = -z_axis * js_step_;
@@ -134,6 +107,36 @@ void JoystickController::joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy
     // }
 }
 
+void JoystickController::joyDisableControl(){
+    control_mode_ = ControlMode::NONE;
+    setJacobianSpeedControl(false);
+    setJsRealTimeControl(false);
+    setAdmittanceControl(false);
+}
+
+void JoystickController::joySetJacobainControlMode(){
+    control_mode_ = ControlMode::JACOBIAN;
+    control_frame_ = params_.base_link_name; // Default control frame is the base link
+    setJacobianSpeedControl(true);
+    setJsRealTimeControl(false);
+    setAdmittanceControl(false);
+}
+
+void JoystickController::joySetJointsControlMode(){
+    control_mode_ = ControlMode::JOINTS;
+    setJacobianSpeedControl(false);
+    setJsRealTimeControl(true);
+    setAdmittanceControl(false);
+}
+
+void JoystickController::joySetAdmittanceControlMode(){
+    control_mode_ = ControlMode::ADMITTANCE;
+    setAdmittanceControl(true);
+    setAdmittanceVelMode(true);
+    setJacobianSpeedControl(true); // Admittance control requires jacobian control to be active
+    setJsRealTimeControl(false);
+}
+
 void JoystickController::declareParameters(){
     node_->declare_parameter("vel_step", 0.4);
     node_->declare_parameter("rot_step", 0.4);
@@ -151,9 +154,20 @@ void JoystickController::shutdown_handler()
 // COMMANDS
 void JoystickController::publishCmd()
 {
-    if      (jacobian_control_)  {velJacSetpoint_pub_->publish(arm_cmd_vel_);}
-    else if (real_time_control_) {velJsRtSetpoint_pub_->publish(js_cmd_vel_);}
-    else if (admittance_control_) {velAdmSetpoint_pub_->publish(arm_cmd_vel_);}
+    switch (control_mode_)
+    {
+        case ControlMode::JACOBIAN:
+            publishJacobianCommand(arm_cmd_vel_, control_frame_);
+            break;
+        case ControlMode::JOINTS:
+            publishJointsCommand(js_cmd_vel_);
+            break;
+        case ControlMode::ADMITTANCE:
+            publishAdmittanceVelocityCommand(arm_cmd_vel_, control_frame_);
+            break;
+        default:
+            break;
+    }
 }
 
 void JoystickController::spinnerJoystick(){

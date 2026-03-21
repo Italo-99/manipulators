@@ -9,6 +9,13 @@
 
 #include "manipulators/ManipulatorMenu.h"
 
+enum ControlMode {
+    NONE = 0,
+    JOINTS = 1,
+    JACOBIAN = 2,
+    ADMITTANCE = 3
+};
+
 enum AxesMap {
     LEFTY = 0,
     LEFTX = 1,
@@ -36,6 +43,32 @@ enum ButtonsMap {
     DPAD_RIGHT = 14
 };
 
+static const rmw_qos_profile_t QOS_PROFILE_RELIABLE =
+{
+    RMW_QOS_POLICY_HISTORY_KEEP_LAST,
+    1,
+    RMW_QOS_POLICY_RELIABILITY_RELIABLE,
+    RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL,
+    RMW_QOS_DEADLINE_DEFAULT,
+    RMW_QOS_LIFESPAN_DEFAULT,
+    RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT,
+    RMW_QOS_LIVELINESS_LEASE_DURATION_DEFAULT,
+    false
+};
+
+static const rmw_qos_profile_t QOS_PROFILE_BEST_EFFORT =
+{
+    RMW_QOS_POLICY_HISTORY_KEEP_LAST,
+    1,
+    RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
+    RMW_QOS_POLICY_DURABILITY_VOLATILE,
+    RMW_QOS_DEADLINE_DEFAULT,
+    RMW_QOS_LIFESPAN_DEFAULT,
+    RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT,
+    RMW_QOS_LIVELINESS_LEASE_DURATION_DEFAULT,
+    false
+};
+
 class JoystickController : public ManipulatorMenu
 {
     public:
@@ -47,6 +80,11 @@ class JoystickController : public ManipulatorMenu
 
         virtual void joyCallback(const sensor_msgs::msg::Joy::SharedPtr &joy); //Callback for joystick 
         void declareParameters(); 
+        
+        void joyDisableControl();              // Set control_mode_ to NONE, stop motion and disable all joystick controls
+        void joySetJacobainControlMode();
+        void joySetJointsControlMode();
+        void joySetAdmittanceControlMode();
     
         //Shutdown handler
         void shutdown_handler();
@@ -57,18 +95,14 @@ class JoystickController : public ManipulatorMenu
         rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;                    //Receive commands from joystick
         sensor_msgs::msg::Joy::SharedPtr joy_msg_; //Last received joystick message
 
-        rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velJacSetpoint_pub_;        //Publish end effector velocity commands to manipulator
-        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr velJsRtSetpoint_pub_;    //Publish joint velocity commands to manipulator
-        
-        rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velAdmSetpoint_pub_;        //Publish velocity commands to admittance controller
-
         sensor_msgs::msg::JointState js_cmd_vel_;
         geometry_msgs::msg::Twist arm_cmd_vel_;
 
         double vel_step_, rot_step_, js_step_;
         std::string joy_topic_;
-
-        bool jacobian_control_, real_time_control_, admittance_control_;
+        
+        ControlMode control_mode_;
+        std::string control_frame_;
 
         rclcpp::TimerBase::SharedPtr cmd_pub_timer_;
 };

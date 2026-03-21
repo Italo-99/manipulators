@@ -1,4 +1,3 @@
-/** @file */
 #ifndef MANIPULATOR_MENU_H
 #define MANIPULATOR_MENU_H
 
@@ -16,6 +15,7 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
+#include "geometry_msgs/msg/twist_stamped.hpp"
 
 #include "moveit_msgs/msg/collision_object.hpp"
 #include "moveit_msgs/msg/attached_collision_object.hpp"
@@ -47,6 +47,7 @@
 #include "manipulator_interfaces/srv/change_planner_tolerances.hpp"
 #include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
 #include "manipulator_interfaces/srv/enable_real_time_constraints.hpp"
+#include "manipulator_interfaces/srv/set_frame.hpp"
 
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
@@ -100,10 +101,13 @@ struct ManipulatorMenuParams
     std::vector<std::string> joint_names = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
 
     std::string base_link_name           = "base_link";
+    std::string ee_link_name             = "tcp_gripper";
     
     double tcp_position_tolerance        = 0.01; //Tolerance for the position of the end effector
     double tcp_orientation_tolerance     = 0.01; //Tolerance for the orientation of the end effector
     double joint_tolerance               = 0.01; //Tolerance for the position of the joints
+    
+    bool has_admittance                  = false; //Whether the manipulator control has admittance capability (admittance_controller node must be running)
 
     std::string known_poses_path          = "";  
 
@@ -380,6 +384,16 @@ class ManipulatorMenu
             @brief Stop trajectory execution.
         */
         void stopTrajectory();
+        
+        /*!
+            @brief Send stop command to all real time controls.
+        */
+        void stopRealTime();
+        
+        /*!
+            @brief Stops whatever movement the manipulator is doing.
+        */
+        void emergencyStop();
 
         /*!
             @brief Get the current end effector pose.
@@ -424,6 +438,17 @@ class ManipulatorMenu
         geometry_msgs::msg::PoseStamped transformPose(const std::string& src_frame, 
                                                       const std::string& dest_frame,
                                                       const geometry_msgs::msg::Pose &pose);
+        
+        /*!
+            @brief Transform a twist from src_frame to dest_frame.
+            @param src_frame: The frame in which the twist is currently expressed.
+            @param dest_frame: The frame in which the twist should be expressed.
+            @param twist: The twist to transform (relative to src_frame).
+            @return The transformed twist expressed in dest_frame.
+        */
+        geometry_msgs::msg::TwistStamped transformTwist(const std::string& src_frame, 
+                                                      const std::string& dest_frame,
+                                                      const geometry_msgs::msg::Twist &twist);
 
         /*!
             @brief Get a pose offset from the passed one (axis should be treated same way as a tf frame).
@@ -649,27 +674,28 @@ class ManipulatorMenu
             @param enable: If true, the jacobian speed control will be enabled.
             @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
         */
-        void setJacobianSpeedControl(bool);
+        void setJacobianSpeedControl(bool enable);
         /*!
             @brief Set the real time control parameter in the manipulator planner.
             @param enable: If true, the real time control will be enabled.
+            @param stop_cmd: If true, a stop command will be sent to the real time control when enabling it to avoid unexpected movements.
             @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
         */
-        void setJsRealTimeControl(bool);
+        void setJsRealTimeControl(bool enable);
 
         /*!
             @brief Set the admittance control parameter in the manipulator planner.
             @param enable: If true, the admittance control will be enabled.
             @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
         */
-        void setAdmittanceControl(bool);
+        void setAdmittanceControl(bool enable);
 
         /*!
             @brief Set the admittance control parameter in the manipulator planner.
             @param enable: If true, the admittance control will be enabled.
             @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
         */
-        void setAdmittanceVelMode(bool);
+        void setAdmittanceVelMode(bool vel_mode);
         
         /*!
             @brief Set the planner velocity and acceleration factors.
@@ -695,6 +721,52 @@ class ManipulatorMenu
             @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
         */
         void setPlannerTolerances(float position_tolerance, float orientation_tolerance, float joint_tolerance);
+
+        /*!
+            @brief Publish a real time joint command to the manipulator planner.
+            @details This will work only if real time control is enabled in the planner via the setJsRealTimeControl method.
+            @param joint_speeds: Vector of joint velocities in degrees/s to be sent as a command.
+        */
+        void publishJointsCommand(const std::vector<double> joint_speeds);
+
+        /*!
+            @brief Publish a real time joint command to the manipulator planner.
+            @details This will work only if real time control is enabled in the planner via the setJsRealTimeControl method.
+            @param joint_state: JointState message containing the joint velocities in radians/s to be set.
+        */
+        void publishJointsCommand(const sensor_msgs::msg::JointState joint_state);
+
+        /*!
+            @brief Publish a real time Cartesian command to the manipulator planner.
+            @details This will work only if real time control is enabled in the planner via the setJsRealTimeControl method.
+            @param tcp_speed: Twist of the end effector containing the linear velocities in m/s and angular velocities in rad/s to be sent as a command.
+            @param frame: Frame in which the twist is expressed (leave empty for default frame).
+        */
+        void publishJacobianCommand(const geometry_msgs::msg::Twist tcp_speed, const std::string& frame = "");
+
+        /*!
+            @brief Publish a real time Cartesian command to the manipulator planner.
+            @details This will work only if real time control is enabled in the planner via the setJsRealTimeControl method.
+            @param tcp_speed: Vector of 6 elements (vx, vy, vz, wx, wy, wz) containing the linear velocities in m/s and angular velocities in degrees/s to be sent as a command.
+            @param frame: Frame in which the twist is expressed (leave empty for default frame).
+        */
+        void publishJacobianCommand(const std::vector<double> tcp_speed, const std::string& frame = "");
+
+        /*!
+            @brief Publish cartesian position command to the admittance controller.
+            @details This will work only if admittance control is enabled in the planner via the setAdmittanceControl method and admittance control is set to position mode by setAdmittanceVelMode(false).
+            @params tcp_pose: Desired tcp pose to be maintained by the admittance controlller.
+            @params frame: Frame in which the pose is expressed (leave empty for default frame).
+        */
+        void publishAdmittancePositionCommand(const geometry_msgs::msg::Pose tcp_pose, const std::string& frame = "");
+        
+        /*!
+            @brief Publish cartesian velocity command to the admittance controller.
+            @details This will work only if admittance control is enabled in the planner via the setAdmittanceControl method and admittance control is set to velocity mode by setAdmittanceVelMode(true).
+            @params tcp_speed: Twist of the end effector containing the linear velocities in m/s and angular velocities in radians/s to be sent as a command to the admittance controller.
+            @params frame: Frame in which the twist is expressed (leave empty for default frame).
+        */
+        void publishAdmittanceVelocityCommand(const geometry_msgs::msg::Twist tcp_speed, const std::string& frame = "");
 
         //Get parameter from manipulator_planner node
         template <typename T>
@@ -833,11 +905,17 @@ class ManipulatorMenu
         rclcpp::Client<manipulator_interfaces::srv::PseudoInverse>::SharedPtr pseudoInverse_client_;
         rclcpp::Client<manipulator_interfaces::srv::FKine>::SharedPtr fKine_client_;
         rclcpp::Client<manipulator_interfaces::srv::Jacobian>::SharedPtr jacobian_client_;
-
+ 
         // TF
         std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
         std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
+        // Real time control publishers
+        rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velJacSetpoint_pub_;        //Publish end effector velocity commands to manipulator
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr velJsRtSetpoint_pub_;    //Publish joint velocity commands to manipulator
+        rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velAdmSetpoint_pub_;        //Publish velocity commands to admittance controller
+        rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr poseAdmSetpoint_pub_; //Publish pose commands to admittance controller
+    
     public:
         // --------------------- PUBLIC VARIABLES ---------------------
 

@@ -27,6 +27,7 @@
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
 #include "manipulator_interfaces/msg/cartesian_goal.hpp"
+#include "manipulator_interfaces/srv/set_frame.hpp"
 
 class ManipulatorPlannerNode : public rclcpp::Node {
     public:
@@ -140,8 +141,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         void jointsRealTimeSetter_callback( // Set the real time joints speed based control
             const std_srvs::srv::SetBool::Request::SharedPtr req, 
             std_srvs::srv::SetBool::Response::SharedPtr res
-        );    
-        
+        );
+
         void jacobianControlSetter_callback( // Set the jacobian speed based control
             const std_srvs::srv::SetBool::Request::SharedPtr req, 
             std_srvs::srv::SetBool::Response::SharedPtr res
@@ -169,6 +170,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
 
         // Execute the real time joints speed based control
         void jointsRealTimeControl();
+
+        bool isRobotMoving();
 
         // --------------- HELPER FUNCTIONS ---------------
 

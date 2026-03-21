@@ -123,7 +123,7 @@ class DynamicPlanner
         void executeTrajectory(); //Asynchronous execution of the last planned trajectory
         void executeTrajectory(moveit_msgs::msg::RobotTrajectory& robot_trajectory); //Asynchronous execution of the passed trajectory (waypoints)
 
-        bool isMoving(); //Check if the robot is moving
+        bool isExecuting(); //Check if the robot is moving
         bool isReady() const; //Check if the planner has received group definition, so the dynamic planner can start working
 
         void stop(); //Stop the execution of the planned trajectory
@@ -196,7 +196,13 @@ class DynamicPlanner
         std::vector<std::string> getJointNames(); //Get the names of the joints
         std::vector<double> getJointValues(); //Get the current joint values
         std::vector<double> getJointSpeeds(); //Get the current joint speeds
+        sensor_msgs::msg::JointState getJointState(); //Get the current joint state as a message
 
+        // --------------- TF2 METHODS ----------------
+        geometry_msgs::msg::TransformStamped getTransform(const std::string &target_frame, const std::string &source_frame); //Get the transform between two frames
+        geometry_msgs::msg::Pose transformPose(const geometry_msgs::msg::Pose &pose, const std::string &target_frame, const std::string &src_frame); //Transform a pose from source_frame to target_frame
+        geometry_msgs::msg::Pose transformPoseToWorld(const geometry_msgs::msg::Pose &pose, const std::string &src_frame);  //Transform a pose from source_frame to world_frame_
+    
     private:
 
         // --------------- CALLBACK METHODS ----------------
@@ -238,12 +244,6 @@ class DynamicPlanner
         bool checkPoseDiff(const geometry_msgs::msg::Pose &pose_a, const geometry_msgs::msg::Pose &pose_b); //Check if the difference between pose_a and pose_b is negligible
     
         geometry_msgs::msg::PoseStamped toPoseStamped(const Eigen::Isometry3d& pose, const std::string &frame_id=""); //Converts an Eigen pose to a PoseStamped message
-    
-        // --------------- TF2 METHODS ----------------
-        
-        geometry_msgs::msg::TransformStamped getTransform(const std::string &target_frame, const std::string &source_frame); //Get the transform between two frames
-        geometry_msgs::msg::Pose transformPose(const geometry_msgs::msg::Pose &pose, const std::string &target_frame, const std::string &src_frame); //Transform a pose from source_frame to target_frame
-        geometry_msgs::msg::Pose transformPoseToWorld(const geometry_msgs::msg::Pose &pose, const std::string &src_frame);  //Transform a pose from source_frame to world_frame_
 
         // --------------- VISUALIZATION ----------------
         //Visualize a primitive
@@ -287,10 +287,10 @@ class DynamicPlanner
     
         //Trajectory variables
         // NOTE: For memory safery reasons robot_trajectory_ and trajpoint_ should be only accessed through setTrajectory() method
-        //       which will stop any attempt to modify them while is_moving_ is true
+        //       which will stop any attempt to modify them while is_executing_ is true
         moveit_msgs::msg::RobotTrajectory robot_trajectory_;    //Planned trajectory
         unsigned long trajpoint_;                               //Index of the current trajectory point
-        std::atomic<bool> is_moving_{false};                    //Whether the robot is moving or not, can be set to false to stop execution of trajectory (protected access)
+        std::atomic<bool> is_executing_{false};                    //Whether the robot is moving or not, can be set to false to stop execution of trajectory (protected access)
         std::atomic<bool> force_stop_{false};                   //Force stop the execution of the trajectory (protected access)
 
         //Time optimal trajectory generation 

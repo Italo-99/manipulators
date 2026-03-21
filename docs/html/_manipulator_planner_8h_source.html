@@ -77,252 +77,230 @@ $(function() {
 <div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;<span class="preprocessor">#include &lt;string&gt;</span></div>
 <div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="preprocessor">#include &lt;Eigen/Geometry&gt;</span></div>
 <div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;<span class="preprocessor">#include &lt;vector&gt;</span> </div>
-<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160; </div>
-<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;<span class="comment">//Interfaces</span></div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;<span class="preprocessor">#include &quot;shape_msgs/msg/solid_primitive.hpp&quot;</span></div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#include &quot;sensor_msgs/msg/joint_state.hpp&quot;</span></div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &quot;std_srvs/srv/set_bool.hpp&quot;</span></div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &quot;std_msgs/msg/float64.hpp&quot;</span></div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;std_msgs/msg/empty.hpp&quot;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160; </div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/f_kine.hpp&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/inv_kine.hpp&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/jacobian.hpp&quot;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/change_planner_tolerances.hpp&quot;</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/change_planner_scaling_factors.hpp&quot;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/pseudo_inverse.hpp&quot;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/msg/joint_goal.hpp&quot;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/msg/tcp_goal.hpp&quot;</span></div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/msg/cartesian_goal.hpp&quot;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160; </div>
-<div class="line"><a name="l00027"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html">   27</a></span>&#160;<span class="keyword">class </span><a class="code" href="class_manipulator_planner_node.html">ManipulatorPlannerNode</a> : <span class="keyword">public</span> rclcpp::Node {</div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;    <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;        <a class="code" href="class_manipulator_planner_node.html">ManipulatorPlannerNode</a>(</div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;            <span class="keyword">const</span> std::string node_name, </div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;            <span class="keyword">const</span> rclcpp::NodeOptions &amp;options</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;        );</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160; </div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;        ~<a class="code" href="class_manipulator_planner_node.html">ManipulatorPlannerNode</a>();</div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160; </div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;        <span class="keywordtype">void</span> spinner(); <span class="comment">//Spins the main node and executor_ in a different thread</span></div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;    <span class="keyword">private</span>:</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160; </div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;        <span class="keywordtype">void</span> shutdown_handler(); </div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160; </div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;        <span class="comment">// --------------- KINEMATICS FUNCTIONS ---------------</span></div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
-<div class="line"><a name="l00048"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#a178662718da69fb88a52d38e0e08e116">   48</a></span>&#160;        <span class="keyword">const</span> geometry_msgs::msg::Pose <a class="code" href="class_manipulator_planner_node.html#a178662718da69fb88a52d38e0e08e116">getFKine</a>();</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160; </div>
-<div class="line"><a name="l00054"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#ac908abe2495191cae6c36f5401b466a8">   54</a></span>&#160;        <span class="keyword">const</span> geometry_msgs::msg::Twist <a class="code" href="class_manipulator_planner_node.html#ac908abe2495191cae6c36f5401b466a8">getTcpVel</a>();</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160; </div>
-<div class="line"><a name="l00062"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#a5d6356bcb27536cd8a8610f882627b32">   62</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#a5d6356bcb27536cd8a8610f882627b32">getJacobian</a>(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;        </div>
-<div class="line"><a name="l00069"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#a43e6f5b29eab70b4577253a1c7073428">   69</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#a43e6f5b29eab70b4577253a1c7073428">getJacobian</a>(<span class="keyword">const</span> std::string &amp;end_effector_link);</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160; </div>
-<div class="line"><a name="l00075"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#a11aeea5fe0dfc9d5ba90c24d2fa90d24">   75</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#a11aeea5fe0dfc9d5ba90c24d2fa90d24">getJacobian</a>();</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160; </div>
-<div class="line"><a name="l00083"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#afc653d303c2f8c4e44f25f50eac4adca">   83</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#afc653d303c2f8c4e44f25f50eac4adca">getPseudoInverseJacobian</a>(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160; </div>
-<div class="line"><a name="l00090"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#a275593ca6cd8bb41775b7ec58a638796">   90</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#a275593ca6cd8bb41775b7ec58a638796">getPseudoInverseJacobian</a>(<span class="keyword">const</span> std::string &amp;end_effector_link);</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160; </div>
-<div class="line"><a name="l00096"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#ab949e62b038ca10eac75a15a03e2b501">   96</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#ab949e62b038ca10eac75a15a03e2b501">getPseudoInverseJacobian</a>();</div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160; </div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;        <span class="comment">// --------------- CALLBACK FUNCTIONS ---------------</span></div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;        </div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;        <span class="comment">//SERVICES</span></div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;        <span class="keywordtype">void</span> getFKine_callback(</div>
-<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::FKine::Request::SharedPtr request, </div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;            manipulator_interfaces::srv::FKine::Response::SharedPtr response</div>
-<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;        );</div>
-<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160; </div>
-<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;        <span class="keywordtype">void</span> getInvKine_callback(</div>
-<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::InvKine::Request::SharedPtr request,</div>
-<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;            manipulator_interfaces::srv::InvKine::Response::SharedPtr response</div>
+<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;<span class="preprocessor">#include &lt;fcl/fcl.h&gt;</span></div>
+<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160; </div>
+<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;<span class="comment">//Interfaces</span></div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#include &quot;shape_msgs/msg/solid_primitive.hpp&quot;</span></div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &quot;sensor_msgs/msg/joint_state.hpp&quot;</span></div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &quot;std_srvs/srv/set_bool.hpp&quot;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;std_msgs/msg/float64.hpp&quot;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;std_msgs/msg/empty.hpp&quot;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;geometry_msgs/msg/pose.hpp&quot;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;tf2_geometry_msgs/tf2_geometry_msgs.hpp&quot;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/f_kine.hpp&quot;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/inv_kine.hpp&quot;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/jacobian.hpp&quot;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/change_planner_tolerances.hpp&quot;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/change_planner_scaling_factors.hpp&quot;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/pseudo_inverse.hpp&quot;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/enable_real_time_constraints.hpp&quot;</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/msg/joint_goal.hpp&quot;</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/msg/tcp_goal.hpp&quot;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/msg/cartesian_goal.hpp&quot;</span></div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;manipulator_interfaces/srv/set_frame.hpp&quot;</span></div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160; </div>
+<div class="line"><a name="l00032"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html">   32</a></span>&#160;<span class="keyword">class </span><a class="code" href="class_manipulator_planner_node.html">ManipulatorPlannerNode</a> : <span class="keyword">public</span> rclcpp::Node {</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;    <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;        <a class="code" href="class_manipulator_planner_node.html">ManipulatorPlannerNode</a>(</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;            <span class="keyword">const</span> std::string node_name, </div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;            <span class="keyword">const</span> rclcpp::NodeOptions &amp;options</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;        );</div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160; </div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;        ~<a class="code" href="class_manipulator_planner_node.html">ManipulatorPlannerNode</a>();</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160; </div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;        <span class="keywordtype">void</span> spinner(); <span class="comment">//Spins the main node and executor_ in a different thread</span></div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160; </div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;    <span class="keyword">private</span>:</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;        <span class="keywordtype">void</span> shutdown_handler(); </div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160; </div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;        <span class="comment">// --------------- KINEMATICS FUNCTIONS ---------------</span></div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160; </div>
+<div class="line"><a name="l00053"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#a178662718da69fb88a52d38e0e08e116">   53</a></span>&#160;        <span class="keyword">const</span> geometry_msgs::msg::Pose <a class="code" href="class_manipulator_planner_node.html#a178662718da69fb88a52d38e0e08e116">getFKine</a>();</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160; </div>
+<div class="line"><a name="l00059"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#ac908abe2495191cae6c36f5401b466a8">   59</a></span>&#160;        <span class="keyword">const</span> geometry_msgs::msg::Twist <a class="code" href="class_manipulator_planner_node.html#ac908abe2495191cae6c36f5401b466a8">getTcpVel</a>();</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160; </div>
+<div class="line"><a name="l00067"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#a5d6356bcb27536cd8a8610f882627b32">   67</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#a5d6356bcb27536cd8a8610f882627b32">getJacobian</a>(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;        </div>
+<div class="line"><a name="l00074"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#a43e6f5b29eab70b4577253a1c7073428">   74</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#a43e6f5b29eab70b4577253a1c7073428">getJacobian</a>(<span class="keyword">const</span> std::string &amp;end_effector_link);</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
+<div class="line"><a name="l00080"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#a11aeea5fe0dfc9d5ba90c24d2fa90d24">   80</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#a11aeea5fe0dfc9d5ba90c24d2fa90d24">getJacobian</a>();</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160; </div>
+<div class="line"><a name="l00088"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#afc653d303c2f8c4e44f25f50eac4adca">   88</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#afc653d303c2f8c4e44f25f50eac4adca">getPseudoInverseJacobian</a>(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160; </div>
+<div class="line"><a name="l00095"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#a275593ca6cd8bb41775b7ec58a638796">   95</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#a275593ca6cd8bb41775b7ec58a638796">getPseudoInverseJacobian</a>(<span class="keyword">const</span> std::string &amp;end_effector_link);</div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160; </div>
+<div class="line"><a name="l00101"></a><span class="lineno"><a class="line" href="class_manipulator_planner_node.html#ab949e62b038ca10eac75a15a03e2b501">  101</a></span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd <a class="code" href="class_manipulator_planner_node.html#ab949e62b038ca10eac75a15a03e2b501">getPseudoInverseJacobian</a>();</div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160; </div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;        <span class="comment">// --------------- CALLBACK FUNCTIONS ---------------</span></div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;        </div>
+<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;        <span class="comment">//SERVICES</span></div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;        <span class="keywordtype">void</span> getFKine_callback(</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::FKine::Request::SharedPtr request, </div>
+<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;            manipulator_interfaces::srv::FKine::Response::SharedPtr response</div>
 <div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;        );</div>
 <div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160; </div>
-<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;        <span class="keywordtype">void</span> getJacobian_callback(</div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::Jacobian::Request::SharedPtr request,</div>
-<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;            manipulator_interfaces::srv::Jacobian::Response::SharedPtr response</div>
+<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;        <span class="keywordtype">void</span> getInvKine_callback(</div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::InvKine::Request::SharedPtr request,</div>
+<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;            manipulator_interfaces::srv::InvKine::Response::SharedPtr response</div>
 <div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;        );</div>
 <div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160; </div>
-<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;        <span class="keywordtype">void</span> getPseudoInverseJacobian_callback(</div>
-<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::PseudoInverse::Request::SharedPtr request,</div>
-<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;            manipulator_interfaces::srv::PseudoInverse::Response::SharedPtr response</div>
+<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;        <span class="keywordtype">void</span> getJacobian_callback(</div>
+<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::Jacobian::Request::SharedPtr request,</div>
+<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;            manipulator_interfaces::srv::Jacobian::Response::SharedPtr response</div>
 <div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;        );</div>
 <div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160; </div>
-<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;        <span class="keywordtype">void</span> changePlannerScalingFactors_callback(</div>
-<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::ChangePlannerScalingFactors::Request::SharedPtr request,</div>
-<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;            manipulator_interfaces::srv::ChangePlannerScalingFactors::Response::SharedPtr response</div>
+<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;        <span class="keywordtype">void</span> getPseudoInverseJacobian_callback(</div>
+<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::PseudoInverse::Request::SharedPtr request,</div>
+<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;            manipulator_interfaces::srv::PseudoInverse::Response::SharedPtr response</div>
 <div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;        );</div>
 <div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160; </div>
-<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;        <span class="keywordtype">void</span> changePlannerTolerances_callback(</div>
-<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::ChangePlannerTolerances::Request::SharedPtr request,</div>
-<div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160;            manipulator_interfaces::srv::ChangePlannerTolerances::Response::SharedPtr response</div>
+<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;        <span class="keywordtype">void</span> changePlannerScalingFactors_callback(</div>
+<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::ChangePlannerScalingFactors::Request::SharedPtr request,</div>
+<div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160;            manipulator_interfaces::srv::ChangePlannerScalingFactors::Response::SharedPtr response</div>
 <div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;        );</div>
 <div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160; </div>
-<div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160;        <span class="keywordtype">void</span> jointsRealTimeSetter_callback( <span class="comment">// Set the real time joints speed based control</span></div>
-<div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;            <span class="keyword">const</span> std_srvs::srv::SetBool::Request::SharedPtr req, </div>
-<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;            std_srvs::srv::SetBool::Response::SharedPtr res</div>
-<div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;        );    </div>
-<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;        </div>
-<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;        <span class="keywordtype">void</span> jacobianControlSetter_callback( <span class="comment">// Set the jacobian speed based control</span></div>
-<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;            <span class="keyword">const</span> std_srvs::srv::SetBool::Request::SharedPtr req, </div>
-<div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;            std_srvs::srv::SetBool::Response::SharedPtr res</div>
-<div class="line"><a name="l00139"></a><span class="lineno">  139</span>&#160;        );  </div>
+<div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160;        <span class="keywordtype">void</span> changePlannerTolerances_callback(</div>
+<div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::ChangePlannerTolerances::Request::SharedPtr request,</div>
+<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;            manipulator_interfaces::srv::ChangePlannerTolerances::Response::SharedPtr response</div>
+<div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;        );</div>
+<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160; </div>
+<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;        <span class="keywordtype">void</span> realTimeConstraintsSetter_callback(</div>
+<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;            <span class="keyword">const</span> manipulator_interfaces::srv::EnableRealTimeConstraints::Request::SharedPtr request,</div>
+<div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;            manipulator_interfaces::srv::EnableRealTimeConstraints::Response::SharedPtr response</div>
+<div class="line"><a name="l00139"></a><span class="lineno">  139</span>&#160;        );</div>
 <div class="line"><a name="l00140"></a><span class="lineno">  140</span>&#160; </div>
-<div class="line"><a name="l00141"></a><span class="lineno">  141</span>&#160;        <span class="comment">//SUBSCRIBERS</span></div>
-<div class="line"><a name="l00142"></a><span class="lineno">  142</span>&#160;        <span class="keywordtype">void</span> tcpGoal_callback(<span class="keyword">const</span> manipulator_interfaces::msg::TcpGoal::SharedPtr goal_pose);</div>
-<div class="line"><a name="l00143"></a><span class="lineno">  143</span>&#160;        <span class="keywordtype">void</span> jointGoal_callback(<span class="keyword">const</span> manipulator_interfaces::msg::JointGoal::SharedPtr goal_joints);</div>
-<div class="line"><a name="l00144"></a><span class="lineno">  144</span>&#160;        <span class="keywordtype">void</span> cartesianPlan_callback(<span class="keyword">const</span> manipulator_interfaces::msg::CartesianGoal::SharedPtr waypoints);</div>
-<div class="line"><a name="l00145"></a><span class="lineno">  145</span>&#160;        <span class="keywordtype">void</span> executionControl_callback(<span class="keyword">const</span> std_msgs::msg::Bool::SharedPtr msg);</div>
-<div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160;        <span class="keywordtype">void</span> collisionObject_callback(<span class="keyword">const</span> moveit_msgs::msg::CollisionObject::SharedPtr collision_object);</div>
-<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160;        <span class="keywordtype">void</span> attachedCollisionObject_callback(<span class="keyword">const</span> moveit_msgs::msg::AttachedCollisionObject::SharedPtr attached_collision_object);</div>
-<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160;        <span class="keywordtype">void</span> velJacSetpoint_callback(<span class="keyword">const</span> geometry_msgs::msg::Twist::SharedPtr &amp;msg); <span class="comment">// Update the velocity setpoint of the arm for the jacobian speed based control</span></div>
-<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;        <span class="keywordtype">void</span> realTimeSetpoint_callback(<span class="keyword">const</span> sensor_msgs::msg::JointState::SharedPtr &amp;msg); <span class="comment">// Update speed setpoint of the arm for the real time joints speed based control</span></div>
-<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;        <span class="keywordtype">void</span> jointConstraint_callback(<span class="keyword">const</span> moveit_msgs::msg::JointConstraint::SharedPtr joint_constraint); <span class="comment">// Update joint constraints</span></div>
-<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;        <span class="keywordtype">void</span> positionConstraint_callback(<span class="keyword">const</span> moveit_msgs::msg::PositionConstraint::SharedPtr position_constraint); <span class="comment">// Update position constraints</span></div>
-<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;        <span class="keywordtype">void</span> orientationConstraint_callback(<span class="keyword">const</span> moveit_msgs::msg::OrientationConstraint::SharedPtr orientation_constraint); <span class="comment">// Update orientation constraints</span></div>
-<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160; </div>
-<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;        <span class="comment">// --------------- CONTROL FUNCTIONS ---------------</span></div>
-<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160; </div>
-<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;        <span class="comment">// Motors controller when no planner</span></div>
-<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;        <span class="keywordtype">void</span> motorsController(<span class="keyword">const</span> sensor_msgs::msg::JointState &amp;js);</div>
-<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160; </div>
-<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;        <span class="comment">// Execute the jacobian based control</span></div>
-<div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;        <span class="keywordtype">void</span> jacobianControl();</div>
-<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;        <span class="keywordtype">void</span> updateJacobianSpeedCmd(); <span class="comment">//Fit ee_vel_cmd_ to the acceleration limits for the end effector and assign the value to current_ee_vel_</span></div>
-<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160; </div>
-<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;        <span class="comment">// Execute the real time joints speed based control</span></div>
-<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;        <span class="keywordtype">void</span> jointsRealTimeControl();</div>
+<div class="line"><a name="l00141"></a><span class="lineno">  141</span>&#160;        <span class="keywordtype">void</span> jointsRealTimeSetter_callback( <span class="comment">// Set the real time joints speed based control</span></div>
+<div class="line"><a name="l00142"></a><span class="lineno">  142</span>&#160;            <span class="keyword">const</span> std_srvs::srv::SetBool::Request::SharedPtr req, </div>
+<div class="line"><a name="l00143"></a><span class="lineno">  143</span>&#160;            std_srvs::srv::SetBool::Response::SharedPtr res</div>
+<div class="line"><a name="l00144"></a><span class="lineno">  144</span>&#160;        );</div>
+<div class="line"><a name="l00145"></a><span class="lineno">  145</span>&#160; </div>
+<div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160;        <span class="keywordtype">void</span> jacobianControlSetter_callback( <span class="comment">// Set the jacobian speed based control</span></div>
+<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160;            <span class="keyword">const</span> std_srvs::srv::SetBool::Request::SharedPtr req, </div>
+<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160;            std_srvs::srv::SetBool::Response::SharedPtr res</div>
+<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;        );  </div>
+<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160; </div>
+<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;        <span class="comment">//SUBSCRIBERS</span></div>
+<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;        <span class="keywordtype">void</span> tcpGoal_callback(<span class="keyword">const</span> manipulator_interfaces::msg::TcpGoal::SharedPtr goal_pose);</div>
+<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;        <span class="keywordtype">void</span> jointGoal_callback(<span class="keyword">const</span> manipulator_interfaces::msg::JointGoal::SharedPtr goal_joints);</div>
+<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;        <span class="keywordtype">void</span> cartesianPlan_callback(<span class="keyword">const</span> manipulator_interfaces::msg::CartesianGoal::SharedPtr waypoints);</div>
+<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;        <span class="keywordtype">void</span> executionControl_callback(<span class="keyword">const</span> std_msgs::msg::Bool::SharedPtr msg);</div>
+<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;        <span class="keywordtype">void</span> collisionObject_callback(<span class="keyword">const</span> moveit_msgs::msg::CollisionObject::SharedPtr collision_object);</div>
+<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;        <span class="keywordtype">void</span> attachedCollisionObject_callback(<span class="keyword">const</span> moveit_msgs::msg::AttachedCollisionObject::SharedPtr attached_collision_object);</div>
+<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;        <span class="keywordtype">void</span> velJacSetpoint_callback(<span class="keyword">const</span> geometry_msgs::msg::Twist::SharedPtr &amp;msg); <span class="comment">// Update the velocity setpoint of the arm for the jacobian speed based control</span></div>
+<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;        <span class="keywordtype">void</span> realTimeSetpoint_callback(<span class="keyword">const</span> sensor_msgs::msg::JointState::SharedPtr &amp;msg); <span class="comment">// Update speed setpoint of the arm for the real time joints speed based control</span></div>
+<div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;        <span class="keywordtype">void</span> jointConstraint_callback(<span class="keyword">const</span> moveit_msgs::msg::JointConstraint::SharedPtr joint_constraint); <span class="comment">// Update joint constraints</span></div>
+<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;        <span class="keywordtype">void</span> positionConstraint_callback(<span class="keyword">const</span> moveit_msgs::msg::PositionConstraint::SharedPtr position_constraint); <span class="comment">// Update position constraints</span></div>
+<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;        <span class="keywordtype">void</span> orientationConstraint_callback(<span class="keyword">const</span> moveit_msgs::msg::OrientationConstraint::SharedPtr orientation_constraint); <span class="comment">// Update orientation constraints</span></div>
+<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160; </div>
+<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;        <span class="comment">// --------------- CONTROL FUNCTIONS ---------------</span></div>
 <div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160; </div>
-<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;        <span class="comment">// --------------- COLLISION OBJECTS ---------------</span></div>
-<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160; </div>
-<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;        <span class="keyword">enum</span> ShapeType {        <span class="comment">//Shape type for shape_msgs::msg::SolidPrimitive</span></div>
-<div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;            BOX = 1,            <span class="comment">//Sizes: x, y, z</span></div>
-<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;            SPHERE = 2,         <span class="comment">//Sizes: radius</span></div>
-<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;            CYLINDER = 3,       <span class="comment">//Sizes: height, radius</span></div>
-<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;            CONE = 4            <span class="comment">//Sizes: height, radius</span></div>
-<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;        };</div>
-<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160; </div>
-<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;        <span class="keywordtype">void</span> addCollisionObject( <span class="comment">//UNUSED</span></div>
-<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;            <span class="keyword">const</span> std::string &amp;object_name,</div>
-<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;            <span class="keyword">const</span> std::string &amp;object_frame,</div>
-<div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160;            <span class="keyword">const</span> ShapeType object_type,</div>
-<div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;            <span class="keyword">const</span> std::vector&lt;double&gt; &amp;object_dims,</div>
-<div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160;            <span class="keyword">const</span> geometry_msgs::msg::Pose &amp;object_pose</div>
-<div class="line"><a name="l00181"></a><span class="lineno">  181</span>&#160;        );</div>
-<div class="line"><a name="l00182"></a><span class="lineno">  182</span>&#160; </div>
-<div class="line"><a name="l00183"></a><span class="lineno">  183</span>&#160;        <span class="keywordtype">void</span> addCollisionObject( <span class="comment">//UNUSED</span></div>
-<div class="line"><a name="l00184"></a><span class="lineno">  184</span>&#160;            <span class="keyword">const</span> std::string &amp;object_name,</div>
-<div class="line"><a name="l00185"></a><span class="lineno">  185</span>&#160;            <span class="keyword">const</span> std::string &amp;object_frame,</div>
-<div class="line"><a name="l00186"></a><span class="lineno">  186</span>&#160;            <span class="keyword">const</span> shape_msgs::msg::SolidPrimitive &amp;object_primitive,</div>
-<div class="line"><a name="l00187"></a><span class="lineno">  187</span>&#160;            <span class="keyword">const</span> geometry_msgs::msg::Pose &amp;object_pose</div>
+<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;        <span class="comment">// Execute the jacobian based control</span></div>
+<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;        <span class="keywordtype">void</span> jacobianControl();</div>
+<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;        <span class="keywordtype">void</span> updateJacobianSpeedCmd(); <span class="comment">//Fit ee_vel_cmd_ to the acceleration limits for the end effector and assign the value to current_ee_vel_</span></div>
+<div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;        <span class="keywordtype">void</span> updateJacobianConstraintPrimitives(); <span class="comment">//Update the list of constraint primitives for the jacobian control</span></div>
+<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160; </div>
+<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;        <span class="comment">// Execute the real time joints speed based control</span></div>
+<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;        <span class="keywordtype">void</span> jointsRealTimeControl();</div>
+<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160; </div>
+<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;        <span class="keywordtype">bool</span> isRobotMoving();</div>
+<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160; </div>
+<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;        <span class="comment">// --------------- HELPER FUNCTIONS ---------------</span></div>
+<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160; </div>
+<div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160;        <span class="keywordtype">void</span> addPrefix(<span class="keyword">const</span> std::string&amp; prefix, std::vector&lt;std::string&gt;&amp; vector) <span class="keyword">const</span>; <span class="comment">//Add a prefix to all elements of a vector</span></div>
+<div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;        </div>
+<div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160;        <span class="keywordtype">void</span> initializePlanner(); <span class="comment">//Creates a node for the DynamicPlanner, adds it to the executor and initializes the planner_ object</span></div>
+<div class="line"><a name="l00181"></a><span class="lineno">  181</span>&#160;        <span class="keywordtype">void</span> checkParams(); <span class="comment">//Declare the parameters for the node</span></div>
+<div class="line"><a name="l00182"></a><span class="lineno">  182</span>&#160;        <span class="keywordtype">double</span> sign(<span class="keywordtype">double</span> val); <span class="comment">//Returns the sign of a number or 0 (+1.0 or -1.0)</span></div>
+<div class="line"><a name="l00183"></a><span class="lineno">  183</span>&#160; </div>
+<div class="line"><a name="l00184"></a><span class="lineno">  184</span>&#160;        <span class="keywordtype">bool</span> isPoseInsidePrimitive(</div>
+<div class="line"><a name="l00185"></a><span class="lineno">  185</span>&#160;            <span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose, </div>
+<div class="line"><a name="l00186"></a><span class="lineno">  186</span>&#160;            <span class="keyword">const</span> shape_msgs::msg::SolidPrimitive &amp;primitive, </div>
+<div class="line"><a name="l00187"></a><span class="lineno">  187</span>&#160;            <span class="keyword">const</span> geometry_msgs::msg::Pose &amp;primitive_pose</div>
 <div class="line"><a name="l00188"></a><span class="lineno">  188</span>&#160;        );</div>
 <div class="line"><a name="l00189"></a><span class="lineno">  189</span>&#160; </div>
-<div class="line"><a name="l00190"></a><span class="lineno">  190</span>&#160;        <span class="keywordtype">void</span> addAttachedCollisionObject( <span class="comment">//UNUSED</span></div>
-<div class="line"><a name="l00191"></a><span class="lineno">  191</span>&#160;            <span class="keyword">const</span> std::string &amp;object_name,</div>
-<div class="line"><a name="l00192"></a><span class="lineno">  192</span>&#160;            <span class="keyword">const</span> shape_msgs::msg::SolidPrimitive &amp;object_primitive,</div>
-<div class="line"><a name="l00193"></a><span class="lineno">  193</span>&#160;            <span class="keyword">const</span> geometry_msgs::msg::Pose &amp;object_pose,</div>
-<div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160;            <span class="keyword">const</span> std::string &amp;link_name=<span class="stringliteral">&quot;&quot;</span>,</div>
-<div class="line"><a name="l00195"></a><span class="lineno">  195</span>&#160;            <span class="keyword">const</span> std::vector&lt;std::string&gt; &amp;disabled_collisions={}</div>
-<div class="line"><a name="l00196"></a><span class="lineno">  196</span>&#160;        );</div>
-<div class="line"><a name="l00197"></a><span class="lineno">  197</span>&#160; </div>
-<div class="line"><a name="l00198"></a><span class="lineno">  198</span>&#160;        <span class="keywordtype">void</span> addAttachedCollisionObject( <span class="comment">//UNUSED</span></div>
-<div class="line"><a name="l00199"></a><span class="lineno">  199</span>&#160;            <span class="keyword">const</span> std::string &amp;object_name,</div>
-<div class="line"><a name="l00200"></a><span class="lineno">  200</span>&#160;            <span class="keyword">const</span> ShapeType object_type,</div>
-<div class="line"><a name="l00201"></a><span class="lineno">  201</span>&#160;            <span class="keyword">const</span> std::vector&lt;double&gt; &amp;object_dims,</div>
-<div class="line"><a name="l00202"></a><span class="lineno">  202</span>&#160;            <span class="keyword">const</span> geometry_msgs::msg::Pose &amp;object_pose,</div>
-<div class="line"><a name="l00203"></a><span class="lineno">  203</span>&#160;            <span class="keyword">const</span> std::string &amp;link_name=<span class="stringliteral">&quot;&quot;</span>,</div>
-<div class="line"><a name="l00204"></a><span class="lineno">  204</span>&#160;            <span class="keyword">const</span> std::vector&lt;std::string&gt; &amp;disabled_collisions={}</div>
-<div class="line"><a name="l00205"></a><span class="lineno">  205</span>&#160;        );</div>
-<div class="line"><a name="l00206"></a><span class="lineno">  206</span>&#160; </div>
-<div class="line"><a name="l00207"></a><span class="lineno">  207</span>&#160;        <span class="comment">// --------------- HELPER FUNCTIONS ---------------</span></div>
-<div class="line"><a name="l00208"></a><span class="lineno">  208</span>&#160; </div>
-<div class="line"><a name="l00209"></a><span class="lineno">  209</span>&#160;        <span class="keywordtype">void</span> addPrefix(<span class="keyword">const</span> std::string&amp; prefix, std::vector&lt;std::string&gt;&amp; vector) <span class="keyword">const</span>; <span class="comment">//Add a prefix to all elements of a vector</span></div>
-<div class="line"><a name="l00210"></a><span class="lineno">  210</span>&#160;        </div>
-<div class="line"><a name="l00211"></a><span class="lineno">  211</span>&#160;        <span class="keywordtype">void</span> initializePlanner(); <span class="comment">//Creates a node for the DynamicPlanner, adds it to the executor and initializes the planner_ object</span></div>
-<div class="line"><a name="l00212"></a><span class="lineno">  212</span>&#160;        <span class="keywordtype">void</span> declareParameters(); <span class="comment">//Declare the parameters for the node</span></div>
-<div class="line"><a name="l00213"></a><span class="lineno">  213</span>&#160;        <span class="keywordtype">void</span> setPrimitiveDimensions(<span class="keyword">const</span> ShapeType object_type, <span class="keyword">const</span> std::vector&lt;double&gt; &amp;object_dims, shape_msgs::msg::SolidPrimitive &amp;primitive); <span class="comment">//Set the dimensions of the primitive object</span></div>
-<div class="line"><a name="l00214"></a><span class="lineno">  214</span>&#160;        <span class="keywordtype">double</span> sign(<span class="keywordtype">double</span> val); <span class="comment">//Returns the sign of a number or 0 (+1.0 or -1.0)</span></div>
-<div class="line"><a name="l00215"></a><span class="lineno">  215</span>&#160; </div>
-<div class="line"><a name="l00216"></a><span class="lineno">  216</span>&#160;        <span class="comment">// --------------- VARIABLES INITIALIZATION ---------------</span></div>
-<div class="line"><a name="l00217"></a><span class="lineno">  217</span>&#160; </div>
-<div class="line"><a name="l00218"></a><span class="lineno">  218</span>&#160;        std::string node_name_;</div>
-<div class="line"><a name="l00219"></a><span class="lineno">  219</span>&#160;        <span class="keywordtype">size_t</span> NUM_JOINTS = 6;</div>
-<div class="line"><a name="l00220"></a><span class="lineno">  220</span>&#160; </div>
-<div class="line"><a name="l00221"></a><span class="lineno">  221</span>&#160;        <span class="comment">//Parameters</span></div>
-<div class="line"><a name="l00222"></a><span class="lineno">  222</span>&#160;        std::string manipulator_name_;</div>
-<div class="line"><a name="l00223"></a><span class="lineno">  223</span>&#160;        std::string planning_group_;</div>
-<div class="line"><a name="l00224"></a><span class="lineno">  224</span>&#160;        std::vector&lt;std::string&gt; joint_names_;</div>
-<div class="line"><a name="l00225"></a><span class="lineno">  225</span>&#160;        std::string ee_name_;</div>
-<div class="line"><a name="l00226"></a><span class="lineno">  226</span>&#160;        std::string base_link_;</div>
-<div class="line"><a name="l00227"></a><span class="lineno">  227</span>&#160;        std::string world_frame_;</div>
-<div class="line"><a name="l00228"></a><span class="lineno">  228</span>&#160;        <span class="keywordtype">double</span> ros_freq_;</div>
-<div class="line"><a name="l00229"></a><span class="lineno">  229</span>&#160;        <span class="keywordtype">double</span> max_speed_ee_;</div>
-<div class="line"><a name="l00230"></a><span class="lineno">  230</span>&#160;        <span class="keywordtype">double</span> max_accel_ee_;</div>
-<div class="line"><a name="l00231"></a><span class="lineno">  231</span>&#160;        <span class="keywordtype">double</span> max_rot_speed_ee_;</div>
-<div class="line"><a name="l00232"></a><span class="lineno">  232</span>&#160;        <span class="keywordtype">double</span> max_rot_accel_ee_;</div>
-<div class="line"><a name="l00233"></a><span class="lineno">  233</span>&#160;        <span class="keywordtype">double</span> max_spd_jnts_;</div>
-<div class="line"><a name="l00234"></a><span class="lineno">  234</span>&#160;        <span class="keywordtype">double</span> max_acc_jnts_;</div>
-<div class="line"><a name="l00235"></a><span class="lineno">  235</span>&#160;        std::vector&lt;std::string&gt; gripper_links_;</div>
-<div class="line"><a name="l00236"></a><span class="lineno">  236</span>&#160;        <span class="keywordtype">double</span> min_jacobian_determinant_;</div>
-<div class="line"><a name="l00237"></a><span class="lineno">  237</span>&#160;        Eigen::MatrixXd jacobian_var_;</div>
-<div class="line"><a name="l00238"></a><span class="lineno">  238</span>&#160; </div>
-<div class="line"><a name="l00239"></a><span class="lineno">  239</span>&#160;        <span class="comment">//Services</span></div>
-<div class="line"><a name="l00240"></a><span class="lineno">  240</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::FKine&gt;::SharedPtr fkine_service_;</div>
-<div class="line"><a name="l00241"></a><span class="lineno">  241</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::InvKine&gt;::SharedPtr invkine_service_;</div>
-<div class="line"><a name="l00242"></a><span class="lineno">  242</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::Jacobian&gt;::SharedPtr jacobian_service_;</div>
-<div class="line"><a name="l00243"></a><span class="lineno">  243</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::PseudoInverse&gt;::SharedPtr pseudoInverse_service_;</div>
-<div class="line"><a name="l00244"></a><span class="lineno">  244</span>&#160;        rclcpp::Service&lt;std_srvs::srv::SetBool&gt;::SharedPtr jointsRealTimeSetter_service_;</div>
-<div class="line"><a name="l00245"></a><span class="lineno">  245</span>&#160;        rclcpp::Service&lt;std_srvs::srv::SetBool&gt;::SharedPtr jacobianControlSetter_service_;</div>
-<div class="line"><a name="l00246"></a><span class="lineno">  246</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::ChangePlannerTolerances&gt;::SharedPtr changePlannerTolerances_service_;</div>
-<div class="line"><a name="l00247"></a><span class="lineno">  247</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::ChangePlannerScalingFactors&gt;::SharedPtr changePlannerScalingFactors_service_;</div>
-<div class="line"><a name="l00248"></a><span class="lineno">  248</span>&#160; </div>
-<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160;        <span class="comment">//Subscribers</span></div>
-<div class="line"><a name="l00250"></a><span class="lineno">  250</span>&#160;        rclcpp::Subscription&lt;manipulator_interfaces::msg::TcpGoal&gt;::SharedPtr tcpGoal_sub_;                         <span class="comment">//Subscriber for TCP goal (cartesian space goals) requests</span></div>
-<div class="line"><a name="l00251"></a><span class="lineno">  251</span>&#160;        rclcpp::Subscription&lt;manipulator_interfaces::msg::JointGoal&gt;::SharedPtr jointGoal_sub_;                     <span class="comment">//Subscriber for joint space goal requests</span></div>
-<div class="line"><a name="l00252"></a><span class="lineno">  252</span>&#160;        rclcpp::Subscription&lt;manipulator_interfaces::msg::CartesianGoal&gt;::SharedPtr cartesianPlan_sub_;             <span class="comment">//Subscriber for cartesian space waypoints</span></div>
-<div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::CollisionObject&gt;::SharedPtr collisionObject_sub_;                    <span class="comment">//Subscriber for addition and update of collision objects</span></div>
-<div class="line"><a name="l00254"></a><span class="lineno">  254</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::AttachedCollisionObject&gt;::SharedPtr attachedcollisionObject_sub_;    <span class="comment">//Subscriber for addition and update of collision objects</span></div>
-<div class="line"><a name="l00255"></a><span class="lineno">  255</span>&#160;        rclcpp::Subscription&lt;geometry_msgs::msg::Twist&gt;::SharedPtr velJacSetpoint_sub_;                             <span class="comment">//Subscriber for the velocity setpoint for the jacobian speed based control</span></div>
-<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160;        rclcpp::Subscription&lt;sensor_msgs::msg::JointState&gt;::SharedPtr realTimeSetpoint_sub_;                        <span class="comment">//Subscriber for the speed setpoint for the real time joints speed based control</span></div>
-<div class="line"><a name="l00257"></a><span class="lineno">  257</span>&#160;        rclcpp::Subscription&lt;std_msgs::msg::Bool&gt;::SharedPtr execution_ctrl_sub_;                                   <span class="comment">//Subscriber for moving and stopping the robot</span></div>
-<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::PositionConstraint&gt;::SharedPtr positionConstraint_sub_;              <span class="comment">//Subscriber for position constraints</span></div>
-<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::OrientationConstraint&gt;::SharedPtr orientationConstraint_sub_;        <span class="comment">//Subscriber for orientation constraints</span></div>
-<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::JointConstraint&gt;::SharedPtr jointConstraint_sub_;                    <span class="comment">//Subscriber for joint constraints</span></div>
-<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;        rclcpp::Subscription&lt;std_msgs::msg::Empty&gt;::SharedPtr clearConstraints_sub_;                                <span class="comment">//Subscriber for clearing constraints</span></div>
-<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160; </div>
-<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;        <span class="comment">//Publishers</span></div>
-<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;        rclcpp::Publisher&lt;std_msgs::msg::Float64&gt;::SharedPtr j0_pub_;           <span class="comment">// Publisher to j0 motor controller</span></div>
-<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;        rclcpp::Publisher&lt;std_msgs::msg::Float64&gt;::SharedPtr j1_pub_;           <span class="comment">// Publisher to j1 motor controller</span></div>
-<div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;        rclcpp::Publisher&lt;std_msgs::msg::Float64&gt;::SharedPtr j2_pub_;           <span class="comment">// Publisher to j2 motor controller</span></div>
-<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;        rclcpp::Publisher&lt;std_msgs::msg::Float64&gt;::SharedPtr j3_pub_;           <span class="comment">// Publisher to j3 motor controller</span></div>
-<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160;        rclcpp::Publisher&lt;std_msgs::msg::Float64&gt;::SharedPtr j4_pub_;           <span class="comment">// Publisher to j4 motor controller</span></div>
-<div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160;        rclcpp::Publisher&lt;std_msgs::msg::Float64&gt;::SharedPtr j5_pub_;           <span class="comment">// Publisher to j5 motor controller</span></div>
-<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;        rclcpp::Publisher&lt;geometry_msgs::msg::Pose&gt;::SharedPtr tcpPose_pub_;    <span class="comment">// Publisher to end effector pose</span></div>
-<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;        rclcpp::Publisher&lt;geometry_msgs::msg::Twist&gt;::SharedPtr tcpVel_pub_;    <span class="comment">// Publisher to end effector velocity</span></div>
-<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160; </div>
-<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160;        <span class="comment">//Execution</span></div>
-<div class="line"><a name="l00274"></a><span class="lineno">  274</span>&#160;        std::shared_ptr&lt;DynamicPlanner&gt; dynamic_planner_;       <span class="comment">//Dynamic planner object</span></div>
-<div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160;        </div>
-<div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160;        rclcpp::executors::MultiThreadedExecutor executor_;     <span class="comment">//Executor for accessory nodes (e.g. dynamic planner)</span></div>
-<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160;        <span class="keywordtype">double</span> spinner_mean_ = 0.0;                             <span class="comment">//Mean value for the time taken for each iteration of the spinner</span></div>
-<div class="line"><a name="l00278"></a><span class="lineno">  278</span>&#160;        rclcpp::TimerBase::SharedPtr mainloop_timer_;           <span class="comment">//Timer for the main loop</span></div>
-<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;        rclcpp::TimerBase::SharedPtr tcpPose_timer_;            <span class="comment">//Timer for publishing tcp pose</span></div>
-<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;        rclcpp::TimerBase::SharedPtr tcpVel_timer_;             <span class="comment">//Timer for publishing tcp velocity</span></div>
-<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160; </div>
-<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160;        <span class="comment">//Real time control variables</span></div>
-<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;        <span class="keywordtype">bool</span>   jac_control_ = <span class="keyword">false</span>;            <span class="comment">// True if the speed control through inverse Jacobian has been enabled</span></div>
-<div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160;        <span class="keywordtype">bool</span> js_rt_control_ = <span class="keyword">false</span>;            <span class="comment">// True if the speed control through direct real time joints cmd has been enabled</span></div>
-<div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160;        Eigen::VectorXd current_ee_vel_;           <span class="comment">// Command of speed to the end_effector</span></div>
-<div class="line"><a name="l00286"></a><span class="lineno">  286</span>&#160;        Eigen::VectorXd  current_js_vel_;           <span class="comment">// Command of speed to the joints</span></div>
-<div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160;        Eigen::VectorXd ee_vel_cmd_;           <span class="comment">// New command of speed to the ee</span></div>
-<div class="line"><a name="l00288"></a><span class="lineno">  288</span>&#160;        Eigen::VectorXd js_vel_cmd_;            <span class="comment">// New command of joints speed</span></div>
-<div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160;};</div>
-<div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160; </div>
-<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="ttc" id="aclass_manipulator_planner_node_html"><div class="ttname"><a href="class_manipulator_planner_node.html">ManipulatorPlannerNode</a></div><div class="ttdef"><b>Definition:</b> ManipulatorPlanner.h:27</div></div>
+<div class="line"><a name="l00190"></a><span class="lineno">  190</span>&#160;        <span class="comment">// --------------- VARIABLES INITIALIZATION ---------------</span></div>
+<div class="line"><a name="l00191"></a><span class="lineno">  191</span>&#160; </div>
+<div class="line"><a name="l00192"></a><span class="lineno">  192</span>&#160;        std::string node_name_;</div>
+<div class="line"><a name="l00193"></a><span class="lineno">  193</span>&#160;        <span class="keywordtype">size_t</span> NUM_JOINTS = 6;</div>
+<div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160; </div>
+<div class="line"><a name="l00195"></a><span class="lineno">  195</span>&#160;        <span class="comment">//Parameters</span></div>
+<div class="line"><a name="l00196"></a><span class="lineno">  196</span>&#160;        std::string manipulator_name_;</div>
+<div class="line"><a name="l00197"></a><span class="lineno">  197</span>&#160;        std::string planning_group_;</div>
+<div class="line"><a name="l00198"></a><span class="lineno">  198</span>&#160;        std::vector&lt;std::string&gt; joint_names_;</div>
+<div class="line"><a name="l00199"></a><span class="lineno">  199</span>&#160;        std::string ee_name_;</div>
+<div class="line"><a name="l00200"></a><span class="lineno">  200</span>&#160;        std::string base_link_;</div>
+<div class="line"><a name="l00201"></a><span class="lineno">  201</span>&#160;        std::string world_frame_;</div>
+<div class="line"><a name="l00202"></a><span class="lineno">  202</span>&#160;        <span class="keywordtype">double</span> ros_freq_;</div>
+<div class="line"><a name="l00203"></a><span class="lineno">  203</span>&#160;        <span class="keywordtype">double</span> max_speed_ee_;</div>
+<div class="line"><a name="l00204"></a><span class="lineno">  204</span>&#160;        <span class="keywordtype">double</span> max_accel_ee_;</div>
+<div class="line"><a name="l00205"></a><span class="lineno">  205</span>&#160;        <span class="keywordtype">double</span> max_rot_speed_ee_;</div>
+<div class="line"><a name="l00206"></a><span class="lineno">  206</span>&#160;        <span class="keywordtype">double</span> max_rot_accel_ee_;</div>
+<div class="line"><a name="l00207"></a><span class="lineno">  207</span>&#160;        <span class="keywordtype">double</span> max_spd_jnts_;</div>
+<div class="line"><a name="l00208"></a><span class="lineno">  208</span>&#160;        <span class="keywordtype">double</span> max_acc_jnts_;</div>
+<div class="line"><a name="l00209"></a><span class="lineno">  209</span>&#160;        std::vector&lt;std::string&gt; gripper_links_;</div>
+<div class="line"><a name="l00210"></a><span class="lineno">  210</span>&#160;        <span class="keywordtype">double</span> min_jacobian_determinant_;</div>
+<div class="line"><a name="l00211"></a><span class="lineno">  211</span>&#160;        Eigen::MatrixXd jacobian_var_;</div>
+<div class="line"><a name="l00212"></a><span class="lineno">  212</span>&#160;        <span class="keywordtype">bool</span> limit_joints_control_; <span class="comment">// If true, the joints speed control is limited to the max_spd_jnts_ parameter</span></div>
+<div class="line"><a name="l00213"></a><span class="lineno">  213</span>&#160;        <span class="keywordtype">bool</span> limit_jacobian_control_; <span class="comment">// If true, the jacobian speed control is limited to the max_speed_ee_ parameter</span></div>
+<div class="line"><a name="l00214"></a><span class="lineno">  214</span>&#160;        <span class="keywordtype">double</span> jac_sigma_threshold_;</div>
+<div class="line"><a name="l00215"></a><span class="lineno">  215</span>&#160;        <span class="keywordtype">double</span> jac_max_damping_factor_;</div>
+<div class="line"><a name="l00216"></a><span class="lineno">  216</span>&#160; </div>
+<div class="line"><a name="l00217"></a><span class="lineno">  217</span>&#160;        <span class="comment">//Services</span></div>
+<div class="line"><a name="l00218"></a><span class="lineno">  218</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::FKine&gt;::SharedPtr fkine_service_;</div>
+<div class="line"><a name="l00219"></a><span class="lineno">  219</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::InvKine&gt;::SharedPtr invkine_service_;</div>
+<div class="line"><a name="l00220"></a><span class="lineno">  220</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::Jacobian&gt;::SharedPtr jacobian_service_;</div>
+<div class="line"><a name="l00221"></a><span class="lineno">  221</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::PseudoInverse&gt;::SharedPtr pseudoInverse_service_;</div>
+<div class="line"><a name="l00222"></a><span class="lineno">  222</span>&#160;        rclcpp::Service&lt;std_srvs::srv::SetBool&gt;::SharedPtr jointsRealTimeSetter_service_;</div>
+<div class="line"><a name="l00223"></a><span class="lineno">  223</span>&#160;        rclcpp::Service&lt;std_srvs::srv::SetBool&gt;::SharedPtr jacobianControlSetter_service_;</div>
+<div class="line"><a name="l00224"></a><span class="lineno">  224</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::EnableRealTimeConstraints&gt;::SharedPtr realTimeConstraintsSetter_service_;</div>
+<div class="line"><a name="l00225"></a><span class="lineno">  225</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::ChangePlannerTolerances&gt;::SharedPtr changePlannerTolerances_service_;</div>
+<div class="line"><a name="l00226"></a><span class="lineno">  226</span>&#160;        rclcpp::Service&lt;manipulator_interfaces::srv::ChangePlannerScalingFactors&gt;::SharedPtr changePlannerScalingFactors_service_;</div>
+<div class="line"><a name="l00227"></a><span class="lineno">  227</span>&#160; </div>
+<div class="line"><a name="l00228"></a><span class="lineno">  228</span>&#160;        <span class="comment">//Subscribers</span></div>
+<div class="line"><a name="l00229"></a><span class="lineno">  229</span>&#160;        rclcpp::Subscription&lt;manipulator_interfaces::msg::TcpGoal&gt;::SharedPtr tcpGoal_sub_;                         <span class="comment">//Subscriber for TCP goal (cartesian space goals) requests</span></div>
+<div class="line"><a name="l00230"></a><span class="lineno">  230</span>&#160;        rclcpp::Subscription&lt;manipulator_interfaces::msg::JointGoal&gt;::SharedPtr jointGoal_sub_;                     <span class="comment">//Subscriber for joint space goal requests</span></div>
+<div class="line"><a name="l00231"></a><span class="lineno">  231</span>&#160;        rclcpp::Subscription&lt;manipulator_interfaces::msg::CartesianGoal&gt;::SharedPtr cartesianPlan_sub_;             <span class="comment">//Subscriber for cartesian space waypoints</span></div>
+<div class="line"><a name="l00232"></a><span class="lineno">  232</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::CollisionObject&gt;::SharedPtr collisionObject_sub_;                    <span class="comment">//Subscriber for addition and update of collision objects</span></div>
+<div class="line"><a name="l00233"></a><span class="lineno">  233</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::AttachedCollisionObject&gt;::SharedPtr attachedcollisionObject_sub_;    <span class="comment">//Subscriber for addition and update of collision objects</span></div>
+<div class="line"><a name="l00234"></a><span class="lineno">  234</span>&#160;        rclcpp::Subscription&lt;geometry_msgs::msg::Twist&gt;::SharedPtr velJacSetpoint_sub_;                             <span class="comment">//Subscriber for the velocity setpoint for the jacobian speed based control</span></div>
+<div class="line"><a name="l00235"></a><span class="lineno">  235</span>&#160;        rclcpp::Subscription&lt;sensor_msgs::msg::JointState&gt;::SharedPtr realTimeSetpoint_sub_;                        <span class="comment">//Subscriber for the speed setpoint for the real time joints speed based control</span></div>
+<div class="line"><a name="l00236"></a><span class="lineno">  236</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::PositionConstraint&gt;::SharedPtr positionConstraint_sub_;              <span class="comment">//Subscriber for position constraints</span></div>
+<div class="line"><a name="l00237"></a><span class="lineno">  237</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::OrientationConstraint&gt;::SharedPtr orientationConstraint_sub_;        <span class="comment">//Subscriber for orientation constraints</span></div>
+<div class="line"><a name="l00238"></a><span class="lineno">  238</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::JointConstraint&gt;::SharedPtr jointConstraint_sub_;                    <span class="comment">//Subscriber for joint constraints</span></div>
+<div class="line"><a name="l00239"></a><span class="lineno">  239</span>&#160;        rclcpp::Subscription&lt;std_msgs::msg::Empty&gt;::SharedPtr clearConstraints_sub_;                                <span class="comment">//Subscriber for clearing constraints</span></div>
+<div class="line"><a name="l00240"></a><span class="lineno">  240</span>&#160; </div>
+<div class="line"><a name="l00241"></a><span class="lineno">  241</span>&#160;        <span class="comment">//Publishers</span></div>
+<div class="line"><a name="l00242"></a><span class="lineno">  242</span>&#160;        rclcpp::Publisher&lt;geometry_msgs::msg::Pose&gt;::SharedPtr tcpPose_pub_;    <span class="comment">// Publisher to end effector pose</span></div>
+<div class="line"><a name="l00243"></a><span class="lineno">  243</span>&#160;        rclcpp::Publisher&lt;geometry_msgs::msg::Twist&gt;::SharedPtr tcpVel_pub_;    <span class="comment">// Publisher to end effector velocity</span></div>
+<div class="line"><a name="l00244"></a><span class="lineno">  244</span>&#160; </div>
+<div class="line"><a name="l00245"></a><span class="lineno">  245</span>&#160;        <span class="comment">//Execution</span></div>
+<div class="line"><a name="l00246"></a><span class="lineno">  246</span>&#160;        std::shared_ptr&lt;DynamicPlanner&gt; dynamic_planner_;       <span class="comment">//Dynamic planner object</span></div>
+<div class="line"><a name="l00247"></a><span class="lineno">  247</span>&#160;        </div>
+<div class="line"><a name="l00248"></a><span class="lineno">  248</span>&#160;        rclcpp::executors::MultiThreadedExecutor executor_;     <span class="comment">//Executor for accessory nodes (e.g. dynamic planner)</span></div>
+<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160;        <span class="keywordtype">double</span> spinner_mean_ = 0.0;                             <span class="comment">//Mean value for the time taken for each iteration of the spinner</span></div>
+<div class="line"><a name="l00250"></a><span class="lineno">  250</span>&#160;        rclcpp::TimerBase::SharedPtr mainloop_timer_;           <span class="comment">//Timer for the main loop</span></div>
+<div class="line"><a name="l00251"></a><span class="lineno">  251</span>&#160;        rclcpp::TimerBase::SharedPtr tcpPose_timer_;            <span class="comment">//Timer for publishing tcp pose</span></div>
+<div class="line"><a name="l00252"></a><span class="lineno">  252</span>&#160;        rclcpp::TimerBase::SharedPtr tcpVel_timer_;             <span class="comment">//Timer for publishing tcp velocity</span></div>
+<div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160;        </div>
+<div class="line"><a name="l00254"></a><span class="lineno">  254</span>&#160;        std::shared_ptr&lt;rclcpp::CallbackGroup&gt; services_cb_group_;       <span class="comment">// Callback group for services</span></div>
+<div class="line"><a name="l00255"></a><span class="lineno">  255</span>&#160;        std::shared_ptr&lt;rclcpp::CallbackGroup&gt; subscribers_cb_group_;    <span class="comment">// Callback group for subscribers</span></div>
+<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160;        std::shared_ptr&lt;rclcpp::CallbackGroup&gt; main_cb_group_;           <span class="comment">// Callback group for mainloop timer </span></div>
+<div class="line"><a name="l00257"></a><span class="lineno">  257</span>&#160; </div>
+<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;        <span class="comment">//Real time control variables</span></div>
+<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;        <span class="keywordtype">bool</span>   jac_control_ = <span class="keyword">false</span>;            <span class="comment">// True if the speed control through inverse Jacobian has been enabled</span></div>
+<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;        <span class="keywordtype">bool</span> js_rt_control_ = <span class="keyword">false</span>;            <span class="comment">// True if the speed control through direct real time joints cmd has been enabled</span></div>
+<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;        Eigen::VectorXd current_ee_vel_;        <span class="comment">// Command of cartesian speed to ee</span></div>
+<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;        Eigen::VectorXd current_js_vel_;        <span class="comment">// Command of speed to the joints</span></div>
+<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;        Eigen::VectorXd ee_vel_cmd_;            <span class="comment">// New command of speed to the ee</span></div>
+<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;        Eigen::VectorXd js_vel_cmd_;            <span class="comment">// New command of joints speed</span></div>
+<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;        std::vector&lt;shape_msgs::msg::SolidPrimitive&gt; constraints_primitives_; <span class="comment">// List of contraints for jacobian control</span></div>
+<div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;        std::vector&lt;geometry_msgs::msg::Pose&gt; constraints_poses_; <span class="comment">// List of poses for jacobian control</span></div>
+<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;};</div>
+<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160; </div>
+<div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="ttc" id="aclass_manipulator_planner_node_html"><div class="ttname"><a href="class_manipulator_planner_node.html">ManipulatorPlannerNode</a></div><div class="ttdef"><b>Definition:</b> ManipulatorPlanner.h:32</div></div>
 <div class="ttc" id="aclass_manipulator_planner_node_html_a11aeea5fe0dfc9d5ba90c24d2fa90d24"><div class="ttname"><a href="class_manipulator_planner_node.html#a11aeea5fe0dfc9d5ba90c24d2fa90d24">ManipulatorPlannerNode::getJacobian</a></div><div class="ttdeci">const Eigen::MatrixXd getJacobian()</div><div class="ttdoc">Computes the jacobian matrix for the current position and the end effector set in the &quot;ee_name&quot; param...</div></div>
 <div class="ttc" id="aclass_manipulator_planner_node_html_a178662718da69fb88a52d38e0e08e116"><div class="ttname"><a href="class_manipulator_planner_node.html#a178662718da69fb88a52d38e0e08e116">ManipulatorPlannerNode::getFKine</a></div><div class="ttdeci">const geometry_msgs::msg::Pose getFKine()</div><div class="ttdoc">Computes the current forward kinematics of the manipulator.</div></div>
 <div class="ttc" id="aclass_manipulator_planner_node_html_a275593ca6cd8bb41775b7ec58a638796"><div class="ttname"><a href="class_manipulator_planner_node.html#a275593ca6cd8bb41775b7ec58a638796">ManipulatorPlannerNode::getPseudoInverseJacobian</a></div><div class="ttdeci">const Eigen::MatrixXd getPseudoInverseJacobian(const std::string &amp;end_effector_link)</div><div class="ttdoc">Computes the pseudo-inverse of the jacobian matrix for the current position.</div></div>
