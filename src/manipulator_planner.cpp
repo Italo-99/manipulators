@@ -283,7 +283,7 @@ void ManipulatorPlannerNode::spinner() {
                 auto start_time = steady_clock.now();
 
                 // Jacobian control
-                jacobianControl();    
+                jacobianControl();
 
                 // Calculate the mean time for each iteration of the spinner
                 double elapsed_time = (steady_clock.now() - start_time).seconds();
@@ -539,6 +539,14 @@ void ManipulatorPlannerNode::collisionObject_callback(const moveit_msgs::msg::Co
     }
 
     dynamic_planner_->processCollisionObject(*collision_object);
+    
+    if (collision_object->operation == moveit_msgs::msg::CollisionObject::ADD || collision_object->operation == moveit_msgs::msg::CollisionObject::APPEND){
+        // Collision is disabled for fixed links
+        for (const std::string &link_name : fixed_links_)
+        {
+            dynamic_planner_->setCollisionEnabled(collision_object->id, link_name, false);
+        }
+    }
 }
 
 void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs::msg::AttachedCollisionObject::SharedPtr collision_object) 
@@ -1055,6 +1063,7 @@ void ManipulatorPlannerNode::checkParams() {
     max_spd_jnts_             = this->get_parameter_or("max_spd_jnts", 1.0);
     max_acc_jnts_             = this->get_parameter_or("max_acc_jnts", 1.0);
     gripper_links_            = this->get_parameter_or("gripper_links", std::vector<std::string>());
+    fixed_links_              = this->get_parameter_or("fixed_links", std::vector<std::string>());
     world_frame_              = prefix + this->get_parameter_or("world_frame", std::string("base_link"));
     min_jacobian_determinant_ = this->get_parameter_or("min_jacobian_determinant", 0.0);
     limit_joints_control_     = this->get_parameter_or("limit_joints_control", false);

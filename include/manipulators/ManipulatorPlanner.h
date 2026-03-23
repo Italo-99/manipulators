@@ -206,6 +206,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         double max_rot_accel_ee_;
         double max_spd_jnts_;
         double max_acc_jnts_;
+        std::vector<std::string> fixed_links_;
         std::vector<std::string> gripper_links_;
         double min_jacobian_determinant_;
         Eigen::MatrixXd jacobian_var_;

@@ -891,6 +891,7 @@ geometry_msgs::msg::TwistStamped ManipulatorMenu::transformTwist(const std::stri
     Eigen::Vector3d angular_vel_vector(twist.angular.x, twist.angular.y, twist.angular.z);
     Eigen::Vector3d angular_vel_world = rotation_matrix * angular_vel_vector; // Rotate the angular velocity from the local frame to the world frame
     
+    result.twist.linear.x = vel_world.x();
     result.twist.linear.y = vel_world.y();
     result.twist.linear.z = vel_world.z();
     result.twist.angular.x = angular_vel_world.x();

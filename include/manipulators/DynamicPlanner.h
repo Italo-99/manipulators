@@ -3,6 +3,7 @@
 
 //C++ Imports
 #include <string>
+#include <sstream>
 #include <vector>
 #include <Eigen/Geometry>
 #include <mutex>
@@ -134,11 +135,8 @@ class DynamicPlanner
         DynamicPlannerParams getParams() const;
 
         void setParams(const DynamicPlannerParams& params);
-
-        void setDynamicBehavior(bool dynamic_behavior); //Set the dynamic_behavior_ variable
-        bool isDynamic() const; //Check if dynamic_behaviour_ is true
                 
-        const planning_scene_monitor::LockedPlanningSceneRO getPlanningScene() const; //Get the current planning scen as a read-only lock object
+        planning_scene_monitor::LockedPlanningSceneRW getPlanningScene(); //Get the current planning scen as a read-only lock object
 
         void setRobotState(moveit::core::RobotStatePtr& robot_state); //Set the state of the robot (subsequent planning will start from this state)
         moveit::core::RobotStatePtr getRobotState() const; //Get the current state of the robot
@@ -156,6 +154,8 @@ class DynamicPlanner
         // --------------- COLLISION OBJECTS ----------------
         void processCollisionObject(const moveit_msgs::msg::CollisionObject& collision_object); //Add a collision object to the planning scene
         void processAttachedCollisionObject(const moveit_msgs::msg::AttachedCollisionObject& collision_object); //Add an attached collision object to the planning scene
+    
+        void setCollisionEnabled(const std::string& object_1, const std::string& object_2, bool enabled); //Enable or disable collision between two objects (object can be a link or a collision object)
 
         // --------------- FORWARD KINEMATICS ----------------
         /* \: computes forward kinematics

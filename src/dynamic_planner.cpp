@@ -609,7 +609,7 @@ void DynamicPlanner::stop()
     force_stop_.store(true);
 }
 
-const planning_scene_monitor::LockedPlanningSceneRO DynamicPlanner::getPlanningScene() const
+planning_scene_monitor::LockedPlanningSceneRW DynamicPlanner::getPlanningScene()
 {
     return planning_scene_monitor::LockedPlanningSceneRW(planning_scene_monitor_);
 }
@@ -777,6 +777,14 @@ void DynamicPlanner::processAttachedCollisionObject(const moveit_msgs::msg::Atta
         rviz_visual_tools_->deleteAllMarkers("ATTACHED_OBJECTS_" + attached_collision_object.object.id);
     }
     rviz_visual_tools_->trigger();
+}
+
+void DynamicPlanner::setCollisionEnabled(const std::string& object_1, const std::string& object_2, bool enabled)
+{
+    planning_scene_monitor::LockedPlanningSceneRW scene = getPlanningScene();
+    collision_detection::AllowedCollisionMatrix& acm = scene->getAllowedCollisionMatrixNonConst();
+    acm.setEntry(object_1, object_2, !enabled);
+    planning_scene_monitor_->triggerSceneUpdateEvent(planning_scene_monitor::PlanningSceneMonitor::UPDATE_SCENE);
 }
 
 // ------------------------------------- FORWARD KINEMATICS ------------------------------------

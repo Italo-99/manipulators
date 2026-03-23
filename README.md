@@ -138,6 +138,7 @@ The manipulator planner node is used to elaborate trajectories, execute real tim
  - `max_rot_accel_ee`: Max angular acceleration the end effector can reach during jacobian control.
  - `max_spd_jnts`: Max speed joints can move during real time joint control.
  - `max_acc_jnts`: Max acceleration joints can reach during real time joint control.
+ - `fixed_links`: Links that don't move so their collision will be disabled with newly added collision objects.
  - `gripper_links`: Links of the gripper to disable their collision with objects attached to the end effector.
  - `position_tolerance`: Tolerance for tcp position.
  - `orientation_tolerance`: Tolerance for tcp orientation.
