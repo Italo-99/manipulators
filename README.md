@@ -9,8 +9,8 @@ This repository is a universal package to plan and execute trajectory or move co
 
 It is conceived for beginners who wants to include robots in their projects, without a deep knowledge of manipulator kinematics and dynamics.
 
-<img src="docs/imgs/sirio.png" height = 300>
-<img src="docs/imgs/tiago_arm.jpeg" height=300>
+![](docs/imgs/sirio.png)
+![](docs/imgs/tiago_arm.jpeg)
 
 The package is made up of 2 main parts:
 - **manipulator_planner**: This is the node which take care of planning, kinematics, collision avoidance...
