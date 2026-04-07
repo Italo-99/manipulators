@@ -1,5 +1,8 @@
 ## Configuration file used by the planner
 
+
+real_time_safety_dt:    0.5
+
 manipulator_name:       manipulator
 
 planning_group:         ur_manipulator

@@ -57,6 +57,13 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
         }
     );
 
+    eeVel_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
+        params_.manipulator_name+"/tcp_vel", 1,
+        [this](const geometry_msgs::msg::Twist::SharedPtr msg) {
+            this->current_tcp_vel_ = *msg;
+        }
+    );
+
     // --------------------- Kinematics client init ---------------------
     invKine_client_                      = node_->create_client<manipulator_interfaces::srv::InvKine>(params_.manipulator_name+"/get_invkine");
     pseudoInverse_client_                = node_->create_client<manipulator_interfaces::srv::PseudoInverse>(params_.manipulator_name+"/get_pseudo_inverse");
@@ -103,10 +110,10 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
         params_.manipulator_name + "/js_cmd_vel", 1
     );
     velAdmSetpoint_pub_ = node_->create_publisher<geometry_msgs::msg::Twist>(
-        params_.manipulator_name + "/adm_cmd_vel", 1
+        params_.manipulator_name + "/adm_vd", 1
     );
     poseAdmSetpoint_pub_ = node_->create_publisher<geometry_msgs::msg::PoseStamped>(
-        params_.manipulator_name + "/adm_cmd_pos", 1
+        params_.manipulator_name + "/adm_xd", 1
     );
 
     // ---------------------- Gripper ----------------------
@@ -2918,7 +2925,7 @@ void ManipulatorMenu::initializeMenu(){
 // Menu constructor to retrieve parameters from the node
 ManipulatorMenuParams::ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node){
     std::string ns = node->get_namespace();
-    std::string prefix = ns.empty() ? "" : ns + "_";
+    std::string prefix = ns == "/" ? "" : ns + "_";
   
     //Declareation
     node->declare_parameter("ros_freq", 10.0);
@@ -2933,7 +2940,8 @@ ManipulatorMenuParams::ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node
         prefix + "wrist_3_joint"
     });
     node->declare_parameter("base_link_name", prefix + "base_link");
-    node->declare_parameter("ee_link_name", prefix + "tcp_gripper");
+    node->declare_parameter("ee_link_name", prefix + "tool0");
+    node->declare_parameter("has_admittance", false);
     node->declare_parameter("tcp_position_tolerance", 0.01);
     node->declare_parameter("tcp_orientation_tolerance", 0.01);
     node->declare_parameter("joint_tolerance", 0.01);
@@ -2949,6 +2957,7 @@ ManipulatorMenuParams::ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node
     node->get_parameter("joint_names", joint_names);
     node->get_parameter("base_link_name", base_link_name);
     node->get_parameter("ee_link_name", ee_link_name);
+    node->get_parameter("has_admittance", has_admittance);
     node->get_parameter("tcp_position_tolerance", tcp_position_tolerance);
     node->get_parameter("tcp_orientation_tolerance", tcp_orientation_tolerance);
     node->get_parameter("joint_tolerance", joint_tolerance);

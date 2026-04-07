@@ -66,6 +66,20 @@ struct DynamicPlannerParams
     static DynamicPlannerParams fromNode(const rclcpp::Node::SharedPtr& node);
 };
 
+inline rclcpp::QoS QOS_PROFILE_RELIABLE()
+{
+    return rclcpp::QoS(rclcpp::KeepLast(1))
+        .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
+        .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+}
+
+inline rclcpp::QoS QOS_PROFILE_BEST_EFFORT()
+{
+    return rclcpp::QoS(rclcpp::KeepLast(1))
+        .reliability(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT)
+        .durability(RMW_QOS_POLICY_DURABILITY_VOLATILE);
+}
+
 class DynamicPlanner
 {
     public:

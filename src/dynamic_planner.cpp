@@ -19,15 +19,6 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
     RCLCPP_INFO(node_->get_logger(), "World frame: %s", params_.world_frame.c_str());
     RCLCPP_INFO(node_->get_logger(), "End effector link: %s", params_.end_effector_link.c_str());
     
-    // move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
-    //     node_, 
-    //     moveit::planning_interface::MoveGroupInterface::Options(
-    //         planning_group,
-    //         "robot_description",
-    //         node_->get_namespace()
-    //     )
-    // );
-    
     kinematic_model_ = moveit::planning_interface::getSharedRobotModel(node_, "robot_description");
     kinematic_state_ = std::make_shared<moveit::core::RobotState>(kinematic_model_);
 

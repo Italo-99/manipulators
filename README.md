@@ -143,7 +143,8 @@ The manipulator planner node is used to elaborate trajectories, execute real tim
  - `position_tolerance`: Tolerance for tcp position.
  - `orientation_tolerance`: Tolerance for tcp orientation.
  - `joint_tolerance`: Tolerance for joint positions.
- - `min_jacobian_determinant`: Minimum absolute value for the determinant of the jacobian matrix during jacobian control. A determinant close to 0 means the position is approaching a singularity point, this will ensure safer control of the arm.
+ - `jac_max_damping_factor`: Maximum damping factor applicable to the jacobian control, a higher value will make jacobian control more stable but also slower and less precise.
+ - `jac_sigma_threshold`: Threshold at which jacobian damping kicks in, a lower threshold will make control safer and smoother against singularity but also less precise.
 <br/>
 
  - `robot_description` : Parsed urdf description of the robot.
