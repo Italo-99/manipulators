@@ -9,9 +9,14 @@ This repository is a universal package to plan and execute trajectory or move co
 
 It is conceived for beginners who wants to include robots in their projects, without a deep knowledge of manipulator kinematics and dynamics.
 
-This document explains how to use this pkg for simulations and for the real hardware.
+<img src="docs/imgs/sirio.png" height = 300>
+<img src="docs/imgs/tiago_arm.jpeg" height=300>
 
-More in depth documentation can be found in the doxygen documentation in [docs/](docs/), by opening the file 'annotated.html' through a browser.
+The package is made up of 2 main parts:
+- **manipulator_planner**: This is the node which take care of planning, kinematics, collision avoidance...
+- **manipulator_menu**: This is a class that acts as an API for the manipulator, it contains all the methods to interface with the robot and the scene. The command line interface and joystick controller provided in this package use the `ManipulatorMenu` class as their backbone.
+
+More in depth informations can be found in the doxygen documentation by opening the symlink [docs.html](docs.html) through a browser.
 
 # Installation
 
@@ -322,7 +327,7 @@ class MyManipulatorMenu : public ManipulatorMenu{
 template class MenuUserInterface<MyManipulatorMenu>;
 ```
 
-### Implementation as member variable
+### Implementation as member variable <u>(DEPRECATED)</u>
 
 Another way to create a custom implementation is the following, which involves creating a member class of type `ManipulatorMenu` inside a wrapper class.
 

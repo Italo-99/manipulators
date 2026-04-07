@@ -130,52 +130,54 @@ $(function() {
 <div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160; </div>
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;        rclcpp::Publisher&lt;geometry_msgs::msg::Twist&gt;::SharedPtr velJacSetpoint_pub_;        <span class="comment">//Publish end effector velocity commands to manipulator</span></div>
 <div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;        rclcpp::Publisher&lt;sensor_msgs::msg::JointState&gt;::SharedPtr velJsRtSetpoint_pub_;    <span class="comment">//Publish joint velocity commands to manipulator</span></div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160; </div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;        sensor_msgs::msg::JointState js_cmd_vel_;</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;        geometry_msgs::msg::Twist arm_cmd_vel_;</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160; </div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;        <span class="keywordtype">double</span> vel_step_, rot_step_, js_step_;</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;        std::string joy_topic_;</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160; </div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;        <span class="keywordtype">bool</span> jacobian_control_, real_time_control_;</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;        </div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;        rclcpp::Publisher&lt;geometry_msgs::msg::Twist&gt;::SharedPtr velAdmSetpoint_pub_;        <span class="comment">//Publish velocity commands to admittance controller</span></div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160; </div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;        sensor_msgs::msg::JointState js_cmd_vel_;</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;        geometry_msgs::msg::Twist arm_cmd_vel_;</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160; </div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;        <span class="keywordtype">double</span> vel_step_, rot_step_, js_step_;</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;        std::string joy_topic_;</div>
 <div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160; </div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;        rclcpp::TimerBase::SharedPtr cmd_pub_timer_;</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;};</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160; </div>
-<div class="line"><a name="l00074"></a><span class="lineno"><a class="line" href="class_joystick_controller_factory.html">   74</a></span>&#160;<span class="keyword">class </span><a class="code" href="class_joystick_controller_factory.html">JoystickControllerFactory</a>{</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;    <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;        <span class="keyword">static</span> std::shared_ptr&lt;JoystickController&gt; fromProfile(</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;            <span class="keyword">const</span> std::string&amp; profile,</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;            <a class="code" href="struct_manipulator_menu_params.html">ManipulatorMenuParams</a> params, </div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;            rclcpp::Node::SharedPtr node, </div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;            <span class="keyword">const</span> <span class="keywordtype">bool</span> sync_parameters = <span class="keyword">false</span></div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;        );</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;};</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160; </div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;<span class="comment">/*</span></div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;<span class="comment">    ===================================================================</span></div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;<span class="comment">    ======================== JOYSTICK PROFILES ========================</span></div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;        <span class="keywordtype">bool</span> jacobian_control_, real_time_control_, admittance_control_;</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160; </div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;        rclcpp::TimerBase::SharedPtr cmd_pub_timer_;</div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;};</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
+<div class="line"><a name="l00076"></a><span class="lineno"><a class="line" href="class_joystick_controller_factory.html">   76</a></span>&#160;<span class="keyword">class </span><a class="code" href="class_joystick_controller_factory.html">JoystickControllerFactory</a>{</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;    <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;        <span class="keyword">static</span> std::shared_ptr&lt;JoystickController&gt; fromProfile(</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;            <span class="keyword">const</span> std::string&amp; profile,</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;            <a class="code" href="struct_manipulator_menu_params.html">ManipulatorMenuParams</a> params, </div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;            rclcpp::Node::SharedPtr node, </div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;            <span class="keyword">const</span> <span class="keywordtype">bool</span> sync_parameters = <span class="keyword">false</span></div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;        );</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;};</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160; </div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;<span class="comment">/*</span></div>
 <div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;<span class="comment">    ===================================================================</span></div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;<span class="comment"></span> </div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;<span class="comment"></span> </div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;<span class="comment">    ======================== JOYSTICK PROFILES ========================</span></div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;<span class="comment">    ===================================================================</span></div>
 <div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;<span class="comment"></span> </div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;<span class="comment">*/</span></div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160; </div>
-<div class="line"><a name="l00093"></a><span class="lineno"><a class="line" href="class_joystick_controller_p_s3.html">   93</a></span>&#160;<span class="keyword">class </span><a class="code" href="class_joystick_controller_p_s3.html">JoystickControllerPS3</a> : <span class="keyword">public</span> <a class="code" href="class_joystick_controller.html">JoystickController</a></div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;{</div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;    <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;        <a class="code" href="class_joystick_controller_p_s3.html">JoystickControllerPS3</a>(<a class="code" href="struct_manipulator_menu_params.html">ManipulatorMenuParams</a> params, rclcpp::Node::SharedPtr node, <span class="keyword">const</span> <span class="keywordtype">bool</span> sync_parameters = <span class="keyword">false</span>): </div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;            <a class="code" href="class_joystick_controller.html">JoystickController</a>(params, node, sync_parameters) {}</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160; </div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;    <span class="keyword">protected</span>:</div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;        <span class="keywordtype">void</span> joyCallback(<span class="keyword">const</span> sensor_msgs::msg::Joy::SharedPtr &amp;joy) <span class="keyword">override</span>;</div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;};</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;<span class="comment"></span> </div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;<span class="comment"></span> </div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;<span class="comment">*/</span></div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160; </div>
+<div class="line"><a name="l00095"></a><span class="lineno"><a class="line" href="class_joystick_controller_p_s3.html">   95</a></span>&#160;<span class="keyword">class </span><a class="code" href="class_joystick_controller_p_s3.html">JoystickControllerPS3</a> : <span class="keyword">public</span> <a class="code" href="class_joystick_controller.html">JoystickController</a></div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;{</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;    <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;        <a class="code" href="class_joystick_controller_p_s3.html">JoystickControllerPS3</a>(<a class="code" href="struct_manipulator_menu_params.html">ManipulatorMenuParams</a> params, rclcpp::Node::SharedPtr node, <span class="keyword">const</span> <span class="keywordtype">bool</span> sync_parameters = <span class="keyword">false</span>): </div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;            <a class="code" href="class_joystick_controller.html">JoystickController</a>(params, node, sync_parameters) {}</div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160; </div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;    <span class="keyword">protected</span>:</div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;        <span class="keywordtype">void</span> joyCallback(<span class="keyword">const</span> sensor_msgs::msg::Joy::SharedPtr &amp;joy) <span class="keyword">override</span>;</div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;};</div>
 <div class="ttc" id="a_manipulator_menu_8h_html"><div class="ttname"><a href="_manipulator_menu_8h.html">ManipulatorMenu.h</a></div></div>
-<div class="ttc" id="aclass_joystick_controller_factory_html"><div class="ttname"><a href="class_joystick_controller_factory.html">JoystickControllerFactory</a></div><div class="ttdef"><b>Definition:</b> JoystickController.h:74</div></div>
+<div class="ttc" id="aclass_joystick_controller_factory_html"><div class="ttname"><a href="class_joystick_controller_factory.html">JoystickControllerFactory</a></div><div class="ttdef"><b>Definition:</b> JoystickController.h:76</div></div>
 <div class="ttc" id="aclass_joystick_controller_html"><div class="ttname"><a href="class_joystick_controller.html">JoystickController</a></div><div class="ttdef"><b>Definition:</b> JoystickController.h:40</div></div>
-<div class="ttc" id="aclass_joystick_controller_p_s3_html"><div class="ttname"><a href="class_joystick_controller_p_s3.html">JoystickControllerPS3</a></div><div class="ttdef"><b>Definition:</b> JoystickController.h:94</div></div>
-<div class="ttc" id="aclass_manipulator_menu_html"><div class="ttname"><a href="class_manipulator_menu.html">ManipulatorMenu</a></div><div class="ttdoc">Main class for the manipulator menu.</div><div class="ttdef"><b>Definition:</b> ManipulatorMenu.h:124</div></div>
-<div class="ttc" id="astruct_manipulator_menu_params_html"><div class="ttname"><a href="struct_manipulator_menu_params.html">ManipulatorMenuParams</a></div><div class="ttdoc">Struct to hold the parameters for the ManipulatorMenu class.</div><div class="ttdef"><b>Definition:</b> ManipulatorMenu.h:82</div></div>
+<div class="ttc" id="aclass_joystick_controller_p_s3_html"><div class="ttname"><a href="class_joystick_controller_p_s3.html">JoystickControllerPS3</a></div><div class="ttdef"><b>Definition:</b> JoystickController.h:96</div></div>
+<div class="ttc" id="aclass_manipulator_menu_html"><div class="ttname"><a href="class_manipulator_menu.html">ManipulatorMenu</a></div><div class="ttdoc">Main class for the manipulator menu.</div><div class="ttdef"><b>Definition:</b> ManipulatorMenu.h:129</div></div>
+<div class="ttc" id="astruct_manipulator_menu_params_html"><div class="ttname"><a href="struct_manipulator_menu_params.html">ManipulatorMenuParams</a></div><div class="ttdoc">Struct to hold the parameters for the ManipulatorMenu class.</div><div class="ttdef"><b>Definition:</b> ManipulatorMenu.h:87</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
