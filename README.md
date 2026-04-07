@@ -7,6 +7,8 @@
 
 This repository is a universal package to plan and execute trajectory or move commands for all manipulators. It handles universal robots manipulators by default, but its aim is to provide a way to easily implement custom robots.
 
+https://github.com/user-attachments/assets/136e0635-8689-4995-9b9d-e48f2b75bba7
+
 It is conceived for beginners who wants to include robots in their projects, without a deep knowledge of manipulator kinematics and dynamics.
 
 ![](docs/imgs/sirio.png)
