@@ -1,6 +1,8 @@
 // Import libraries
 #include "manipulators/DriverTrajectoryConverter.h"
 
+auto const qos_best_effort = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
+
 // Constructor
 DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, const rclcpp::NodeOptions &options)
     : rclcpp::Node(node_name, options), joint_map_initialized_(false), cmd_map_initialized_(false), mean_(0.0)
@@ -29,13 +31,13 @@ DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, cons
 
     // Setup subscriber and publisher
     joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
-        "/joint_states", 1, 
+        "/joint_states", qos_best_effort, 
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             jointStateCallback(msg);
         }
     );
     joint_cmd_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
-        "/move_group/fake_controller_joint_states", 1, 
+        "/move_group/fake_controller_joint_states", qos_best_effort, 
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             jointCmdCallback(msg);
         }

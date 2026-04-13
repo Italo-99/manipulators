@@ -95,7 +95,7 @@ void DynamicPlanner::initialize()
 
     // Subscribers
     trajectory_sub_ = node_->create_subscription<moveit_msgs::msg::RobotTrajectory>(
-        planning_group_ + "/trajectory", 1,
+        planning_group_ + "/trajectory", qos_reliable(1),
         [this](const moveit_msgs::msg::RobotTrajectory::SharedPtr msg) {
             setTrajectory(*msg);
         },
@@ -103,7 +103,7 @@ void DynamicPlanner::initialize()
     );
 
     joints_state_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
-        ns + "/joint_states", 1,
+        ns + "/joint_states", qos_best_effort(1),
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->jointsState_callback(msg);
         },
@@ -111,7 +111,7 @@ void DynamicPlanner::initialize()
     );
 
     execution_ctrl_sub_ = node_->create_subscription<std_msgs::msg::Bool>(
-        planning_group_ + "/execution_control", 1, 
+        planning_group_ + "/execution_control", qos_reliable(1), 
         [this](const std_msgs::msg::Bool::SharedPtr msg) {
             this->executionControl_callback(msg);
         },
@@ -1535,6 +1535,7 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
     marker.pose = primitive_pose.pose;
     marker.color = color;
     marker.id = id;
+    marker.frame_locked = frame_locked;
 
     switch(primitive.type)
     {
@@ -1564,7 +1565,11 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
         }
         case shape_msgs::msg::SolidPrimitive::CONE:
         {
-            RCLCPP_ERROR(node_->get_logger(), "Cones are not supported for visualization yet.");
+            marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
+            marker.mesh_resource = "package://manipulators/models/meshes/Cone.stl";
+            marker.scale.x = primitive.dimensions[1] * 2;
+            marker.scale.y = primitive.dimensions[1] * 2;
+            marker.scale.z = primitive.dimensions[0];
             break;
         }
         default:
@@ -1579,7 +1584,9 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
         rviz_visual_tools_->enableFrameLocking(true);
         rviz_visual_tools_->publishMarker(marker);
         rviz_visual_tools_->enableFrameLocking(false);
-    } else {
+    }
+    else
+    {
         rviz_visual_tools_->publishMarker(marker);
     }
 }

@@ -39,8 +39,20 @@
 #include <moveit_msgs/action/move_group.hpp>
 #include <moveit/kinematic_constraints/utils.h>
 
-// Struct definition of the parameters of the Dynamic Planner
+// QoS profiles 
+const auto qos_best_effort = [](size_t depth = 1){
+    auto qos = rclcpp::QoS(rclcpp::KeepLast(depth))
+               .best_effort();
+    return qos;
+};
 
+const auto qos_reliable = [](size_t depth = 1){
+    auto qos = rclcpp::QoS(rclcpp::KeepLast(depth))
+               .reliable();
+    return qos;
+};
+
+// Struct definition of the parameters of the Dynamic Planner
 struct DynamicPlannerParams
 {
     std::string planning_pipeline   = "ompl";                    // planning pipeline (check moveit_config package for available pipelines)
@@ -341,6 +353,7 @@ class DynamicPlanner
         //Visualization
         rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;
         size_t marker_id_ = 0; //ID for the next marker to be published
+        std::map<std::string, visualization_msgs::msg::Marker> visualized_primitives_; //List of currently visualized primitives
 };
 
 #endif //DYNAMIC_PLANNER_H

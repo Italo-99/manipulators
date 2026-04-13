@@ -130,7 +130,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
 
     // Initialize subscribers
     tcpGoal_sub_ = this->create_subscription<manipulator_interfaces::msg::TcpGoal>(
-        manipulator_name_ + "/tcp_goal", 1, 
+        manipulator_name_ + "/tcp_goal", qos_reliable(1), 
         [this](const manipulator_interfaces::msg::TcpGoal::SharedPtr msg) {
             this->tcpGoal_callback(msg);
         },
@@ -138,7 +138,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     jointGoal_sub_ = this->create_subscription<manipulator_interfaces::msg::JointGoal>(
-        manipulator_name_ + "/joint_goal", 1, 
+        manipulator_name_ + "/joint_goal", qos_reliable(1), 
         [this](const manipulator_interfaces::msg::JointGoal::SharedPtr msg) {
             this->jointGoal_callback(msg);
         },
@@ -146,7 +146,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     collisionObject_sub_ = this->create_subscription<moveit_msgs::msg::CollisionObject>(
-        manipulator_name_ + "/collision_object", 1, 
+        manipulator_name_ + "/collision_object", qos_reliable(1), 
         [this](const moveit_msgs::msg::CollisionObject::SharedPtr msg) {
             this->collisionObject_callback(msg);
         },
@@ -154,7 +154,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     attachedcollisionObject_sub_ = this->create_subscription<moveit_msgs::msg::AttachedCollisionObject>(
-        manipulator_name_ + "/attached_collision_object", 1, 
+        manipulator_name_ + "/attached_collision_object", qos_reliable(1), 
         [this](const moveit_msgs::msg::AttachedCollisionObject::SharedPtr msg) {
             this->attachedCollisionObject_callback(msg);
         },
@@ -162,7 +162,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     cartesianPlan_sub_ = this->create_subscription<manipulator_interfaces::msg::CartesianGoal>(
-        manipulator_name_ + "/cartesian_plan", 1, 
+        manipulator_name_ + "/cartesian_plan", qos_reliable(1), 
         [this](const manipulator_interfaces::msg::CartesianGoal::SharedPtr msg) {
             this->cartesianPlan_callback(msg);
         },
@@ -171,7 +171,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
 
 
     jointConstraint_sub_ = this->create_subscription<moveit_msgs::msg::JointConstraint>(
-        manipulator_name_ + "/joint_constraint", 1, 
+        manipulator_name_ + "/joint_constraint", qos_reliable(1), 
         [this](const moveit_msgs::msg::JointConstraint::SharedPtr msg) {
             this->jointConstraint_callback(msg);
         },
@@ -179,7 +179,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     positionConstraint_sub_ = this->create_subscription<moveit_msgs::msg::PositionConstraint>(
-        manipulator_name_ + "/position_constraint", 1, 
+        manipulator_name_ + "/position_constraint", qos_reliable(1), 
         [this](const moveit_msgs::msg::PositionConstraint::SharedPtr msg) {
             this->positionConstraint_callback(msg);
         },
@@ -188,7 +188,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     
 
     orientationConstraint_sub_ = this->create_subscription<moveit_msgs::msg::OrientationConstraint>(
-        manipulator_name_ + "/orientation_constraint", 1, 
+        manipulator_name_ + "/orientation_constraint", qos_reliable(1), 
         [this](const moveit_msgs::msg::OrientationConstraint::SharedPtr msg) {
             this->orientationConstraint_callback(msg);
         },
@@ -196,7 +196,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     clearConstraints_sub_ = this->create_subscription<std_msgs::msg::Empty>(
-        manipulator_name_ + "/clear_constraints", 1, 
+        manipulator_name_ + "/clear_constraints", qos_reliable(1), 
         [this](const std_msgs::msg::Empty::SharedPtr msg) {
             msg.get();
             dynamic_planner_->clearPathConstraints();
@@ -212,7 +212,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     rt_sub_options.callback_group = main_cb_group_;
 
     velJacSetpoint_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
-        manipulator_name_ + "/cmd_vel", 1, 
+        manipulator_name_ + "/cmd_vel", qos_best_effort(1), 
         [this](const geometry_msgs::msg::Twist::SharedPtr msg) {
             this->velJacSetpoint_callback(msg);
         },
@@ -220,7 +220,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     realTimeSetpoint_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
-        manipulator_name_ + "/js_cmd_vel", 1, 
+        manipulator_name_ + "/js_cmd_vel", qos_best_effort(1), 
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->realTimeSetpoint_callback(msg);
         },

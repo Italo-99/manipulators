@@ -44,21 +44,21 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     clearConstraints_pub_        = node_->create_publisher<std_msgs::msg::Empty>(params_.manipulator_name+"/clear_constraints", 1);
 
     jointState_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
-        "/joint_states", 1, 
+        "/joint_states", qos_best_effort(1), 
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->jointStateCallback(msg);
         }
     );
 
     eePose_sub_ = node_->create_subscription<geometry_msgs::msg::Pose>(
-        params_.manipulator_name+"/tcp_pose", 1,
+        params_.manipulator_name+"/tcp_pose", qos_best_effort(1),
         [this](const geometry_msgs::msg::Pose::SharedPtr msg) {
             this->current_tcp_pose_ = *msg;
         }
     );
 
     eeVel_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
-        params_.manipulator_name+"/tcp_vel", 1,
+        params_.manipulator_name+"/tcp_vel", qos_best_effort(1),
         [this](const geometry_msgs::msg::Twist::SharedPtr msg) {
             this->current_tcp_vel_ = *msg;
         }
@@ -91,7 +91,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     sub_options.callback_group = cb_group;
 
     plannedTrajectory_sub_ = node_->create_subscription<manipulator_interfaces::msg::TrajectoryResult>(
-        params_.planning_group+"/planned_trajectory", 1,
+        params_.planning_group+"/planned_trajectory", qos_reliable(1),
         [this](const manipulator_interfaces::msg::TrajectoryResult::SharedPtr msg) {
             trajectoryCallback(msg);
         },

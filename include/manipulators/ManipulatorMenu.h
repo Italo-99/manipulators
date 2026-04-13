@@ -57,6 +57,20 @@
 
 #include "manipulators/MenuUserInterface.hpp"
 
+// QoS profiles 
+const auto qos_best_effort = [](size_t depth = 1){
+    auto qos = rclcpp::QoS(rclcpp::KeepLast(depth))
+               .best_effort();
+    return qos;
+};
+
+const auto qos_reliable = [](size_t depth = 1){
+    auto qos = rclcpp::QoS(rclcpp::KeepLast(depth))
+               .reliable();
+    return qos;
+};
+
+
 #define DEFAULT_PLANNING_TIMEOUT 2
 #define DEFAULT_EXECUTION_TIMEOUT 20 
 
