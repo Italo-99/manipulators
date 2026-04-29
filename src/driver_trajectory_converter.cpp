@@ -68,7 +68,7 @@ DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, cons
         },
         sub_options);
 
-    joint_state_publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_state", 1);
+    joint_state_publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 1);
     velocity_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(velocity_topic_, 1);
 
     // Initialize Eigen matrices to zero
@@ -87,7 +87,7 @@ DriverTrajectoryConverter::DriverTrajectoryConverter(std::string node_name, cons
 void DriverTrajectoryConverter::declareParameters(){
     this->declare_parameter("joints_names_group", std::vector<std::string>());
     this->declare_parameter("velocity_topic", "/ur_rtde/controllers/joint_velocity_controller/command");
-    this->declare_parameter("real_joint_state_topic", "/fake/joint_state");
+    this->declare_parameter("real_joint_state_topic", "/fake/joint_states");
     this->declare_parameter("kp", 1.0);
     this->declare_parameter("min_motor_speed", 0.001);
     this->declare_parameter("joint_state_timeout", 2.0);
@@ -104,10 +104,10 @@ void DriverTrajectoryConverter::shutdown_handler()
     velocity_publisher_->publish(zero_vel_msg_);
 }
 
-// Check if both joint state and command maps are initialized
+// Check if real joint state map is initialized
 bool DriverTrajectoryConverter::isReady()
 {
-    return joint_map_initialized_ && cmd_map_initialized_;
+    return joint_map_initialized_;
 }
 
 bool DriverTrajectoryConverter::isJointStateTimeout() const
@@ -260,7 +260,14 @@ void DriverTrajectoryConverter::spinner()
                     auto start_time = steady_clock.now();
 
                     pubZOH_JointState();
-                    computeVel();
+                    if (cmd_map_initialized_)
+                    {
+                        computeVel();
+                    }
+                    else
+                    {
+                        velocity_publisher_->publish(zero_vel_msg_);
+                    }
 
                     double elapsed_time = (steady_clock.now() - start_time).seconds();
                     mean_ = (mean_ * static_cast<double>(k) + elapsed_time) / static_cast<double>(k + 1);
@@ -268,7 +275,7 @@ void DriverTrajectoryConverter::spinner()
                 },
                 subscribers_callback_group_);
 
-            RCLCPP_INFO(get_logger(), "Driver is ready.");
+            RCLCPP_INFO(get_logger(), "Driver is ready: streaming joint states.");
             break;
         }
 
