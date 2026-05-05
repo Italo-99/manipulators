@@ -27,7 +27,6 @@
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
 #include "manipulator_interfaces/msg/cartesian_goal.hpp"
-#include "manipulator_interfaces/srv/set_frame.hpp"
 
 class ManipulatorPlannerNode : public rclcpp::Node {
     public:
