@@ -6,22 +6,22 @@
 
     <!-- Robot Arguments -->
     <xacro:arg name="name" default="ur"/>
-    <xacro:arg name="ur_type" default="ur5e"/>
+    <xacro:arg name="ur_type" default="ur10e"/>
     <xacro:arg name="tf_prefix" default=""/>
     <xacro:arg name="parent_link" default="world_ur"/>
-    <xacro:arg name="joint_limits_parameters_file" default="$(find ur_description)/config/ur5e/joint_limits.yaml"/>
-    <xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/ur5e/default_kinematics.yaml"/>
+    <xacro:arg name="joint_limits_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
+    <xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/default_kinematics.yaml"/>
 
     <!-- Additional objects Arguments -->
-    <xacro:arg name="camera"                        default="true"/>
-    <xacro:arg name="gripper"                       default="true"/>
+    <xacro:arg name="camera"                        default="false"/>
+    <xacro:arg name="gripper"                       default="false"/>
     <xacro:arg name="gfloor"                        default="false"/>
     <xacro:arg name="gripper_collision_box"         default="false"/>
     <xacro:arg name="back_wall"                     default="false"/>
 
-    <xacro:arg name="tcp_offset"                    default="0.148"/>
-    <xacro:arg name="tcp_z_rot"                     default="1.866"/>
-    <xacro:arg name="camera_pitch"                  default="0.41"/>
+    <xacro:arg name="tcp_offset"                    default="0.0"/>
+    <xacro:arg name="tcp_z_rot"                     default="0.0"/>
+    <xacro:arg name="camera_pitch"                  default="0.0"/>
 
     <xacro:property name="camera"                   value="$(arg camera)"/>
     <xacro:property name="gripper"                  value="$(arg gripper)"/>
@@ -43,8 +43,8 @@
         tf_prefix="$(arg tf_prefix)"
         joint_limits_parameters_file="$(arg joint_limits_parameters_file)"
         kinematics_parameters_file="$(arg kinematics_parameters_file)"
-        physical_parameters_file="$(find ur_description)/config/ur5e/physical_parameters.yaml"
-        visual_parameters_file="$(find ur_description)/config/ur5e/visual_parameters.yaml"
+        physical_parameters_file="$(find ur_description)/config/$(arg ur_type)/physical_parameters.yaml"
+        visual_parameters_file="$(find ur_description)/config/$(arg ur_type)/visual_parameters.yaml"
     >
         <origin xyz="0 0 0" rpy="0 0 0" />
     </xacro:ur_robot>
@@ -92,7 +92,7 @@
     <xacro:if value="${gfloor}">
         <link name="floor">
             <visual> <!-- floor -->
-                <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+                <origin xyz="0.0 0.0 -0.40" rpy="0 0 0"/>
                 <geometry>
                     <box size="10 10 0.01"/>
                 </geometry>
@@ -101,10 +101,40 @@
                 </material>
             </visual>
             <collision>
-                <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+                <origin xyz="0.0 0.0 -0.40" rpy="0 0 0"/>
                 <geometry>
                     <box size="10 10 0.01"/>
                 </geometry>
+            </collision>
+            <visual>
+                <geometry>
+                    <box size="1.0 0.7 0.5"/> <!-- box sotto -->
+                </geometry>
+                <origin xyz="-0.25 0.0 -0.25" rpy="0 0 0"/>
+                <material name="">
+                        <color rgba="1.0 1.0 1.0 1.0"/>
+                </material>
+            </visual>
+            <visual>
+                <geometry>
+                    <box size="0.6 0.7 0.4"/> <!-- box sopra -->
+                </geometry>
+                <origin xyz="-0.4 0.0 0.2" rpy="0 0 0"/>
+                <material name="">
+                    <color rgba="1.0 1.0 1.0 1.0"/>
+                </material>
+            </visual>
+            <collision>
+                <geometry>
+                    <box size="1.0 0.7 0.5"/> <!-- box sotto -->
+                </geometry>
+                <origin xyz="-0.25 0.0 -0.25" rpy="0 0 0"/>
+            </collision>
+            <collision>
+                <geometry>
+                    <box size="0.6 0.7 0.4"/> <!-- box sopra -->
+                </geometry>
+                <origin xyz="-0.4 0.0 0.2" rpy="0 0 0"/>
             </collision>
         </link>
 
@@ -115,39 +145,13 @@
         </joint>
     </xacro:if>
 
-    <xacro:if value="${back_wall}">
-        <link name="back_wall">
-            <visual> <!-- back wall -->
-                <origin xyz="-0.4 0 1.1" rpy="0 0 0"/>
-                <geometry>
-                    <box size="0.01 10 2.0"/>
-                </geometry>
-                <material name="">
-                    <color rgba="0.8 0.1 0.1 0.4"/>
-                </material>
-            </visual>
-            <collision>
-                <origin xyz="-0.4 0 1.1" rpy="0 0 0"/>
-                <geometry>
-                    <box size="0.01 10 2.0"/>
-                </geometry>
-            </collision>
-        </link>
-
-        <joint name="world_back_wall" type="fixed">
-            <parent link="base_link"/>
-            <child link="back_wall"/>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
-        </joint>
-    </xacro:if>
-
     <!-- Gripper collision box -->
     <xacro:if value="${gripper_collision_box}">
         <link name="ee_collision_box">
             <visual>
                 <origin xyz="0 0 0" rpy="0 0 0"/>
                 <geometry>
-                    <box size="0.130 0.170 $(arg tcp_offset)"/>  
+                    <box size="0.130 0.170 $(arg tcp_offset)"/>
                 </geometry>
                 <material name="">
                     <color rgba="0.8 0.1 0.1 0.4"/>
@@ -156,7 +160,7 @@
             <collision>
                 <origin xyz="0 0 0" rpy="0 0 0"/>
                 <geometry>
-                    <box size="0.130 0.170 $(arg tcp_offset)"/> 
+                    <box size="0.130 0.170 $(arg tcp_offset)"/>
                 </geometry>
             </collision>
 
@@ -167,6 +171,7 @@
             </joint>
 
         </link>
+
     </xacro:if>
 
 </robot>

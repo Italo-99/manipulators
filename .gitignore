@@ -21,4 +21,5 @@ rad.json
 #Test results file
 TestResults.xml
 #Coppelia scenes
+#Simulation scenes
 scenes/coppelia

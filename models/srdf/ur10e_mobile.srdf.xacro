@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot name="$(arg name)" xmlns:xacro="http://ros.org/wiki/xacro">
+    <!-- robot name parameter -->
+    <xacro:arg name="name" default="ur"/>
+    <!-- parameters -->
+    <xacro:arg name="prefix" default="" />
+
+    <xacro:include filename="$(find ur_moveit_config)/srdf/ur_macro.srdf.xacro"/>
+
+    <xacro:ur_srdf name="$(arg name)" prefix="$(arg prefix)"/>
+
+    <!-- Additional objects Arguments -->
+    <xacro:arg name="camera"                   default="false"/>
+    <xacro:arg name="gripper"                  default="false"/>
+    <xacro:arg name="gfloor"                   default="false"/>
+    <xacro:arg name="gripper_collision_box"    default="false"/>
+
+    <xacro:property name="camera"                value="$(arg camera)"/>
+    <xacro:property name="gripper"               value="$(arg gripper)"/>
+    <xacro:property name="gfloor"                value="$(arg gfloor)"/>
+    <xacro:property name="gripper_collision_box" value="$(arg gripper_collision_box)"/>
+
+    <!-- Virtual base joint -->
+    <virtual_joint name="fixed_base" type="fixed" parent_frame="world_ur" child_link="base_link" />
+
+    <!-- Disable collisions for Robotiq 85 gripper if enabled -->
+    <xacro:if value="${gripper}">
+        <group name="$(arg prefix)robotiq_85_gripper">
+            <link name="$(arg prefix)robotiq_85_base_link"/>
+            <link name="$(arg prefix)robotiq_85_left_finger_link"/>
+            <link name="$(arg prefix)robotiq_85_left_finger_tip_link"/>
+            <link name="$(arg prefix)robotiq_85_left_knuckle_link"/>
+            <link name="$(arg prefix)robotiq_85_left_inner_knuckle_link"/>
+            <link name="$(arg prefix)robotiq_85_right_finger_link"/>
+            <link name="$(arg prefix)robotiq_85_right_finger_tip_link"/>
+            <link name="$(arg prefix)robotiq_85_right_knuckle_link"/>
+            <link name="$(arg prefix)robotiq_85_right_inner_knuckle_link"/>
+        </group>
+    
+        <disable_collisions link1="$(arg prefix)robotiq_85_base_link" link2="wrist_3_link" reason="Adjacent" />
+
+        <disable_collisions link1="$(arg prefix)robotiq_85_right_knuckle_link" link2="$(arg prefix)robotiq_85_base_link" reason="Adjacent" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_left_knuckle_link" link2="$(arg prefix)robotiq_85_base_link" reason="Adjacent" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_base_link" link2="$(arg prefix)robotiq_85_left_finger_link" reason="Adjacent" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_base_link" link2="$(arg prefix)robotiq_85_right_finger_link" reason="Adjacent" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_left_finger_link" link2="$(arg prefix)robotiq_85_left_inner_knuckle_link" reason="Adjacent" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_right_finger_link" link2="$(arg prefix)robotiq_85_right_inner_knuckle_link" reason="Adjacent" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_left_inner_knuckle_link" link2="$(arg prefix)robotiq_85_left_finger_tip_link" reason="Adjacent" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_right_inner_knuckle_link" link2="$(arg prefix)robotiq_85_right_finger_tip_link" reason="Adjacent" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_right_finger_link" link2="$(arg prefix)robotiq_85_right_knuckle_link" reason="Adjacent" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_left_finger_link" link2="$(arg prefix)robotiq_85_left_knuckle_link" reason="Adjacent" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_left_finger_tip_link" link2="$(arg prefix)robotiq_85_left_finger_link" reason="Adjacent" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_right_finger_tip_link" link2="$(arg prefix)robotiq_85_right_finger_link" reason="Adjacent" />
+
+        <disable_collisions link1="$(arg prefix)robotiq_85_base_link" link2="$(arg prefix)robotiq_85_left_inner_knuckle_link" reason="Never" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_base_link" link2="$(arg prefix)robotiq_85_right_inner_knuckle_link" reason="Never" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_base_link" link2="$(arg prefix)robotiq_85_left_finger_tip_link" reason="Never" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_base_link" link2="$(arg prefix)robotiq_85_right_finger_tip_link" reason="Never" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_left_finger_link" link2="$(arg prefix)robotiq_85_right_finger_link" reason="Never" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_left_finger_link" link2="$(arg prefix)robotiq_85_right_inner_knuckle_link" reason="Never" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_left_finger_link" link2="$(arg prefix)robotiq_85_right_finger_tip_link" reason="Never" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_right_finger_link" link2="$(arg prefix)robotiq_85_left_inner_knuckle_link" reason="Never" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_right_finger_link" link2="$(arg prefix)robotiq_85_left_finger_tip_link" reason="Never" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_left_inner_knuckle_link" link2="$(arg prefix)robotiq_85_right_inner_knuckle_link" reason="Never" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_left_inner_knuckle_link" link2="$(arg prefix)robotiq_85_right_finger_tip_link" reason="Never" />
+        <disable_collisions link1="$(arg prefix)robotiq_85_right_inner_knuckle_link" link2="$(arg prefix)robotiq_85_left_finger_tip_link" reason="Never" />
+    </xacro:if>
+    
+    <!-- Disable collision for gfloor if enabled -->
+    <xacro:if value="${gfloor}">
+        <disable_collisions link1="base_link_inertia" link2="floor" reason="Adjacent"/>
+    </xacro:if>
+
+    <!-- Disable collision between wrist and ee collision box if enabled -->
+    <xacro:if value="${gripper_collision_box}">
+        <disable_collisions link1="wrist_3_link" link2="ee_collision_box" reason="Adjacent"/>
+        <!-- Disable collision between camera and ee collision box if both are enabled -->
+        <xacro:if value="${camera}">
+            <disable_collisions link1="ee_cam_link" link2="ee_collision_box" reason="Adjacent"/>
+        </xacro:if>
+    </xacro:if>
+
+
+</robot>

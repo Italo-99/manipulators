@@ -9,3 +9,7 @@ kp:                 1.0
 spinner_rate:       500
 
 min_motor_speed:    0.001
+
+real_joint_state_topic: /fake/joint_states
+
+joint_state_timeout:  2.0

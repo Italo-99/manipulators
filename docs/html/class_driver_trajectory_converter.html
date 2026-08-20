@@ -118,6 +118,12 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>jointCmdCallback</b> 
 <tr class="memitem:a078d072547ecfc384a82c238c6eba5d5"><td class="memItemLeft" align="right" valign="top"><a id="a078d072547ecfc384a82c238c6eba5d5"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>computeVel</b> ()</td></tr>
 <tr class="separator:a078d072547ecfc384a82c238c6eba5d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a084d382b20875a6e5f8c7ac6d66057c8"><td class="memItemLeft" align="right" valign="top"><a id="a084d382b20875a6e5f8c7ac6d66057c8"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>pubZOH_JointState</b> ()</td></tr>
+<tr class="separator:a084d382b20875a6e5f8c7ac6d66057c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d66a72b739751a1b26f3f3c82f0241c"><td class="memItemLeft" align="right" valign="top"><a id="a4d66a72b739751a1b26f3f3c82f0241c"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>isJointStateTimeout</b> () const</td></tr>
+<tr class="separator:a4d66a72b739751a1b26f3f3c82f0241c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-attribs"></a>
 Private Attributes</h2></td></tr>
@@ -127,6 +133,9 @@ rclcpp::Subscription&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td>
 <tr class="memitem:ad87b54ac1997394e30549ca95e0a6ecf"><td class="memItemLeft" align="right" valign="top"><a id="ad87b54ac1997394e30549ca95e0a6ecf"></a>
 rclcpp::Subscription&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>joint_cmd_sub_</b></td></tr>
 <tr class="separator:ad87b54ac1997394e30549ca95e0a6ecf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a662147ba2ee143813d236a1f430e7c0e"><td class="memItemLeft" align="right" valign="top"><a id="a662147ba2ee143813d236a1f430e7c0e"></a>
+rclcpp::Publisher&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>joint_state_publisher_</b></td></tr>
+<tr class="separator:a662147ba2ee143813d236a1f430e7c0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a48d84ee9d7aa44b0034d38634aca5bb1"><td class="memItemLeft" align="right" valign="top"><a id="a48d84ee9d7aa44b0034d38634aca5bb1"></a>
 rclcpp::Publisher&lt; std_msgs::msg::Float64MultiArray &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velocity_publisher_</b></td></tr>
 <tr class="separator:a48d84ee9d7aa44b0034d38634aca5bb1"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -145,6 +154,9 @@ Eigen::Matrix&lt; double, 6, 1 &gt;&#160;</td><td class="memItemRight" valign="b
 <tr class="memitem:a9361741d532cdb7bfbaad77733fc6459"><td class="memItemLeft" align="right" valign="top"><a id="a9361741d532cdb7bfbaad77733fc6459"></a>
 std_msgs::msg::Float64MultiArray&#160;</td><td class="memItemRight" valign="bottom"><b>vel_msg_</b></td></tr>
 <tr class="separator:a9361741d532cdb7bfbaad77733fc6459"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4b0bd9a39cc872906fc0533549d504c1"><td class="memItemLeft" align="right" valign="top"><a id="a4b0bd9a39cc872906fc0533549d504c1"></a>
+std_msgs::msg::Float64MultiArray&#160;</td><td class="memItemRight" valign="bottom"><b>zero_vel_msg_</b></td></tr>
+<tr class="separator:a4b0bd9a39cc872906fc0533549d504c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af033a7d8b931137d1a69342280552178"><td class="memItemLeft" align="right" valign="top"><a id="af033a7d8b931137d1a69342280552178"></a>
 std::unordered_map&lt; std::string, size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joint_name_to_index_</b></td></tr>
 <tr class="separator:af033a7d8b931137d1a69342280552178"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -154,24 +166,45 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>joint_map_initialized
 <tr class="memitem:a527b89386c4073b7a970ec6c7b46b692"><td class="memItemLeft" align="right" valign="top"><a id="a527b89386c4073b7a970ec6c7b46b692"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>cmd_map_initialized_</b></td></tr>
 <tr class="separator:a527b89386c4073b7a970ec6c7b46b692"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ef3fa3bfc269c9acda60bdde49bc6d9"><td class="memItemLeft" align="right" valign="top"><a id="a1ef3fa3bfc269c9acda60bdde49bc6d9"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>timeout_active_</b></td></tr>
+<tr class="separator:a1ef3fa3bfc269c9acda60bdde49bc6d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afff9d6ca0db100fa3b7bb1ae06613e9c"><td class="memItemLeft" align="right" valign="top"><a id="afff9d6ca0db100fa3b7bb1ae06613e9c"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>real_joint_state_received_</b></td></tr>
+<tr class="separator:afff9d6ca0db100fa3b7bb1ae06613e9c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a70f2ea9f4caa671e4489973b57bf5607"><td class="memItemLeft" align="right" valign="top"><a id="a70f2ea9f4caa671e4489973b57bf5607"></a>
+sensor_msgs::msg::JointState&#160;</td><td class="memItemRight" valign="bottom"><b>last_real_joint_state_</b></td></tr>
+<tr class="separator:a70f2ea9f4caa671e4489973b57bf5607"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aafd448290f524fe269492d5365ac7a7f"><td class="memItemLeft" align="right" valign="top"><a id="aafd448290f524fe269492d5365ac7a7f"></a>
+rclcpp::Time&#160;</td><td class="memItemRight" valign="bottom"><b>last_joint_state_rx_time_</b></td></tr>
+<tr class="separator:aafd448290f524fe269492d5365ac7a7f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3649fd4cd7a1cd4af8bbdd921f534662"><td class="memItemLeft" align="right" valign="top"><a id="a3649fd4cd7a1cd4af8bbdd921f534662"></a>
 std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joints_names_group_</b></td></tr>
 <tr class="separator:a3649fd4cd7a1cd4af8bbdd921f534662"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac264e52d62f8511b6886433231258a7f"><td class="memItemLeft" align="right" valign="top"><a id="ac264e52d62f8511b6886433231258a7f"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>velocity_topic_</b></td></tr>
 <tr class="separator:ac264e52d62f8511b6886433231258a7f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ba637bf938e3fa283b370b3994eee0f"><td class="memItemLeft" align="right" valign="top"><a id="a3ba637bf938e3fa283b370b3994eee0f"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>real_joint_state_topic_</b></td></tr>
+<tr class="separator:a3ba637bf938e3fa283b370b3994eee0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a271f76372c2ebb5f1b23cb63bc3f798d"><td class="memItemLeft" align="right" valign="top"><a id="a271f76372c2ebb5f1b23cb63bc3f798d"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>kp_</b></td></tr>
 <tr class="separator:a271f76372c2ebb5f1b23cb63bc3f798d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a485141d9c18a994da7d5a408ec696c73"><td class="memItemLeft" align="right" valign="top"><a id="a485141d9c18a994da7d5a408ec696c73"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>min_motor_speed_</b></td></tr>
 <tr class="separator:a485141d9c18a994da7d5a408ec696c73"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a972561ccc51fa3612be47362165fcad7"><td class="memItemLeft" align="right" valign="top"><a id="a972561ccc51fa3612be47362165fcad7"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>joint_state_timeout_s_</b></td></tr>
+<tr class="separator:a972561ccc51fa3612be47362165fcad7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a789c185711b231f24bafb69ed67cabcb"><td class="memItemLeft" align="right" valign="top"><a id="a789c185711b231f24bafb69ed67cabcb"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>spinner_rate_</b></td></tr>
 <tr class="separator:a789c185711b231f24bafb69ed67cabcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a975f97d641fee7160caf9ecff1028798"><td class="memItemLeft" align="right" valign="top"><a id="a975f97d641fee7160caf9ecff1028798"></a>
-rclcpp::executors::SingleThreadedExecutor&#160;</td><td class="memItemRight" valign="bottom"><b>executor</b></td></tr>
-<tr class="separator:a975f97d641fee7160caf9ecff1028798"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeb78509e1afb9aab1606476870197351"><td class="memItemLeft" align="right" valign="top"><a id="aeb78509e1afb9aab1606476870197351"></a>
+rclcpp::CallbackGroup::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>subscribers_callback_group_</b></td></tr>
+<tr class="separator:aeb78509e1afb9aab1606476870197351"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a77e13f6bc742e5035743d80e7b9e1f80"><td class="memItemLeft" align="right" valign="top"><a id="a77e13f6bc742e5035743d80e7b9e1f80"></a>
+rclcpp::executors::MultiThreadedExecutor&#160;</td><td class="memItemRight" valign="bottom"><b>executor_</b></td></tr>
+<tr class="separator:a77e13f6bc742e5035743d80e7b9e1f80"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab3df83e9d96968efcc2ef6f86aee4ff1"><td class="memItemLeft" align="right" valign="top"><a id="ab3df83e9d96968efcc2ef6f86aee4ff1"></a>
 rclcpp::TimerBase::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>timer_</b></td></tr>
 <tr class="separator:ab3df83e9d96968efcc2ef6f86aee4ff1"><td class="memSeparator" colspan="2">&#160;</td></tr>

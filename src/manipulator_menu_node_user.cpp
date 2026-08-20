@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
     params.manipulator_name   = "manipulator";
     params.planning_group     = prefix + "ur_manipulator";
 
-    params.gripper            = "toolIO";           // Gripper type, can be "robotiq_85" for 'motor_mover' integration or "toolIO"
+    params.gripper            = "robotiq_85";           // Gripper type, can be "robotiq_85" for 'motor_mover' integration or "toolIO"
     params.gripper_group      = "robotiq_85_gripper";   // For gripper type "robotiq_85"
     params.gripper_IO_cmds    = {1, 0};                 // For gripper type "toolIO", IO commands to close/open the gripper
     
