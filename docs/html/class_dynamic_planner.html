@@ -142,15 +142,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>stop</b> ()</td></tr>
 <tr class="memitem:a0408917146da8ab7e5af3a7f0405cc2d"><td class="memItemLeft" align="right" valign="top"><a id="a0408917146da8ab7e5af3a7f0405cc2d"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>setParams</b> (const <a class="el" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a> &amp;params)</td></tr>
 <tr class="separator:a0408917146da8ab7e5af3a7f0405cc2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9cd5e0e2f44585944a5bad572202de03"><td class="memItemLeft" align="right" valign="top"><a id="a9cd5e0e2f44585944a5bad572202de03"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>setDynamicBehavior</b> (bool dynamic_behavior)</td></tr>
-<tr class="separator:a9cd5e0e2f44585944a5bad572202de03"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae4c934e09fa1c538c83dbf755dc45078"><td class="memItemLeft" align="right" valign="top"><a id="ae4c934e09fa1c538c83dbf755dc45078"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>isDynamic</b> () const</td></tr>
-<tr class="separator:ae4c934e09fa1c538c83dbf755dc45078"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1fdcb96de5d1de768bd34d98bce2e462"><td class="memItemLeft" align="right" valign="top"><a id="a1fdcb96de5d1de768bd34d98bce2e462"></a>
-const planning_scene_monitor::LockedPlanningSceneRO&#160;</td><td class="memItemRight" valign="bottom"><b>getPlanningScene</b> () const</td></tr>
-<tr class="separator:a1fdcb96de5d1de768bd34d98bce2e462"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a072104d8dc52128950186d48494eff5e"><td class="memItemLeft" align="right" valign="top"><a id="a072104d8dc52128950186d48494eff5e"></a>
+planning_scene_monitor::LockedPlanningSceneRW&#160;</td><td class="memItemRight" valign="bottom"><b>getPlanningScene</b> ()</td></tr>
+<tr class="separator:a072104d8dc52128950186d48494eff5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1ab284e1ae4a9e1a19c02710bf309391"><td class="memItemLeft" align="right" valign="top"><a id="a1ab284e1ae4a9e1a19c02710bf309391"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>setRobotState</b> (moveit::core::RobotStatePtr &amp;robot_state)</td></tr>
 <tr class="separator:a1ab284e1ae4a9e1a19c02710bf309391"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -181,6 +175,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>processCollisionObjec
 <tr class="memitem:a6bd5f50938f255779e9e4dedf30667be"><td class="memItemLeft" align="right" valign="top"><a id="a6bd5f50938f255779e9e4dedf30667be"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>processAttachedCollisionObject</b> (const moveit_msgs::msg::AttachedCollisionObject &amp;collision_object)</td></tr>
 <tr class="separator:a6bd5f50938f255779e9e4dedf30667be"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6354931797e7c1d0450669f2c656e37a"><td class="memItemLeft" align="right" valign="top"><a id="a6354931797e7c1d0450669f2c656e37a"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>setCollisionEnabled</b> (const std::string &amp;object_1, const std::string &amp;object_2, bool enabled)</td></tr>
+<tr class="separator:a6354931797e7c1d0450669f2c656e37a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3978d89a10b16fc8e16d4d063151b5b0"><td class="memItemLeft" align="right" valign="top"><a id="a3978d89a10b16fc8e16d4d063151b5b0"></a>
 geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><b>getFKine</b> (const std::vector&lt; double &gt; &amp;joint_positions, const std::string &amp;end_effector_link)</td></tr>
 <tr class="separator:a3978d89a10b16fc8e16d4d063151b5b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -409,6 +406,9 @@ rviz_visual_tools::RvizVisualToolsPtr&#160;</td><td class="memItemRight" valign=
 <tr class="memitem:a060e7bcdf0d661e738ab8355befc751f"><td class="memItemLeft" align="right" valign="top"><a id="a060e7bcdf0d661e738ab8355befc751f"></a>
 size_t&#160;</td><td class="memItemRight" valign="bottom"><b>marker_id_</b> = 0</td></tr>
 <tr class="separator:a060e7bcdf0d661e738ab8355befc751f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3c22a13690beeaf71a6289d6f9df7636"><td class="memItemLeft" align="right" valign="top"><a id="a3c22a13690beeaf71a6289d6f9df7636"></a>
+std::map&lt; std::string, visualization_msgs::msg::Marker &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>visualized_primitives_</b></td></tr>
+<tr class="separator:a3c22a13690beeaf71a6289d6f9df7636"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>include/manipulators/<a class="el" href="_dynamic_planner_8h_source.html">DynamicPlanner.h</a></li>

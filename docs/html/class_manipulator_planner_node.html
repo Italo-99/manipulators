@@ -202,6 +202,15 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>jointsRealTimeControl
 <tr class="memitem:ab1fb3af6d04495cec75f2bc2db554de9"><td class="memItemLeft" align="right" valign="top"><a id="ab1fb3af6d04495cec75f2bc2db554de9"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>isRobotMoving</b> ()</td></tr>
 <tr class="separator:ab1fb3af6d04495cec75f2bc2db554de9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae55c2f0300448c97f24106abb877187f"><td class="memItemLeft" align="right" valign="top"><a id="ae55c2f0300448c97f24106abb877187f"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>zeroJacobianCmd</b> ()</td></tr>
+<tr class="separator:ae55c2f0300448c97f24106abb877187f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab6d7a80c09035e72ae8da952783e48d6"><td class="memItemLeft" align="right" valign="top"><a id="ab6d7a80c09035e72ae8da952783e48d6"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>zeroJointsCmd</b> ()</td></tr>
+<tr class="separator:ab6d7a80c09035e72ae8da952783e48d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af672c10f687deedac172589ce9c997cb"><td class="memItemLeft" align="right" valign="top"><a id="af672c10f687deedac172589ce9c997cb"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>realTimeFrequencyCheck</b> ()</td></tr>
+<tr class="separator:af672c10f687deedac172589ce9c997cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4c6d610072c7f7b3405dc8376768f720"><td class="memItemLeft" align="right" valign="top"><a id="a4c6d610072c7f7b3405dc8376768f720"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>addPrefix</b> (const std::string &amp;prefix, std::vector&lt; std::string &gt; &amp;vector) const</td></tr>
 <tr class="separator:a4c6d610072c7f7b3405dc8376768f720"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -265,15 +274,15 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>max_spd_jnts_</b></
 <tr class="memitem:a83d8e6797d8acf7852c934038552343f"><td class="memItemLeft" align="right" valign="top"><a id="a83d8e6797d8acf7852c934038552343f"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>max_acc_jnts_</b></td></tr>
 <tr class="separator:a83d8e6797d8acf7852c934038552343f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae0f3f08471f55786dc4cf384c97237eb"><td class="memItemLeft" align="right" valign="top"><a id="ae0f3f08471f55786dc4cf384c97237eb"></a>
+std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>fixed_links_</b></td></tr>
+<tr class="separator:ae0f3f08471f55786dc4cf384c97237eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1849f05c571c4ef6098b2a57a4bd85a3"><td class="memItemLeft" align="right" valign="top"><a id="a1849f05c571c4ef6098b2a57a4bd85a3"></a>
 std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>gripper_links_</b></td></tr>
 <tr class="separator:a1849f05c571c4ef6098b2a57a4bd85a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae433dcfa1eb08acc2bb1c58ce46b1b16"><td class="memItemLeft" align="right" valign="top"><a id="ae433dcfa1eb08acc2bb1c58ce46b1b16"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>min_jacobian_determinant_</b></td></tr>
-<tr class="separator:ae433dcfa1eb08acc2bb1c58ce46b1b16"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5be605d4162868a504b3cb6f8cdf94bc"><td class="memItemLeft" align="right" valign="top"><a id="a5be605d4162868a504b3cb6f8cdf94bc"></a>
-Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><b>jacobian_var_</b></td></tr>
-<tr class="separator:a5be605d4162868a504b3cb6f8cdf94bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad3fe262335eda79469f9d24161cdcec8"><td class="memItemLeft" align="right" valign="top"><a id="ad3fe262335eda79469f9d24161cdcec8"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>real_time_safety_dt_</b></td></tr>
+<tr class="separator:ad3fe262335eda79469f9d24161cdcec8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa97d8d596fcb35af437911f2ead6f80a"><td class="memItemLeft" align="right" valign="top"><a id="aa97d8d596fcb35af437911f2ead6f80a"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>limit_joints_control_</b></td></tr>
 <tr class="separator:aa97d8d596fcb35af437911f2ead6f80a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -403,6 +412,12 @@ std::vector&lt; shape_msgs::msg::SolidPrimitive &gt;&#160;</td><td class="memIte
 <tr class="memitem:a70f59a70801b4f45df80f9ea6d52dbf1"><td class="memItemLeft" align="right" valign="top"><a id="a70f59a70801b4f45df80f9ea6d52dbf1"></a>
 std::vector&lt; geometry_msgs::msg::Pose &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>constraints_poses_</b></td></tr>
 <tr class="separator:a70f59a70801b4f45df80f9ea6d52dbf1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae6112b7efe36e97c765bea35c2afdd65"><td class="memItemLeft" align="right" valign="top"><a id="ae6112b7efe36e97c765bea35c2afdd65"></a>
+rclcpp::Time&#160;</td><td class="memItemRight" valign="bottom"><b>last_received_rt_command_</b></td></tr>
+<tr class="separator:ae6112b7efe36e97c765bea35c2afdd65"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5be605d4162868a504b3cb6f8cdf94bc"><td class="memItemLeft" align="right" valign="top"><a id="a5be605d4162868a504b3cb6f8cdf94bc"></a>
+Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><b>jacobian_var_</b></td></tr>
+<tr class="separator:a5be605d4162868a504b3cb6f8cdf94bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Function Documentation</h2>
 <a id="a178662718da69fb88a52d38e0e08e116"></a>

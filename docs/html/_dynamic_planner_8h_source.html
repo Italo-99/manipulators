@@ -74,336 +74,363 @@ $(function() {
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160; </div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="comment">//C++ Imports</span></div>
 <div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;<span class="preprocessor">#include &lt;string&gt;</span></div>
-<div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;<span class="preprocessor">#include &lt;vector&gt;</span></div>
-<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="preprocessor">#include &lt;Eigen/Geometry&gt;</span></div>
-<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;<span class="preprocessor">#include &lt;mutex&gt;</span></div>
-<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;<span class="preprocessor">#include &lt;atomic&gt;</span></div>
-<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;<span class="preprocessor">#include &lt;stdexcept&gt;</span></div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160; </div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="comment">//ROS Imports</span></div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &lt;rclcpp/rclcpp.hpp&gt;</span></div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;rclcpp_action/rclcpp_action.hpp&gt;</span></div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;geometry_msgs/msg/pose.hpp&gt;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;geometry_msgs/msg/quaternion.hpp&gt;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;trajectory_msgs/msg/joint_trajectory.hpp&gt;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;std_msgs/msg/bool.hpp&gt;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;std_msgs/msg/u_int32.hpp&gt;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;tf2/convert.h&gt;</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;tf2_ros/transform_listener.h&gt;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;tf2_ros/buffer.h&gt;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;tf2_geometry_msgs/tf2_geometry_msgs.hpp&gt;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;rviz_visual_tools/rviz_visual_tools.hpp&quot;</span></div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="comment">//MoveIt2 Imports</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &lt;moveit/move_group/capability_names.h&gt;</span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &lt;moveit/common_planning_interface_objects/common_objects.h&gt;</span></div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &lt;moveit_visual_tools/moveit_visual_tools.h&gt;</span></div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &lt;moveit/planning_scene_monitor/planning_scene_monitor.hpp&gt;</span></div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &lt;moveit/trajectory_processing/time_optimal_trajectory_generation.h&gt;</span></div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &lt;manipulator_interfaces/msg/trajectory_result.hpp&gt;</span> </div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/msg/robot_trajectory.hpp&gt;</span></div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/msg/motion_plan_request.hpp&gt;</span></div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/msg/motion_plan_response.hpp&gt;</span></div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/srv/get_motion_sequence.hpp&gt;</span></div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#include &lt;moveit/robot_state/conversions.h&gt;</span></div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/srv/get_motion_plan.hpp&gt;</span></div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/action/move_group.hpp&gt;</span></div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#include &lt;moveit/kinematic_constraints/utils.h&gt;</span></div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160; </div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="comment">// Struct definition of the parameters of the Dynamic Planner</span></div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160; </div>
-<div class="line"><a name="l00043"></a><span class="lineno"><a class="line" href="struct_dynamic_planner_params.html">   43</a></span>&#160;<span class="keyword">struct </span><a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a></div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;{</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;    std::string planning_pipeline   = <span class="stringliteral">&quot;ompl&quot;</span>;                    <span class="comment">// planning pipeline (check moveit_config package for available pipelines)</span></div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    std::string planner_id          = <span class="stringliteral">&quot;RRTConnectkConfigDefault&quot;</span>;   <span class="comment">// name of the planner method (look up from list in &lt;planning_pipeline&gt;.yaml)</span></div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;    <span class="keywordtype">int</span> num_attempts                = 2;                         <span class="comment">// max number of attempts to find a trajectory</span></div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;    <span class="keywordtype">double</span> planning_time            = 2;                         <span class="comment">// maximum planning time in seconds (0: no limit)</span></div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    <span class="keywordtype">double</span> vel_factor               = 1.;                        <span class="comment">// velocity factor</span></div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;    <span class="keywordtype">double</span> acc_factor               = 1.;                        <span class="comment">// acceleration factor</span></div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;    <span class="keywordtype">double</span> sample_time              = 0.002;                     <span class="comment">// sample time for cartesian planner (seconds)</span></div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;    <span class="keywordtype">double</span> max_velocity             = 0.5;                       <span class="comment">// maximum ee velocity for cartesian planner</span></div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;    <span class="keywordtype">double</span> position_tolerance       = 0.01;                      <span class="comment">// tolerance for tcp position (m)</span></div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;    <span class="keywordtype">double</span> orientation_tolerance    = 0.01;                      <span class="comment">// tolerance for tcp orientation (rad)</span></div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;    <span class="keywordtype">double</span> joint_tolerance          = 0.01;                      <span class="comment">// tolerance for joint positions (rad)</span></div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;    std::string world_frame         = <span class="stringliteral">&quot;base_link&quot;</span>;               <span class="comment">// world frame</span></div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;    std::string end_effector_link   = <span class="stringliteral">&quot;tool0&quot;</span>;                   <span class="comment">// end effector link</span></div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;    <span class="keywordtype">double</span> min_cartesian_fraction   = 0.1;                       <span class="comment">// Minimum fraction for the cartesian plan to be considered successful</span></div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;    <span class="keywordtype">double</span> caresian_blend_radius    = 0.0;                       <span class="comment">// Blend radius for the cartesian plan</span></div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;    <span class="keywordtype">double</span> joint_states_timeout     = 1.0;                       <span class="comment">// Timeout after which planner is blocked if no joint states are received (seconds)</span></div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;    <span class="keywordtype">double</span> tf_timeout               = 2.0;                       <span class="comment">// TF lookups will fail if last received transfoms are older than this threshold (seconds)</span></div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160; </div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    <a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a>() {}</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160; </div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;    <span class="keyword">static</span> <a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a> fromNode(<span class="keyword">const</span> rclcpp::Node::SharedPtr&amp; node);</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;};</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160; </div>
-<div class="line"><a name="l00068"></a><span class="lineno"><a class="line" href="class_dynamic_planner.html">   68</a></span>&#160;<span class="keyword">class </span><a class="code" href="class_dynamic_planner.html">DynamicPlanner</a></div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;{</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;        <a class="code" href="class_dynamic_planner.html">DynamicPlanner</a>(<span class="keyword">const</span> rclcpp::Node::SharedPtr&amp; node,</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;                       <span class="keyword">const</span> std::string&amp; planning_group);</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160; </div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;        ~<a class="code" href="class_dynamic_planner.html">DynamicPlanner</a>();</div>
+<div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;<span class="preprocessor">#include &lt;sstream&gt;</span></div>
+<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="preprocessor">#include &lt;vector&gt;</span></div>
+<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;<span class="preprocessor">#include &lt;Eigen/Geometry&gt;</span></div>
+<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;<span class="preprocessor">#include &lt;mutex&gt;</span></div>
+<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;<span class="preprocessor">#include &lt;atomic&gt;</span></div>
+<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;<span class="preprocessor">#include &lt;stdexcept&gt;</span></div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; </div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="comment">//ROS Imports</span></div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;rclcpp/rclcpp.hpp&gt;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;rclcpp_action/rclcpp_action.hpp&gt;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;geometry_msgs/msg/pose.hpp&gt;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;geometry_msgs/msg/quaternion.hpp&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;trajectory_msgs/msg/joint_trajectory.hpp&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;std_msgs/msg/bool.hpp&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;std_msgs/msg/u_int32.hpp&gt;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;tf2/convert.h&gt;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;tf2_ros/transform_listener.h&gt;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;tf2_ros/buffer.h&gt;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;tf2_geometry_msgs/tf2_geometry_msgs.hpp&gt;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;rviz_visual_tools/rviz_visual_tools.hpp&quot;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="comment">//MoveIt2 Imports</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &lt;moveit/move_group/capability_names.h&gt;</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &lt;moveit/common_planning_interface_objects/common_objects.h&gt;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &lt;moveit_visual_tools/moveit_visual_tools.h&gt;</span></div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &lt;moveit/planning_scene_monitor/planning_scene_monitor.hpp&gt;</span></div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &lt;moveit/trajectory_processing/time_optimal_trajectory_generation.h&gt;</span></div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &lt;manipulator_interfaces/msg/trajectory_result.hpp&gt;</span> </div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/msg/robot_trajectory.hpp&gt;</span></div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/msg/motion_plan_request.hpp&gt;</span></div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/msg/motion_plan_response.hpp&gt;</span></div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/srv/get_motion_sequence.hpp&gt;</span></div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &lt;moveit/robot_state/conversions.h&gt;</span></div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/srv/get_motion_plan.hpp&gt;</span></div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#include &lt;moveit_msgs/action/move_group.hpp&gt;</span></div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#include &lt;moveit/kinematic_constraints/utils.h&gt;</span></div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160; </div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="comment">// QoS profiles </span></div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="keyword">const</span> <span class="keyword">auto</span> qos_best_effort = [](<span class="keywordtype">size_t</span> depth = 1){</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    <span class="keyword">auto</span> qos = rclcpp::QoS(rclcpp::KeepLast(depth))</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;               .best_effort();</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    <span class="keywordflow">return</span> qos;</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;};</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160; </div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;<span class="keyword">const</span> <span class="keyword">auto</span> qos_reliable = [](<span class="keywordtype">size_t</span> depth = 1){</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;    <span class="keyword">auto</span> qos = rclcpp::QoS(rclcpp::KeepLast(depth))</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;               .reliable();</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;    <span class="keywordflow">return</span> qos;</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;};</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160; </div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;<span class="comment">// Struct definition of the parameters of the Dynamic Planner</span></div>
+<div class="line"><a name="l00056"></a><span class="lineno"><a class="line" href="struct_dynamic_planner_params.html">   56</a></span>&#160;<span class="keyword">struct </span><a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a></div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;{</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;    std::string planning_pipeline   = <span class="stringliteral">&quot;ompl&quot;</span>;                    <span class="comment">// planning pipeline (check moveit_config package for available pipelines)</span></div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;    std::string planner_id          = <span class="stringliteral">&quot;RRTConnectkConfigDefault&quot;</span>;   <span class="comment">// name of the planner method (look up from list in &lt;planning_pipeline&gt;.yaml)</span></div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;    <span class="keywordtype">int</span> num_attempts                = 2;                         <span class="comment">// max number of attempts to find a trajectory</span></div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;    <span class="keywordtype">double</span> planning_time            = 2;                         <span class="comment">// maximum planning time in seconds (0: no limit)</span></div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;    <span class="keywordtype">double</span> vel_factor               = 1.;                        <span class="comment">// velocity factor</span></div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    <span class="keywordtype">double</span> acc_factor               = 1.;                        <span class="comment">// acceleration factor</span></div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    <span class="keywordtype">double</span> sample_time              = 0.002;                     <span class="comment">// sample time for cartesian planner (seconds)</span></div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;    <span class="keywordtype">double</span> max_velocity             = 0.5;                       <span class="comment">// maximum ee velocity for cartesian planner</span></div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;    <span class="keywordtype">double</span> position_tolerance       = 0.01;                      <span class="comment">// tolerance for tcp position (m)</span></div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;    <span class="keywordtype">double</span> orientation_tolerance    = 0.01;                      <span class="comment">// tolerance for tcp orientation (rad)</span></div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;    <span class="keywordtype">double</span> joint_tolerance          = 0.01;                      <span class="comment">// tolerance for joint positions (rad)</span></div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;    std::string world_frame         = <span class="stringliteral">&quot;base_link&quot;</span>;               <span class="comment">// world frame</span></div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    std::string end_effector_link   = <span class="stringliteral">&quot;tool0&quot;</span>;                   <span class="comment">// end effector link</span></div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;    <span class="keywordtype">double</span> min_cartesian_fraction   = 0.1;                       <span class="comment">// Minimum fraction for the cartesian plan to be considered successful</span></div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    <span class="keywordtype">double</span> caresian_blend_radius    = 0.0;                       <span class="comment">// Blend radius for the cartesian plan</span></div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    <span class="keywordtype">double</span> joint_states_timeout     = 1.0;                       <span class="comment">// Timeout after which planner is blocked if no joint states are received (seconds)</span></div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;    <span class="keywordtype">double</span> tf_timeout               = 2.0;                       <span class="comment">// TF lookups will fail if last received transfoms are older than this threshold (seconds)</span></div>
 <div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;        <span class="keywordtype">void</span> initialize(); <span class="comment">//Initialize the dynamic planner (vars, subscribers, publishers, ...)</span></div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;    <a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a>() {}</div>
 <div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160; </div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;        <span class="comment">// --------------- CONTROL METHODS ---------------</span></div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160; </div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;        <span class="comment">/*plan: joint goal</span></div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;<span class="comment">            NOTE: This is a blocking function, it will stop execution until the planning is done</span></div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;<span class="comment">            Args:</span></div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;<span class="comment">                joint_positions: Array of target joint position</span></div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;<span class="comment">        */</span></div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> std::vector&lt;double&gt; joint_positions, <span class="keyword">const</span> moveit::core::RobotStatePtr start_state);</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> std::vector&lt;double&gt; joint_positions);</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;    <span class="keyword">static</span> <a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a> fromNode(<span class="keyword">const</span> rclcpp::Node::SharedPtr&amp; node);</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;};</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160; </div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;<span class="keyword">inline</span> rclcpp::QoS QOS_PROFILE_RELIABLE()</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;{</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;    <span class="keywordflow">return</span> rclcpp::QoS(rclcpp::KeepLast(1))</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;        .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;        .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;}</div>
 <div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160; </div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;        <span class="comment">/*plan: pose goal</span></div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;<span class="comment">            NOTE: This is a blocking function, it will stop execution until the planning is done</span></div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;<span class="comment">            Args:</span></div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;<span class="comment">                goal_pose: Target position</span></div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;<span class="comment">                ee_link: End effector link</span></div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;<span class="comment">                frame: Reference frame</span></div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;<span class="comment">            </span></div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;<span class="comment">            Overloads use default values specified in the class definition and params</span></div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;<span class="comment">        */</span></div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;        </div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> geometry_msgs::msg::Pose&amp; goal_pose, <span class="keyword">const</span> std::string&amp; ee_link, <span class="keyword">const</span> std::string&amp; frame, <span class="keyword">const</span> moveit::core::RobotStatePtr start_state);</div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> geometry_msgs::msg::Pose&amp; goal_pose, <span class="keyword">const</span> std::string&amp; ee_link, <span class="keyword">const</span> std::string&amp; frame);</div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> geometry_msgs::msg::Pose&amp; goal_pose, <span class="keyword">const</span> std::string&amp; ee_link);</div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> geometry_msgs::msg::Pose&amp; goal_pose);</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;<span class="keyword">inline</span> rclcpp::QoS QOS_PROFILE_BEST_EFFORT()</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;{</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;    <span class="keywordflow">return</span> rclcpp::QoS(rclcpp::KeepLast(1))</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;        .reliability(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT)</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;        .durability(RMW_QOS_POLICY_DURABILITY_VOLATILE);</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;}</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160; </div>
+<div class="line"><a name="l00095"></a><span class="lineno"><a class="line" href="class_dynamic_planner.html">   95</a></span>&#160;<span class="keyword">class </span><a class="code" href="class_dynamic_planner.html">DynamicPlanner</a></div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;{</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;    <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;        <a class="code" href="class_dynamic_planner.html">DynamicPlanner</a>(<span class="keyword">const</span> rclcpp::Node::SharedPtr&amp; node,</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;                       <span class="keyword">const</span> std::string&amp; planning_group);</div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160; </div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;        ~<a class="code" href="class_dynamic_planner.html">DynamicPlanner</a>();</div>
 <div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160; </div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;        <span class="comment">/*plan: cartesian goal</span></div>
-<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;<span class="comment">            Args:</span></div>
-<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;<span class="comment">                waypoints: Array of target positions to follow</span></div>
-<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;<span class="comment">                ee_link: End effector link</span></div>
-<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;<span class="comment">                frame: Reference frame</span></div>
-<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;<span class="comment">            Returns:</span></div>
-<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;<span class="comment">                fraction: Fraction of the trajectory that was planned</span></div>
-<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;<span class="comment">        */</span></div>
-<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;        <span class="keywordtype">void</span> cartesianPlan(<span class="keyword">const</span> std::vector&lt;geometry_msgs::msg::Pose&gt;&amp; waypoints,</div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;                           <span class="keyword">const</span> std::string&amp; ee_link,</div>
-<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;                           <span class="keyword">const</span> std::string&amp; frame);</div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;        <span class="keywordtype">void</span> initialize(); <span class="comment">//Initialize the dynamic planner (vars, subscribers, publishers, ...)</span></div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160; </div>
+<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;        <span class="comment">// --------------- CONTROL METHODS ---------------</span></div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160; </div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;        <span class="comment">/*plan: joint goal</span></div>
+<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;<span class="comment">            NOTE: This is a blocking function, it will stop execution until the planning is done</span></div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;<span class="comment">            Args:</span></div>
+<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;<span class="comment">                joint_positions: Array of target joint position</span></div>
+<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;<span class="comment">        */</span></div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> std::vector&lt;double&gt; joint_positions, <span class="keyword">const</span> moveit::core::RobotStatePtr start_state);</div>
+<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> std::vector&lt;double&gt; joint_positions);</div>
 <div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160; </div>
-<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;        <span class="keywordtype">void</span> cartesianPlan(<span class="keyword">const</span> std::vector&lt;geometry_msgs::msg::Pose&gt;&amp; waypoints,</div>
-<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;                           <span class="keyword">const</span> std::string&amp; ee_link);</div>
-<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160; </div>
-<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;        <span class="keywordtype">void</span> cartesianPlan(<span class="keyword">const</span> std::vector&lt;geometry_msgs::msg::Pose&gt;&amp; waypoints);</div>
-<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160; </div>
-<div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;        <span class="keywordtype">void</span> moveRobot(<span class="keyword">const</span> sensor_msgs::msg::JointState &amp;joint_state); <span class="comment">//Single trajectory point</span></div>
-<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;        <span class="keywordtype">void</span> moveRobot(<span class="keyword">const</span> trajectory_msgs::msg::JointTrajectoryPoint &amp;traj_pt); <span class="comment">//Single trajectory point</span></div>
-<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;        </div>
-<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;        <span class="keywordtype">void</span> executeTrajectory(); <span class="comment">//Asynchronous execution of the last planned trajectory</span></div>
-<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;        <span class="keywordtype">void</span> executeTrajectory(moveit_msgs::msg::RobotTrajectory&amp; robot_trajectory); <span class="comment">//Asynchronous execution of the passed trajectory (waypoints)</span></div>
-<div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160; </div>
-<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;        <span class="keywordtype">bool</span> isExecuting(); <span class="comment">//Check if the robot is moving</span></div>
-<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;        <span class="keywordtype">bool</span> isReady() <span class="keyword">const</span>; <span class="comment">//Check if the planner has received group definition, so the dynamic planner can start working</span></div>
-<div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160; </div>
-<div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;        <span class="keywordtype">void</span> stop(); <span class="comment">//Stop the execution of the planned trajectory</span></div>
-<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160; </div>
-<div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160;        <span class="comment">// --------------- GETTERS AND SETTERS ----------------</span></div>
-<div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160; </div>
-<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;        <span class="comment">// Dynamic planner parameters getter and setter</span></div>
-<div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;        <a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a> getParams() <span class="keyword">const</span>;</div>
-<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160; </div>
-<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;        <span class="keywordtype">void</span> setParams(<span class="keyword">const</span> <a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a>&amp; params);</div>
-<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160; </div>
-<div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;        <span class="keywordtype">void</span> setDynamicBehavior(<span class="keywordtype">bool</span> dynamic_behavior); <span class="comment">//Set the dynamic_behavior_ variable</span></div>
-<div class="line"><a name="l00139"></a><span class="lineno">  139</span>&#160;        <span class="keywordtype">bool</span> isDynamic() <span class="keyword">const</span>; <span class="comment">//Check if dynamic_behaviour_ is true</span></div>
-<div class="line"><a name="l00140"></a><span class="lineno">  140</span>&#160;                </div>
-<div class="line"><a name="l00141"></a><span class="lineno">  141</span>&#160;        <span class="keyword">const</span> planning_scene_monitor::LockedPlanningSceneRO getPlanningScene() <span class="keyword">const</span>; <span class="comment">//Get the current planning scen as a read-only lock object</span></div>
-<div class="line"><a name="l00142"></a><span class="lineno">  142</span>&#160; </div>
-<div class="line"><a name="l00143"></a><span class="lineno">  143</span>&#160;        <span class="keywordtype">void</span> setRobotState(moveit::core::RobotStatePtr&amp; robot_state); <span class="comment">//Set the state of the robot (subsequent planning will start from this state)</span></div>
-<div class="line"><a name="l00144"></a><span class="lineno">  144</span>&#160;        moveit::core::RobotStatePtr getRobotState() <span class="keyword">const</span>; <span class="comment">//Get the current state of the robot</span></div>
-<div class="line"><a name="l00145"></a><span class="lineno">  145</span>&#160;        </div>
-<div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160;        <span class="keyword">const</span> moveit::core::JointModelGroup* getJointModelGroup() <span class="keyword">const</span>; <span class="comment">//Get the joint model group of the planning group</span></div>
-<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160; </div>
-<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160;        <span class="comment">// --------------- PATH CONSTRAINTS ----------------</span></div>
-<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;        <span class="keywordtype">void</span> setPathConstraints(<span class="keyword">const</span> moveit_msgs::msg::Constraints&amp; position_constraint); <span class="comment">//Set constraints for the path</span></div>
-<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;        <span class="keywordtype">void</span> clearPathConstraints(); <span class="comment">//Clear all constraints</span></div>
-<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;        moveit_msgs::msg::Constraints getPathConstraints() <span class="keyword">const</span>; <span class="comment">//Get the current path constraints</span></div>
+<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;        <span class="comment">/*plan: pose goal</span></div>
+<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;<span class="comment">            NOTE: This is a blocking function, it will stop execution until the planning is done</span></div>
+<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;<span class="comment">            Args:</span></div>
+<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;<span class="comment">                goal_pose: Target position</span></div>
+<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;<span class="comment">                ee_link: End effector link</span></div>
+<div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;<span class="comment">                frame: Reference frame</span></div>
+<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;<span class="comment">            </span></div>
+<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;<span class="comment">            Overloads use default values specified in the class definition and params</span></div>
+<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;<span class="comment">        */</span></div>
+<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;        </div>
+<div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> geometry_msgs::msg::Pose&amp; goal_pose, <span class="keyword">const</span> std::string&amp; ee_link, <span class="keyword">const</span> std::string&amp; frame, <span class="keyword">const</span> moveit::core::RobotStatePtr start_state);</div>
+<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> geometry_msgs::msg::Pose&amp; goal_pose, <span class="keyword">const</span> std::string&amp; ee_link, <span class="keyword">const</span> std::string&amp; frame);</div>
+<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> geometry_msgs::msg::Pose&amp; goal_pose, <span class="keyword">const</span> std::string&amp; ee_link);</div>
+<div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160;        <span class="keywordtype">void</span> plan(<span class="keyword">const</span> geometry_msgs::msg::Pose&amp; goal_pose);</div>
+<div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160; </div>
+<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;        <span class="comment">/*plan: cartesian goal</span></div>
+<div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160;<span class="comment">            Args:</span></div>
+<div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;<span class="comment">                waypoints: Array of target positions to follow</span></div>
+<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;<span class="comment">                ee_link: End effector link</span></div>
+<div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;<span class="comment">                frame: Reference frame</span></div>
+<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;<span class="comment">            Returns:</span></div>
+<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;<span class="comment">                fraction: Fraction of the trajectory that was planned</span></div>
+<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;<span class="comment">        */</span></div>
+<div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;        <span class="keywordtype">void</span> cartesianPlan(<span class="keyword">const</span> std::vector&lt;geometry_msgs::msg::Pose&gt;&amp; waypoints,</div>
+<div class="line"><a name="l00139"></a><span class="lineno">  139</span>&#160;                           <span class="keyword">const</span> std::string&amp; ee_link,</div>
+<div class="line"><a name="l00140"></a><span class="lineno">  140</span>&#160;                           <span class="keyword">const</span> std::string&amp; frame);</div>
+<div class="line"><a name="l00141"></a><span class="lineno">  141</span>&#160; </div>
+<div class="line"><a name="l00142"></a><span class="lineno">  142</span>&#160;        <span class="keywordtype">void</span> cartesianPlan(<span class="keyword">const</span> std::vector&lt;geometry_msgs::msg::Pose&gt;&amp; waypoints,</div>
+<div class="line"><a name="l00143"></a><span class="lineno">  143</span>&#160;                           <span class="keyword">const</span> std::string&amp; ee_link);</div>
+<div class="line"><a name="l00144"></a><span class="lineno">  144</span>&#160; </div>
+<div class="line"><a name="l00145"></a><span class="lineno">  145</span>&#160;        <span class="keywordtype">void</span> cartesianPlan(<span class="keyword">const</span> std::vector&lt;geometry_msgs::msg::Pose&gt;&amp; waypoints);</div>
+<div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160; </div>
+<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160;        <span class="keywordtype">void</span> moveRobot(<span class="keyword">const</span> sensor_msgs::msg::JointState &amp;joint_state); <span class="comment">//Single trajectory point</span></div>
+<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160;        <span class="keywordtype">void</span> moveRobot(<span class="keyword">const</span> trajectory_msgs::msg::JointTrajectoryPoint &amp;traj_pt); <span class="comment">//Single trajectory point</span></div>
+<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;        </div>
+<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;        <span class="keywordtype">void</span> executeTrajectory(); <span class="comment">//Asynchronous execution of the last planned trajectory</span></div>
+<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;        <span class="keywordtype">void</span> executeTrajectory(moveit_msgs::msg::RobotTrajectory&amp; robot_trajectory); <span class="comment">//Asynchronous execution of the passed trajectory (waypoints)</span></div>
 <div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160; </div>
-<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;        <span class="keywordtype">bool</span> checkJointConstraints(<span class="keyword">const</span> std::vector&lt;double&gt;&amp; joint_positions); <span class="comment">//Check if the joint positions respect the constraints</span></div>
-<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;        <span class="keywordtype">bool</span> checkPoseConstraints(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions); <span class="comment">//Check if the pose respects the constraints</span></div>
-<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;        </div>
-<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;        <span class="comment">// --------------- COLLISION OBJECTS ----------------</span></div>
-<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;        <span class="keywordtype">void</span> processCollisionObject(<span class="keyword">const</span> moveit_msgs::msg::CollisionObject&amp; collision_object); <span class="comment">//Add a collision object to the planning scene</span></div>
-<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;        <span class="keywordtype">void</span> processAttachedCollisionObject(<span class="keyword">const</span> moveit_msgs::msg::AttachedCollisionObject&amp; collision_object); <span class="comment">//Add an attached collision object to the planning scene</span></div>
+<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;        <span class="keywordtype">bool</span> isExecuting(); <span class="comment">//Check if the robot is moving</span></div>
+<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;        <span class="keywordtype">bool</span> isReady() <span class="keyword">const</span>; <span class="comment">//Check if the planner has received group definition, so the dynamic planner can start working</span></div>
+<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160; </div>
+<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;        <span class="keywordtype">void</span> stop(); <span class="comment">//Stop the execution of the planned trajectory</span></div>
+<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160; </div>
+<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;        <span class="comment">// --------------- GETTERS AND SETTERS ----------------</span></div>
 <div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160; </div>
-<div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;        <span class="comment">// --------------- FORWARD KINEMATICS ----------------</span></div>
-<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;        <span class="comment">/* \: computes forward kinematics</span></div>
-<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;<span class="comment">            Args:</span></div>
-<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;<span class="comment">                joint_positions: Array of joint positions</span></div>
-<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;<span class="comment">                end_effector_link: End effector link</span></div>
-<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;<span class="comment">            Returns:</span></div>
-<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;<span class="comment">                PoseStamped message</span></div>
-<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;<span class="comment">        */</span></div>
-<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;        geometry_msgs::msg::PoseStamped getFKine(<span class="keyword">const</span> std::vector&lt;double&gt;&amp; joint_positions, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
-<div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;        geometry_msgs::msg::PoseStamped getFKine(<span class="keyword">const</span> std::string &amp;end_effector_link); <span class="comment">//Get the current fkine</span></div>
-<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;        geometry_msgs::msg::PoseStamped getFKine(); <span class="comment">//Get the current fkine; end_effector_link_ is used as default</span></div>
+<div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;        <span class="comment">// Dynamic planner parameters getter and setter</span></div>
+<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;        <a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a> getParams() <span class="keyword">const</span>;</div>
+<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160; </div>
+<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;        <span class="keywordtype">void</span> setParams(<span class="keyword">const</span> <a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a>&amp; params);</div>
+<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;                </div>
+<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;        planning_scene_monitor::LockedPlanningSceneRW getPlanningScene(); <span class="comment">//Get the current planning scen as a read-only lock object</span></div>
+<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160; </div>
+<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;        <span class="keywordtype">void</span> setRobotState(moveit::core::RobotStatePtr&amp; robot_state); <span class="comment">//Set the state of the robot (subsequent planning will start from this state)</span></div>
+<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;        moveit::core::RobotStatePtr getRobotState() <span class="keyword">const</span>; <span class="comment">//Get the current state of the robot</span></div>
+<div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;        </div>
+<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;        <span class="keyword">const</span> moveit::core::JointModelGroup* getJointModelGroup() <span class="keyword">const</span>; <span class="comment">//Get the joint model group of the planning group</span></div>
 <div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160; </div>
-<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;        <span class="comment">// --------------- INVERSE KINEMATICS ---------------</span></div>
-<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;        <span class="comment">/* invKine: computes inverse kinematics</span></div>
-<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;<span class="comment">            Args:</span></div>
-<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;<span class="comment">                target_pose: Target position</span></div>
-<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;<span class="comment">                end_effector_link: End effector link</span></div>
-<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;<span class="comment">            Returns:</span></div>
-<div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160;<span class="comment">                Vector of joint positions</span></div>
-<div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;<span class="comment">        */</span></div>
-<div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160;        std::vector&lt;double&gt; invKine(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;target_pose, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
-<div class="line"><a name="l00181"></a><span class="lineno">  181</span>&#160;        std::vector&lt;double&gt; invKine(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;target_pose); <span class="comment">//end_effector_link_ is used as default</span></div>
-<div class="line"><a name="l00182"></a><span class="lineno">  182</span>&#160; </div>
-<div class="line"><a name="l00183"></a><span class="lineno">  183</span>&#160;        <span class="comment">// --------------- JACOBIAN ---------------</span></div>
-<div class="line"><a name="l00184"></a><span class="lineno">  184</span>&#160; </div>
-<div class="line"><a name="l00185"></a><span class="lineno">  185</span>&#160;        <span class="comment">//Get the Jacobian matrix of the manipulator</span></div>
-<div class="line"><a name="l00186"></a><span class="lineno">  186</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getJacobian(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
-<div class="line"><a name="l00187"></a><span class="lineno">  187</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getJacobian(<span class="keyword">const</span> std::string &amp;end_effector_link);</div>
-<div class="line"><a name="l00188"></a><span class="lineno">  188</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getJacobian(); <span class="comment">//end_effector_link_ is used as default</span></div>
-<div class="line"><a name="l00189"></a><span class="lineno">  189</span>&#160; </div>
-<div class="line"><a name="l00190"></a><span class="lineno">  190</span>&#160;        <span class="comment">//Get the pseudo-inverse of the Jacobian matrix</span></div>
-<div class="line"><a name="l00191"></a><span class="lineno">  191</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getPseudoInverseJacobian(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
-<div class="line"><a name="l00192"></a><span class="lineno">  192</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getPseudoInverseJacobian(<span class="keyword">const</span> std::string &amp;end_effector_link);</div>
-<div class="line"><a name="l00193"></a><span class="lineno">  193</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getPseudoInverseJacobian(); <span class="comment">//end_effector_link_ is used as default</span></div>
-<div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160;        </div>
-<div class="line"><a name="l00195"></a><span class="lineno">  195</span>&#160;        <span class="comment">// --------------- JOINT STATES ---------------</span></div>
-<div class="line"><a name="l00196"></a><span class="lineno">  196</span>&#160;        std::vector&lt;std::string&gt; getJointNames(); <span class="comment">//Get the names of the joints</span></div>
-<div class="line"><a name="l00197"></a><span class="lineno">  197</span>&#160;        std::vector&lt;double&gt; getJointValues(); <span class="comment">//Get the current joint values</span></div>
-<div class="line"><a name="l00198"></a><span class="lineno">  198</span>&#160;        std::vector&lt;double&gt; getJointSpeeds(); <span class="comment">//Get the current joint speeds</span></div>
-<div class="line"><a name="l00199"></a><span class="lineno">  199</span>&#160;        sensor_msgs::msg::JointState getJointState(); <span class="comment">//Get the current joint state as a message</span></div>
-<div class="line"><a name="l00200"></a><span class="lineno">  200</span>&#160; </div>
-<div class="line"><a name="l00201"></a><span class="lineno">  201</span>&#160;        <span class="comment">// --------------- TF2 METHODS ----------------</span></div>
-<div class="line"><a name="l00202"></a><span class="lineno">  202</span>&#160;        geometry_msgs::msg::TransformStamped getTransform(<span class="keyword">const</span> std::string &amp;target_frame, <span class="keyword">const</span> std::string &amp;source_frame); <span class="comment">//Get the transform between two frames</span></div>
-<div class="line"><a name="l00203"></a><span class="lineno">  203</span>&#160;        geometry_msgs::msg::Pose transformPose(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose, <span class="keyword">const</span> std::string &amp;target_frame, <span class="keyword">const</span> std::string &amp;src_frame); <span class="comment">//Transform a pose from source_frame to target_frame</span></div>
-<div class="line"><a name="l00204"></a><span class="lineno">  204</span>&#160;        geometry_msgs::msg::Pose transformPoseToWorld(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose, <span class="keyword">const</span> std::string &amp;src_frame);  <span class="comment">//Transform a pose from source_frame to world_frame_</span></div>
-<div class="line"><a name="l00205"></a><span class="lineno">  205</span>&#160;    </div>
-<div class="line"><a name="l00206"></a><span class="lineno">  206</span>&#160;    <span class="keyword">private</span>:</div>
-<div class="line"><a name="l00207"></a><span class="lineno">  207</span>&#160; </div>
-<div class="line"><a name="l00208"></a><span class="lineno">  208</span>&#160;        <span class="comment">// --------------- CALLBACK METHODS ----------------</span></div>
-<div class="line"><a name="l00209"></a><span class="lineno">  209</span>&#160; </div>
-<div class="line"><a name="l00210"></a><span class="lineno">  210</span>&#160;        <span class="keywordtype">void</span> jointsState_callback(<span class="keyword">const</span> sensor_msgs::msg::JointState::SharedPtr &amp;joints_state);     <span class="comment">//Update the joint states</span></div>
-<div class="line"><a name="l00211"></a><span class="lineno">  211</span>&#160;        <span class="keywordtype">void</span> trajectoryExecution_callback(); <span class="comment">//Update the current trajectory point index</span></div>
-<div class="line"><a name="l00212"></a><span class="lineno">  212</span>&#160;        <span class="keywordtype">void</span> executionControl_callback(<span class="keyword">const</span> std_msgs::msg::Bool::SharedPtr &amp;msg); <span class="comment">//Control the execution of the trajectory</span></div>
-<div class="line"><a name="l00213"></a><span class="lineno">  213</span>&#160; </div>
-<div class="line"><a name="l00214"></a><span class="lineno">  214</span>&#160;        <span class="comment">// --------------- TRAJECTORY METHODS ----------------</span></div>
+<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;        <span class="comment">// --------------- PATH CONSTRAINTS ----------------</span></div>
+<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;        <span class="keywordtype">void</span> setPathConstraints(<span class="keyword">const</span> moveit_msgs::msg::Constraints&amp; position_constraint); <span class="comment">//Set constraints for the path</span></div>
+<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;        <span class="keywordtype">void</span> clearPathConstraints(); <span class="comment">//Clear all constraints</span></div>
+<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;        moveit_msgs::msg::Constraints getPathConstraints() <span class="keyword">const</span>; <span class="comment">//Get the current path constraints</span></div>
+<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160; </div>
+<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;        <span class="keywordtype">bool</span> checkJointConstraints(<span class="keyword">const</span> std::vector&lt;double&gt;&amp; joint_positions); <span class="comment">//Check if the joint positions respect the constraints</span></div>
+<div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160;        <span class="keywordtype">bool</span> checkPoseConstraints(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions); <span class="comment">//Check if the pose respects the constraints</span></div>
+<div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;        </div>
+<div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160;        <span class="comment">// --------------- COLLISION OBJECTS ----------------</span></div>
+<div class="line"><a name="l00181"></a><span class="lineno">  181</span>&#160;        <span class="keywordtype">void</span> processCollisionObject(<span class="keyword">const</span> moveit_msgs::msg::CollisionObject&amp; collision_object); <span class="comment">//Add a collision object to the planning scene</span></div>
+<div class="line"><a name="l00182"></a><span class="lineno">  182</span>&#160;        <span class="keywordtype">void</span> processAttachedCollisionObject(<span class="keyword">const</span> moveit_msgs::msg::AttachedCollisionObject&amp; collision_object); <span class="comment">//Add an attached collision object to the planning scene</span></div>
+<div class="line"><a name="l00183"></a><span class="lineno">  183</span>&#160;    </div>
+<div class="line"><a name="l00184"></a><span class="lineno">  184</span>&#160;        <span class="keywordtype">void</span> setCollisionEnabled(<span class="keyword">const</span> std::string&amp; object_1, <span class="keyword">const</span> std::string&amp; object_2, <span class="keywordtype">bool</span> enabled); <span class="comment">//Enable or disable collision between two objects (object can be a link or a collision object)</span></div>
+<div class="line"><a name="l00185"></a><span class="lineno">  185</span>&#160; </div>
+<div class="line"><a name="l00186"></a><span class="lineno">  186</span>&#160;        <span class="comment">// --------------- FORWARD KINEMATICS ----------------</span></div>
+<div class="line"><a name="l00187"></a><span class="lineno">  187</span>&#160;        <span class="comment">/* \: computes forward kinematics</span></div>
+<div class="line"><a name="l00188"></a><span class="lineno">  188</span>&#160;<span class="comment">            Args:</span></div>
+<div class="line"><a name="l00189"></a><span class="lineno">  189</span>&#160;<span class="comment">                joint_positions: Array of joint positions</span></div>
+<div class="line"><a name="l00190"></a><span class="lineno">  190</span>&#160;<span class="comment">                end_effector_link: End effector link</span></div>
+<div class="line"><a name="l00191"></a><span class="lineno">  191</span>&#160;<span class="comment">            Returns:</span></div>
+<div class="line"><a name="l00192"></a><span class="lineno">  192</span>&#160;<span class="comment">                PoseStamped message</span></div>
+<div class="line"><a name="l00193"></a><span class="lineno">  193</span>&#160;<span class="comment">        */</span></div>
+<div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160;        geometry_msgs::msg::PoseStamped getFKine(<span class="keyword">const</span> std::vector&lt;double&gt;&amp; joint_positions, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
+<div class="line"><a name="l00195"></a><span class="lineno">  195</span>&#160;        geometry_msgs::msg::PoseStamped getFKine(<span class="keyword">const</span> std::string &amp;end_effector_link); <span class="comment">//Get the current fkine</span></div>
+<div class="line"><a name="l00196"></a><span class="lineno">  196</span>&#160;        geometry_msgs::msg::PoseStamped getFKine(); <span class="comment">//Get the current fkine; end_effector_link_ is used as default</span></div>
+<div class="line"><a name="l00197"></a><span class="lineno">  197</span>&#160; </div>
+<div class="line"><a name="l00198"></a><span class="lineno">  198</span>&#160;        <span class="comment">// --------------- INVERSE KINEMATICS ---------------</span></div>
+<div class="line"><a name="l00199"></a><span class="lineno">  199</span>&#160;        <span class="comment">/* invKine: computes inverse kinematics</span></div>
+<div class="line"><a name="l00200"></a><span class="lineno">  200</span>&#160;<span class="comment">            Args:</span></div>
+<div class="line"><a name="l00201"></a><span class="lineno">  201</span>&#160;<span class="comment">                target_pose: Target position</span></div>
+<div class="line"><a name="l00202"></a><span class="lineno">  202</span>&#160;<span class="comment">                end_effector_link: End effector link</span></div>
+<div class="line"><a name="l00203"></a><span class="lineno">  203</span>&#160;<span class="comment">            Returns:</span></div>
+<div class="line"><a name="l00204"></a><span class="lineno">  204</span>&#160;<span class="comment">                Vector of joint positions</span></div>
+<div class="line"><a name="l00205"></a><span class="lineno">  205</span>&#160;<span class="comment">        */</span></div>
+<div class="line"><a name="l00206"></a><span class="lineno">  206</span>&#160;        std::vector&lt;double&gt; invKine(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;target_pose, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
+<div class="line"><a name="l00207"></a><span class="lineno">  207</span>&#160;        std::vector&lt;double&gt; invKine(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;target_pose); <span class="comment">//end_effector_link_ is used as default</span></div>
+<div class="line"><a name="l00208"></a><span class="lineno">  208</span>&#160; </div>
+<div class="line"><a name="l00209"></a><span class="lineno">  209</span>&#160;        <span class="comment">// --------------- JACOBIAN ---------------</span></div>
+<div class="line"><a name="l00210"></a><span class="lineno">  210</span>&#160; </div>
+<div class="line"><a name="l00211"></a><span class="lineno">  211</span>&#160;        <span class="comment">//Get the Jacobian matrix of the manipulator</span></div>
+<div class="line"><a name="l00212"></a><span class="lineno">  212</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getJacobian(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
+<div class="line"><a name="l00213"></a><span class="lineno">  213</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getJacobian(<span class="keyword">const</span> std::string &amp;end_effector_link);</div>
+<div class="line"><a name="l00214"></a><span class="lineno">  214</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getJacobian(); <span class="comment">//end_effector_link_ is used as default</span></div>
 <div class="line"><a name="l00215"></a><span class="lineno">  215</span>&#160; </div>
-<div class="line"><a name="l00216"></a><span class="lineno">  216</span>&#160;        <span class="keywordtype">void</span> setTrajectory(<span class="keyword">const</span> moveit_msgs::msg::RobotTrajectory&amp; trajectory); <span class="comment">//Set the planned trajectory</span></div>
-<div class="line"><a name="l00217"></a><span class="lineno">  217</span>&#160; </div>
-<div class="line"><a name="l00218"></a><span class="lineno">  218</span>&#160;        <span class="comment">//Computes the passed trajectory to make waypoints spaced equally in time</span></div>
-<div class="line"><a name="l00219"></a><span class="lineno">  219</span>&#160;        <span class="comment">//Returns true if successfull</span></div>
-<div class="line"><a name="l00220"></a><span class="lineno">  220</span>&#160;        <span class="keywordtype">bool</span> processTrajectory(moveit_msgs::msg::RobotTrajectory &amp;trajectory); </div>
-<div class="line"><a name="l00221"></a><span class="lineno">  221</span>&#160; </div>
-<div class="line"><a name="l00222"></a><span class="lineno">  222</span>&#160;        <span class="keywordtype">bool</span> checkTrajectoryConstraints(<span class="keyword">const</span> moveit_msgs::msg::RobotTrajectory &amp;trajectory); <span class="comment">//Check if the trajectory respects the path constraints</span></div>
-<div class="line"><a name="l00223"></a><span class="lineno">  223</span>&#160;    </div>
-<div class="line"><a name="l00224"></a><span class="lineno">  224</span>&#160;        <span class="comment">// --------------- PLANNING METHODS ----------------</span></div>
-<div class="line"><a name="l00225"></a><span class="lineno">  225</span>&#160;     </div>
-<div class="line"><a name="l00226"></a><span class="lineno">  226</span>&#160;        <span class="comment">//Create a motion plan request with the current parameters</span></div>
-<div class="line"><a name="l00227"></a><span class="lineno">  227</span>&#160;        moveit_msgs::msg::MotionPlanRequest createMotionPlanRequest();</div>
-<div class="line"><a name="l00228"></a><span class="lineno">  228</span>&#160;        moveit_msgs::msg::MotionPlanRequest createMotionPlanRequest(<span class="keyword">const</span> std::string &amp;planning_pipeline, <span class="keyword">const</span> std::string &amp;planner_id); </div>
-<div class="line"><a name="l00229"></a><span class="lineno">  229</span>&#160; </div>
-<div class="line"><a name="l00230"></a><span class="lineno">  230</span>&#160;        moveit_msgs::msg::Constraints createJointGoalConstraints(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions); <span class="comment">//Create goal constraints for joint positions</span></div>
-<div class="line"><a name="l00231"></a><span class="lineno">  231</span>&#160;        moveit_msgs::msg::Constraints createTcpGoalConstraints(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose, <span class="keyword">const</span> std::string &amp;ee_link, <span class="keyword">const</span> std::string &amp;frame); <span class="comment">//Create goal constraints for a pose</span></div>
-<div class="line"><a name="l00232"></a><span class="lineno">  232</span>&#160;    </div>
-<div class="line"><a name="l00233"></a><span class="lineno">  233</span>&#160;        moveit_msgs::action::MoveGroup::Result computeMotionPlan(<span class="keyword">const</span> moveit_msgs::msg::MotionPlanRequest &amp;motion_plan_request); <span class="comment">//Call the motion planning service and return the response</span></div>
-<div class="line"><a name="l00234"></a><span class="lineno">  234</span>&#160;        moveit_msgs::msg::MotionSequenceResponse computeMotionSequence(<span class="keyword">const</span> moveit_msgs::msg::MotionSequenceRequest &amp;motion_plan_request); <span class="comment">//Call the cartesian motion sequence service and return the response</span></div>
+<div class="line"><a name="l00216"></a><span class="lineno">  216</span>&#160;        <span class="comment">//Get the pseudo-inverse of the Jacobian matrix</span></div>
+<div class="line"><a name="l00217"></a><span class="lineno">  217</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getPseudoInverseJacobian(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions, <span class="keyword">const</span> std::string &amp;end_effector_link);</div>
+<div class="line"><a name="l00218"></a><span class="lineno">  218</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getPseudoInverseJacobian(<span class="keyword">const</span> std::string &amp;end_effector_link);</div>
+<div class="line"><a name="l00219"></a><span class="lineno">  219</span>&#160;        <span class="keyword">const</span> Eigen::MatrixXd getPseudoInverseJacobian(); <span class="comment">//end_effector_link_ is used as default</span></div>
+<div class="line"><a name="l00220"></a><span class="lineno">  220</span>&#160;        </div>
+<div class="line"><a name="l00221"></a><span class="lineno">  221</span>&#160;        <span class="comment">// --------------- JOINT STATES ---------------</span></div>
+<div class="line"><a name="l00222"></a><span class="lineno">  222</span>&#160;        std::vector&lt;std::string&gt; getJointNames(); <span class="comment">//Get the names of the joints</span></div>
+<div class="line"><a name="l00223"></a><span class="lineno">  223</span>&#160;        std::vector&lt;double&gt; getJointValues(); <span class="comment">//Get the current joint values</span></div>
+<div class="line"><a name="l00224"></a><span class="lineno">  224</span>&#160;        std::vector&lt;double&gt; getJointSpeeds(); <span class="comment">//Get the current joint speeds</span></div>
+<div class="line"><a name="l00225"></a><span class="lineno">  225</span>&#160;        sensor_msgs::msg::JointState getJointState(); <span class="comment">//Get the current joint state as a message</span></div>
+<div class="line"><a name="l00226"></a><span class="lineno">  226</span>&#160; </div>
+<div class="line"><a name="l00227"></a><span class="lineno">  227</span>&#160;        <span class="comment">// --------------- TF2 METHODS ----------------</span></div>
+<div class="line"><a name="l00228"></a><span class="lineno">  228</span>&#160;        geometry_msgs::msg::TransformStamped getTransform(<span class="keyword">const</span> std::string &amp;target_frame, <span class="keyword">const</span> std::string &amp;source_frame); <span class="comment">//Get the transform between two frames</span></div>
+<div class="line"><a name="l00229"></a><span class="lineno">  229</span>&#160;        geometry_msgs::msg::Pose transformPose(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose, <span class="keyword">const</span> std::string &amp;target_frame, <span class="keyword">const</span> std::string &amp;src_frame); <span class="comment">//Transform a pose from source_frame to target_frame</span></div>
+<div class="line"><a name="l00230"></a><span class="lineno">  230</span>&#160;        geometry_msgs::msg::Pose transformPoseToWorld(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose, <span class="keyword">const</span> std::string &amp;src_frame);  <span class="comment">//Transform a pose from source_frame to world_frame_</span></div>
+<div class="line"><a name="l00231"></a><span class="lineno">  231</span>&#160;    </div>
+<div class="line"><a name="l00232"></a><span class="lineno">  232</span>&#160;    <span class="keyword">private</span>:</div>
+<div class="line"><a name="l00233"></a><span class="lineno">  233</span>&#160; </div>
+<div class="line"><a name="l00234"></a><span class="lineno">  234</span>&#160;        <span class="comment">// --------------- CALLBACK METHODS ----------------</span></div>
 <div class="line"><a name="l00235"></a><span class="lineno">  235</span>&#160; </div>
-<div class="line"><a name="l00236"></a><span class="lineno">  236</span>&#160;        <span class="comment">// --------------- HELPER METHODS ----------------</span></div>
-<div class="line"><a name="l00237"></a><span class="lineno">  237</span>&#160;        </div>
-<div class="line"><a name="l00238"></a><span class="lineno">  238</span>&#160;        <span class="keywordtype">void</span> checkParams(); <span class="comment">// Get all the ros parameters and assign them to params_</span></div>
+<div class="line"><a name="l00236"></a><span class="lineno">  236</span>&#160;        <span class="keywordtype">void</span> jointsState_callback(<span class="keyword">const</span> sensor_msgs::msg::JointState::SharedPtr &amp;joints_state);     <span class="comment">//Update the joint states</span></div>
+<div class="line"><a name="l00237"></a><span class="lineno">  237</span>&#160;        <span class="keywordtype">void</span> trajectoryExecution_callback(); <span class="comment">//Update the current trajectory point index</span></div>
+<div class="line"><a name="l00238"></a><span class="lineno">  238</span>&#160;        <span class="keywordtype">void</span> executionControl_callback(<span class="keyword">const</span> std_msgs::msg::Bool::SharedPtr &amp;msg); <span class="comment">//Control the execution of the trajectory</span></div>
 <div class="line"><a name="l00239"></a><span class="lineno">  239</span>&#160; </div>
-<div class="line"><a name="l00240"></a><span class="lineno">  240</span>&#160;        <span class="keywordtype">bool</span> checkJointDiff(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_values);                             <span class="comment">//Check if the difference between joint_values and current pose is negligible</span></div>
-<div class="line"><a name="l00241"></a><span class="lineno">  241</span>&#160;        <span class="keywordtype">bool</span> checkJointDiff(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;val_a, <span class="keyword">const</span> std::vector&lt;double&gt; &amp;val_b);  <span class="comment">//Check if the difference between val_a and val_b is negligible</span></div>
-<div class="line"><a name="l00242"></a><span class="lineno">  242</span>&#160; </div>
-<div class="line"><a name="l00243"></a><span class="lineno">  243</span>&#160;        <span class="keywordtype">bool</span> checkPoseDiff(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose, <span class="keyword">const</span> std::string&amp; ee_link);               <span class="comment">//Check if the difference between pose and current pose of ee_link is negligible</span></div>
-<div class="line"><a name="l00244"></a><span class="lineno">  244</span>&#160;        <span class="keywordtype">bool</span> checkPoseDiff(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose_a, <span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose_b); <span class="comment">//Check if the difference between pose_a and pose_b is negligible</span></div>
-<div class="line"><a name="l00245"></a><span class="lineno">  245</span>&#160;    </div>
-<div class="line"><a name="l00246"></a><span class="lineno">  246</span>&#160;        geometry_msgs::msg::PoseStamped toPoseStamped(<span class="keyword">const</span> Eigen::Isometry3d&amp; pose, <span class="keyword">const</span> std::string &amp;frame_id=<span class="stringliteral">&quot;&quot;</span>); <span class="comment">//Converts an Eigen pose to a PoseStamped message</span></div>
+<div class="line"><a name="l00240"></a><span class="lineno">  240</span>&#160;        <span class="comment">// --------------- TRAJECTORY METHODS ----------------</span></div>
+<div class="line"><a name="l00241"></a><span class="lineno">  241</span>&#160; </div>
+<div class="line"><a name="l00242"></a><span class="lineno">  242</span>&#160;        <span class="keywordtype">void</span> setTrajectory(<span class="keyword">const</span> moveit_msgs::msg::RobotTrajectory&amp; trajectory); <span class="comment">//Set the planned trajectory</span></div>
+<div class="line"><a name="l00243"></a><span class="lineno">  243</span>&#160; </div>
+<div class="line"><a name="l00244"></a><span class="lineno">  244</span>&#160;        <span class="comment">//Computes the passed trajectory to make waypoints spaced equally in time</span></div>
+<div class="line"><a name="l00245"></a><span class="lineno">  245</span>&#160;        <span class="comment">//Returns true if successfull</span></div>
+<div class="line"><a name="l00246"></a><span class="lineno">  246</span>&#160;        <span class="keywordtype">bool</span> processTrajectory(moveit_msgs::msg::RobotTrajectory &amp;trajectory); </div>
 <div class="line"><a name="l00247"></a><span class="lineno">  247</span>&#160; </div>
-<div class="line"><a name="l00248"></a><span class="lineno">  248</span>&#160;        <span class="comment">// --------------- VISUALIZATION ----------------</span></div>
-<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160;        <span class="comment">//Visualize a primitive</span></div>
-<div class="line"><a name="l00250"></a><span class="lineno">  250</span>&#160;        <span class="keywordtype">void</span> visualizePrimitive(<span class="keyword">const</span> shape_msgs::msg::SolidPrimitive &amp;primitive, </div>
-<div class="line"><a name="l00251"></a><span class="lineno">  251</span>&#160;                                <span class="keyword">const</span> geometry_msgs::msg::PoseStamped &amp;pose, </div>
-<div class="line"><a name="l00252"></a><span class="lineno">  252</span>&#160;                                <span class="keyword">const</span> std::vector&lt;double&gt; rgba_color = {0.0, 0.0, 0.0, 0.1},</div>
-<div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160;                                <span class="keyword">const</span> std::string &amp;ns = <span class="stringliteral">&quot;rviz&quot;</span>,</div>
-<div class="line"><a name="l00254"></a><span class="lineno">  254</span>&#160;                                <span class="keyword">const</span> <span class="keywordtype">int</span> &amp;<span class="keywordtype">id</span> = 0,</div>
-<div class="line"><a name="l00255"></a><span class="lineno">  255</span>&#160;                                <span class="keyword">const</span> <span class="keywordtype">bool</span> frame_locked = <span class="keyword">false</span>);</div>
-<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160; </div>
-<div class="line"><a name="l00257"></a><span class="lineno">  257</span>&#160;        <span class="comment">// --------------- PRIVATE VARIABLES ----------------</span></div>
-<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160; </div>
-<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;        <span class="comment">// --------------- JOINTS STATE ----------------</span></div>
-<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160; </div>
-<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;        std::vector&lt;std::string&gt; joints_names_group_;               <span class="comment">// Joints group names</span></div>
-<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;        std::vector&lt;double&gt; joints_values_group_;                   <span class="comment">// Current joint values of the group</span></div>
-<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;        std::vector&lt;double&gt; joints_speed_group_;                    <span class="comment">// Current joint speeds of the group</span></div>
-<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;        <span class="comment">// Mutex</span></div>
-<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;        std::mutex joint_val_mutex_;</div>
-<div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;        std::mutex joint_speed_mutex_;</div>
-<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;        </div>
-<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160;        <span class="comment">//ROS Node</span></div>
-<div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160;        <span class="comment">//NOTE: It&#39;s critical for this node to be always spinning!</span></div>
-<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;        rclcpp::Node::SharedPtr node_;</div>
-<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160; </div>
-<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;        <span class="comment">//Parameters for planning</span></div>
-<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160;        <a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a> params_;                   <span class="comment">//Dynamic planner parameters</span></div>
-<div class="line"><a name="l00274"></a><span class="lineno">  274</span>&#160; </div>
-<div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160;        <span class="comment">//MoveIt2 interfaces</span></div>
-<div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160;        planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor_; <span class="comment">//Planning scene monitor</span></div>
-<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160; </div>
-<div class="line"><a name="l00278"></a><span class="lineno">  278</span>&#160;        <span class="comment">//Dynamic planner variables</span></div>
-<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;        <span class="keyword">const</span> std::string planning_group_;</div>
-<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;        moveit::core::RobotModelConstPtr kinematic_model_;      <span class="comment">//this holds all the kinematic information about the robot (eg: links, joints, limits, etc.)</span></div>
-<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;        moveit::core::RobotStatePtr kinematic_state_;           <span class="comment">//this holds the current position of the robot at any given time</span></div>
-<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160;        moveit_msgs::msg::Constraints path_constraints_;</div>
-<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;        </div>
-<div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160;        <span class="comment">//Status</span></div>
-<div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160;        std::atomic&lt;bool&gt; joints_group_received_{<span class="keyword">false</span>};            <span class="comment">// Check if joints group was received (protected access)</span></div>
-<div class="line"><a name="l00286"></a><span class="lineno">  286</span>&#160;        std::atomic&lt;double&gt; last_joint_state_time_{0.0};            <span class="comment">// Time when the last joint state was received</span></div>
-<div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160;    </div>
-<div class="line"><a name="l00288"></a><span class="lineno">  288</span>&#160;        <span class="comment">//Trajectory variables</span></div>
-<div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160;        <span class="comment">// NOTE: For memory safery reasons robot_trajectory_ and trajpoint_ should be only accessed through setTrajectory() method</span></div>
-<div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160;        <span class="comment">//       which will stop any attempt to modify them while is_executing_ is true</span></div>
-<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160;        moveit_msgs::msg::RobotTrajectory robot_trajectory_;    <span class="comment">//Planned trajectory</span></div>
-<div class="line"><a name="l00292"></a><span class="lineno">  292</span>&#160;        <span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> trajpoint_;                               <span class="comment">//Index of the current trajectory point</span></div>
-<div class="line"><a name="l00293"></a><span class="lineno">  293</span>&#160;        std::atomic&lt;bool&gt; is_executing_{<span class="keyword">false</span>};                    <span class="comment">//Whether the robot is moving or not, can be set to false to stop execution of trajectory (protected access)</span></div>
-<div class="line"><a name="l00294"></a><span class="lineno">  294</span>&#160;        std::atomic&lt;bool&gt; force_stop_{<span class="keyword">false</span>};                   <span class="comment">//Force stop the execution of the trajectory (protected access)</span></div>
-<div class="line"><a name="l00295"></a><span class="lineno">  295</span>&#160; </div>
-<div class="line"><a name="l00296"></a><span class="lineno">  296</span>&#160;        <span class="comment">//Time optimal trajectory generation </span></div>
-<div class="line"><a name="l00297"></a><span class="lineno">  297</span>&#160;        trajectory_processing::TimeOptimalTrajectoryGenerationPtr time_optimal_traj_gen_;</div>
-<div class="line"><a name="l00298"></a><span class="lineno">  298</span>&#160;        <span class="keyword">const</span> <span class="keywordtype">double</span> totg_tolerance = 0.1;</div>
-<div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;        <span class="keyword">const</span> <span class="keywordtype">double</span> totg_min_angle_change = 0.001;</div>
+<div class="line"><a name="l00248"></a><span class="lineno">  248</span>&#160;        <span class="keywordtype">bool</span> checkTrajectoryConstraints(<span class="keyword">const</span> moveit_msgs::msg::RobotTrajectory &amp;trajectory); <span class="comment">//Check if the trajectory respects the path constraints</span></div>
+<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160;    </div>
+<div class="line"><a name="l00250"></a><span class="lineno">  250</span>&#160;        <span class="comment">// --------------- PLANNING METHODS ----------------</span></div>
+<div class="line"><a name="l00251"></a><span class="lineno">  251</span>&#160;     </div>
+<div class="line"><a name="l00252"></a><span class="lineno">  252</span>&#160;        <span class="comment">//Create a motion plan request with the current parameters</span></div>
+<div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160;        moveit_msgs::msg::MotionPlanRequest createMotionPlanRequest();</div>
+<div class="line"><a name="l00254"></a><span class="lineno">  254</span>&#160;        moveit_msgs::msg::MotionPlanRequest createMotionPlanRequest(<span class="keyword">const</span> std::string &amp;planning_pipeline, <span class="keyword">const</span> std::string &amp;planner_id); </div>
+<div class="line"><a name="l00255"></a><span class="lineno">  255</span>&#160; </div>
+<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160;        moveit_msgs::msg::Constraints createJointGoalConstraints(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_positions); <span class="comment">//Create goal constraints for joint positions</span></div>
+<div class="line"><a name="l00257"></a><span class="lineno">  257</span>&#160;        moveit_msgs::msg::Constraints createTcpGoalConstraints(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose, <span class="keyword">const</span> std::string &amp;ee_link, <span class="keyword">const</span> std::string &amp;frame); <span class="comment">//Create goal constraints for a pose</span></div>
+<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;    </div>
+<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;        moveit_msgs::action::MoveGroup::Result computeMotionPlan(<span class="keyword">const</span> moveit_msgs::msg::MotionPlanRequest &amp;motion_plan_request); <span class="comment">//Call the motion planning service and return the response</span></div>
+<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;        moveit_msgs::msg::MotionSequenceResponse computeMotionSequence(<span class="keyword">const</span> moveit_msgs::msg::MotionSequenceRequest &amp;motion_plan_request); <span class="comment">//Call the cartesian motion sequence service and return the response</span></div>
+<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160; </div>
+<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;        <span class="comment">// --------------- HELPER METHODS ----------------</span></div>
+<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;        </div>
+<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;        <span class="keywordtype">void</span> checkParams(); <span class="comment">// Get all the ros parameters and assign them to params_</span></div>
+<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160; </div>
+<div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;        <span class="keywordtype">bool</span> checkJointDiff(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;joint_values);                             <span class="comment">//Check if the difference between joint_values and current pose is negligible</span></div>
+<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;        <span class="keywordtype">bool</span> checkJointDiff(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;val_a, <span class="keyword">const</span> std::vector&lt;double&gt; &amp;val_b);  <span class="comment">//Check if the difference between val_a and val_b is negligible</span></div>
+<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160; </div>
+<div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160;        <span class="keywordtype">bool</span> checkPoseDiff(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose, <span class="keyword">const</span> std::string&amp; ee_link);               <span class="comment">//Check if the difference between pose and current pose of ee_link is negligible</span></div>
+<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;        <span class="keywordtype">bool</span> checkPoseDiff(<span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose_a, <span class="keyword">const</span> geometry_msgs::msg::Pose &amp;pose_b); <span class="comment">//Check if the difference between pose_a and pose_b is negligible</span></div>
+<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;    </div>
+<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;        geometry_msgs::msg::PoseStamped toPoseStamped(<span class="keyword">const</span> Eigen::Isometry3d&amp; pose, <span class="keyword">const</span> std::string &amp;frame_id=<span class="stringliteral">&quot;&quot;</span>); <span class="comment">//Converts an Eigen pose to a PoseStamped message</span></div>
+<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160; </div>
+<div class="line"><a name="l00274"></a><span class="lineno">  274</span>&#160;        <span class="comment">// --------------- VISUALIZATION ----------------</span></div>
+<div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160;        <span class="comment">//Visualize a primitive</span></div>
+<div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160;        <span class="keywordtype">void</span> visualizePrimitive(<span class="keyword">const</span> shape_msgs::msg::SolidPrimitive &amp;primitive, </div>
+<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160;                                <span class="keyword">const</span> geometry_msgs::msg::PoseStamped &amp;pose, </div>
+<div class="line"><a name="l00278"></a><span class="lineno">  278</span>&#160;                                <span class="keyword">const</span> std::vector&lt;double&gt; rgba_color = {0.0, 0.0, 0.0, 0.1},</div>
+<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;                                <span class="keyword">const</span> std::string &amp;ns = <span class="stringliteral">&quot;rviz&quot;</span>,</div>
+<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;                                <span class="keyword">const</span> <span class="keywordtype">int</span> &amp;<span class="keywordtype">id</span> = 0,</div>
+<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;                                <span class="keyword">const</span> <span class="keywordtype">bool</span> frame_locked = <span class="keyword">false</span>);</div>
+<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160; </div>
+<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;        <span class="comment">// --------------- PRIVATE VARIABLES ----------------</span></div>
+<div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160; </div>
+<div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160;        <span class="comment">// --------------- JOINTS STATE ----------------</span></div>
+<div class="line"><a name="l00286"></a><span class="lineno">  286</span>&#160; </div>
+<div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160;        std::vector&lt;std::string&gt; joints_names_group_;               <span class="comment">// Joints group names</span></div>
+<div class="line"><a name="l00288"></a><span class="lineno">  288</span>&#160;        std::vector&lt;double&gt; joints_values_group_;                   <span class="comment">// Current joint values of the group</span></div>
+<div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160;        std::vector&lt;double&gt; joints_speed_group_;                    <span class="comment">// Current joint speeds of the group</span></div>
+<div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160;        <span class="comment">// Mutex</span></div>
+<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160;        std::mutex joint_val_mutex_;</div>
+<div class="line"><a name="l00292"></a><span class="lineno">  292</span>&#160;        std::mutex joint_speed_mutex_;</div>
+<div class="line"><a name="l00293"></a><span class="lineno">  293</span>&#160;        </div>
+<div class="line"><a name="l00294"></a><span class="lineno">  294</span>&#160;        <span class="comment">//ROS Node</span></div>
+<div class="line"><a name="l00295"></a><span class="lineno">  295</span>&#160;        <span class="comment">//NOTE: It&#39;s critical for this node to be always spinning!</span></div>
+<div class="line"><a name="l00296"></a><span class="lineno">  296</span>&#160;        rclcpp::Node::SharedPtr node_;</div>
+<div class="line"><a name="l00297"></a><span class="lineno">  297</span>&#160; </div>
+<div class="line"><a name="l00298"></a><span class="lineno">  298</span>&#160;        <span class="comment">//Parameters for planning</span></div>
+<div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;        <a class="code" href="struct_dynamic_planner_params.html">DynamicPlannerParams</a> params_;                   <span class="comment">//Dynamic planner parameters</span></div>
 <div class="line"><a name="l00300"></a><span class="lineno">  300</span>&#160; </div>
-<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160;        <span class="comment">//Publishers</span></div>
-<div class="line"><a name="l00302"></a><span class="lineno">  302</span>&#160;        rclcpp::Publisher&lt;sensor_msgs::msg::JointState&gt;::SharedPtr joint_cmd_pub_;                    <span class="comment">//Joint state publisher for the fake controller</span></div>
-<div class="line"><a name="l00303"></a><span class="lineno">  303</span>&#160;        rclcpp::Publisher&lt;manipulator_interfaces::msg::TrajectoryResult&gt;::SharedPtr trajectory_pub_;    <span class="comment">//Trajectory result publisher see manipulator_interfaces/TrajectoryResult</span></div>
-<div class="line"><a name="l00304"></a><span class="lineno">  304</span>&#160;        rclcpp::Publisher&lt;moveit_msgs::msg::CollisionObject&gt;::SharedPtr collision_object_pub_; <span class="comment">//Collision object publisher for planning scene</span></div>
-<div class="line"><a name="l00305"></a><span class="lineno">  305</span>&#160;        rclcpp::Publisher&lt;moveit_msgs::msg::AttachedCollisionObject&gt;::SharedPtr attached_collision_object_pub_; <span class="comment">//Attached collision object publisher for planning scene</span></div>
-<div class="line"><a name="l00306"></a><span class="lineno">  306</span>&#160;        </div>
-<div class="line"><a name="l00307"></a><span class="lineno">  307</span>&#160;        <span class="comment">//Subscribers</span></div>
-<div class="line"><a name="l00308"></a><span class="lineno">  308</span>&#160;        rclcpp::Subscription&lt;sensor_msgs::msg::JointState&gt;::SharedPtr joints_state_sub_;        <span class="comment">//Subscriber for updating the joint states</span></div>
-<div class="line"><a name="l00309"></a><span class="lineno">  309</span>&#160;        rclcpp::Subscription&lt;std_msgs::msg::UInt32&gt;::SharedPtr trajpoint_sub_;                  <span class="comment">//Current trajpoint subscriber</span></div>
-<div class="line"><a name="l00310"></a><span class="lineno">  310</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::RobotTrajectory&gt;::SharedPtr trajectory_sub_;     <span class="comment">//Subscriber for trajectories</span></div>
-<div class="line"><a name="l00311"></a><span class="lineno">  311</span>&#160;        rclcpp::Subscription&lt;std_msgs::msg::Bool&gt;::SharedPtr execution_ctrl_sub_;               <span class="comment">//Subscriber for moving and stopping the robot</span></div>
-<div class="line"><a name="l00312"></a><span class="lineno">  312</span>&#160;        </div>
-<div class="line"><a name="l00313"></a><span class="lineno">  313</span>&#160;        <span class="comment">//Service Clients</span></div>
-<div class="line"><a name="l00314"></a><span class="lineno">  314</span>&#160;        rclcpp_action::Client&lt;moveit_msgs::action::MoveGroup&gt;::SharedPtr plan_action_client_; <span class="comment">//Client for motion planning</span></div>
-<div class="line"><a name="l00315"></a><span class="lineno">  315</span>&#160;        rclcpp::Client&lt;moveit_msgs::srv::GetMotionSequence&gt;::SharedPtr cartesian_motion_sequence_client_; <span class="comment">//Client for the cartesian motion sequence service</span></div>
-<div class="line"><a name="l00316"></a><span class="lineno">  316</span>&#160;        </div>
-<div class="line"><a name="l00317"></a><span class="lineno">  317</span>&#160;        <span class="comment">//TF2</span></div>
-<div class="line"><a name="l00318"></a><span class="lineno">  318</span>&#160;        std::shared_ptr&lt;tf2_ros::TransformListener&gt; tf_listener_{<span class="keyword">nullptr</span>};</div>
-<div class="line"><a name="l00319"></a><span class="lineno">  319</span>&#160;        std::unique_ptr&lt;tf2_ros::Buffer&gt; tf_buffer_;</div>
-<div class="line"><a name="l00320"></a><span class="lineno">  320</span>&#160; </div>
-<div class="line"><a name="l00321"></a><span class="lineno">  321</span>&#160;        <span class="comment">//Timers</span></div>
-<div class="line"><a name="l00322"></a><span class="lineno">  322</span>&#160;        rclcpp::TimerBase::SharedPtr traj_timer_; <span class="comment">//Timer to execute trajectory points</span></div>
-<div class="line"><a name="l00323"></a><span class="lineno">  323</span>&#160;        </div>
-<div class="line"><a name="l00324"></a><span class="lineno">  324</span>&#160;        <span class="comment">//Callback group</span></div>
-<div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;        rclcpp::CallbackGroup::SharedPtr cb_group_;</div>
-<div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160;        </div>
-<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;        <span class="comment">//Visualization</span></div>
-<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;        rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;</div>
-<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;        <span class="keywordtype">size_t</span> marker_id_ = 0; <span class="comment">//ID for the next marker to be published</span></div>
-<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;};</div>
-<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160; </div>
-<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;<span class="preprocessor">#endif </span><span class="comment">//DYNAMIC_PLANNER_H</span></div>
-<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160; </div>
-<div class="ttc" id="aclass_dynamic_planner_html"><div class="ttname"><a href="class_dynamic_planner.html">DynamicPlanner</a></div><div class="ttdef"><b>Definition:</b> DynamicPlanner.h:69</div></div>
-<div class="ttc" id="astruct_dynamic_planner_params_html"><div class="ttname"><a href="struct_dynamic_planner_params.html">DynamicPlannerParams</a></div><div class="ttdef"><b>Definition:</b> DynamicPlanner.h:44</div></div>
+<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160;        <span class="comment">//MoveIt2 interfaces</span></div>
+<div class="line"><a name="l00302"></a><span class="lineno">  302</span>&#160;        planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor_; <span class="comment">//Planning scene monitor</span></div>
+<div class="line"><a name="l00303"></a><span class="lineno">  303</span>&#160; </div>
+<div class="line"><a name="l00304"></a><span class="lineno">  304</span>&#160;        <span class="comment">//Dynamic planner variables</span></div>
+<div class="line"><a name="l00305"></a><span class="lineno">  305</span>&#160;        <span class="keyword">const</span> std::string planning_group_;</div>
+<div class="line"><a name="l00306"></a><span class="lineno">  306</span>&#160;        moveit::core::RobotModelConstPtr kinematic_model_;      <span class="comment">//this holds all the kinematic information about the robot (eg: links, joints, limits, etc.)</span></div>
+<div class="line"><a name="l00307"></a><span class="lineno">  307</span>&#160;        moveit::core::RobotStatePtr kinematic_state_;           <span class="comment">//this holds the current position of the robot at any given time</span></div>
+<div class="line"><a name="l00308"></a><span class="lineno">  308</span>&#160;        moveit_msgs::msg::Constraints path_constraints_;</div>
+<div class="line"><a name="l00309"></a><span class="lineno">  309</span>&#160;        </div>
+<div class="line"><a name="l00310"></a><span class="lineno">  310</span>&#160;        <span class="comment">//Status</span></div>
+<div class="line"><a name="l00311"></a><span class="lineno">  311</span>&#160;        std::atomic&lt;bool&gt; joints_group_received_{<span class="keyword">false</span>};            <span class="comment">// Check if joints group was received (protected access)</span></div>
+<div class="line"><a name="l00312"></a><span class="lineno">  312</span>&#160;        std::atomic&lt;double&gt; last_joint_state_time_{0.0};            <span class="comment">// Time when the last joint state was received</span></div>
+<div class="line"><a name="l00313"></a><span class="lineno">  313</span>&#160;    </div>
+<div class="line"><a name="l00314"></a><span class="lineno">  314</span>&#160;        <span class="comment">//Trajectory variables</span></div>
+<div class="line"><a name="l00315"></a><span class="lineno">  315</span>&#160;        <span class="comment">// NOTE: For memory safery reasons robot_trajectory_ and trajpoint_ should be only accessed through setTrajectory() method</span></div>
+<div class="line"><a name="l00316"></a><span class="lineno">  316</span>&#160;        <span class="comment">//       which will stop any attempt to modify them while is_executing_ is true</span></div>
+<div class="line"><a name="l00317"></a><span class="lineno">  317</span>&#160;        moveit_msgs::msg::RobotTrajectory robot_trajectory_;    <span class="comment">//Planned trajectory</span></div>
+<div class="line"><a name="l00318"></a><span class="lineno">  318</span>&#160;        <span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> trajpoint_;                               <span class="comment">//Index of the current trajectory point</span></div>
+<div class="line"><a name="l00319"></a><span class="lineno">  319</span>&#160;        std::atomic&lt;bool&gt; is_executing_{<span class="keyword">false</span>};                    <span class="comment">//Whether the robot is moving or not, can be set to false to stop execution of trajectory (protected access)</span></div>
+<div class="line"><a name="l00320"></a><span class="lineno">  320</span>&#160;        std::atomic&lt;bool&gt; force_stop_{<span class="keyword">false</span>};                   <span class="comment">//Force stop the execution of the trajectory (protected access)</span></div>
+<div class="line"><a name="l00321"></a><span class="lineno">  321</span>&#160; </div>
+<div class="line"><a name="l00322"></a><span class="lineno">  322</span>&#160;        <span class="comment">//Time optimal trajectory generation </span></div>
+<div class="line"><a name="l00323"></a><span class="lineno">  323</span>&#160;        trajectory_processing::TimeOptimalTrajectoryGenerationPtr time_optimal_traj_gen_;</div>
+<div class="line"><a name="l00324"></a><span class="lineno">  324</span>&#160;        <span class="keyword">const</span> <span class="keywordtype">double</span> totg_tolerance = 0.1;</div>
+<div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;        <span class="keyword">const</span> <span class="keywordtype">double</span> totg_min_angle_change = 0.001;</div>
+<div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160; </div>
+<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;        <span class="comment">//Publishers</span></div>
+<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;        rclcpp::Publisher&lt;sensor_msgs::msg::JointState&gt;::SharedPtr joint_cmd_pub_;                    <span class="comment">//Joint state publisher for the fake controller</span></div>
+<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;        rclcpp::Publisher&lt;manipulator_interfaces::msg::TrajectoryResult&gt;::SharedPtr trajectory_pub_;    <span class="comment">//Trajectory result publisher see manipulator_interfaces/TrajectoryResult</span></div>
+<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;        rclcpp::Publisher&lt;moveit_msgs::msg::CollisionObject&gt;::SharedPtr collision_object_pub_; <span class="comment">//Collision object publisher for planning scene</span></div>
+<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;        rclcpp::Publisher&lt;moveit_msgs::msg::AttachedCollisionObject&gt;::SharedPtr attached_collision_object_pub_; <span class="comment">//Attached collision object publisher for planning scene</span></div>
+<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;        </div>
+<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;        <span class="comment">//Subscribers</span></div>
+<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;        rclcpp::Subscription&lt;sensor_msgs::msg::JointState&gt;::SharedPtr joints_state_sub_;        <span class="comment">//Subscriber for updating the joint states</span></div>
+<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160;        rclcpp::Subscription&lt;std_msgs::msg::UInt32&gt;::SharedPtr trajpoint_sub_;                  <span class="comment">//Current trajpoint subscriber</span></div>
+<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160;        rclcpp::Subscription&lt;moveit_msgs::msg::RobotTrajectory&gt;::SharedPtr trajectory_sub_;     <span class="comment">//Subscriber for trajectories</span></div>
+<div class="line"><a name="l00337"></a><span class="lineno">  337</span>&#160;        rclcpp::Subscription&lt;std_msgs::msg::Bool&gt;::SharedPtr execution_ctrl_sub_;               <span class="comment">//Subscriber for moving and stopping the robot</span></div>
+<div class="line"><a name="l00338"></a><span class="lineno">  338</span>&#160;        </div>
+<div class="line"><a name="l00339"></a><span class="lineno">  339</span>&#160;        <span class="comment">//Service Clients</span></div>
+<div class="line"><a name="l00340"></a><span class="lineno">  340</span>&#160;        rclcpp_action::Client&lt;moveit_msgs::action::MoveGroup&gt;::SharedPtr plan_action_client_; <span class="comment">//Client for motion planning</span></div>
+<div class="line"><a name="l00341"></a><span class="lineno">  341</span>&#160;        rclcpp::Client&lt;moveit_msgs::srv::GetMotionSequence&gt;::SharedPtr cartesian_motion_sequence_client_; <span class="comment">//Client for the cartesian motion sequence service</span></div>
+<div class="line"><a name="l00342"></a><span class="lineno">  342</span>&#160;        </div>
+<div class="line"><a name="l00343"></a><span class="lineno">  343</span>&#160;        <span class="comment">//TF2</span></div>
+<div class="line"><a name="l00344"></a><span class="lineno">  344</span>&#160;        std::shared_ptr&lt;tf2_ros::TransformListener&gt; tf_listener_{<span class="keyword">nullptr</span>};</div>
+<div class="line"><a name="l00345"></a><span class="lineno">  345</span>&#160;        std::unique_ptr&lt;tf2_ros::Buffer&gt; tf_buffer_;</div>
+<div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160; </div>
+<div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;        <span class="comment">//Timers</span></div>
+<div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;        rclcpp::TimerBase::SharedPtr traj_timer_; <span class="comment">//Timer to execute trajectory points</span></div>
+<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;        </div>
+<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160;        <span class="comment">//Callback group</span></div>
+<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;        rclcpp::CallbackGroup::SharedPtr cb_group_;</div>
+<div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160;        </div>
+<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160;        <span class="comment">//Visualization</span></div>
+<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;        rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;</div>
+<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;        <span class="keywordtype">size_t</span> marker_id_ = 0; <span class="comment">//ID for the next marker to be published</span></div>
+<div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160;        std::map&lt;std::string, visualization_msgs::msg::Marker&gt; visualized_primitives_; <span class="comment">//List of currently visualized primitives</span></div>
+<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160;};</div>
+<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160; </div>
+<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160;<span class="preprocessor">#endif </span><span class="comment">//DYNAMIC_PLANNER_H</span></div>
+<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160; </div>
+<div class="ttc" id="aclass_dynamic_planner_html"><div class="ttname"><a href="class_dynamic_planner.html">DynamicPlanner</a></div><div class="ttdef"><b>Definition:</b> DynamicPlanner.h:96</div></div>
+<div class="ttc" id="astruct_dynamic_planner_params_html"><div class="ttname"><a href="struct_dynamic_planner_params.html">DynamicPlannerParams</a></div><div class="ttdef"><b>Definition:</b> DynamicPlanner.h:57</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
