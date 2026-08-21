@@ -130,7 +130,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
 
     // Initialize subscribers
     tcpGoal_sub_ = this->create_subscription<manipulator_interfaces::msg::TcpGoal>(
-        manipulator_name_ + "/tcp_goal", 1, 
+        manipulator_name_ + "/tcp_goal", qos_reliable(1), 
         [this](const manipulator_interfaces::msg::TcpGoal::SharedPtr msg) {
             this->tcpGoal_callback(msg);
         },
@@ -138,7 +138,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     jointGoal_sub_ = this->create_subscription<manipulator_interfaces::msg::JointGoal>(
-        manipulator_name_ + "/joint_goal", 1, 
+        manipulator_name_ + "/joint_goal", qos_reliable(1), 
         [this](const manipulator_interfaces::msg::JointGoal::SharedPtr msg) {
             this->jointGoal_callback(msg);
         },
@@ -146,7 +146,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     collisionObject_sub_ = this->create_subscription<moveit_msgs::msg::CollisionObject>(
-        manipulator_name_ + "/collision_object", 1, 
+        manipulator_name_ + "/collision_object", qos_reliable(1), 
         [this](const moveit_msgs::msg::CollisionObject::SharedPtr msg) {
             this->collisionObject_callback(msg);
         },
@@ -154,7 +154,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     attachedcollisionObject_sub_ = this->create_subscription<moveit_msgs::msg::AttachedCollisionObject>(
-        manipulator_name_ + "/attached_collision_object", 1, 
+        manipulator_name_ + "/attached_collision_object", qos_reliable(1), 
         [this](const moveit_msgs::msg::AttachedCollisionObject::SharedPtr msg) {
             this->attachedCollisionObject_callback(msg);
         },
@@ -162,7 +162,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     cartesianPlan_sub_ = this->create_subscription<manipulator_interfaces::msg::CartesianGoal>(
-        manipulator_name_ + "/cartesian_plan", 1, 
+        manipulator_name_ + "/cartesian_plan", qos_reliable(1), 
         [this](const manipulator_interfaces::msg::CartesianGoal::SharedPtr msg) {
             this->cartesianPlan_callback(msg);
         },
@@ -171,7 +171,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
 
 
     jointConstraint_sub_ = this->create_subscription<moveit_msgs::msg::JointConstraint>(
-        manipulator_name_ + "/joint_constraint", 1, 
+        manipulator_name_ + "/joint_constraint", qos_reliable(1), 
         [this](const moveit_msgs::msg::JointConstraint::SharedPtr msg) {
             this->jointConstraint_callback(msg);
         },
@@ -179,7 +179,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     positionConstraint_sub_ = this->create_subscription<moveit_msgs::msg::PositionConstraint>(
-        manipulator_name_ + "/position_constraint", 1, 
+        manipulator_name_ + "/position_constraint", qos_reliable(1), 
         [this](const moveit_msgs::msg::PositionConstraint::SharedPtr msg) {
             this->positionConstraint_callback(msg);
         },
@@ -188,7 +188,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     
 
     orientationConstraint_sub_ = this->create_subscription<moveit_msgs::msg::OrientationConstraint>(
-        manipulator_name_ + "/orientation_constraint", 1, 
+        manipulator_name_ + "/orientation_constraint", qos_reliable(1), 
         [this](const moveit_msgs::msg::OrientationConstraint::SharedPtr msg) {
             this->orientationConstraint_callback(msg);
         },
@@ -196,7 +196,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     clearConstraints_sub_ = this->create_subscription<std_msgs::msg::Empty>(
-        manipulator_name_ + "/clear_constraints", 1, 
+        manipulator_name_ + "/clear_constraints", qos_reliable(1), 
         [this](const std_msgs::msg::Empty::SharedPtr msg) {
             msg.get();
             dynamic_planner_->clearPathConstraints();
@@ -212,7 +212,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     rt_sub_options.callback_group = main_cb_group_;
 
     velJacSetpoint_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
-        manipulator_name_ + "/cmd_vel", 1, 
+        manipulator_name_ + "/cmd_vel", qos_best_effort(1), 
         [this](const geometry_msgs::msg::Twist::SharedPtr msg) {
             this->velJacSetpoint_callback(msg);
         },
@@ -220,7 +220,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     realTimeSetpoint_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
-        manipulator_name_ + "/js_cmd_vel", 1, 
+        manipulator_name_ + "/js_cmd_vel", qos_best_effort(1), 
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->realTimeSetpoint_callback(msg);
         },
@@ -267,6 +267,7 @@ void ManipulatorPlannerNode::spinner() {
     mainloop_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
         [&, this]() {
+
             if (spinner_mean_ > 0.9 / ros_freq_) {
                 RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 20000, "Spinner mean time is too high: %f s", spinner_mean_);
             }
@@ -283,7 +284,7 @@ void ManipulatorPlannerNode::spinner() {
                 auto start_time = steady_clock.now();
 
                 // Jacobian control
-                jacobianControl();    
+                jacobianControl();
 
                 // Calculate the mean time for each iteration of the spinner
                 double elapsed_time = (steady_clock.now() - start_time).seconds();
@@ -301,6 +302,13 @@ void ManipulatorPlannerNode::spinner() {
                 double elapsed_time = (steady_clock.now() - start_time).seconds();
                 spinner_mean_ = (spinner_mean_ * static_cast<double>(num_samples) + elapsed_time) / static_cast<double>(num_samples + 1);
                 num_samples++;
+            } else if (isRobotMoving() && !dynamic_planner_->isExecuting()) {
+                zeroJacobianCmd();
+                zeroJointsCmd();
+
+                sensor_msgs::msg::JointState zero_js_cmd = dynamic_planner_->getJointState();
+                zero_js_cmd.velocity = std::vector<double>(zero_js_cmd.name.size(), 0.0);
+                dynamic_planner_->moveRobot(zero_js_cmd);
             }
 
             tcpPose_pub_->publish(getFKine());
@@ -539,6 +547,14 @@ void ManipulatorPlannerNode::collisionObject_callback(const moveit_msgs::msg::Co
     }
 
     dynamic_planner_->processCollisionObject(*collision_object);
+    
+    if (collision_object->operation == moveit_msgs::msg::CollisionObject::ADD || collision_object->operation == moveit_msgs::msg::CollisionObject::APPEND){
+        // Collision is disabled for fixed links
+        for (const std::string &link_name : fixed_links_)
+        {
+            dynamic_planner_->setCollisionEnabled(collision_object->id, link_name, false);
+        }
+    }
 }
 
 void ManipulatorPlannerNode::attachedCollisionObject_callback(const moveit_msgs::msg::AttachedCollisionObject::SharedPtr collision_object) 
@@ -620,17 +636,16 @@ void ManipulatorPlannerNode::realTimeConstraintsSetter_callback(const std::share
 // Set the jacobian speed based control
 void ManipulatorPlannerNode::jointsRealTimeSetter_callback(const std_srvs::srv::SetBool::Request::SharedPtr req, std_srvs::srv::SetBool::Response::SharedPtr res)
 {
+    zeroJointsCmd();
+    
     // Set robot real time joints speed control
     js_rt_control_ = req->data;
     RCLCPP_INFO(get_logger(), "Joints real time control mode set as %s", js_rt_control_ ? "True":"False");
-
-    // Stop the robot to prevent bad behaviours during mode switch
-    for (unsigned int k = 0; k < joint_names_.size(); k++)
-    {
-        current_js_vel_[k]  = 0.;
-        js_vel_cmd_[k] = 0.;
+    if (jac_control_ && req->data) {
+        RCLCPP_WARN(get_logger(), "Tried setting joint state control while jacobian control is active, latter will be disabled");
+        jac_control_ = false;
     }
-    
+
     // Return success
     res->success = true;
     res->message = js_rt_control_ ? "Joints real time control mode enabled":"Joints real time control mode disabled";
@@ -639,14 +654,14 @@ void ManipulatorPlannerNode::jointsRealTimeSetter_callback(const std_srvs::srv::
 // Set the jacobian speed based control
 void ManipulatorPlannerNode::jacobianControlSetter_callback(const std_srvs::srv::SetBool::Request::SharedPtr req, std_srvs::srv::SetBool::Response::SharedPtr res)
 {
+    zeroJacobianCmd();
+
     // Set robot jacobian control
     jac_control_ = req->data;
     RCLCPP_INFO(get_logger(), "Jacobian control mode set as %s", jac_control_ ? "True":"False");
-
-    // Stop the robot to prevent bad behaviours during mode switch
-    for (unsigned int k = 0; k<6; k++) {
-        current_ee_vel_(k) = 0.;
-        ee_vel_cmd_(k) = 0.;
+    if (js_rt_control_ && req->data) {
+        RCLCPP_WARN(get_logger(), "Tried setting jacobian control while joint state control is active, latter will be disabled");
+        js_rt_control_ = false;
     }
 
     // Return success
@@ -657,6 +672,11 @@ void ManipulatorPlannerNode::jacobianControlSetter_callback(const std_srvs::srv:
 // Update speed setpoint of the arm for the real time joints speed based control
 void ManipulatorPlannerNode::realTimeSetpoint_callback(const sensor_msgs::msg::JointState::SharedPtr& msg)
 {
+    if (js_rt_control_ == false) {
+        RCLCPP_WARN(get_logger(), "Received joint speed command but joints real time control mode is disabled");
+        return;
+    }
+
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
         // Update setpoint of the k-th joint
@@ -667,11 +687,18 @@ void ManipulatorPlannerNode::realTimeSetpoint_callback(const sensor_msgs::msg::J
             js_vel_cmd_[k] = sign(msg->velocity[k])*max_spd_jnts_;
         }
     }
+
+    last_received_rt_command_ = get_clock()->now();
 }
 
 // Update the velocity setpoint of the arm for the jacobian speed based control
 void ManipulatorPlannerNode::velJacSetpoint_callback(const geometry_msgs::msg::Twist::SharedPtr& msg)
 {
+    if (jac_control_ == false) {
+        RCLCPP_WARN(get_logger(), "Received velocity command but jacobian control mode is disabled");
+        return;
+    }
+
     // Map the linear velocity
     ee_vel_cmd_[0] = msg->linear.x;
     ee_vel_cmd_[1] = msg->linear.y;
@@ -681,14 +708,15 @@ void ManipulatorPlannerNode::velJacSetpoint_callback(const geometry_msgs::msg::T
     ee_vel_cmd_[3] = msg->angular.x; // X component of angular velocity
     ee_vel_cmd_[4] = msg->angular.y; // Y component of angular velocity
     ee_vel_cmd_[5] = msg->angular.z; // Z component of angular velocity
-
-    // Check if linear speed is below the maximum, otherwise scale velocity to fit
+    
+    // VELOCITY CAPPING
     double norm_linear = ee_vel_cmd_.head<3>().norm();
     if (norm_linear > max_speed_ee_) {ee_vel_cmd_ *= (max_speed_ee_/norm_linear);}
 
-    // Check if angular speed is below the maximum, otherwise scale velocity to fit
     double norm_angular = ee_vel_cmd_.tail<3>().norm();
     if (norm_angular > max_speed_ee_) {ee_vel_cmd_.tail<3>() *= (max_rot_speed_ee_/norm_angular);}
+
+    last_received_rt_command_ = get_clock()->now();
 }
 
 void ManipulatorPlannerNode::jointConstraint_callback(const moveit_msgs::msg::JointConstraint::SharedPtr msg)
@@ -753,6 +781,13 @@ double ManipulatorPlannerNode::sign(double val)
 // Execute the jacobian based control
 void ManipulatorPlannerNode::jacobianControl()
 {
+    // Safety check for REMOTE CONTROL
+    // If connection is loss and a new command is not received within real_time_safety_dt seconds robot is stopped
+    if (isRobotMoving() && !dynamic_planner_->isExecuting() && !realTimeFrequencyCheck()){
+        RCLCPP_INFO(get_logger(), "Real time command not received within %f seconds, stopping robot", real_time_safety_dt_);
+        zeroJacobianCmd();
+    }
+
     updateJacobianSpeedCmd(); // Update the speed setpoint of the arm
 
     // Compute the speed
@@ -829,11 +864,6 @@ void ManipulatorPlannerNode::jacobianControl()
     bool jac_check = true;
     bool pos_constraints_check = true;
     bool joint_constraints_check = true;
-
-    // if (min_jacobian_determinant_ > 0.0){
-    //     Eigen::MatrixXd jacobian = getJacobian(js.position, ee_name_); // Compute the jacobian matrix for the new position
-    //     jac_check = abs(jacobian.determinant()) >= min_jacobian_determinant_; // Jacobian check failed
-    // }
 
     if (limit_jacobian_control_) {
         // If the jacobian control is limited, check if the joint constraints are violated
@@ -925,12 +955,22 @@ void ManipulatorPlannerNode::updateJacobianConstraintPrimitives()
 // Execute the jacobian based control
 void ManipulatorPlannerNode::jointsRealTimeControl()
 {
+    // Safety check for REMOTE CONTROL
+    // If connection is loss and a new command is not received within real_time_safety_dt seconds robot is stopped
+    if (isRobotMoving() && !dynamic_planner_->isExecuting() && !realTimeFrequencyCheck()){
+        RCLCPP_INFO(get_logger(), "Real time command not received within %f seconds, stopping robot", real_time_safety_dt_);
+        zeroJointsCmd(); 
+    }
+
     // Check if the accelerations are acceptable and map the joints speed from the JointState message
     for (unsigned int k = 0; k < NUM_JOINTS; k++)
     {
-        if (abs(js_vel_cmd_[k]-current_js_vel_[k])*ros_freq_ > max_acc_jnts_)
-            {current_js_vel_[k] = current_js_vel_[k] + sign(js_vel_cmd_[k]-current_js_vel_[k])*max_acc_jnts_/ros_freq_;}
-        else  {current_js_vel_[k] = js_vel_cmd_[k];}
+        if (abs(js_vel_cmd_[k] - current_js_vel_[k]) * ros_freq_ > max_acc_jnts_) {
+            current_js_vel_[k] = current_js_vel_[k] + sign(js_vel_cmd_[k] - current_js_vel_[k]) * max_acc_jnts_ / ros_freq_;
+        }
+        else  {
+            current_js_vel_[k] = js_vel_cmd_[k];
+        }
     }
 
     // Convert joints state into Eigen::MatrixXd
@@ -975,6 +1015,34 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
     dynamic_planner_->moveRobot(js);
 }
 
+bool ManipulatorPlannerNode::isRobotMoving(){
+    std::vector<double> current_joint_speeds = dynamic_planner_->getJointSpeeds();
+    for (unsigned int k = 0; k < NUM_JOINTS; k++)
+    {
+        if (abs(current_joint_speeds[k]) > dynamic_planner_->getParams().joint_tolerance) {return true;}
+    }
+    return false;
+}
+
+void ManipulatorPlannerNode::zeroJacobianCmd(){
+    for (unsigned int k = 0; k<6; k++) {
+        current_ee_vel_(k) = 0.;
+        ee_vel_cmd_(k) = 0.;
+    }
+}
+
+void ManipulatorPlannerNode::zeroJointsCmd(){
+    for (unsigned int k = 0; k < joint_names_.size(); k++)
+    {
+        current_js_vel_[k]  = 0.;
+        js_vel_cmd_[k] = 0.;
+    }
+}
+
+bool ManipulatorPlannerNode::realTimeFrequencyCheck(){
+    return (get_clock()->now() - last_received_rt_command_).seconds() < real_time_safety_dt_ || real_time_safety_dt_ <= 0;
+}
+
 //HELPER FUNCTIONS
 
 void ManipulatorPlannerNode::addPrefix(const std::string &prefix, std::vector<std::string> &names) const {
@@ -1004,8 +1072,9 @@ void ManipulatorPlannerNode::checkParams() {
     max_spd_jnts_             = this->get_parameter_or("max_spd_jnts", 1.0);
     max_acc_jnts_             = this->get_parameter_or("max_acc_jnts", 1.0);
     gripper_links_            = this->get_parameter_or("gripper_links", std::vector<std::string>());
+    fixed_links_              = this->get_parameter_or("fixed_links", std::vector<std::string>());
     world_frame_              = prefix + this->get_parameter_or("world_frame", std::string("base_link"));
-    min_jacobian_determinant_ = this->get_parameter_or("min_jacobian_determinant", 0.0);
+    real_time_safety_dt_      = this->get_parameter_or("real_time_safety_dt", 0.0);
     limit_joints_control_     = this->get_parameter_or("limit_joints_control", false);
     limit_jacobian_control_   = this->get_parameter_or("limit_jacobian_control", false);
     jac_max_damping_factor_   = this->get_parameter_or("jacobian_max_damping_factor", 0.1);
@@ -1013,6 +1082,7 @@ void ManipulatorPlannerNode::checkParams() {
 
     addPrefix(prefix, joint_names_);
     addPrefix(prefix, gripper_links_);
+    addPrefix(prefix, fixed_links_);
 }
  
 void ManipulatorPlannerNode::initializePlanner() {

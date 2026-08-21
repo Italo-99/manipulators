@@ -145,11 +145,13 @@ The manipulator planner node is used to elaborate trajectories, execute real tim
  - `max_rot_accel_ee`: Max angular acceleration the end effector can reach during jacobian control.
  - `max_spd_jnts`: Max speed joints can move during real time joint control.
  - `max_acc_jnts`: Max acceleration joints can reach during real time joint control.
+ - `fixed_links`: Links that don't move so their collision will be disabled with newly added collision objects.
  - `gripper_links`: Links of the gripper to disable their collision with objects attached to the end effector.
  - `position_tolerance`: Tolerance for tcp position.
  - `orientation_tolerance`: Tolerance for tcp orientation.
  - `joint_tolerance`: Tolerance for joint positions.
- - `min_jacobian_determinant`: Minimum absolute value for the determinant of the jacobian matrix during jacobian control. A determinant close to 0 means the position is approaching a singularity point, this will ensure safer control of the arm.
+ - `jac_max_damping_factor`: Maximum damping factor applicable to the jacobian control, a higher value will make jacobian control more stable but also slower and less precise.
+ - `jac_sigma_threshold`: Threshold at which jacobian damping kicks in, a lower threshold will make control safer and smoother against singularity but also less precise.
 <br/>
 
  - `robot_description` : Parsed urdf description of the robot.

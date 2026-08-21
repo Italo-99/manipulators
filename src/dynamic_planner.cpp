@@ -19,15 +19,6 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
     RCLCPP_INFO(node_->get_logger(), "World frame: %s", params_.world_frame.c_str());
     RCLCPP_INFO(node_->get_logger(), "End effector link: %s", params_.end_effector_link.c_str());
     
-    // move_group_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
-    //     node_, 
-    //     moveit::planning_interface::MoveGroupInterface::Options(
-    //         planning_group,
-    //         "robot_description",
-    //         node_->get_namespace()
-    //     )
-    // );
-    
     kinematic_model_ = moveit::planning_interface::getSharedRobotModel(node_, "robot_description");
     kinematic_state_ = std::make_shared<moveit::core::RobotState>(kinematic_model_);
 
@@ -39,7 +30,6 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
                      "Found %zu joints for model group %s, DynamicPlanner is built to work with 6 joints, this can lead to undefined behavior",
                      num_joints, planning_group_.c_str());
     }
-
 
     joints_values_group_.resize(num_joints);    // Adjust joints values array size
     joints_speed_group_.resize(num_joints);     // Adjust joints values array size
@@ -105,7 +95,7 @@ void DynamicPlanner::initialize()
 
     // Subscribers
     trajectory_sub_ = node_->create_subscription<moveit_msgs::msg::RobotTrajectory>(
-        planning_group_ + "/trajectory", 1,
+        planning_group_ + "/trajectory", qos_reliable(1),
         [this](const moveit_msgs::msg::RobotTrajectory::SharedPtr msg) {
             setTrajectory(*msg);
         },
@@ -113,7 +103,7 @@ void DynamicPlanner::initialize()
     );
 
     joints_state_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
-        ns + "/joint_states", 1,
+        ns + "/joint_states", qos_best_effort(1),
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->jointsState_callback(msg);
         },
@@ -121,7 +111,7 @@ void DynamicPlanner::initialize()
     );
 
     execution_ctrl_sub_ = node_->create_subscription<std_msgs::msg::Bool>(
-        planning_group_ + "/execution_control", 1, 
+        planning_group_ + "/execution_control", qos_reliable(1), 
         [this](const std_msgs::msg::Bool::SharedPtr msg) {
             this->executionControl_callback(msg);
         },
@@ -170,7 +160,7 @@ void DynamicPlanner::plan(const std::vector<double> joint_positions, const movei
     moveit::core::RobotState goal_state(*kinematic_state_);
     goal_state.setJointGroupPositions(planning_group_, joint_positions);
 
-    bool goal_valid = getPlanningScene()->isStateValid(goal_state, "", false);
+    bool goal_valid = getPlanningScene()->isStateValid(goal_state, "", true);
 
     manipulator_interfaces::msg::TrajectoryResult result_msg;
 
@@ -310,8 +300,16 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
 
     // PRE PLANNING CHECK
     // 1. goal_pose is not too close to the current position
+    
+    geometry_msgs::msg::Pose pose_world;
+    if (frame != params_.world_frame)
+    {
+        pose_world = transformPoseToWorld(goal_pose, frame);
+    } else {
+        pose_world = goal_pose;
+    }
 
-    if (checkPoseDiff(goal_pose, ee_link))
+    if (checkPoseDiff(pose_world, ee_link))
     {
         RCLCPP_ERROR(node_->get_logger(), "Goal pose is too close to the current position");
         manipulator_interfaces::msg::TrajectoryResult result_msg;
@@ -332,7 +330,7 @@ void DynamicPlanner::plan(const geometry_msgs::msg::Pose& goal_pose, const std::
     //Create the plan and execute
     moveit_msgs::msg::MotionPlanRequest motion_plan_request = createMotionPlanRequest();
     moveit::core::robotStateToRobotStateMsg(*start_state, motion_plan_request.start_state);
-    motion_plan_request.goal_constraints.push_back(createTcpGoalConstraints(goal_pose, ee_link, frame));
+    motion_plan_request.goal_constraints.push_back(createTcpGoalConstraints(pose_world, ee_link, params_.world_frame));
 
     moveit_msgs::action::MoveGroup::Result plan = computeMotionPlan(motion_plan_request);
 
@@ -459,7 +457,6 @@ void DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& 
     }
 
     moveit_msgs::msg::MotionSequenceResponse plan = computeMotionSequence(motion_sequence_request);
-    moveit_msgs::msg::RobotTrajectory trajectory = plan.planned_trajectories.front();
 
     // POST PLANNING CHECKS
     // 1. Planning succeded
@@ -479,6 +476,8 @@ void DynamicPlanner::cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& 
         trajectory_pub_->publish(result_msg);
         return;
     }
+
+    moveit_msgs::msg::RobotTrajectory trajectory = plan.planned_trajectories.front();
 
 //    trajectory_msgs::msg::JointTrajectoryPoint last_point = trajectory.joint_trajectory.points.back();
 //    if(!checkPoseDiff(getFKine(last_point.positions, ee_link).pose, goal_pose)){
@@ -562,7 +561,7 @@ void DynamicPlanner::moveRobot(const trajectory_msgs::msg::JointTrajectoryPoint&
 
 void DynamicPlanner::executeTrajectory()
 {
-    if (isMoving()) {
+    if (isExecuting()) {
         RCLCPP_WARN(node_->get_logger(), "Robot is already moving");
         return;
     }
@@ -574,7 +573,7 @@ void DynamicPlanner::executeTrajectory()
         return;
     }
 
-    is_moving_.store(true); //Set moving state to true
+    is_executing_.store(true); //Set moving state to true
 }
 
 void DynamicPlanner::executeTrajectory(moveit_msgs::msg::RobotTrajectory& robot_trajectory)
@@ -583,10 +582,10 @@ void DynamicPlanner::executeTrajectory(moveit_msgs::msg::RobotTrajectory& robot_
     executeTrajectory();
 }
 
-bool DynamicPlanner::isMoving()
+bool DynamicPlanner::isExecuting()
 {
     //Check if the robot is moving
-    return is_moving_.load();
+    return is_executing_.load();
 }
 
 // Check if the planner has received group definition, so the dynamic planner can start working
@@ -601,7 +600,7 @@ void DynamicPlanner::stop()
     force_stop_.store(true);
 }
 
-const planning_scene_monitor::LockedPlanningSceneRO DynamicPlanner::getPlanningScene() const
+planning_scene_monitor::LockedPlanningSceneRW DynamicPlanner::getPlanningScene()
 {
     return planning_scene_monitor::LockedPlanningSceneRW(planning_scene_monitor_);
 }
@@ -769,6 +768,14 @@ void DynamicPlanner::processAttachedCollisionObject(const moveit_msgs::msg::Atta
         rviz_visual_tools_->deleteAllMarkers("ATTACHED_OBJECTS_" + attached_collision_object.object.id);
     }
     rviz_visual_tools_->trigger();
+}
+
+void DynamicPlanner::setCollisionEnabled(const std::string& object_1, const std::string& object_2, bool enabled)
+{
+    planning_scene_monitor::LockedPlanningSceneRW scene = getPlanningScene();
+    collision_detection::AllowedCollisionMatrix& acm = scene->getAllowedCollisionMatrixNonConst();
+    acm.setEntry(object_1, object_2, !enabled);
+    planning_scene_monitor_->triggerSceneUpdateEvent(planning_scene_monitor::PlanningSceneMonitor::UPDATE_SCENE);
 }
 
 // ------------------------------------- FORWARD KINEMATICS ------------------------------------
@@ -948,6 +955,24 @@ std::vector<std::string> DynamicPlanner::getJointNames()
     return joints_names_group_;
 }
 
+sensor_msgs::msg::JointState DynamicPlanner::getJointState()
+{
+    if (!isReady()) {
+        RCLCPP_ERROR(node_->get_logger(), "Cannot get current joint state, joint states not received yet");
+        return sensor_msgs::msg::JointState();
+    }
+
+    std::lock_guard<std::mutex> lock_val(joint_val_mutex_);
+    std::lock_guard<std::mutex> lock_speed(joint_speed_mutex_);
+
+    sensor_msgs::msg::JointState joint_state;
+    joint_state.name = joints_names_group_;
+    joint_state.position = joints_values_group_;
+    joint_state.velocity = joints_speed_group_;
+
+    return joint_state;
+}
+
 // -------------------------------------------------------------------------------------------
 // ------------------------------------- PRIVATE METHODS -------------------------------------
 // -------------------------------------------------------------------------------------------
@@ -997,7 +1022,7 @@ void DynamicPlanner::trajectoryExecution_callback(){
     //Check that joint states are being received
     if (node_->now().seconds() - last_joint_state_time_.load() > params_.joint_states_timeout){
         RCLCPP_ERROR(node_->get_logger(), "No joint states received for more than %.2f seconds, blocking planner.", params_.joint_states_timeout);
-        is_moving_.store(false);
+        is_executing_.store(false);
         force_stop_.store(false); // Reset force stop flag
         trajpoint_ = 0UL; // Reset trajectory point index
         joints_group_received_.store(false);
@@ -1008,7 +1033,7 @@ void DynamicPlanner::trajectoryExecution_callback(){
         std::lock_guard<std::mutex> joint_val_lock(joint_val_mutex_);
 
         RCLCPP_INFO(node_->get_logger(), "Force stop received, stopping trajectory execution.");
-        is_moving_.store(false);
+        is_executing_.store(false);
         force_stop_.store(false); // Reset force stop flag
         trajpoint_ = 0UL; // Reset trajectory point index
         
@@ -1022,7 +1047,7 @@ void DynamicPlanner::trajectoryExecution_callback(){
         return;
     }
 
-    if (isMoving()){
+    if (isExecuting()){
         std::lock_guard<std::mutex> joint_val_lock(joint_val_mutex_);
 
         trajectory_msgs::msg::JointTrajectoryPoint traj_pt;
@@ -1036,7 +1061,7 @@ void DynamicPlanner::trajectoryExecution_callback(){
         {
             // If the trajectory is finished, stop the execution
             RCLCPP_INFO(node_->get_logger(), "Trajectory executed.");
-            is_moving_.store(false);
+            is_executing_.store(false);
             trajpoint_ = 0UL; // Reset trajectory point index
         }
     }
@@ -1065,7 +1090,7 @@ void DynamicPlanner::setTrajectory(const moveit_msgs::msg::RobotTrajectory &traj
         trajectory: The trajectory
     */
 
-    if (isMoving()){
+    if (isExecuting()){
         // Memory safety check
         RCLCPP_ERROR(node_->get_logger(), "Cannot set trajectory while robot is moving");
         throw std::runtime_error("Cannot set trajectory while robot is moving");
@@ -1454,7 +1479,7 @@ geometry_msgs::msg::Pose DynamicPlanner::transformPose(const geometry_msgs::msg:
         transformed_pose_stamped = tf_buffer_->transform(
             pose_stamped,
             target_frame,
-            tf2::durationFromSec(0.5)
+            tf2::durationFromSec(params_.tf_timeout)
         );
     }
     catch (tf2::TransformException &ex) {
@@ -1510,6 +1535,7 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
     marker.pose = primitive_pose.pose;
     marker.color = color;
     marker.id = id;
+    marker.frame_locked = frame_locked;
 
     switch(primitive.type)
     {
@@ -1539,7 +1565,11 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
         }
         case shape_msgs::msg::SolidPrimitive::CONE:
         {
-            RCLCPP_ERROR(node_->get_logger(), "Cones are not supported for visualization yet.");
+            marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
+            marker.mesh_resource = "package://manipulators/models/meshes/Cone.stl";
+            marker.scale.x = primitive.dimensions[1] * 2;
+            marker.scale.y = primitive.dimensions[1] * 2;
+            marker.scale.z = primitive.dimensions[0];
             break;
         }
         default:
@@ -1554,7 +1584,9 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
         rviz_visual_tools_->enableFrameLocking(true);
         rviz_visual_tools_->publishMarker(marker);
         rviz_visual_tools_->enableFrameLocking(false);
-    } else {
+    }
+    else
+    {
         rviz_visual_tools_->publishMarker(marker);
     }
 }
@@ -1578,6 +1610,7 @@ DynamicPlannerParams DynamicPlannerParams::fromNode(const rclcpp::Node::SharedPt
     params.end_effector_link        = node->get_parameter_or("ee_name", params.end_effector_link);
     params.min_cartesian_fraction   = node->get_parameter_or("min_cartesian_fraction", params.min_cartesian_fraction);
     params.joint_states_timeout     = node->get_parameter_or("joint_states_timeout", params.joint_states_timeout);
+    params.tf_timeout               = node->get_parameter_or("tf_timeout", params.tf_timeout);
 
     return params;
 }

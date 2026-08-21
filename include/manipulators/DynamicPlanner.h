@@ -3,6 +3,7 @@
 
 //C++ Imports
 #include <string>
+#include <sstream>
 #include <vector>
 #include <Eigen/Geometry>
 #include <mutex>
@@ -38,8 +39,20 @@
 #include <moveit_msgs/action/move_group.hpp>
 #include <moveit/kinematic_constraints/utils.h>
 
-// Struct definition of the parameters of the Dynamic Planner
+// QoS profiles 
+const auto qos_best_effort = [](size_t depth = 1){
+    auto qos = rclcpp::QoS(rclcpp::KeepLast(depth))
+               .best_effort();
+    return qos;
+};
 
+const auto qos_reliable = [](size_t depth = 1){
+    auto qos = rclcpp::QoS(rclcpp::KeepLast(depth))
+               .reliable();
+    return qos;
+};
+
+// Struct definition of the parameters of the Dynamic Planner
 struct DynamicPlannerParams
 {
     std::string planning_pipeline   = "ompl";                    // planning pipeline (check moveit_config package for available pipelines)
@@ -58,11 +71,26 @@ struct DynamicPlannerParams
     double min_cartesian_fraction   = 0.1;                       // Minimum fraction for the cartesian plan to be considered successful
     double caresian_blend_radius    = 0.0;                       // Blend radius for the cartesian plan
     double joint_states_timeout     = 1.0;                       // Timeout after which planner is blocked if no joint states are received (seconds)
+    double tf_timeout               = 2.0;                       // TF lookups will fail if last received transfoms are older than this threshold (seconds)
 
     DynamicPlannerParams() {}
 
     static DynamicPlannerParams fromNode(const rclcpp::Node::SharedPtr& node);
 };
+
+inline rclcpp::QoS QOS_PROFILE_RELIABLE()
+{
+    return rclcpp::QoS(rclcpp::KeepLast(1))
+        .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
+        .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+}
+
+inline rclcpp::QoS QOS_PROFILE_BEST_EFFORT()
+{
+    return rclcpp::QoS(rclcpp::KeepLast(1))
+        .reliability(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT)
+        .durability(RMW_QOS_POLICY_DURABILITY_VOLATILE);
+}
 
 class DynamicPlanner
 {
@@ -122,7 +150,7 @@ class DynamicPlanner
         void executeTrajectory(); //Asynchronous execution of the last planned trajectory
         void executeTrajectory(moveit_msgs::msg::RobotTrajectory& robot_trajectory); //Asynchronous execution of the passed trajectory (waypoints)
 
-        bool isMoving(); //Check if the robot is moving
+        bool isExecuting(); //Check if the robot is moving
         bool isReady() const; //Check if the planner has received group definition, so the dynamic planner can start working
 
         void stop(); //Stop the execution of the planned trajectory
@@ -133,11 +161,8 @@ class DynamicPlanner
         DynamicPlannerParams getParams() const;
 
         void setParams(const DynamicPlannerParams& params);
-
-        void setDynamicBehavior(bool dynamic_behavior); //Set the dynamic_behavior_ variable
-        bool isDynamic() const; //Check if dynamic_behaviour_ is true
                 
-        const planning_scene_monitor::LockedPlanningSceneRO getPlanningScene() const; //Get the current planning scen as a read-only lock object
+        planning_scene_monitor::LockedPlanningSceneRW getPlanningScene(); //Get the current planning scen as a read-only lock object
 
         void setRobotState(moveit::core::RobotStatePtr& robot_state); //Set the state of the robot (subsequent planning will start from this state)
         moveit::core::RobotStatePtr getRobotState() const; //Get the current state of the robot
@@ -155,6 +180,8 @@ class DynamicPlanner
         // --------------- COLLISION OBJECTS ----------------
         void processCollisionObject(const moveit_msgs::msg::CollisionObject& collision_object); //Add a collision object to the planning scene
         void processAttachedCollisionObject(const moveit_msgs::msg::AttachedCollisionObject& collision_object); //Add an attached collision object to the planning scene
+    
+        void setCollisionEnabled(const std::string& object_1, const std::string& object_2, bool enabled); //Enable or disable collision between two objects (object can be a link or a collision object)
 
         // --------------- FORWARD KINEMATICS ----------------
         /* \: computes forward kinematics
@@ -195,7 +222,13 @@ class DynamicPlanner
         std::vector<std::string> getJointNames(); //Get the names of the joints
         std::vector<double> getJointValues(); //Get the current joint values
         std::vector<double> getJointSpeeds(); //Get the current joint speeds
+        sensor_msgs::msg::JointState getJointState(); //Get the current joint state as a message
 
+        // --------------- TF2 METHODS ----------------
+        geometry_msgs::msg::TransformStamped getTransform(const std::string &target_frame, const std::string &source_frame); //Get the transform between two frames
+        geometry_msgs::msg::Pose transformPose(const geometry_msgs::msg::Pose &pose, const std::string &target_frame, const std::string &src_frame); //Transform a pose from source_frame to target_frame
+        geometry_msgs::msg::Pose transformPoseToWorld(const geometry_msgs::msg::Pose &pose, const std::string &src_frame);  //Transform a pose from source_frame to world_frame_
+    
     private:
 
         // --------------- CALLBACK METHODS ----------------
@@ -237,12 +270,6 @@ class DynamicPlanner
         bool checkPoseDiff(const geometry_msgs::msg::Pose &pose_a, const geometry_msgs::msg::Pose &pose_b); //Check if the difference between pose_a and pose_b is negligible
     
         geometry_msgs::msg::PoseStamped toPoseStamped(const Eigen::Isometry3d& pose, const std::string &frame_id=""); //Converts an Eigen pose to a PoseStamped message
-    
-        // --------------- TF2 METHODS ----------------
-        
-        geometry_msgs::msg::TransformStamped getTransform(const std::string &target_frame, const std::string &source_frame); //Get the transform between two frames
-        geometry_msgs::msg::Pose transformPose(const geometry_msgs::msg::Pose &pose, const std::string &target_frame, const std::string &src_frame); //Transform a pose from source_frame to target_frame
-        geometry_msgs::msg::Pose transformPoseToWorld(const geometry_msgs::msg::Pose &pose, const std::string &src_frame);  //Transform a pose from source_frame to world_frame_
 
         // --------------- VISUALIZATION ----------------
         //Visualize a primitive
@@ -286,10 +313,10 @@ class DynamicPlanner
     
         //Trajectory variables
         // NOTE: For memory safery reasons robot_trajectory_ and trajpoint_ should be only accessed through setTrajectory() method
-        //       which will stop any attempt to modify them while is_moving_ is true
+        //       which will stop any attempt to modify them while is_executing_ is true
         moveit_msgs::msg::RobotTrajectory robot_trajectory_;    //Planned trajectory
         unsigned long trajpoint_;                               //Index of the current trajectory point
-        std::atomic<bool> is_moving_{false};                    //Whether the robot is moving or not, can be set to false to stop execution of trajectory (protected access)
+        std::atomic<bool> is_executing_{false};                    //Whether the robot is moving or not, can be set to false to stop execution of trajectory (protected access)
         std::atomic<bool> force_stop_{false};                   //Force stop the execution of the trajectory (protected access)
 
         //Time optimal trajectory generation 
@@ -326,6 +353,7 @@ class DynamicPlanner
         //Visualization
         rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;
         size_t marker_id_ = 0; //ID for the next marker to be published
+        std::map<std::string, visualization_msgs::msg::Marker> visualized_primitives_; //List of currently visualized primitives
 };
 
 #endif //DYNAMIC_PLANNER_H

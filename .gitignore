@@ -20,5 +20,5 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
-#Simulation scenes
+#Coppelia scenes
 scenes/coppelia

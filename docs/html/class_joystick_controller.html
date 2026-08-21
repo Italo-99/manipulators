@@ -162,6 +162,14 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>spinnerJoystick</b> (
 void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a95df0a492be065c3e6e9e85208c07715">stopTrajectory</a> ()</td></tr>
 <tr class="memdesc:a95df0a492be065c3e6e9e85208c07715 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop trajectory execution. <br /></td></tr>
 <tr class="separator:a95df0a492be065c3e6e9e85208c07715 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5795e17ce90ea01a3388bea21e943054 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a5795e17ce90ea01a3388bea21e943054"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a5795e17ce90ea01a3388bea21e943054">stopRealTime</a> ()</td></tr>
+<tr class="memdesc:a5795e17ce90ea01a3388bea21e943054 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Send stop command to all real time controls. <br /></td></tr>
+<tr class="separator:a5795e17ce90ea01a3388bea21e943054 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a07557a7c00296df695b2ad34c1f468ee inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a07557a7c00296df695b2ad34c1f468ee"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a07557a7c00296df695b2ad34c1f468ee">emergencyStop</a> ()</td></tr>
+<tr class="memdesc:a07557a7c00296df695b2ad34c1f468ee inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stops whatever movement the manipulator is doing. <br /></td></tr>
+<tr class="separator:a07557a7c00296df695b2ad34c1f468ee inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa36bd3cf7124c581ad8b83b629d4334d inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#aa36bd3cf7124c581ad8b83b629d4334d">getEEpose</a> ()</td></tr>
 <tr class="memdesc:aa36bd3cf7124c581ad8b83b629d4334d inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current end effector pose.  <a href="class_manipulator_menu.html#aa36bd3cf7124c581ad8b83b629d4334d">More...</a><br /></td></tr>
 <tr class="separator:aa36bd3cf7124c581ad8b83b629d4334d inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -176,14 +184,20 @@ sensor_msgs::msg::JointState&#160;</td><td class="memItemRight" valign="bottom">
 std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a7ab183712e6e1fecb6302124f0c366e7">getJointStateDegrees</a> ()</td></tr>
 <tr class="memdesc:a7ab183712e6e1fecb6302124f0c366e7 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current joint state of the manipulator in degrees. <br /></td></tr>
 <tr class="separator:a7ab183712e6e1fecb6302124f0c366e7 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2a719fe407416ee38db5602340278f48 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a2a719fe407416ee38db5602340278f48"></a>
-geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a2a719fe407416ee38db5602340278f48">getTf</a> (const std::string &amp;target_frame, const std::string &amp;reference_frame, uint num_tries=10)</td></tr>
-<tr class="memdesc:a2a719fe407416ee38db5602340278f48 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the pose of target_frame relative to reference_frame. <br /></td></tr>
-<tr class="separator:a2a719fe407416ee38db5602340278f48 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a55d96ada57386a3324d33d2a5632f93a inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a55d96ada57386a3324d33d2a5632f93a"></a>
-geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a55d96ada57386a3324d33d2a5632f93a">getTfOffset</a> (const std::string &amp;target_frame, const std::string &amp;reference_frame, const geometry_msgs::msg::Pose &amp;offset)</td></tr>
-<tr class="memdesc:a55d96ada57386a3324d33d2a5632f93a inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the pose of a point offset from target_frame according to its own frame, relative to reference frame. <br /></td></tr>
-<tr class="separator:a55d96ada57386a3324d33d2a5632f93a inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2fae2dce1f305308df51dd991f5ba5aa inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a2fae2dce1f305308df51dd991f5ba5aa"></a>
+geometry_msgs::msg::TransformStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a2fae2dce1f305308df51dd991f5ba5aa">getTf</a> (const std::string &amp;src_frame, const std::string &amp;dest_frame, uint num_tries=10)</td></tr>
+<tr class="memdesc:a2fae2dce1f305308df51dd991f5ba5aa inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the transformation from src_frame to dest_frame. <br /></td></tr>
+<tr class="separator:a2fae2dce1f305308df51dd991f5ba5aa inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac667802215533664bbc827fcc557f40a inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="ac667802215533664bbc827fcc557f40a"></a>
+geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ac667802215533664bbc827fcc557f40a">getTfPose</a> (const std::string &amp;target_frame, const std::string &amp;reference_frame, uint num_tries=10)</td></tr>
+<tr class="memdesc:ac667802215533664bbc827fcc557f40a inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the pose of target_frame relative to reference_frame. <br /></td></tr>
+<tr class="separator:ac667802215533664bbc827fcc557f40a inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ec641069acd7acbe9310f375c5133dc inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a1ec641069acd7acbe9310f375c5133dc">transformPose</a> (const std::string &amp;src_frame, const std::string &amp;dest_frame, const geometry_msgs::msg::Pose &amp;pose)</td></tr>
+<tr class="memdesc:a1ec641069acd7acbe9310f375c5133dc inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Transform a pose from src_frame to dest_frame.  <a href="class_manipulator_menu.html#a1ec641069acd7acbe9310f375c5133dc">More...</a><br /></td></tr>
+<tr class="separator:a1ec641069acd7acbe9310f375c5133dc inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2e718b7b105693fc621fb9652d742abd inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">geometry_msgs::msg::TwistStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a2e718b7b105693fc621fb9652d742abd">transformTwist</a> (const std::string &amp;src_frame, const std::string &amp;dest_frame, const geometry_msgs::msg::Twist &amp;twist)</td></tr>
+<tr class="memdesc:a2e718b7b105693fc621fb9652d742abd inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Transform a twist from src_frame to dest_frame.  <a href="class_manipulator_menu.html#a2e718b7b105693fc621fb9652d742abd">More...</a><br /></td></tr>
+<tr class="separator:a2e718b7b105693fc621fb9652d742abd inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4128bc16b38f54e76d8d69228f70c0e2 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a4128bc16b38f54e76d8d69228f70c0e2"></a>
 geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a4128bc16b38f54e76d8d69228f70c0e2">getOffsetPose</a> (const geometry_msgs::msg::Pose &amp;pose, const geometry_msgs::msg::Pose &amp;offset)</td></tr>
 <tr class="memdesc:a4128bc16b38f54e76d8d69228f70c0e2 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a pose offset from the passed one (axis should be treated same way as a tf frame). <br /></td></tr>
@@ -311,18 +325,18 @@ Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><b>getJacobia
 <tr class="memitem:a93e4d34b37f17f7fe6cc26d1e91ab441 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a93e4d34b37f17f7fe6cc26d1e91ab441"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>gripperMoveClient</b> (const bool close)</td></tr>
 <tr class="separator:a93e4d34b37f17f7fe6cc26d1e91ab441 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad2223115b377ef3b0f7c037c69d2eae4 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ad2223115b377ef3b0f7c037c69d2eae4">setJacobianSpeedControl</a> (bool)</td></tr>
-<tr class="memdesc:ad2223115b377ef3b0f7c037c69d2eae4 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the jacobian speed control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#ad2223115b377ef3b0f7c037c69d2eae4">More...</a><br /></td></tr>
-<tr class="separator:ad2223115b377ef3b0f7c037c69d2eae4 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a35bc7da6edbe69dd537ee1243552d008 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a35bc7da6edbe69dd537ee1243552d008">setJsRealTimeControl</a> (bool)</td></tr>
-<tr class="memdesc:a35bc7da6edbe69dd537ee1243552d008 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the real time control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#a35bc7da6edbe69dd537ee1243552d008">More...</a><br /></td></tr>
-<tr class="separator:a35bc7da6edbe69dd537ee1243552d008 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a774408905aecac49f287c4edac41fae9 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a774408905aecac49f287c4edac41fae9">setAdmittanceControl</a> (bool)</td></tr>
-<tr class="memdesc:a774408905aecac49f287c4edac41fae9 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the admittance control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#a774408905aecac49f287c4edac41fae9">More...</a><br /></td></tr>
-<tr class="separator:a774408905aecac49f287c4edac41fae9 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab50d86f1de338614f515beb765f8c032 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ab50d86f1de338614f515beb765f8c032">setAdmittanceVelMode</a> (bool)</td></tr>
-<tr class="memdesc:ab50d86f1de338614f515beb765f8c032 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the admittance control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#ab50d86f1de338614f515beb765f8c032">More...</a><br /></td></tr>
-<tr class="separator:ab50d86f1de338614f515beb765f8c032 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adacad5617362cbefa35b002e27fcbab0 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#adacad5617362cbefa35b002e27fcbab0">setJacobianSpeedControl</a> (bool enable)</td></tr>
+<tr class="memdesc:adacad5617362cbefa35b002e27fcbab0 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the jacobian speed control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#adacad5617362cbefa35b002e27fcbab0">More...</a><br /></td></tr>
+<tr class="separator:adacad5617362cbefa35b002e27fcbab0 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e256fdea48fa149cd95e2a3fd681815 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a6e256fdea48fa149cd95e2a3fd681815">setJsRealTimeControl</a> (bool enable)</td></tr>
+<tr class="memdesc:a6e256fdea48fa149cd95e2a3fd681815 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the real time control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#a6e256fdea48fa149cd95e2a3fd681815">More...</a><br /></td></tr>
+<tr class="separator:a6e256fdea48fa149cd95e2a3fd681815 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad9bdbf9a492825506dcd80c511ce90a3 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ad9bdbf9a492825506dcd80c511ce90a3">setAdmittanceControl</a> (bool enable)</td></tr>
+<tr class="memdesc:ad9bdbf9a492825506dcd80c511ce90a3 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the admittance control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#ad9bdbf9a492825506dcd80c511ce90a3">More...</a><br /></td></tr>
+<tr class="separator:ad9bdbf9a492825506dcd80c511ce90a3 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d670cc83ba3f082fe82dca9ea568d05 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a8d670cc83ba3f082fe82dca9ea568d05">setAdmittanceVelMode</a> (bool vel_mode)</td></tr>
+<tr class="memdesc:a8d670cc83ba3f082fe82dca9ea568d05 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the admittance control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#a8d670cc83ba3f082fe82dca9ea568d05">More...</a><br /></td></tr>
+<tr class="separator:a8d670cc83ba3f082fe82dca9ea568d05 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaa1934ba74e08bfe954eb0cecae34d31 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#aaa1934ba74e08bfe954eb0cecae34d31">setRealTimeConstraints</a> (bool limit_joints, bool limit_jacobian)</td></tr>
 <tr class="memdesc:aaa1934ba74e08bfe954eb0cecae34d31 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the planner velocity and acceleration factors.  <a href="class_manipulator_menu.html#aaa1934ba74e08bfe954eb0cecae34d31">More...</a><br /></td></tr>
 <tr class="separator:aaa1934ba74e08bfe954eb0cecae34d31 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -332,6 +346,24 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>gripperMoveClient</b>
 <tr class="memitem:acffaec984a176e3f6b6bf9b6a2c73a11 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#acffaec984a176e3f6b6bf9b6a2c73a11">setPlannerTolerances</a> (float position_tolerance, float orientation_tolerance, float joint_tolerance)</td></tr>
 <tr class="memdesc:acffaec984a176e3f6b6bf9b6a2c73a11 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the tolerances in the manipulator planner.  <a href="class_manipulator_menu.html#acffaec984a176e3f6b6bf9b6a2c73a11">More...</a><br /></td></tr>
 <tr class="separator:acffaec984a176e3f6b6bf9b6a2c73a11 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a67e4cd4434d408334e08b051aebcea16 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a67e4cd4434d408334e08b051aebcea16">publishJointsCommand</a> (const std::vector&lt; double &gt; joint_speeds)</td></tr>
+<tr class="memdesc:a67e4cd4434d408334e08b051aebcea16 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a real time joint command to the manipulator planner.  <a href="class_manipulator_menu.html#a67e4cd4434d408334e08b051aebcea16">More...</a><br /></td></tr>
+<tr class="separator:a67e4cd4434d408334e08b051aebcea16 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6af986153addd6c6010ef842addd73db inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a6af986153addd6c6010ef842addd73db">publishJointsCommand</a> (const sensor_msgs::msg::JointState joint_state)</td></tr>
+<tr class="memdesc:a6af986153addd6c6010ef842addd73db inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a real time joint command to the manipulator planner.  <a href="class_manipulator_menu.html#a6af986153addd6c6010ef842addd73db">More...</a><br /></td></tr>
+<tr class="separator:a6af986153addd6c6010ef842addd73db inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a40ced1926b8371573f11ce5e5ab5a1df inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a40ced1926b8371573f11ce5e5ab5a1df">publishJacobianCommand</a> (const geometry_msgs::msg::Twist tcp_speed, const std::string &amp;frame=&quot;&quot;)</td></tr>
+<tr class="memdesc:a40ced1926b8371573f11ce5e5ab5a1df inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a real time Cartesian command to the manipulator planner.  <a href="class_manipulator_menu.html#a40ced1926b8371573f11ce5e5ab5a1df">More...</a><br /></td></tr>
+<tr class="separator:a40ced1926b8371573f11ce5e5ab5a1df inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6bab9b4da346b87d131e3e415ee0f0c7 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a6bab9b4da346b87d131e3e415ee0f0c7">publishJacobianCommand</a> (const std::vector&lt; double &gt; tcp_speed, const std::string &amp;frame=&quot;&quot;)</td></tr>
+<tr class="memdesc:a6bab9b4da346b87d131e3e415ee0f0c7 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a real time Cartesian command to the manipulator planner.  <a href="class_manipulator_menu.html#a6bab9b4da346b87d131e3e415ee0f0c7">More...</a><br /></td></tr>
+<tr class="separator:a6bab9b4da346b87d131e3e415ee0f0c7 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0a7c7d82b6a62a8782c63d2e853e45d6 inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a0a7c7d82b6a62a8782c63d2e853e45d6">publishAdmittancePositionCommand</a> (const geometry_msgs::msg::Pose tcp_pose, const std::string &amp;frame=&quot;&quot;)</td></tr>
+<tr class="memdesc:a0a7c7d82b6a62a8782c63d2e853e45d6 inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish cartesian position command to the admittance controller.  <a href="class_manipulator_menu.html#a0a7c7d82b6a62a8782c63d2e853e45d6">More...</a><br /></td></tr>
+<tr class="separator:a0a7c7d82b6a62a8782c63d2e853e45d6 inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aea04e8f89df74b520d1b7cb27e2a373a inherit pub_methods_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#aea04e8f89df74b520d1b7cb27e2a373a">publishAdmittanceVelocityCommand</a> (const geometry_msgs::msg::Twist tcp_speed, const std::string &amp;frame=&quot;&quot;)</td></tr>
+<tr class="memdesc:aea04e8f89df74b520d1b7cb27e2a373a inherit pub_methods_class_manipulator_menu"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish cartesian velocity command to the admittance controller.  <a href="class_manipulator_menu.html#aea04e8f89df74b520d1b7cb27e2a373a">More...</a><br /></td></tr>
+<tr class="separator:aea04e8f89df74b520d1b7cb27e2a373a inherit pub_methods_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aed1be2c13b6aec2b41efbf557cad480e inherit pub_methods_class_manipulator_menu"><td class="memTemplParams" colspan="2"><a id="aed1be2c13b6aec2b41efbf557cad480e"></a>
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:aed1be2c13b6aec2b41efbf557cad480e inherit pub_methods_class_manipulator_menu"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><b>getManipulatorParameter</b> (const std::string &amp;param_name)</td></tr>
@@ -345,6 +377,18 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>joyCallback</
 <tr class="memitem:ac29746aeb9026929747c2c11b18760c0"><td class="memItemLeft" align="right" valign="top"><a id="ac29746aeb9026929747c2c11b18760c0"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>declareParameters</b> ()</td></tr>
 <tr class="separator:ac29746aeb9026929747c2c11b18760c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e7eda9b59c914e22bb676db610328ab"><td class="memItemLeft" align="right" valign="top"><a id="a6e7eda9b59c914e22bb676db610328ab"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>joyDisableControl</b> ()</td></tr>
+<tr class="separator:a6e7eda9b59c914e22bb676db610328ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad41026ffd71d5014bfc44373d36d37fb"><td class="memItemLeft" align="right" valign="top"><a id="ad41026ffd71d5014bfc44373d36d37fb"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>joySetJacobainControlMode</b> ()</td></tr>
+<tr class="separator:ad41026ffd71d5014bfc44373d36d37fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaaa7a6cec91caa4653af0712aea078b9"><td class="memItemLeft" align="right" valign="top"><a id="aaaa7a6cec91caa4653af0712aea078b9"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>joySetJointsControlMode</b> ()</td></tr>
+<tr class="separator:aaaa7a6cec91caa4653af0712aea078b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a70a122b155b037d071b465bed8eb3738"><td class="memItemLeft" align="right" valign="top"><a id="a70a122b155b037d071b465bed8eb3738"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>joySetAdmittanceControlMode</b> ()</td></tr>
+<tr class="separator:a70a122b155b037d071b465bed8eb3738"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adf71fddb3b88820919b91e13e5744a7c"><td class="memItemLeft" align="right" valign="top"><a id="adf71fddb3b88820919b91e13e5744a7c"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>shutdown_handler</b> ()</td></tr>
 <tr class="separator:adf71fddb3b88820919b91e13e5744a7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -484,15 +528,6 @@ rclcpp::Subscription&lt; sensor_msgs::msg::Joy &gt;::SharedPtr&#160;</td><td cla
 <tr class="memitem:aa5088e1113745c5cd73087b6c63bea39"><td class="memItemLeft" align="right" valign="top"><a id="aa5088e1113745c5cd73087b6c63bea39"></a>
 sensor_msgs::msg::Joy::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>joy_msg_</b></td></tr>
 <tr class="separator:aa5088e1113745c5cd73087b6c63bea39"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a089415a89fd90f663e56ddcec285c3f0"><td class="memItemLeft" align="right" valign="top"><a id="a089415a89fd90f663e56ddcec285c3f0"></a>
-rclcpp::Publisher&lt; geometry_msgs::msg::Twist &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velJacSetpoint_pub_</b></td></tr>
-<tr class="separator:a089415a89fd90f663e56ddcec285c3f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0694cde031357ac04ceaa55bb765ab5b"><td class="memItemLeft" align="right" valign="top"><a id="a0694cde031357ac04ceaa55bb765ab5b"></a>
-rclcpp::Publisher&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velJsRtSetpoint_pub_</b></td></tr>
-<tr class="separator:a0694cde031357ac04ceaa55bb765ab5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a63486be95be1f203dcb3710f40a0e0fb"><td class="memItemLeft" align="right" valign="top"><a id="a63486be95be1f203dcb3710f40a0e0fb"></a>
-rclcpp::Publisher&lt; geometry_msgs::msg::Twist &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velAdmSetpoint_pub_</b></td></tr>
-<tr class="separator:a63486be95be1f203dcb3710f40a0e0fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af0ad391885e454a333018c63e7dd3757"><td class="memItemLeft" align="right" valign="top"><a id="af0ad391885e454a333018c63e7dd3757"></a>
 sensor_msgs::msg::JointState&#160;</td><td class="memItemRight" valign="bottom"><b>js_cmd_vel_</b></td></tr>
 <tr class="separator:af0ad391885e454a333018c63e7dd3757"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -511,15 +546,12 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>js_step_</b></td></
 <tr class="memitem:a2d508c1a70d29d8e9a319395bd2a9fa6"><td class="memItemLeft" align="right" valign="top"><a id="a2d508c1a70d29d8e9a319395bd2a9fa6"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>joy_topic_</b></td></tr>
 <tr class="separator:a2d508c1a70d29d8e9a319395bd2a9fa6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2e9a14772f0c21f903580db0c565ee1f"><td class="memItemLeft" align="right" valign="top"><a id="a2e9a14772f0c21f903580db0c565ee1f"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>jacobian_control_</b></td></tr>
-<tr class="separator:a2e9a14772f0c21f903580db0c565ee1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aba9b346cbf1c272f4f05bc4b0ff71ca7"><td class="memItemLeft" align="right" valign="top"><a id="aba9b346cbf1c272f4f05bc4b0ff71ca7"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>real_time_control_</b></td></tr>
-<tr class="separator:aba9b346cbf1c272f4f05bc4b0ff71ca7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5ce47a0cd2e2cdf18a600407798328fd"><td class="memItemLeft" align="right" valign="top"><a id="a5ce47a0cd2e2cdf18a600407798328fd"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>admittance_control_</b></td></tr>
-<tr class="separator:a5ce47a0cd2e2cdf18a600407798328fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ce9ee5dc044489401aa10f79c0555a1"><td class="memItemLeft" align="right" valign="top"><a id="a1ce9ee5dc044489401aa10f79c0555a1"></a>
+ControlMode&#160;</td><td class="memItemRight" valign="bottom"><b>control_mode_</b></td></tr>
+<tr class="separator:a1ce9ee5dc044489401aa10f79c0555a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a21dd605876fa770a89d68b6332c7cbe3"><td class="memItemLeft" align="right" valign="top"><a id="a21dd605876fa770a89d68b6332c7cbe3"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>control_frame_</b></td></tr>
+<tr class="separator:a21dd605876fa770a89d68b6332c7cbe3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af9e41f8f572a10c82437386f4df03e05"><td class="memItemLeft" align="right" valign="top"><a id="af9e41f8f572a10c82437386f4df03e05"></a>
 rclcpp::TimerBase::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>cmd_pub_timer_</b></td></tr>
 <tr class="separator:af9e41f8f572a10c82437386f4df03e05"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -578,6 +610,9 @@ rclcpp::Subscription&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td>
 <tr class="memitem:af19b179f2742b0784956ca5ad3c23b1b inherit pro_attribs_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="af19b179f2742b0784956ca5ad3c23b1b"></a>
 rclcpp::Subscription&lt; geometry_msgs::msg::Pose &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>eePose_sub_</b></td></tr>
 <tr class="separator:af19b179f2742b0784956ca5ad3c23b1b inherit pro_attribs_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ef678e6e17b5246510643636e5f9ea3 inherit pro_attribs_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a1ef678e6e17b5246510643636e5f9ea3"></a>
+rclcpp::Subscription&lt; geometry_msgs::msg::Twist &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>eeVel_sub_</b></td></tr>
+<tr class="separator:a1ef678e6e17b5246510643636e5f9ea3 inherit pro_attribs_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a66a61bee375dbb55c942220c4688fad2 inherit pro_attribs_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a66a61bee375dbb55c942220c4688fad2"></a>
 rclcpp::Client&lt; manipulator_interfaces::srv::ChangePlannerScalingFactors &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>changePlannerScalingFactors_client_</b></td></tr>
 <tr class="separator:a66a61bee375dbb55c942220c4688fad2 inherit pro_attribs_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -626,6 +661,18 @@ std::shared_ptr&lt; tf2_ros::TransformListener &gt;&#160;</td><td class="memItem
 <tr class="memitem:a7e86be70e797d3a42852d59951c242f3 inherit pro_attribs_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a7e86be70e797d3a42852d59951c242f3"></a>
 std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tf_buffer_</b></td></tr>
 <tr class="separator:a7e86be70e797d3a42852d59951c242f3 inherit pro_attribs_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4ca7d86995bf5fdc895d2f0114bb94c8 inherit pro_attribs_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a4ca7d86995bf5fdc895d2f0114bb94c8"></a>
+rclcpp::Publisher&lt; geometry_msgs::msg::Twist &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velJacSetpoint_pub_</b></td></tr>
+<tr class="separator:a4ca7d86995bf5fdc895d2f0114bb94c8 inherit pro_attribs_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab5b5f87e04c2ae5c3e051dadee35461d inherit pro_attribs_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="ab5b5f87e04c2ae5c3e051dadee35461d"></a>
+rclcpp::Publisher&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velJsRtSetpoint_pub_</b></td></tr>
+<tr class="separator:ab5b5f87e04c2ae5c3e051dadee35461d inherit pro_attribs_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d90b1c0fbdfffd4a5f98079999af6a5 inherit pro_attribs_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a2d90b1c0fbdfffd4a5f98079999af6a5"></a>
+rclcpp::Publisher&lt; geometry_msgs::msg::Twist &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velAdmSetpoint_pub_</b></td></tr>
+<tr class="separator:a2d90b1c0fbdfffd4a5f98079999af6a5 inherit pro_attribs_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a05ba8b702a528499ca9e94fdf98febe7 inherit pro_attribs_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a05ba8b702a528499ca9e94fdf98febe7"></a>
+rclcpp::Publisher&lt; geometry_msgs::msg::PoseStamped &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>poseAdmSetpoint_pub_</b></td></tr>
+<tr class="separator:a05ba8b702a528499ca9e94fdf98febe7 inherit pro_attribs_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
@@ -651,6 +698,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>traj_received_</b> = 
 <tr class="memitem:a8467381898bf7492814987176918c343 inherit pub_attribs_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a8467381898bf7492814987176918c343"></a>
 geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><b>current_tcp_pose_</b></td></tr>
 <tr class="separator:a8467381898bf7492814987176918c343 inherit pub_attribs_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a12eefbdf4a7b42eb9b28bf5de857d342 inherit pub_attribs_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a12eefbdf4a7b42eb9b28bf5de857d342"></a>
+geometry_msgs::msg::Twist&#160;</td><td class="memItemRight" valign="bottom"><b>current_tcp_vel_</b></td></tr>
+<tr class="separator:a12eefbdf4a7b42eb9b28bf5de857d342 inherit pub_attribs_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a40297d80c284747254e9a4acf59e7366 inherit pub_attribs_class_manipulator_menu"><td class="memItemLeft" align="right" valign="top"><a id="a40297d80c284747254e9a4acf59e7366"></a>
 std::unordered_map&lt; std::string, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joints_map_group_</b></td></tr>
 <tr class="separator:a40297d80c284747254e9a4acf59e7366 inherit pub_attribs_class_manipulator_menu"><td class="memSeparator" colspan="2">&#160;</td></tr>

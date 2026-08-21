@@ -140,8 +140,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         void jointsRealTimeSetter_callback( // Set the real time joints speed based control
             const std_srvs::srv::SetBool::Request::SharedPtr req, 
             std_srvs::srv::SetBool::Response::SharedPtr res
-        );    
-        
+        );
+
         void jacobianControlSetter_callback( // Set the jacobian speed based control
             const std_srvs::srv::SetBool::Request::SharedPtr req, 
             std_srvs::srv::SetBool::Response::SharedPtr res
@@ -169,6 +169,13 @@ class ManipulatorPlannerNode : public rclcpp::Node {
 
         // Execute the real time joints speed based control
         void jointsRealTimeControl();
+
+        bool isRobotMoving();
+        
+        void zeroJacobianCmd();
+        void zeroJointsCmd();
+
+        bool realTimeFrequencyCheck();
 
         // --------------- HELPER FUNCTIONS ---------------
 
@@ -203,9 +210,9 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         double max_rot_accel_ee_;
         double max_spd_jnts_;
         double max_acc_jnts_;
+        std::vector<std::string> fixed_links_;
         std::vector<std::string> gripper_links_;
-        double min_jacobian_determinant_;
-        Eigen::MatrixXd jacobian_var_;
+        double real_time_safety_dt_;
         bool limit_joints_control_; // If true, the joints speed control is limited to the max_spd_jnts_ parameter
         bool limit_jacobian_control_; // If true, the jacobian speed control is limited to the max_speed_ee_ parameter
         double jac_sigma_threshold_;
@@ -261,6 +268,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         Eigen::VectorXd js_vel_cmd_;            // New command of joints speed
         std::vector<shape_msgs::msg::SolidPrimitive> constraints_primitives_; // List of contraints for jacobian control
         std::vector<geometry_msgs::msg::Pose> constraints_poses_; // List of poses for jacobian control
+        rclcpp::Time last_received_rt_command_;
+        Eigen::MatrixXd jacobian_var_;
 };
 
 #endif

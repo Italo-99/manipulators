@@ -44,16 +44,23 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     clearConstraints_pub_        = node_->create_publisher<std_msgs::msg::Empty>(params_.manipulator_name+"/clear_constraints", 1);
 
     jointState_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
-        "/joint_states", 1, 
+        "/joint_states", qos_best_effort(1), 
         [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
             this->jointStateCallback(msg);
         }
     );
 
     eePose_sub_ = node_->create_subscription<geometry_msgs::msg::Pose>(
-        params_.manipulator_name+"/tcp_pose", 1,
+        params_.manipulator_name+"/tcp_pose", qos_best_effort(1),
         [this](const geometry_msgs::msg::Pose::SharedPtr msg) {
             this->current_tcp_pose_ = *msg;
+        }
+    );
+
+    eeVel_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
+        params_.manipulator_name+"/tcp_vel", qos_best_effort(1),
+        [this](const geometry_msgs::msg::Twist::SharedPtr msg) {
+            this->current_tcp_vel_ = *msg;
         }
     );
 
@@ -84,7 +91,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     sub_options.callback_group = cb_group;
 
     plannedTrajectory_sub_ = node_->create_subscription<manipulator_interfaces::msg::TrajectoryResult>(
-        params_.planning_group+"/planned_trajectory", 1,
+        params_.planning_group+"/planned_trajectory", qos_reliable(1),
         [this](const manipulator_interfaces::msg::TrajectoryResult::SharedPtr msg) {
             trajectoryCallback(msg);
         },
@@ -93,6 +100,21 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
 
     trajectory_pub_ = node_->create_publisher<moveit_msgs::msg::RobotTrajectory>(params_.planning_group+"/trajectory", 1);
     executionControl_pub_ = node_->create_publisher<std_msgs::msg::Bool>(params_.planning_group+"/execution_control", 1);
+
+    // ---------------------- Real time control ----------------------
+
+    velJacSetpoint_pub_ = node_->create_publisher<geometry_msgs::msg::Twist>(
+        params_.manipulator_name + "/cmd_vel", 1
+    );
+    velJsRtSetpoint_pub_ = node_->create_publisher<sensor_msgs::msg::JointState>(
+        params_.manipulator_name + "/js_cmd_vel", 1
+    );
+    velAdmSetpoint_pub_ = node_->create_publisher<geometry_msgs::msg::Twist>(
+        params_.manipulator_name + "/adm_vd", 1
+    );
+    poseAdmSetpoint_pub_ = node_->create_publisher<geometry_msgs::msg::PoseStamped>(
+        params_.manipulator_name + "/adm_xd", 1
+    );
 
     // ---------------------- Gripper ----------------------
 
@@ -759,23 +781,48 @@ void ManipulatorMenu::stopTrajectory(){
     RCLCPP_INFO(node_->get_logger(), "Stopping trajectory execution");
 }
 
+void ManipulatorMenu::stopRealTime(){
+    setJsRealTimeControl(false);
+    setJacobianSpeedControl(false);
+    if (params_.has_admittance){
+        setAdmittanceControl(false);
+    }
+}
+
+void ManipulatorMenu::emergencyStop(){
+    stopTrajectory();
+    stopRealTime();
+}
+
 // -------------------- TF END EFFECTOR LISTENER -----------------------
 
-// Listen a TF between two given frames
-geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &reference_frame, const std::string &target_frame, uint num_tries)
+geometry_msgs::msg::TransformStamped ManipulatorMenu::getTf(const std::string &src_frame, const std::string &dest_frame, uint num_tries)
 {
-
     geometry_msgs::msg::TransformStamped transform;
     bool received_transform = false;
     for (size_t counter {0}; !received_transform && rclcpp::ok() && counter < num_tries; ++counter)
     {
         try {
-            transform = tf_buffer_->lookupTransform(reference_frame, target_frame, tf2::TimePointZero, tf2::durationFromSec(0.5));
+            transform = tf_buffer_->lookupTransform(dest_frame, src_frame, tf2::TimePointZero, tf2::durationFromSec(0.5));
             received_transform = true;
         } catch (const tf2::TransformException & ex) {
             rclcpp::sleep_for(std::chrono::milliseconds(100));
         }
     }
+
+    if (!received_transform)
+    {
+        RCLCPP_DEBUG(node_->get_logger(), "Failed to receive transform from %s to %s after %u attempts.", src_frame.c_str(), dest_frame.c_str(), num_tries);
+    }
+
+    return transform;
+}
+
+// Listen a TF between two given frames
+geometry_msgs::msg::PoseStamped ManipulatorMenu::getTfPose(const std::string &reference_frame, const std::string &target_frame, uint num_tries)
+{
+    geometry_msgs::msg::TransformStamped transform = getTf(reference_frame, target_frame, num_tries);
+    bool received_transform = !transform.header.frame_id.empty();
 
     geometry_msgs::msg::PoseStamped pose_stamped;
     if (received_transform)
@@ -793,14 +840,74 @@ geometry_msgs::msg::PoseStamped ManipulatorMenu::getTf(const std::string &refere
     return pose_stamped;
 }
 
-geometry_msgs::msg::PoseStamped ManipulatorMenu::getTfOffset(const std::string& target_frame, 
-                                                             const std::string& reference_frame,
-                                                             const geometry_msgs::msg::Pose &offset)
+geometry_msgs::msg::PoseStamped ManipulatorMenu::transformPose(const std::string& src_frame, 
+                                                               const std::string& dest_frame,
+                                                               const geometry_msgs::msg::Pose &pose)
 {
-    geometry_msgs::msg::PoseStamped pose = getTf(reference_frame, target_frame);
-    pose.pose = getOffsetPose(pose.pose, offset);
+    geometry_msgs::msg::PoseStamped result;
+    
+    // Get the transform from src_frame to dest_frame
+    geometry_msgs::msg::TransformStamped transform = getTf(src_frame, dest_frame);
+    
+    if (transform.header.frame_id.empty())
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to get transform from %s to %s", src_frame.c_str(), dest_frame.c_str());
+        return result;
+    }
 
-    return pose;
+    // Convert the input pose to tf2::Transform
+    tf2::Transform tf_pose;
+    tf2::fromMsg(pose, tf_pose);
+
+    // Convert the TransformStamped to tf2::Transform
+    tf2::Transform tf_transform;
+    tf2::fromMsg(transform.transform, tf_transform);
+
+    // Apply the transform: dest_T_pose = dest_T_src * src_T_pose
+    tf2::Transform tf_result = tf_transform * tf_pose;
+
+    // Convert back to geometry_msgs::PoseStamped
+    result.header.stamp = transform.header.stamp;
+    result.header.frame_id = dest_frame;
+
+    geometry_msgs::msg::Transform result_transform_msg = tf2::toMsg(tf_result);
+    result.pose.position.x = result_transform_msg.translation.x;
+    result.pose.position.y = result_transform_msg.translation.y;
+    result.pose.position.z = result_transform_msg.translation.z;
+    result.pose.orientation = result_transform_msg.rotation;
+
+    return result;
+}
+
+geometry_msgs::msg::TwistStamped ManipulatorMenu::transformTwist(const std::string& src_frame, const std::string& dest_frame, const geometry_msgs::msg::Twist &twist) {
+    geometry_msgs::msg::TwistStamped result;
+    geometry_msgs::msg::TransformStamped tf = getTf(src_frame, dest_frame);
+    if (tf.header.frame_id.empty())
+    {
+        RCLCPP_WARN(node_->get_logger(), "Failed to get transform from %s to %s, publishing command in base frame.", 
+                    src_frame.c_str(), dest_frame.c_str());
+        return result;
+    }
+
+    Eigen::Quaterniond rotation(tf.transform.rotation.w, tf.transform.rotation.x, tf.transform.rotation.y, tf.transform.rotation.z);
+    Eigen::Matrix3d rotation_matrix = rotation.toRotationMatrix();
+    
+    Eigen::Vector3d vel_vector(twist.linear.x, twist.linear.y, twist.linear.z);
+    Eigen::Vector3d vel_world = rotation_matrix * vel_vector; // Rotate the velocity from the local frame to the world frame
+    
+    Eigen::Vector3d angular_vel_vector(twist.angular.x, twist.angular.y, twist.angular.z);
+    Eigen::Vector3d angular_vel_world = rotation_matrix * angular_vel_vector; // Rotate the angular velocity from the local frame to the world frame
+    
+    result.twist.linear.x = vel_world.x();
+    result.twist.linear.y = vel_world.y();
+    result.twist.linear.z = vel_world.z();
+    result.twist.angular.x = angular_vel_world.x();
+    result.twist.angular.y = angular_vel_world.y();
+    result.twist.angular.z = angular_vel_world.z();
+    result.header.stamp = tf.header.stamp;
+    result.header.frame_id = dest_frame;
+
+    return result;
 }
 
 geometry_msgs::msg::Pose ManipulatorMenu::getOffsetPose(const geometry_msgs::msg::Pose &pose, 
@@ -880,7 +987,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_x(const double x_step, bool
     if (linear)
     {
         // publishCartesianGoal({goal_pose});
-        cartesianPlanAndWait({goal_pose});
+        cartesianPlanExecuteAndWait({goal_pose});
         return goal_pose;
     }
     else
@@ -900,7 +1007,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_y(const double y_step, bool
     if (linear)
     {
         // publishCartesianGoal({goal_pose});
-        cartesianPlanAndWait({goal_pose});
+        cartesianPlanExecuteAndWait({goal_pose});
         return goal_pose;
     }
     else
@@ -920,7 +1027,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_z(const double z_step, bool
     if (linear)
     {
         // publishCartesianGoal({goal_pose});
-        cartesianPlanAndWait({goal_pose});
+        cartesianPlanExecuteAndWait({goal_pose});
         return goal_pose;
     }
     else
@@ -1492,6 +1599,11 @@ void ManipulatorMenu::setPlannerTolerances(float position, float orientation, fl
 
 void ManipulatorMenu::setAdmittanceControl(bool set)
 {
+    if (!params_.has_admittance){
+        RCLCPP_ERROR(node_->get_logger(), "Manipulator doesn't support admittance control.");
+        return;
+    }
+
     auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
     request->data  = set;
 
@@ -1520,6 +1632,11 @@ void ManipulatorMenu::setAdmittanceControl(bool set)
 
 void ManipulatorMenu::setAdmittanceVelMode(bool set)
 {
+    if (!params_.has_admittance){
+        RCLCPP_ERROR(node_->get_logger(), "Manipulator doesn't support admittance control.");
+        return;
+    }
+
     auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
     request->data  = set;
 
@@ -1544,6 +1661,94 @@ void ManipulatorMenu::setAdmittanceVelMode(bool set)
 
     // Send the request asynchronously
     setAdmittanceVelMode_client_->async_send_request(request, cb);
+}
+
+// --------------------- REAL TIME CONTROL COMMANDS ---------------------
+
+void ManipulatorMenu::publishJointsCommand(const std::vector<double> joint_speeds)
+{
+    sensor_msgs::msg::JointState joint_state;
+    joint_state.header.stamp = node_->get_clock()->now();
+    joint_state.header.frame_id = params_.base_link_name;
+    joint_state.name = params_.joint_names;
+    // Convert from degrees/s to radians/s
+    joint_state.velocity = rad_from_deg(joint_speeds);
+    
+    publishJointsCommand(joint_state);
+}
+
+void ManipulatorMenu::publishJointsCommand(const sensor_msgs::msg::JointState joint_state)
+{
+    velJsRtSetpoint_pub_->publish(joint_state);
+}
+
+void ManipulatorMenu::publishJacobianCommand(const geometry_msgs::msg::Twist tcp_speed, const std::string& frame)
+{
+    if (!frame.empty() && frame != params_.base_link_name)
+    {
+        geometry_msgs::msg::TwistStamped transformed_twist = transformTwist(frame, params_.base_link_name, tcp_speed);
+        if (transformed_twist.header.frame_id.empty())
+        {
+            RCLCPP_WARN(node_->get_logger(), "Failed to transform twist from %s to %s.", frame.c_str(), params_.base_link_name.c_str());
+            return;
+        }
+        velJacSetpoint_pub_->publish(transformed_twist.twist);
+    } else {
+        velJacSetpoint_pub_->publish(tcp_speed);
+    }
+}
+
+void ManipulatorMenu::publishJacobianCommand(const std::vector<double> tcp_speed, const std::string& frame)
+{
+    if (tcp_speed.size() != 6)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "TCP speed vector must have 6 elements (vx, vy, vz, wx, wy, wz).");
+        return;
+    }
+    
+    geometry_msgs::msg::Twist twist;
+    twist.linear.x = tcp_speed[0];
+    twist.linear.y = tcp_speed[1];
+    twist.linear.z = tcp_speed[2];
+    // Convert angular velocities from degrees/s to radians/s
+    twist.angular.x = tcp_speed[3] * M_PI / 180.0;
+    twist.angular.y = tcp_speed[4] * M_PI / 180.0;
+    twist.angular.z = tcp_speed[5] * M_PI / 180.0;
+    
+    publishJacobianCommand(twist, frame);
+}
+
+void ManipulatorMenu::publishAdmittancePositionCommand(const geometry_msgs::msg::Pose tcp_pose, const std::string& frame)
+{
+    if (!frame.empty() && frame != params_.base_link_name){
+        geometry_msgs::msg::PoseStamped pose_transformed = transformPose(frame, params_.base_link_name, tcp_pose);
+        if (pose_transformed.header.frame_id.empty()){
+            RCLCPP_WARN(node_->get_logger(), "Failed to transform pose from %s to %s.", frame.c_str(), params_.base_link_name.c_str());
+            return;
+        }
+
+        poseAdmSetpoint_pub_->publish(pose_transformed);
+    } else {
+        geometry_msgs::msg::PoseStamped pose_stamped;
+        pose_stamped.header.stamp = node_->get_clock()->now();
+        pose_stamped.header.frame_id = params_.base_link_name;
+        poseAdmSetpoint_pub_->publish(pose_stamped);
+    }
+}
+
+void ManipulatorMenu::publishAdmittanceVelocityCommand(const geometry_msgs::msg::Twist tcp_speed, const std::string& frame)
+{
+    if (!frame.empty() && frame != params_.base_link_name){
+        geometry_msgs::msg::TwistStamped twist_transformed = transformTwist(frame, params_.base_link_name, tcp_speed);
+        if (twist_transformed.header.frame_id.empty()){
+            RCLCPP_WARN(node_->get_logger(), "Failed to transform pose from %s to %s.", frame.c_str(), params_.base_link_name.c_str());
+            return;
+        }
+        
+        velAdmSetpoint_pub_->publish(twist_transformed.twist);
+    } else {
+        velAdmSetpoint_pub_->publish(tcp_speed);
+    }
 }
 
 // --------------------- MATRIX UTILS ------------------------
@@ -2720,7 +2925,7 @@ void ManipulatorMenu::initializeMenu(){
 // Menu constructor to retrieve parameters from the node
 ManipulatorMenuParams::ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node){
     std::string ns = node->get_namespace();
-    std::string prefix = ns.empty() ? "" : ns + "_";
+    std::string prefix = ns == "/" ? "" : ns + "_";
   
     //Declareation
     node->declare_parameter("ros_freq", 10.0);
@@ -2735,6 +2940,8 @@ ManipulatorMenuParams::ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node
         prefix + "wrist_3_joint"
     });
     node->declare_parameter("base_link_name", prefix + "base_link");
+    node->declare_parameter("ee_link_name", prefix + "tool0");
+    node->declare_parameter("has_admittance", false);
     node->declare_parameter("tcp_position_tolerance", 0.01);
     node->declare_parameter("tcp_orientation_tolerance", 0.01);
     node->declare_parameter("joint_tolerance", 0.01);
@@ -2749,6 +2956,8 @@ ManipulatorMenuParams::ManipulatorMenuParams(const rclcpp::Node::SharedPtr& node
     node->get_parameter("planning_group", planning_group);
     node->get_parameter("joint_names", joint_names);
     node->get_parameter("base_link_name", base_link_name);
+    node->get_parameter("ee_link_name", ee_link_name);
+    node->get_parameter("has_admittance", has_admittance);
     node->get_parameter("tcp_position_tolerance", tcp_position_tolerance);
     node->get_parameter("tcp_orientation_tolerance", tcp_orientation_tolerance);
     node->get_parameter("joint_tolerance", joint_tolerance);

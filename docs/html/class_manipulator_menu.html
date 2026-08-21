@@ -160,6 +160,14 @@ Public Member Functions</h2></td></tr>
 void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a95df0a492be065c3e6e9e85208c07715">stopTrajectory</a> ()</td></tr>
 <tr class="memdesc:a95df0a492be065c3e6e9e85208c07715"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop trajectory execution. <br /></td></tr>
 <tr class="separator:a95df0a492be065c3e6e9e85208c07715"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5795e17ce90ea01a3388bea21e943054"><td class="memItemLeft" align="right" valign="top"><a id="a5795e17ce90ea01a3388bea21e943054"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a5795e17ce90ea01a3388bea21e943054">stopRealTime</a> ()</td></tr>
+<tr class="memdesc:a5795e17ce90ea01a3388bea21e943054"><td class="mdescLeft">&#160;</td><td class="mdescRight">Send stop command to all real time controls. <br /></td></tr>
+<tr class="separator:a5795e17ce90ea01a3388bea21e943054"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a07557a7c00296df695b2ad34c1f468ee"><td class="memItemLeft" align="right" valign="top"><a id="a07557a7c00296df695b2ad34c1f468ee"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a07557a7c00296df695b2ad34c1f468ee">emergencyStop</a> ()</td></tr>
+<tr class="memdesc:a07557a7c00296df695b2ad34c1f468ee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stops whatever movement the manipulator is doing. <br /></td></tr>
+<tr class="separator:a07557a7c00296df695b2ad34c1f468ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa36bd3cf7124c581ad8b83b629d4334d"><td class="memItemLeft" align="right" valign="top">geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#aa36bd3cf7124c581ad8b83b629d4334d">getEEpose</a> ()</td></tr>
 <tr class="memdesc:aa36bd3cf7124c581ad8b83b629d4334d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current end effector pose.  <a href="class_manipulator_menu.html#aa36bd3cf7124c581ad8b83b629d4334d">More...</a><br /></td></tr>
 <tr class="separator:aa36bd3cf7124c581ad8b83b629d4334d"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -174,14 +182,20 @@ sensor_msgs::msg::JointState&#160;</td><td class="memItemRight" valign="bottom">
 std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a7ab183712e6e1fecb6302124f0c366e7">getJointStateDegrees</a> ()</td></tr>
 <tr class="memdesc:a7ab183712e6e1fecb6302124f0c366e7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current joint state of the manipulator in degrees. <br /></td></tr>
 <tr class="separator:a7ab183712e6e1fecb6302124f0c366e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2a719fe407416ee38db5602340278f48"><td class="memItemLeft" align="right" valign="top"><a id="a2a719fe407416ee38db5602340278f48"></a>
-geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a2a719fe407416ee38db5602340278f48">getTf</a> (const std::string &amp;target_frame, const std::string &amp;reference_frame, uint num_tries=10)</td></tr>
-<tr class="memdesc:a2a719fe407416ee38db5602340278f48"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the pose of target_frame relative to reference_frame. <br /></td></tr>
-<tr class="separator:a2a719fe407416ee38db5602340278f48"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a55d96ada57386a3324d33d2a5632f93a"><td class="memItemLeft" align="right" valign="top"><a id="a55d96ada57386a3324d33d2a5632f93a"></a>
-geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a55d96ada57386a3324d33d2a5632f93a">getTfOffset</a> (const std::string &amp;target_frame, const std::string &amp;reference_frame, const geometry_msgs::msg::Pose &amp;offset)</td></tr>
-<tr class="memdesc:a55d96ada57386a3324d33d2a5632f93a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the pose of a point offset from target_frame according to its own frame, relative to reference frame. <br /></td></tr>
-<tr class="separator:a55d96ada57386a3324d33d2a5632f93a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2fae2dce1f305308df51dd991f5ba5aa"><td class="memItemLeft" align="right" valign="top"><a id="a2fae2dce1f305308df51dd991f5ba5aa"></a>
+geometry_msgs::msg::TransformStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a2fae2dce1f305308df51dd991f5ba5aa">getTf</a> (const std::string &amp;src_frame, const std::string &amp;dest_frame, uint num_tries=10)</td></tr>
+<tr class="memdesc:a2fae2dce1f305308df51dd991f5ba5aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the transformation from src_frame to dest_frame. <br /></td></tr>
+<tr class="separator:a2fae2dce1f305308df51dd991f5ba5aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac667802215533664bbc827fcc557f40a"><td class="memItemLeft" align="right" valign="top"><a id="ac667802215533664bbc827fcc557f40a"></a>
+geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ac667802215533664bbc827fcc557f40a">getTfPose</a> (const std::string &amp;target_frame, const std::string &amp;reference_frame, uint num_tries=10)</td></tr>
+<tr class="memdesc:ac667802215533664bbc827fcc557f40a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the pose of target_frame relative to reference_frame. <br /></td></tr>
+<tr class="separator:ac667802215533664bbc827fcc557f40a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ec641069acd7acbe9310f375c5133dc"><td class="memItemLeft" align="right" valign="top">geometry_msgs::msg::PoseStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a1ec641069acd7acbe9310f375c5133dc">transformPose</a> (const std::string &amp;src_frame, const std::string &amp;dest_frame, const geometry_msgs::msg::Pose &amp;pose)</td></tr>
+<tr class="memdesc:a1ec641069acd7acbe9310f375c5133dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Transform a pose from src_frame to dest_frame.  <a href="class_manipulator_menu.html#a1ec641069acd7acbe9310f375c5133dc">More...</a><br /></td></tr>
+<tr class="separator:a1ec641069acd7acbe9310f375c5133dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2e718b7b105693fc621fb9652d742abd"><td class="memItemLeft" align="right" valign="top">geometry_msgs::msg::TwistStamped&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a2e718b7b105693fc621fb9652d742abd">transformTwist</a> (const std::string &amp;src_frame, const std::string &amp;dest_frame, const geometry_msgs::msg::Twist &amp;twist)</td></tr>
+<tr class="memdesc:a2e718b7b105693fc621fb9652d742abd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Transform a twist from src_frame to dest_frame.  <a href="class_manipulator_menu.html#a2e718b7b105693fc621fb9652d742abd">More...</a><br /></td></tr>
+<tr class="separator:a2e718b7b105693fc621fb9652d742abd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4128bc16b38f54e76d8d69228f70c0e2"><td class="memItemLeft" align="right" valign="top"><a id="a4128bc16b38f54e76d8d69228f70c0e2"></a>
 geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a4128bc16b38f54e76d8d69228f70c0e2">getOffsetPose</a> (const geometry_msgs::msg::Pose &amp;pose, const geometry_msgs::msg::Pose &amp;offset)</td></tr>
 <tr class="memdesc:a4128bc16b38f54e76d8d69228f70c0e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a pose offset from the passed one (axis should be treated same way as a tf frame). <br /></td></tr>
@@ -309,18 +323,18 @@ Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><b>getJacobia
 <tr class="memitem:a93e4d34b37f17f7fe6cc26d1e91ab441"><td class="memItemLeft" align="right" valign="top"><a id="a93e4d34b37f17f7fe6cc26d1e91ab441"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>gripperMoveClient</b> (const bool close)</td></tr>
 <tr class="separator:a93e4d34b37f17f7fe6cc26d1e91ab441"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad2223115b377ef3b0f7c037c69d2eae4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ad2223115b377ef3b0f7c037c69d2eae4">setJacobianSpeedControl</a> (bool)</td></tr>
-<tr class="memdesc:ad2223115b377ef3b0f7c037c69d2eae4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the jacobian speed control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#ad2223115b377ef3b0f7c037c69d2eae4">More...</a><br /></td></tr>
-<tr class="separator:ad2223115b377ef3b0f7c037c69d2eae4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a35bc7da6edbe69dd537ee1243552d008"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a35bc7da6edbe69dd537ee1243552d008">setJsRealTimeControl</a> (bool)</td></tr>
-<tr class="memdesc:a35bc7da6edbe69dd537ee1243552d008"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the real time control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#a35bc7da6edbe69dd537ee1243552d008">More...</a><br /></td></tr>
-<tr class="separator:a35bc7da6edbe69dd537ee1243552d008"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a774408905aecac49f287c4edac41fae9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a774408905aecac49f287c4edac41fae9">setAdmittanceControl</a> (bool)</td></tr>
-<tr class="memdesc:a774408905aecac49f287c4edac41fae9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the admittance control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#a774408905aecac49f287c4edac41fae9">More...</a><br /></td></tr>
-<tr class="separator:a774408905aecac49f287c4edac41fae9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab50d86f1de338614f515beb765f8c032"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ab50d86f1de338614f515beb765f8c032">setAdmittanceVelMode</a> (bool)</td></tr>
-<tr class="memdesc:ab50d86f1de338614f515beb765f8c032"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the admittance control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#ab50d86f1de338614f515beb765f8c032">More...</a><br /></td></tr>
-<tr class="separator:ab50d86f1de338614f515beb765f8c032"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adacad5617362cbefa35b002e27fcbab0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#adacad5617362cbefa35b002e27fcbab0">setJacobianSpeedControl</a> (bool enable)</td></tr>
+<tr class="memdesc:adacad5617362cbefa35b002e27fcbab0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the jacobian speed control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#adacad5617362cbefa35b002e27fcbab0">More...</a><br /></td></tr>
+<tr class="separator:adacad5617362cbefa35b002e27fcbab0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e256fdea48fa149cd95e2a3fd681815"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a6e256fdea48fa149cd95e2a3fd681815">setJsRealTimeControl</a> (bool enable)</td></tr>
+<tr class="memdesc:a6e256fdea48fa149cd95e2a3fd681815"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the real time control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#a6e256fdea48fa149cd95e2a3fd681815">More...</a><br /></td></tr>
+<tr class="separator:a6e256fdea48fa149cd95e2a3fd681815"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad9bdbf9a492825506dcd80c511ce90a3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#ad9bdbf9a492825506dcd80c511ce90a3">setAdmittanceControl</a> (bool enable)</td></tr>
+<tr class="memdesc:ad9bdbf9a492825506dcd80c511ce90a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the admittance control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#ad9bdbf9a492825506dcd80c511ce90a3">More...</a><br /></td></tr>
+<tr class="separator:ad9bdbf9a492825506dcd80c511ce90a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d670cc83ba3f082fe82dca9ea568d05"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a8d670cc83ba3f082fe82dca9ea568d05">setAdmittanceVelMode</a> (bool vel_mode)</td></tr>
+<tr class="memdesc:a8d670cc83ba3f082fe82dca9ea568d05"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the admittance control parameter in the manipulator planner.  <a href="class_manipulator_menu.html#a8d670cc83ba3f082fe82dca9ea568d05">More...</a><br /></td></tr>
+<tr class="separator:a8d670cc83ba3f082fe82dca9ea568d05"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaa1934ba74e08bfe954eb0cecae34d31"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#aaa1934ba74e08bfe954eb0cecae34d31">setRealTimeConstraints</a> (bool limit_joints, bool limit_jacobian)</td></tr>
 <tr class="memdesc:aaa1934ba74e08bfe954eb0cecae34d31"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the planner velocity and acceleration factors.  <a href="class_manipulator_menu.html#aaa1934ba74e08bfe954eb0cecae34d31">More...</a><br /></td></tr>
 <tr class="separator:aaa1934ba74e08bfe954eb0cecae34d31"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -330,6 +344,24 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>gripperMoveClient</b>
 <tr class="memitem:acffaec984a176e3f6b6bf9b6a2c73a11"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#acffaec984a176e3f6b6bf9b6a2c73a11">setPlannerTolerances</a> (float position_tolerance, float orientation_tolerance, float joint_tolerance)</td></tr>
 <tr class="memdesc:acffaec984a176e3f6b6bf9b6a2c73a11"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the tolerances in the manipulator planner.  <a href="class_manipulator_menu.html#acffaec984a176e3f6b6bf9b6a2c73a11">More...</a><br /></td></tr>
 <tr class="separator:acffaec984a176e3f6b6bf9b6a2c73a11"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a67e4cd4434d408334e08b051aebcea16"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a67e4cd4434d408334e08b051aebcea16">publishJointsCommand</a> (const std::vector&lt; double &gt; joint_speeds)</td></tr>
+<tr class="memdesc:a67e4cd4434d408334e08b051aebcea16"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a real time joint command to the manipulator planner.  <a href="class_manipulator_menu.html#a67e4cd4434d408334e08b051aebcea16">More...</a><br /></td></tr>
+<tr class="separator:a67e4cd4434d408334e08b051aebcea16"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6af986153addd6c6010ef842addd73db"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a6af986153addd6c6010ef842addd73db">publishJointsCommand</a> (const sensor_msgs::msg::JointState joint_state)</td></tr>
+<tr class="memdesc:a6af986153addd6c6010ef842addd73db"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a real time joint command to the manipulator planner.  <a href="class_manipulator_menu.html#a6af986153addd6c6010ef842addd73db">More...</a><br /></td></tr>
+<tr class="separator:a6af986153addd6c6010ef842addd73db"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a40ced1926b8371573f11ce5e5ab5a1df"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a40ced1926b8371573f11ce5e5ab5a1df">publishJacobianCommand</a> (const geometry_msgs::msg::Twist tcp_speed, const std::string &amp;frame=&quot;&quot;)</td></tr>
+<tr class="memdesc:a40ced1926b8371573f11ce5e5ab5a1df"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a real time Cartesian command to the manipulator planner.  <a href="class_manipulator_menu.html#a40ced1926b8371573f11ce5e5ab5a1df">More...</a><br /></td></tr>
+<tr class="separator:a40ced1926b8371573f11ce5e5ab5a1df"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6bab9b4da346b87d131e3e415ee0f0c7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a6bab9b4da346b87d131e3e415ee0f0c7">publishJacobianCommand</a> (const std::vector&lt; double &gt; tcp_speed, const std::string &amp;frame=&quot;&quot;)</td></tr>
+<tr class="memdesc:a6bab9b4da346b87d131e3e415ee0f0c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a real time Cartesian command to the manipulator planner.  <a href="class_manipulator_menu.html#a6bab9b4da346b87d131e3e415ee0f0c7">More...</a><br /></td></tr>
+<tr class="separator:a6bab9b4da346b87d131e3e415ee0f0c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0a7c7d82b6a62a8782c63d2e853e45d6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#a0a7c7d82b6a62a8782c63d2e853e45d6">publishAdmittancePositionCommand</a> (const geometry_msgs::msg::Pose tcp_pose, const std::string &amp;frame=&quot;&quot;)</td></tr>
+<tr class="memdesc:a0a7c7d82b6a62a8782c63d2e853e45d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish cartesian position command to the admittance controller.  <a href="class_manipulator_menu.html#a0a7c7d82b6a62a8782c63d2e853e45d6">More...</a><br /></td></tr>
+<tr class="separator:a0a7c7d82b6a62a8782c63d2e853e45d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aea04e8f89df74b520d1b7cb27e2a373a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_manipulator_menu.html#aea04e8f89df74b520d1b7cb27e2a373a">publishAdmittanceVelocityCommand</a> (const geometry_msgs::msg::Twist tcp_speed, const std::string &amp;frame=&quot;&quot;)</td></tr>
+<tr class="memdesc:aea04e8f89df74b520d1b7cb27e2a373a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish cartesian velocity command to the admittance controller.  <a href="class_manipulator_menu.html#aea04e8f89df74b520d1b7cb27e2a373a">More...</a><br /></td></tr>
+<tr class="separator:aea04e8f89df74b520d1b7cb27e2a373a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aed1be2c13b6aec2b41efbf557cad480e"><td class="memTemplParams" colspan="2"><a id="aed1be2c13b6aec2b41efbf557cad480e"></a>
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:aed1be2c13b6aec2b41efbf557cad480e"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><b>getManipulatorParameter</b> (const std::string &amp;param_name)</td></tr>
@@ -358,6 +390,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>traj_received_</b> = 
 <tr class="memitem:a8467381898bf7492814987176918c343"><td class="memItemLeft" align="right" valign="top"><a id="a8467381898bf7492814987176918c343"></a>
 geometry_msgs::msg::Pose&#160;</td><td class="memItemRight" valign="bottom"><b>current_tcp_pose_</b></td></tr>
 <tr class="separator:a8467381898bf7492814987176918c343"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a12eefbdf4a7b42eb9b28bf5de857d342"><td class="memItemLeft" align="right" valign="top"><a id="a12eefbdf4a7b42eb9b28bf5de857d342"></a>
+geometry_msgs::msg::Twist&#160;</td><td class="memItemRight" valign="bottom"><b>current_tcp_vel_</b></td></tr>
+<tr class="separator:a12eefbdf4a7b42eb9b28bf5de857d342"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a40297d80c284747254e9a4acf59e7366"><td class="memItemLeft" align="right" valign="top"><a id="a40297d80c284747254e9a4acf59e7366"></a>
 std::unordered_map&lt; std::string, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>joints_map_group_</b></td></tr>
 <tr class="separator:a40297d80c284747254e9a4acf59e7366"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -547,6 +582,9 @@ rclcpp::Subscription&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td>
 <tr class="memitem:af19b179f2742b0784956ca5ad3c23b1b"><td class="memItemLeft" align="right" valign="top"><a id="af19b179f2742b0784956ca5ad3c23b1b"></a>
 rclcpp::Subscription&lt; geometry_msgs::msg::Pose &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>eePose_sub_</b></td></tr>
 <tr class="separator:af19b179f2742b0784956ca5ad3c23b1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ef678e6e17b5246510643636e5f9ea3"><td class="memItemLeft" align="right" valign="top"><a id="a1ef678e6e17b5246510643636e5f9ea3"></a>
+rclcpp::Subscription&lt; geometry_msgs::msg::Twist &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>eeVel_sub_</b></td></tr>
+<tr class="separator:a1ef678e6e17b5246510643636e5f9ea3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a66a61bee375dbb55c942220c4688fad2"><td class="memItemLeft" align="right" valign="top"><a id="a66a61bee375dbb55c942220c4688fad2"></a>
 rclcpp::Client&lt; manipulator_interfaces::srv::ChangePlannerScalingFactors &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>changePlannerScalingFactors_client_</b></td></tr>
 <tr class="separator:a66a61bee375dbb55c942220c4688fad2"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -595,6 +633,18 @@ std::shared_ptr&lt; tf2_ros::TransformListener &gt;&#160;</td><td class="memItem
 <tr class="memitem:a7e86be70e797d3a42852d59951c242f3"><td class="memItemLeft" align="right" valign="top"><a id="a7e86be70e797d3a42852d59951c242f3"></a>
 std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tf_buffer_</b></td></tr>
 <tr class="separator:a7e86be70e797d3a42852d59951c242f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4ca7d86995bf5fdc895d2f0114bb94c8"><td class="memItemLeft" align="right" valign="top"><a id="a4ca7d86995bf5fdc895d2f0114bb94c8"></a>
+rclcpp::Publisher&lt; geometry_msgs::msg::Twist &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velJacSetpoint_pub_</b></td></tr>
+<tr class="separator:a4ca7d86995bf5fdc895d2f0114bb94c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab5b5f87e04c2ae5c3e051dadee35461d"><td class="memItemLeft" align="right" valign="top"><a id="ab5b5f87e04c2ae5c3e051dadee35461d"></a>
+rclcpp::Publisher&lt; sensor_msgs::msg::JointState &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velJsRtSetpoint_pub_</b></td></tr>
+<tr class="separator:ab5b5f87e04c2ae5c3e051dadee35461d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d90b1c0fbdfffd4a5f98079999af6a5"><td class="memItemLeft" align="right" valign="top"><a id="a2d90b1c0fbdfffd4a5f98079999af6a5"></a>
+rclcpp::Publisher&lt; geometry_msgs::msg::Twist &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>velAdmSetpoint_pub_</b></td></tr>
+<tr class="separator:a2d90b1c0fbdfffd4a5f98079999af6a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a05ba8b702a528499ca9e94fdf98febe7"><td class="memItemLeft" align="right" valign="top"><a id="a05ba8b702a528499ca9e94fdf98febe7"></a>
+rclcpp::Publisher&lt; geometry_msgs::msg::PoseStamped &gt;::SharedPtr&#160;</td><td class="memItemRight" valign="bottom"><b>poseAdmSetpoint_pub_</b></td></tr>
+<tr class="separator:a05ba8b702a528499ca9e94fdf98febe7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Main class for the manipulator menu. </p>
@@ -1492,6 +1542,68 @@ std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" vali
 
 </div>
 </div>
+<a id="a0a7c7d82b6a62a8782c63d2e853e45d6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0a7c7d82b6a62a8782c63d2e853e45d6">&#9670;&nbsp;</a></span>publishAdmittancePositionCommand()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishAdmittancePositionCommand </td>
+          <td>(</td>
+          <td class="paramtype">const geometry_msgs::msg::Pose&#160;</td>
+          <td class="paramname"><em>tcp_pose</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>frame</em> = <code>&quot;&quot;</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish cartesian position command to the admittance controller. </p>
+<p>This will work only if admittance control is enabled in the planner via the setAdmittanceControl method and admittance control is set to position mode by setAdmittanceVelMode(false). @params tcp_pose: Desired tcp pose to be maintained by the admittance controlller. @params frame: Frame in which the pose is expressed (leave empty for default frame). </p>
+
+</div>
+</div>
+<a id="aea04e8f89df74b520d1b7cb27e2a373a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aea04e8f89df74b520d1b7cb27e2a373a">&#9670;&nbsp;</a></span>publishAdmittanceVelocityCommand()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishAdmittanceVelocityCommand </td>
+          <td>(</td>
+          <td class="paramtype">const geometry_msgs::msg::Twist&#160;</td>
+          <td class="paramname"><em>tcp_speed</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>frame</em> = <code>&quot;&quot;</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish cartesian velocity command to the admittance controller. </p>
+<p>This will work only if admittance control is enabled in the planner via the setAdmittanceControl method and admittance control is set to velocity mode by setAdmittanceVelMode(true). @params tcp_speed: Twist of the end effector containing the linear velocities in m/s and angular velocities in radians/s to be sent as a command to the admittance controller. @params frame: Frame in which the twist is expressed (leave empty for default frame). </p>
+
+</div>
+</div>
 <a id="a7b8414a729ee8b04b0abb47784fbe999"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a7b8414a729ee8b04b0abb47784fbe999">&#9670;&nbsp;</a></span>publishAttachedCollisionObject()</h2>
 
@@ -1611,6 +1723,80 @@ std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" vali
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">collisionObjectMsg</td><td>Collision object message to be published. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a40ced1926b8371573f11ce5e5ab5a1df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a40ced1926b8371573f11ce5e5ab5a1df">&#9670;&nbsp;</a></span>publishJacobianCommand() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishJacobianCommand </td>
+          <td>(</td>
+          <td class="paramtype">const geometry_msgs::msg::Twist&#160;</td>
+          <td class="paramname"><em>tcp_speed</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>frame</em> = <code>&quot;&quot;</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish a real time Cartesian command to the manipulator planner. </p>
+<p>This will work only if real time control is enabled in the planner via the setJsRealTimeControl method. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">tcp_speed</td><td>Twist of the end effector containing the linear velocities in m/s and angular velocities in rad/s to be sent as a command. </td></tr>
+    <tr><td class="paramname">frame</td><td>Frame in which the twist is expressed (leave empty for default frame). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a6bab9b4da346b87d131e3e415ee0f0c7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6bab9b4da346b87d131e3e415ee0f0c7">&#9670;&nbsp;</a></span>publishJacobianCommand() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishJacobianCommand </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; double &gt;&#160;</td>
+          <td class="paramname"><em>tcp_speed</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>frame</em> = <code>&quot;&quot;</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish a real time Cartesian command to the manipulator planner. </p>
+<p>This will work only if real time control is enabled in the planner via the setJsRealTimeControl method. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">tcp_speed</td><td>Vector of 6 elements (vx, vy, vz, wx, wy, wz) containing the linear velocities in m/s and angular velocities in degrees/s to be sent as a command. </td></tr>
+    <tr><td class="paramname">frame</td><td>Frame in which the twist is expressed (leave empty for default frame). </td></tr>
   </table>
   </dd>
 </dl>
@@ -1755,6 +1941,58 @@ std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" vali
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The passed joint goal. </dd></dl>
+
+</div>
+</div>
+<a id="a6af986153addd6c6010ef842addd73db"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6af986153addd6c6010ef842addd73db">&#9670;&nbsp;</a></span>publishJointsCommand() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishJointsCommand </td>
+          <td>(</td>
+          <td class="paramtype">const sensor_msgs::msg::JointState&#160;</td>
+          <td class="paramname"><em>joint_state</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish a real time joint command to the manipulator planner. </p>
+<p>This will work only if real time control is enabled in the planner via the setJsRealTimeControl method. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">joint_state</td><td>JointState message containing the joint velocities in radians/s to be set. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a67e4cd4434d408334e08b051aebcea16"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a67e4cd4434d408334e08b051aebcea16">&#9670;&nbsp;</a></span>publishJointsCommand() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::publishJointsCommand </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; double &gt;&#160;</td>
+          <td class="paramname"><em>joint_speeds</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish a real time joint command to the manipulator planner. </p>
+<p>This will work only if real time control is enabled in the planner via the setJsRealTimeControl method. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">joint_speeds</td><td>Vector of joint velocities in degrees/s to be sent as a command. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -2028,6 +2266,112 @@ std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" vali
 
 </div>
 </div>
+<a id="ad9bdbf9a492825506dcd80c511ce90a3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad9bdbf9a492825506dcd80c511ce90a3">&#9670;&nbsp;</a></span>setAdmittanceControl()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::setAdmittanceControl </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>enable</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the admittance control parameter in the manipulator planner. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">enable</td><td>If true, the admittance control will be enabled. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged </dd></dl>
+
+</div>
+</div>
+<a id="a8d670cc83ba3f082fe82dca9ea568d05"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8d670cc83ba3f082fe82dca9ea568d05">&#9670;&nbsp;</a></span>setAdmittanceVelMode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::setAdmittanceVelMode </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>vel_mode</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the admittance control parameter in the manipulator planner. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">enable</td><td>If true, the admittance control will be enabled. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged </dd></dl>
+
+</div>
+</div>
+<a id="adacad5617362cbefa35b002e27fcbab0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adacad5617362cbefa35b002e27fcbab0">&#9670;&nbsp;</a></span>setJacobianSpeedControl()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::removeAttachedObj </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Remove an attached collision object from the planning scene. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>Name of the object to be removed. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ad3bbf037ad7053e19ae619e93627f78e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad3bbf037ad7053e19ae619e93627f78e">&#9670;&nbsp;</a></span>removeObj()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::removeObj </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Remove a collision object from the planning scene. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>Name of the object to be removed. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <a id="a774408905aecac49f287c4edac41fae9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a774408905aecac49f287c4edac41fae9">&#9670;&nbsp;</a></span>setAdmittanceControl()</h2>
 
@@ -2038,7 +2382,7 @@ std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" vali
           <td class="memname">void ManipulatorMenu::setAdmittanceControl </td>
           <td>(</td>
           <td class="paramtype">bool&#160;</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramname"><em>enable</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -2082,8 +2426,114 @@ std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" vali
 
 </div>
 </div>
-<a id="ad2223115b377ef3b0f7c037c69d2eae4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad2223115b377ef3b0f7c037c69d2eae4">&#9670;&nbsp;</a></span>setJacobianSpeedControl()</h2>
+<a id="acb134a7ebe780af180ab348778364349"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acb134a7ebe780af180ab348778364349">&#9670;&nbsp;</a></span>removeAttachedObj()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::removeAttachedObj </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Remove an attached collision object from the planning scene. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>Name of the object to be removed. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ad3bbf037ad7053e19ae619e93627f78e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad3bbf037ad7053e19ae619e93627f78e">&#9670;&nbsp;</a></span>removeObj()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::removeObj </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Remove a collision object from the planning scene. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>Name of the object to be removed. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ad9bdbf9a492825506dcd80c511ce90a3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad9bdbf9a492825506dcd80c511ce90a3">&#9670;&nbsp;</a></span>setAdmittanceControl()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::setAdmittanceControl </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>enable</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the admittance control parameter in the manipulator planner. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">enable</td><td>If true, the admittance control will be enabled. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged </dd></dl>
+
+</div>
+</div>
+<a id="a8d670cc83ba3f082fe82dca9ea568d05"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8d670cc83ba3f082fe82dca9ea568d05">&#9670;&nbsp;</a></span>setAdmittanceVelMode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ManipulatorMenu::setAdmittanceVelMode </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>vel_mode</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the admittance control parameter in the manipulator planner. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">enable</td><td>If true, the admittance control will be enabled. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged </dd></dl>
+
+</div>
+</div>
+<a id="adacad5617362cbefa35b002e27fcbab0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adacad5617362cbefa35b002e27fcbab0">&#9670;&nbsp;</a></span>setJacobianSpeedControl()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2092,7 +2542,7 @@ std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" vali
           <td class="memname">void ManipulatorMenu::setJacobianSpeedControl </td>
           <td>(</td>
           <td class="paramtype">bool&#160;</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramname"><em>enable</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -2109,8 +2559,8 @@ std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" vali
 
 </div>
 </div>
-<a id="a35bc7da6edbe69dd537ee1243552d008"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a35bc7da6edbe69dd537ee1243552d008">&#9670;&nbsp;</a></span>setJsRealTimeControl()</h2>
+<a id="a6e256fdea48fa149cd95e2a3fd681815"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6e256fdea48fa149cd95e2a3fd681815">&#9670;&nbsp;</a></span>setJsRealTimeControl()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2119,7 +2569,7 @@ std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" vali
           <td class="memname">void ManipulatorMenu::setJsRealTimeControl </td>
           <td>(</td>
           <td class="paramtype">bool&#160;</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramname"><em>enable</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -2129,6 +2579,7 @@ std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" vali
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">enable</td><td>If true, the real time control will be enabled. </td></tr>
+    <tr><td class="paramname">stop_cmd</td><td>If true, a stop command will be sent to the real time control when enabling it to avoid unexpected movements. </td></tr>
   </table>
   </dd>
 </dl>
@@ -2296,6 +2747,96 @@ std::unique_ptr&lt; tf2_ros::Buffer &gt;&#160;</td><td class="memItemRight" vali
 
 <p>Start the menu and wait for user input. </p>
 <p>This function will start a thread that will run the function <a class="el" href="class_manipulator_menu.html#a04f19862a4eaebe36f8a101c55089551" title="Start the actual spinner for the node.">spinner()</a> and then it will start the command line menu. </p><dl class="section note"><dt>Note</dt><dd>This will block the execution until the user exits the menu. </dd></dl>
+
+</div>
+</div>
+<a id="a1ec641069acd7acbe9310f375c5133dc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1ec641069acd7acbe9310f375c5133dc">&#9670;&nbsp;</a></span>transformPose()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">geometry_msgs::msg::PoseStamped ManipulatorMenu::transformPose </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>src_frame</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>dest_frame</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const geometry_msgs::msg::Pose &amp;&#160;</td>
+          <td class="paramname"><em>pose</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Transform a pose from src_frame to dest_frame. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">src_frame</td><td>The frame in which the pose is currently expressed. </td></tr>
+    <tr><td class="paramname">dest_frame</td><td>The frame in which the pose should be expressed. </td></tr>
+    <tr><td class="paramname">pose</td><td>The pose to transform (relative to src_frame). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The transformed pose expressed in dest_frame. </dd></dl>
+
+</div>
+</div>
+<a id="a2e718b7b105693fc621fb9652d742abd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2e718b7b105693fc621fb9652d742abd">&#9670;&nbsp;</a></span>transformTwist()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">geometry_msgs::msg::TwistStamped ManipulatorMenu::transformTwist </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>src_frame</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>dest_frame</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const geometry_msgs::msg::Twist &amp;&#160;</td>
+          <td class="paramname"><em>twist</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Transform a twist from src_frame to dest_frame. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">src_frame</td><td>The frame in which the twist is currently expressed. </td></tr>
+    <tr><td class="paramname">dest_frame</td><td>The frame in which the twist should be expressed. </td></tr>
+    <tr><td class="paramname">twist</td><td>The twist to transform (relative to src_frame). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The transformed twist expressed in dest_frame. </dd></dl>
 
 </div>
 </div>
