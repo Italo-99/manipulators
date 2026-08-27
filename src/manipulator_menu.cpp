@@ -1500,10 +1500,11 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
     setRealTimeControl_client_->async_send_request(request, cb);
 }
 
-void ManipulatorMenu::setRealTimeConstraints(bool limit_joints, bool limit_jacobian){
+void ManipulatorMenu::setRealTimeConstraints(bool limit_joints, bool limit_jacobian, bool collision_check){
     auto request = std::make_shared<manipulator_interfaces::srv::EnableRealTimeConstraints::Request>();
     request->limit_joints_control = limit_joints;
     request->limit_jacobian_control = limit_jacobian;
+    request->real_time_collision_check = collision_check;
 
     // Check if service is available
     if (!enableRealTimeConstraints_client_->wait_for_service(std::chrono::milliseconds(100)))
@@ -1516,8 +1517,8 @@ void ManipulatorMenu::setRealTimeConstraints(bool limit_joints, bool limit_jacob
         auto result = future.get();
         if (result->success)
         {
-            RCLCPP_INFO(node_->get_logger(), "Set real time constraints: limit_joints_control = %s, limit_jacobian_control = %s",
-                        limit_joints ? "True" : "False", limit_jacobian ? "True" : "False");
+            RCLCPP_INFO(node_->get_logger(), "Set real time constraints: limit_joints_control = %s, limit_jacobian_control = %s, real_time_collision_check = %s",
+                        limit_joints ? "True" : "False", limit_jacobian ? "True" : "False", collision_check ? "True" : "False");
         }
         else
         {
@@ -2727,14 +2728,16 @@ void ManipulatorMenu::userSetRealTimeControl()
 }
 
 void ManipulatorMenu::userSetRealTimeConstraints(){
-    bool limit_joints, limit_jacobian;
+    bool limit_joints, limit_jacobian, real_time_collision_check;
 
     std::cout << "Enter 1 to enable real time joints constraints, 0 to unset: \n";
     std::cin >> limit_joints;
     std::cout << "Enter 1 to enable real time jacobian constraints, 0 to unset: \n";
     std::cin >> limit_jacobian;
+    std::cout << "Enter 1 to enable real time collision checking, 0 to unset: \n";
+    std::cin >> real_time_collision_check;
 
-    setRealTimeConstraints(limit_joints, limit_jacobian);
+    setRealTimeConstraints(limit_joints, limit_jacobian, real_time_collision_check);
 }
 
 void ManipulatorMenu::userSetPlannerScalingFactors()

@@ -626,8 +626,9 @@ void ManipulatorPlannerNode::realTimeConstraintsSetter_callback(const std::share
     // Set the real time constraints
     limit_joints_control_ = req->limit_joints_control;
     limit_jacobian_control_ = req->limit_jacobian_control;
-    RCLCPP_INFO(get_logger(), "Real time constraints set as: limit_joints_control = %s, limit_jacobian_control = %s", 
-                limit_joints_control_ ? "True" : "False", limit_jacobian_control_ ? "True" : "False");
+    real_time_collision_check_ = req->real_time_collision_check;
+    RCLCPP_INFO(get_logger(), "Real time constraints set as: limit_joints_control = %s, limit_jacobian_control = %s, real_time_collision_check = %s", 
+                limit_joints_control_ ? "True" : "False", limit_jacobian_control_ ? "True" : "False", real_time_collision_check_ ? "True" : "False");
 
     // Return success
     res->success = true;
@@ -861,9 +862,9 @@ void ManipulatorPlannerNode::jacobianControl()
         js.velocity[k] = qdot[k];
     }
 
-    bool jac_check = true;
     bool pos_constraints_check = true;
     bool joint_constraints_check = true;
+    bool collision_check = true;
 
     if (limit_jacobian_control_) {
         // If the jacobian control is limited, check if the joint constraints are violated
@@ -875,6 +876,7 @@ void ManipulatorPlannerNode::jacobianControl()
                 constraints_poses_[k]
             )) {
                 pos_constraints_check = false;
+                RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000, "Position constraints violated, stopping the robot");
                 break; // Exit the loop if a constraint is violated
             }
         }
@@ -883,13 +885,20 @@ void ManipulatorPlannerNode::jacobianControl()
     if (limit_joints_control_) {
         // If the joint control is limited, check if the joint constraints are violated
         if (!dynamic_planner_->checkJointConstraints(js.position)) {
-            RCLCPP_WARN(get_logger(), "Joint constraints violated, stopping the robot");
+            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000, "Joint constraints violated, stopping the robot");
             joint_constraints_check = false;
         }
     }
 
+    if (real_time_collision_check_) {
+        // If real-time collision checking is enabled, check if the current pose is in collision
+        if (isPoseColliding(js.position)) {
+            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000, "Current pose is in collision, stopping the robot");
+            collision_check = false;
+        }
+    }
 
-    if (!jac_check || !pos_constraints_check || !joint_constraints_check) {
+    if (!pos_constraints_check || !joint_constraints_check || !collision_check) {
         js.position = dynamic_planner_->getJointValues(); // Set the position to the current one
         js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
     }
@@ -1005,7 +1014,16 @@ void ManipulatorPlannerNode::jointsRealTimeControl()
     if (limit_joints_control_) {
         // If the joint control is limited, check if the joint constraints are violated
         if (!dynamic_planner_->checkJointConstraints(js.position)) {
-            RCLCPP_WARN(get_logger(), "Joint constraints violated, stopping the robot");
+            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000, "Joint constraints violated, stopping the robot");
+            js.position = dynamic_planner_->getJointValues(); // Set the position to the current one
+            js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
+        }
+    }
+
+    if (real_time_collision_check_) {
+        // If real-time collision checking is enabled, check if the current pose is in collision
+        if (isPoseColliding(js.position)) {
+            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000, "Current pose is in collision, stopping the robot");
             js.position = dynamic_planner_->getJointValues(); // Set the position to the current one
             js.velocity = std::vector<double>(NUM_JOINTS, 0.0); // Set the velocity to zero
         }
@@ -1075,8 +1093,11 @@ void ManipulatorPlannerNode::checkParams() {
     fixed_links_              = this->get_parameter_or("fixed_links", std::vector<std::string>());
     world_frame_              = prefix + this->get_parameter_or("world_frame", std::string("base_link"));
     real_time_safety_dt_      = this->get_parameter_or("real_time_safety_dt", 0.0);
+
     limit_joints_control_     = this->get_parameter_or("limit_joints_control", false);
     limit_jacobian_control_   = this->get_parameter_or("limit_jacobian_control", false);
+    real_time_collision_check_ = this->get_parameter_or("real_time_collision_check", false);
+
     jac_max_damping_factor_   = this->get_parameter_or("jacobian_max_damping_factor", 0.1);
     jac_sigma_threshold_      = this->get_parameter_or("jacobian_sigma_threshold", 0.1);
 
@@ -1137,4 +1158,19 @@ bool ManipulatorPlannerNode::isPoseInsidePrimitive(
             RCLCPP_WARN(this->get_logger(), "Unsupported primitive type.");
             return false;
     }
+}
+
+bool ManipulatorPlannerNode::isPoseColliding(std::vector<double> joint_positions){
+
+    if (joint_positions.empty()) {
+        joint_positions = dynamic_planner_->getJointValues();
+    }
+    
+    // Check if the given joint positions result in a collision
+    moveit::core::RobotStatePtr robot_state = dynamic_planner_->getRobotState();
+    robot_state->setJointGroupPositions(planning_group_, joint_positions);
+    robot_state->update();
+
+    auto planning_scene = dynamic_planner_->getPlanningScene();
+    return planning_scene->isStateColliding(*robot_state, planning_group_);
 }

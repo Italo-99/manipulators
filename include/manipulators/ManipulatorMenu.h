@@ -716,7 +716,7 @@ class ManipulatorMenu
             @param limit_jacobian: During jacobian control ee pose will be limited to the area specified by position constraints.
             @note This client doesn't expect actual results from the server, the response will only evaluate the success of the query and will be logged
         */
-        void setRealTimeConstraints(bool limit_joints, bool limit_jacobian);
+        void setRealTimeConstraints(bool limit_joints, bool limit_jacobian, bool collision_check);
 
         /*!
             @brief Set the planner scaling factors.

@@ -191,6 +191,10 @@ class ManipulatorPlannerNode : public rclcpp::Node {
             const geometry_msgs::msg::Pose &primitive_pose
         );
 
+        // Check if the state of the robot is in collision with the environment or with itself
+        // If joint_positions is empty, the current state of the robot is checked
+        bool isPoseColliding(std::vector<double> joint_positions = std::vector<double>());
+
         // --------------- VARIABLES INITIALIZATION ---------------
 
         std::string node_name_;
@@ -215,6 +219,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         double real_time_safety_dt_;
         bool limit_joints_control_; // If true, the joints speed control is limited to the max_spd_jnts_ parameter
         bool limit_jacobian_control_; // If true, the jacobian speed control is limited to the max_speed_ee_ parameter
+        bool real_time_collision_check_; // If true, the real time control will check for collisions with the environment and with itself
         double jac_sigma_threshold_;
         double jac_max_damping_factor_;
 
