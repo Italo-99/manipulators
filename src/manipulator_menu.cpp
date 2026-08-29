@@ -99,6 +99,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     );
 
     trajectory_pub_ = node_->create_publisher<moveit_msgs::msg::RobotTrajectory>(params_.planning_group+"/trajectory", 1);
+    trajectory_service_client_ = node_->create_client<manipulator_interfaces::srv::SetTrajectory>(params_.planning_group+"/set_trajectory");
     executionControl_pub_ = node_->create_publisher<std_msgs::msg::Bool>(params_.planning_group+"/execution_control", 1);
 
     // ---------------------- Real time control ----------------------
@@ -639,10 +640,50 @@ manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::cartesianPlanAndW
     return traj_result_;
 }
 
+bool ManipulatorMenu::setTrajectoryClient(const moveit_msgs::msg::RobotTrajectory& trajectory)
+{
+    auto request = std::make_shared<manipulator_interfaces::srv::SetTrajectory::Request>();
+    request->trajectory = trajectory;
+
+    size_t num_tries {0};
+    while (!trajectory_service_client_->wait_for_service(std::chrono::seconds(1)))
+    {
+        if (num_tries > clients_wait_timeout_) {
+            RCLCPP_ERROR(node_->get_logger(), "Unable to connect to trajectory service");
+            return false;
+        }
+        num_tries++;
+
+        if (!rclcpp::ok()) {
+            RCLCPP_ERROR(node_->get_logger(), "Interrupted while waiting for trajectory service. Exiting.");
+            return false;
+        }
+    }
+
+    auto response_future = trajectory_service_client_->async_send_request(request);
+    if (response_future.wait_for(std::chrono::seconds(clients_wait_timeout_)) != std::future_status::ready)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call trajectory service");
+        return false;
+    }
+
+    auto response = response_future.get();
+    if (!response->success)
+    {
+        RCLCPP_ERROR(node_->get_logger(), "Trajectory service rejected the trajectory: %s", response->message.c_str());
+        return false;
+    }
+
+    return true;
+}
+
 bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajectory, uint timeout)
 {
-    trajectory_pub_->publish(trajectory);
-    rclcpp::sleep_for(std::chrono::milliseconds(1000)); // Sleep for a short time to ensure the trajectory is received before starting to check execution
+    if (!setTrajectoryClient(trajectory))
+    {
+        return false;
+    }
+
     rclcpp::Rate rate(params_.ros_freq);
 
     sensor_msgs::msg::JointState goal_state;

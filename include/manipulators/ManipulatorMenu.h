@@ -47,6 +47,7 @@
 #include "manipulator_interfaces/srv/change_planner_tolerances.hpp"
 #include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
 #include "manipulator_interfaces/srv/enable_real_time_constraints.hpp"
+#include "manipulator_interfaces/srv/set_trajectory.hpp"
 
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
@@ -312,6 +313,8 @@ class ManipulatorMenu
             @return True if the trajectory was executed successfully, false otherwise.
             @note This function will block until the trajectory is executed or the timeout is reached.
         */
+        bool setTrajectoryClient(const moveit_msgs::msg::RobotTrajectory& trajectory);
+
         bool executeAndWait(const moveit_msgs::msg::RobotTrajectory joint_trajectory, uint timeout=DEFAULT_EXECUTION_TIMEOUT);
 
         /*!
@@ -937,7 +940,8 @@ class ManipulatorMenu
 
         // Planning 
         rclcpp::Subscription<manipulator_interfaces::msg::TrajectoryResult>::SharedPtr plannedTrajectory_sub_;      // Subscription to the planned trajectory
-        rclcpp::Publisher<moveit_msgs::msg::RobotTrajectory>::SharedPtr trajectory_pub_;                            // Publishes the trajectory to be executed
+        rclcpp::Publisher<moveit_msgs::msg::RobotTrajectory>::SharedPtr trajectory_pub_;                            // Publishes the trajectory to be executed (legacy compatibility)
+        rclcpp::Client<manipulator_interfaces::srv::SetTrajectory>::SharedPtr trajectory_service_client_;         // Service to deliver a trajectory to the planner without polling on a topic
         rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr executionControl_pub_;                                    // Moves or stops the robot
 
         manipulator_interfaces::msg::TrajectoryResult traj_result_; // Planned trajectory

@@ -30,6 +30,7 @@
 #include <moveit/planning_scene_monitor/planning_scene_monitor.hpp>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 #include <manipulator_interfaces/msg/trajectory_result.hpp> 
+#include <manipulator_interfaces/srv/set_trajectory.hpp>
 #include <moveit_msgs/msg/robot_trajectory.hpp>
 #include <moveit_msgs/msg/motion_plan_request.hpp>
 #include <moveit_msgs/msg/motion_plan_response.hpp>
@@ -329,6 +330,7 @@ class DynamicPlanner
         rclcpp::Publisher<manipulator_interfaces::msg::TrajectoryResult>::SharedPtr trajectory_pub_;    //Trajectory result publisher see manipulator_interfaces/TrajectoryResult
         rclcpp::Publisher<moveit_msgs::msg::CollisionObject>::SharedPtr collision_object_pub_; //Collision object publisher for planning scene
         rclcpp::Publisher<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr attached_collision_object_pub_; //Attached collision object publisher for planning scene
+        rclcpp::Service<manipulator_interfaces::srv::SetTrajectory>::SharedPtr set_trajectory_srv_; //Service for menu-to-planner trajectory handoff
         
         //Subscribers
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joints_state_sub_;        //Subscriber for updating the joint states

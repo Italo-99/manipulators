@@ -82,6 +82,16 @@ void DynamicPlanner::initialize()
     // Publishers
     joint_cmd_pub_ = node_->create_publisher<sensor_msgs::msg::JointState>(ns + "/move_group/fake_controller_joint_states", 1);
     trajectory_pub_ = node_->create_publisher<manipulator_interfaces::msg::TrajectoryResult>(planning_group_ + "/planned_trajectory", 1);
+    set_trajectory_srv_ = node_->create_service<manipulator_interfaces::srv::SetTrajectory>(
+        planning_group_ + "/set_trajectory",
+        [this](const std::shared_ptr<manipulator_interfaces::srv::SetTrajectory::Request> request,
+               const std::shared_ptr<manipulator_interfaces::srv::SetTrajectory::Response> response) {
+            RCLCPP_INFO(node_->get_logger(), "Received trajectory via service");
+            setTrajectory(request->trajectory);
+            response->success = true;
+            response->message = "Trajectory set successfully";
+        }
+    );
     
     auto sub_options = rclcpp::SubscriptionOptions();
     sub_options.callback_group = cb_group_;
@@ -1096,7 +1106,7 @@ void DynamicPlanner::setTrajectory(const moveit_msgs::msg::RobotTrajectory &traj
     if (isExecuting()){
         // Memory safety check
         RCLCPP_ERROR(node_->get_logger(), "Cannot set trajectory while robot is moving");
-        throw std::runtime_error("Cannot set trajectory while robot is moving");
+        return;
     }
 
 
