@@ -97,6 +97,7 @@ void DynamicPlanner::initialize()
     trajectory_sub_ = node_->create_subscription<moveit_msgs::msg::RobotTrajectory>(
         planning_group_ + "/trajectory", qos_reliable(1),
         [this](const moveit_msgs::msg::RobotTrajectory::SharedPtr msg) {
+            RCLCPP_INFO(node_->get_logger(), "Received trajectory");
             setTrajectory(*msg);
         },
         sub_options
@@ -1074,8 +1075,10 @@ void DynamicPlanner::executionControl_callback(const std_msgs::msg::Bool::Shared
     //If true move the robot, otherwise stop
     if (msg->data)
     {
+        RCLCPP_INFO(node_->get_logger(), "Execution control: start");
         executeTrajectory();
     } else {
+        RCLCPP_INFO(node_->get_logger(), "Execution control: stop");
         stop();
     }
 }

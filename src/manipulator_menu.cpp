@@ -642,7 +642,7 @@ manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::cartesianPlanAndW
 bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajectory, uint timeout)
 {
     trajectory_pub_->publish(trajectory);
-    rclcpp::sleep_for(std::chrono::milliseconds(100)); // Sleep for a short time to ensure the trajectory is received before starting to check execution
+    rclcpp::sleep_for(std::chrono::milliseconds(1000)); // Sleep for a short time to ensure the trajectory is received before starting to check execution
     rclcpp::Rate rate(params_.ros_freq);
 
     sensor_msgs::msg::JointState goal_state;
