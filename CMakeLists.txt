@@ -42,6 +42,17 @@ find_package(rviz_visual_tools REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(yaml_cpp_vendor REQUIRED)
 
+# The prebuilt moveit_core exports link against the imported target
+# "tl::expected", but the installed ros-humble-tl-expected package only
+# provides "tl_expected::tl_expected". Without the alias below the linker
+# fails with "cannot find -ltl::expected".
+find_package(tl_expected QUIET)
+if(TARGET tl_expected::tl_expected AND NOT TARGET tl::expected)
+  add_library(tl::expected INTERFACE IMPORTED)
+  set_target_properties(tl::expected PROPERTIES
+    INTERFACE_LINK_LIBRARIES tl_expected::tl_expected)
+endif()
+
 # ---------------- VARIABLES -----------------
 
 # Dependencies for libraries
