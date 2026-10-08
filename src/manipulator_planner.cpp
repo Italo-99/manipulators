@@ -38,7 +38,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
                std::shared_ptr<manipulator_interfaces::srv::FKine::Response> response) {
             this->getFKine_callback(request, response);
         },
-        rmw_qos_profile_services_default,
+        rclcpp::ServicesQoS(),
         main_cb_group_
     );
 
@@ -48,7 +48,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
                std::shared_ptr<manipulator_interfaces::srv::InvKine::Response> response) {
             this->getInvKine_callback(request, response);
         },
-        rmw_qos_profile_services_default,
+        rclcpp::ServicesQoS(),
         main_cb_group_
     );
 
@@ -58,7 +58,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
                std::shared_ptr<manipulator_interfaces::srv::Jacobian::Response> response) {
             this->getJacobian_callback(request, response);
         },
-        rmw_qos_profile_services_default,
+        rclcpp::ServicesQoS(),
         main_cb_group_
     );
 
@@ -68,7 +68,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
                std::shared_ptr<manipulator_interfaces::srv::PseudoInverse::Response> response) {
             this->getPseudoInverseJacobian_callback(request, response);
         },
-        rmw_qos_profile_services_default,
+        rclcpp::ServicesQoS(),
         main_cb_group_
     );
 
@@ -78,7 +78,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
                std::shared_ptr<manipulator_interfaces::srv::ChangePlannerScalingFactors::Response> response) {
             this->changePlannerScalingFactors_callback(request, response);
         },
-        rmw_qos_profile_services_default,
+        rclcpp::ServicesQoS(),
         main_cb_group_
     );
 
@@ -88,7 +88,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
                std::shared_ptr<manipulator_interfaces::srv::ChangePlannerTolerances::Response> response) {
             this->changePlannerTolerances_callback(request, response);
         },
-        rmw_qos_profile_services_default,
+        rclcpp::ServicesQoS(),
         main_cb_group_
     );
 
@@ -98,7 +98,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
                std::shared_ptr<manipulator_interfaces::srv::EnableRealTimeConstraints::Response> response) {
             this->realTimeConstraintsSetter_callback(request, response);
         },
-        rmw_qos_profile_services_default,
+        rclcpp::ServicesQoS(),
         main_cb_group_
     );
 
@@ -108,7 +108,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
                std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
             this->jointsRealTimeSetter_callback(request, response);
         },
-        rmw_qos_profile_services_default,
+        rclcpp::ServicesQoS(),
         main_cb_group_
     );
 
@@ -118,7 +118,7 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
                std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
             this->jacobianControlSetter_callback(request, response);
         },
-        rmw_qos_profile_services_default,
+        rclcpp::ServicesQoS(),
         main_cb_group_
     );
 

@@ -18,27 +18,27 @@
 #include <trajectory_msgs/msg/joint_trajectory.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/u_int32.hpp>
-#include <tf2/convert.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2_ros/buffer.h>
+#include <tf2/convert.hpp>
+#include <tf2_ros/transform_listener.hpp>
+#include <tf2_ros/buffer.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include "rviz_visual_tools/rviz_visual_tools.hpp"
 //MoveIt2 Imports
-#include <moveit/move_group/capability_names.h>
-#include <moveit/common_planning_interface_objects/common_objects.h>
+#include <moveit/move_group/capability_names.hpp>
+#include <moveit/common_planning_interface_objects/common_objects.hpp>
 #include <moveit_visual_tools/moveit_visual_tools.h>
 #include <moveit/planning_scene_monitor/planning_scene_monitor.hpp>
-#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.hpp>
 #include <manipulator_interfaces/msg/trajectory_result.hpp> 
 #include <manipulator_interfaces/srv/set_trajectory.hpp>
 #include <moveit_msgs/msg/robot_trajectory.hpp>
 #include <moveit_msgs/msg/motion_plan_request.hpp>
 #include <moveit_msgs/msg/motion_plan_response.hpp>
 #include <moveit_msgs/srv/get_motion_sequence.hpp>
-#include <moveit/robot_state/conversions.h>
+#include <moveit/robot_state/conversions.hpp>
 #include <moveit_msgs/srv/get_motion_plan.hpp>
 #include <moveit_msgs/action/move_group.hpp>
-#include <moveit/kinematic_constraints/utils.h>
+#include <moveit/kinematic_constraints/utils.hpp>
 
 // QoS profiles 
 const auto qos_best_effort = [](size_t depth = 1){

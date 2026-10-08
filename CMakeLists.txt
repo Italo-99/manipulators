@@ -41,6 +41,9 @@ find_package(motors_trajectory REQUIRED)
 find_package(rviz_visual_tools REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(yaml_cpp_vendor REQUIRED)
+# Jazzy's yaml_cpp_vendor no longer exports the yaml-cpp libraries itself
+find_package(yaml-cpp REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 
 # The prebuilt moveit_core exports link against the imported target
 # "tl::expected", but the installed ros-humble-tl-expected package only
@@ -70,6 +73,7 @@ set(MANIPULATOR_MENU_DEPENDS
     manipulator_interfaces
     tf2_ros
     tf2_geometry_msgs
+    ament_index_cpp
 )
 
 if(BUILD_TESTING)
@@ -145,7 +149,7 @@ ament_target_dependencies(manipulator_menu_user
 )
 
 
-target_link_libraries(manipulator_menu_user Eigen3::Eigen)
+target_link_libraries(manipulator_menu_user Eigen3::Eigen yaml-cpp::yaml-cpp)
 
 install(
     TARGETS manipulator_menu_user
@@ -166,7 +170,7 @@ install(
 add_library(manipulator_menu SHARED src/manipulator_menu.cpp)
 ament_export_targets(manipulator_menu)
 
-target_link_libraries(manipulator_menu Eigen3::Eigen)
+target_link_libraries(manipulator_menu Eigen3::Eigen yaml-cpp::yaml-cpp)
 
 install(
     TARGETS manipulator_menu
@@ -207,7 +211,7 @@ ament_target_dependencies(joystick_controller_node
 )
 
 
-target_link_libraries(joystick_controller_node Eigen3::Eigen)
+target_link_libraries(joystick_controller_node Eigen3::Eigen yaml-cpp::yaml-cpp)
 
 install(
     TARGETS joystick_controller_node
@@ -233,6 +237,6 @@ ament_target_dependencies(joystick_controller
 
 # ------------------------------------------------------------
 
-ament_export_dependencies(${MANIPULATOR_MENU_DEPENDS})
+ament_export_dependencies(${MANIPULATOR_MENU_DEPENDS} yaml-cpp)
 
 ament_package()
