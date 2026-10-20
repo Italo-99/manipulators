@@ -32,7 +32,7 @@
     <depend>tf2_ros</depend>
     <depend>motors_trajectory</depend>
     <depend>rviz_visual_tools</depend>
-    <depend>Eigen3</depend>
+    <depend>eigen</depend>
     <depend>yaml_cpp_vendor</depend>
     <depend>ament_index_cpp</depend>
     <depend>xacro</depend>
