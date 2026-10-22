@@ -9,6 +9,8 @@
 #include <mutex>
 #include <atomic>
 #include <stdexcept>
+#include <functional>
+#include <thread>
 
 //ROS Imports
 #include <rclcpp/rclcpp.hpp>
@@ -31,6 +33,7 @@
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.hpp>
 #include <manipulator_interfaces/msg/trajectory_result.hpp> 
 #include <manipulator_interfaces/srv/set_trajectory.hpp>
+#include <manipulator_interfaces/action/execute_trajectory.hpp>
 #include <moveit_msgs/msg/robot_trajectory.hpp>
 #include <moveit_msgs/msg/motion_plan_request.hpp>
 #include <moveit_msgs/msg/motion_plan_response.hpp>
@@ -73,6 +76,8 @@ struct DynamicPlannerParams
     double caresian_blend_radius    = 0.0;                       // Blend radius for the cartesian plan
     double joint_states_timeout     = 1.0;                       // Timeout after which planner is blocked if no joint states are received (seconds)
     double tf_timeout               = 2.0;                       // TF lookups will fail if last received transfoms are older than this threshold (seconds)
+    double execution_feedback_period = 0.2;                      // Period of the execution action feedback (seconds)
+    double execution_settle_timeout = 2.0;                       // Max time for the robot to reach the last trajectory point once all points are sent (seconds)
 
     DynamicPlannerParams() {}
 
@@ -96,6 +101,16 @@ inline rclcpp::QoS QOS_PROFILE_BEST_EFFORT()
 class DynamicPlanner
 {
     public:
+        using TrajectoryResult = manipulator_interfaces::msg::TrajectoryResult;
+        using ExecuteTrajectory = manipulator_interfaces::action::ExecuteTrajectory;
+        using ExecuteTrajectoryGoalHandle = rclcpp_action::ServerGoalHandle<ExecuteTrajectory>;
+
+        //Called with a description of each check/action performed while planning
+        using StatusCallback = std::function<void(const std::string&)>;
+
+        //Outcome of the last trajectory execution
+        enum class ExecutionOutcome { IDLE, RUNNING, COMPLETED, STOPPED, JOINT_STATES_LOST };
+
         DynamicPlanner(const rclcpp::Node::SharedPtr& node,
                        const std::string& planning_group);
 
@@ -109,9 +124,12 @@ class DynamicPlanner
             NOTE: This is a blocking function, it will stop execution until the planning is done
             Args:
                 joint_positions: Array of target joint position
+                status_cb: Optional callback receiving the status of the planner
+            Returns:
+                The planning result (also published on planned_trajectory)
         */
-        void plan(const std::vector<double> joint_positions, const moveit::core::RobotStatePtr start_state);
-        void plan(const std::vector<double> joint_positions);
+        TrajectoryResult plan(const std::vector<double> joint_positions, const moveit::core::RobotStatePtr start_state, const StatusCallback& status_cb = {});
+        TrajectoryResult plan(const std::vector<double> joint_positions);
 
         /*plan: pose goal
             NOTE: This is a blocking function, it will stop execution until the planning is done
@@ -119,39 +137,46 @@ class DynamicPlanner
                 goal_pose: Target position
                 ee_link: End effector link
                 frame: Reference frame
+                status_cb: Optional callback receiving the status of the planner
+            Returns:
+                The planning result (also published on planned_trajectory)
             
             Overloads use default values specified in the class definition and params
         */
         
-        void plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link, const std::string& frame, const moveit::core::RobotStatePtr start_state);
-        void plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link, const std::string& frame);
-        void plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link);
-        void plan(const geometry_msgs::msg::Pose& goal_pose);
+        TrajectoryResult plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link, const std::string& frame, const moveit::core::RobotStatePtr start_state, const StatusCallback& status_cb = {});
+        TrajectoryResult plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link, const std::string& frame);
+        TrajectoryResult plan(const geometry_msgs::msg::Pose& goal_pose, const std::string& ee_link);
+        TrajectoryResult plan(const geometry_msgs::msg::Pose& goal_pose);
 
         /*plan: cartesian goal
             Args:
                 waypoints: Array of target positions to follow
                 ee_link: End effector link
                 frame: Reference frame
+                status_cb: Optional callback receiving the status of the planner
             Returns:
-                fraction: Fraction of the trajectory that was planned
+                The planning result (also published on planned_trajectory)
         */
-        void cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints,
-                           const std::string& ee_link,
-                           const std::string& frame);
+        TrajectoryResult cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints,
+                                       const std::string& ee_link,
+                                       const std::string& frame,
+                                       const StatusCallback& status_cb = {});
 
-        void cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints,
-                           const std::string& ee_link);
+        TrajectoryResult cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints,
+                                       const std::string& ee_link);
 
-        void cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints);
+        TrajectoryResult cartesianPlan(const std::vector<geometry_msgs::msg::Pose>& waypoints);
 
         void moveRobot(const sensor_msgs::msg::JointState &joint_state); //Single trajectory point
         void moveRobot(const trajectory_msgs::msg::JointTrajectoryPoint &traj_pt); //Single trajectory point
         
-        void executeTrajectory(); //Asynchronous execution of the last planned trajectory
-        void executeTrajectory(moveit_msgs::msg::RobotTrajectory& robot_trajectory); //Asynchronous execution of the passed trajectory (waypoints)
+        bool executeTrajectory(); //Asynchronous execution of the last planned trajectory, returns true if the execution started
+        bool executeTrajectory(moveit_msgs::msg::RobotTrajectory& robot_trajectory); //Asynchronous execution of the passed trajectory (waypoints)
 
         bool isExecuting(); //Check if the robot is moving
+        ExecutionOutcome getExecutionOutcome() const; //Outcome of the current/last execution
+        void getExecutionProgress(size_t& executed_points, size_t& total_points) const; //Progress of the current/last execution
         bool isReady() const; //Check if the planner has received group definition, so the dynamic planner can start working
 
         void stop(); //Stop the execution of the planned trajectory
@@ -238,6 +263,12 @@ class DynamicPlanner
         void trajectoryExecution_callback(); //Update the current trajectory point index
         void executionControl_callback(const std_msgs::msg::Bool::SharedPtr &msg); //Control the execution of the trajectory
 
+        // --------------- EXECUTION ACTION ----------------
+
+        rclcpp_action::GoalResponse handleExecuteGoal(const rclcpp_action::GoalUUID& uuid, std::shared_ptr<const ExecuteTrajectory::Goal> goal);
+        rclcpp_action::CancelResponse handleExecuteCancel(const std::shared_ptr<ExecuteTrajectoryGoalHandle> goal_handle);
+        void executeAction(const std::shared_ptr<ExecuteTrajectoryGoalHandle> goal_handle); //Runs in a dedicated thread until the execution ends
+
         // --------------- TRAJECTORY METHODS ----------------
 
         void setTrajectory(const moveit_msgs::msg::RobotTrajectory& trajectory); //Set the planned trajectory
@@ -249,6 +280,9 @@ class DynamicPlanner
         bool checkTrajectoryConstraints(const moveit_msgs::msg::RobotTrajectory &trajectory); //Check if the trajectory respects the path constraints
     
         // --------------- PLANNING METHODS ----------------
+
+        void reportStatus(const StatusCallback& status_cb, const std::string& status); //Log the status and forward it to status_cb
+        TrajectoryResult publishResult(TrajectoryResult& result, const StatusCallback& status_cb); //Publish the planning result and forward its message to status_cb
      
         //Create a motion plan request with the current parameters
         moveit_msgs::msg::MotionPlanRequest createMotionPlanRequest();
@@ -319,6 +353,9 @@ class DynamicPlanner
         unsigned long trajpoint_;                               //Index of the current trajectory point
         std::atomic<bool> is_executing_{false};                    //Whether the robot is moving or not, can be set to false to stop execution of trajectory (protected access)
         std::atomic<bool> force_stop_{false};                   //Force stop the execution of the trajectory (protected access)
+        std::atomic<ExecutionOutcome> execution_outcome_{ExecutionOutcome::IDLE}; //Outcome of the current/last execution
+        std::atomic<size_t> executed_points_{0};                //Number of points sent in the current/last execution
+        std::atomic<size_t> total_points_{0};                   //Number of points of the current/last executed trajectory
 
         //Time optimal trajectory generation 
         trajectory_processing::TimeOptimalTrajectoryGenerationPtr time_optimal_traj_gen_;
@@ -341,6 +378,9 @@ class DynamicPlanner
         //Service Clients
         rclcpp_action::Client<moveit_msgs::action::MoveGroup>::SharedPtr plan_action_client_; //Client for motion planning
         rclcpp::Client<moveit_msgs::srv::GetMotionSequence>::SharedPtr cartesian_motion_sequence_client_; //Client for the cartesian motion sequence service
+
+        //Action servers
+        rclcpp_action::Server<ExecuteTrajectory>::SharedPtr execute_action_server_; //Executes the trajectory set via set_trajectory, reports completion percentage
         
         //TF2
         std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
@@ -351,6 +391,7 @@ class DynamicPlanner
         
         //Callback group
         rclcpp::CallbackGroup::SharedPtr cb_group_;
+        rclcpp::CallbackGroup::SharedPtr action_cb_group_;
         
         //Visualization
         rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;

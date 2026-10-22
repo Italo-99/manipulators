@@ -7,6 +7,9 @@
 #include <Eigen/Geometry>
 #include <vector> 
 #include <fcl/fcl.h>
+#include <mutex>
+#include <thread>
+#include "rclcpp_action/rclcpp_action.hpp"
 
 //Interfaces
 #include "shape_msgs/msg/solid_primitive.hpp"
@@ -27,6 +30,9 @@
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
 #include "manipulator_interfaces/msg/cartesian_goal.hpp"
+#include "manipulator_interfaces/action/plan_joint_goal.hpp"
+#include "manipulator_interfaces/action/plan_tcp_goal.hpp"
+#include "manipulator_interfaces/action/plan_cartesian_goal.hpp"
 
 class ManipulatorPlannerNode : public rclcpp::Node {
     public:
@@ -147,10 +153,19 @@ class ManipulatorPlannerNode : public rclcpp::Node {
             std_srvs::srv::SetBool::Response::SharedPtr res
         );  
 
+        //PLANNING
+        // Plan the goal received by the action servers (resolving DEFAULT end effector/frame and start state)
+        // and execute it if goal.execute is true. status_cb receives the status of the planner during the process.
+        manipulator_interfaces::msg::TrajectoryResult planTcpGoal(const manipulator_interfaces::msg::TcpGoal& goal, const DynamicPlanner::StatusCallback& status_cb = {});
+        manipulator_interfaces::msg::TrajectoryResult planJointGoal(const manipulator_interfaces::msg::JointGoal& goal, const DynamicPlanner::StatusCallback& status_cb = {});
+        manipulator_interfaces::msg::TrajectoryResult planCartesianGoal(const manipulator_interfaces::msg::CartesianGoal& goal, const DynamicPlanner::StatusCallback& status_cb = {});
+
+        // Create an action server that plans the received goal with plan_fn in a dedicated thread,
+        // publishing the planner status as feedback and returning the TrajectoryResult
+        template <typename ActionT, typename PlanFn>
+        typename rclcpp_action::Server<ActionT>::SharedPtr createPlanActionServer(const std::string& name, PlanFn plan_fn);
+
         //SUBSCRIBERS
-        void tcpGoal_callback(const manipulator_interfaces::msg::TcpGoal::SharedPtr goal_pose);
-        void jointGoal_callback(const manipulator_interfaces::msg::JointGoal::SharedPtr goal_joints);
-        void cartesianPlan_callback(const manipulator_interfaces::msg::CartesianGoal::SharedPtr waypoints);
         void executionControl_callback(const std_msgs::msg::Bool::SharedPtr msg);
         void collisionObject_callback(const moveit_msgs::msg::CollisionObject::SharedPtr collision_object);
         void attachedCollisionObject_callback(const moveit_msgs::msg::AttachedCollisionObject::SharedPtr attached_collision_object);
@@ -235,9 +250,6 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Service<manipulator_interfaces::srv::ChangePlannerScalingFactors>::SharedPtr changePlannerScalingFactors_service_;
 
         //Subscribers
-        rclcpp::Subscription<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpGoal_sub_;                         //Subscriber for TCP goal (cartesian space goals) requests
-        rclcpp::Subscription<manipulator_interfaces::msg::JointGoal>::SharedPtr jointGoal_sub_;                     //Subscriber for joint space goal requests
-        rclcpp::Subscription<manipulator_interfaces::msg::CartesianGoal>::SharedPtr cartesianPlan_sub_;             //Subscriber for cartesian space waypoints
         rclcpp::Subscription<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObject_sub_;                    //Subscriber for addition and update of collision objects
         rclcpp::Subscription<moveit_msgs::msg::AttachedCollisionObject>::SharedPtr attachedcollisionObject_sub_;    //Subscriber for addition and update of collision objects
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr velJacSetpoint_sub_;                             //Subscriber for the velocity setpoint for the jacobian speed based control
@@ -246,6 +258,11 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Subscription<moveit_msgs::msg::OrientationConstraint>::SharedPtr orientationConstraint_sub_;        //Subscriber for orientation constraints
         rclcpp::Subscription<moveit_msgs::msg::JointConstraint>::SharedPtr jointConstraint_sub_;                    //Subscriber for joint constraints
         rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr clearConstraints_sub_;                                //Subscriber for clearing constraints
+
+        //Action servers
+        rclcpp_action::Server<manipulator_interfaces::action::PlanTcpGoal>::SharedPtr tcpGoal_action_server_;             //Plan TCP goals with status feedback
+        rclcpp_action::Server<manipulator_interfaces::action::PlanJointGoal>::SharedPtr jointGoal_action_server_;         //Plan joint goals with status feedback
+        rclcpp_action::Server<manipulator_interfaces::action::PlanCartesianGoal>::SharedPtr cartesianPlan_action_server_; //Plan cartesian waypoints with status feedback
 
         //Publishers
         rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr tcpPose_pub_;    // Publisher to end effector pose
@@ -263,6 +280,8 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         std::shared_ptr<rclcpp::CallbackGroup> services_cb_group_;       // Callback group for services
         std::shared_ptr<rclcpp::CallbackGroup> subscribers_cb_group_;    // Callback group for subscribers
         std::shared_ptr<rclcpp::CallbackGroup> main_cb_group_;           // Callback group for mainloop timer 
+        std::shared_ptr<rclcpp::CallbackGroup> actions_cb_group_;        // Callback group for planning action servers
+        std::mutex planning_mutex_;                                      // Prevents concurrent planning from different action goals
 
         //Real time control variables
         bool   jac_control_ = false;            // True if the speed control through inverse Jacobian has been enabled

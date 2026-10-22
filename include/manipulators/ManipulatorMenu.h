@@ -9,6 +9,7 @@
 #include <Eigen/Geometry>
 #include <yaml-cpp/yaml.h>
 #include <fstream>
+#include <mutex>
 
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
@@ -24,6 +25,7 @@
 #include "moveit_msgs/msg/orientation_constraint.hpp"
 
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
 #include "ament_index_cpp/get_package_share_directory.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "std_msgs/msg/float64.hpp"
@@ -53,6 +55,10 @@
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
 #include "manipulator_interfaces/msg/cartesian_goal.hpp"
 #include "manipulator_interfaces/msg/trajectory_result.hpp"
+#include "manipulator_interfaces/action/plan_joint_goal.hpp"
+#include "manipulator_interfaces/action/plan_tcp_goal.hpp"
+#include "manipulator_interfaces/action/plan_cartesian_goal.hpp"
+#include "manipulator_interfaces/action/execute_trajectory.hpp"
 #include "trajectory_msgs/msg/joint_trajectory.hpp"
 
 #include "manipulators/MenuUserInterface.hpp"
@@ -72,7 +78,7 @@ const auto qos_reliable = [](size_t depth = 1){
 
 
 #define DEFAULT_PLANNING_TIMEOUT 2
-#define DEFAULT_EXECUTION_TIMEOUT 20 
+#define DEFAULT_EXECUTION_FEEDBACK_TIMEOUT 2.0 // Max age of the last execution feedback before considering the execution timed out (seconds)
 
 /*! @struct ManipulatorMenuParams
         @brief Struct to hold the parameters for the ManipulatorMenu class.
@@ -146,6 +152,14 @@ struct ManipulatorMenuParams
 class ManipulatorMenu
 {
     public:
+        // ---------------------  ASYNC STATUS ---------------------
+
+        //! Status of the last planning request (see planAsync())
+        enum class PlanStatus { IDLE, PENDING, SUCCEEDED, FAILED };
+
+        //! Status of the last execution request (see executeAsync() and planExecuteAsync())
+        enum class ExecutionStatus { IDLE, PENDING, RUNNING, SUCCEEDED, STOPPED, TIMEOUT, FAILED };
+
         // ---------------------  PUBLIC CONSTRUCTOR ---------------------
         /*!
             @brief Constructor for the ManipulatorMenu class.
@@ -180,79 +194,11 @@ class ManipulatorMenu
         */
         void spinner(void);
 
-        // Goal publishers
-
-        /*!
-            @brief Publish a joint goal to the manipulator planner.
-            @param joint_goal: Joint goal to be published (in degrees).
-            @param start_state: Start state of the manipulator (in degrees).
-            @param execute: If true, the trajectory will be executed.
-            @return The passed joint goal.
-        */
-        sensor_msgs::msg::JointState publishJointGoal(
-            const std::vector<double> joint_goal, 
-            const std::vector<double> start_state = std::vector<double>(), 
-            const bool execute=true);
-
-        /*!
-            @brief Publish a joint goal to the manipulator planner.
-            @param joint_goal: Joint goal to be published (in radians).
-            @param start_state: Start state of the manipulator (in degrees).
-            @param execute: If true, the trajectory will be executed.
-            @return The passed joint goal.
-        */
-        sensor_msgs::msg::JointState publishJointGoal(
-            const sensor_msgs::msg::JointState joint_goal, 
-            const std::vector<double> start_state = std::vector<double>(), 
-            const bool execute=true);
-
-        /*!
-            @brief Publish a TCP goal to the manipulator planner.
-            @param position: Position of the end effector (in meters).
-            @param start_state: Start state of the manipulator (in degrees).
-            @param frame: Frame in which the position is expressed (leave empty for default frame).
-            @param execute: If true, the trajectory will be executed.
-            @return The passed TCP goal.
-        */
-        geometry_msgs::msg::Pose publishTcpGoal(
-            const std::vector<double> position, 
-            const std::vector<double> start_state = std::vector<double>(),
-            const std::string& frame = "", //Leave empty for default frame
-            const bool execute=true);
-
-        /*!
-            @brief Publish a TCP goal to the manipulator planner.
-            @param tcpPoseMsg: TCP goal to be published (in meters).
-            @param start_state: Start state of the manipulator (in degrees).
-            @param frame: Frame in which the position is expressed (leave empty for default frame).
-            @param execute: If true, the trajectory will be executed.
-            @return The passed TCP goal.
-        */
-        geometry_msgs::msg::Pose publishTcpGoal(
-            const geometry_msgs::msg::Pose tcpPoseMsg, 
-            const std::vector<double> start_state = std::vector<double>(),
-            const std::string& frame = "", //Leave empty for default frame
-            const bool execute=true);
-
-        /*!
-            @brief Publish a TCP goal to the manipulator planner.
-            @param tcp_goal: TCP goal to be published (in meters).
-            @param start_state: Start state of the manipulator (in degrees).
-            @param frame: Frame in which the position is expressed (leave empty for default frame).
-            @param execute: If true, the trajectory will be executed
-        */
-        void publishCartesianGoal(
-            const std::vector<geometry_msgs::msg::Pose> waypoints,
-            const std::vector<double> start_state = std::vector<double>(),
-            const std::string& frame = "", //Leave empty for default frame
-            const bool execute=true
-        );
-        
         /*!
             @brief Execute movement of a single joint.
             @param num: Number of the joint to be moved.
             @param joint_rot: Degrees to rotate the joint.
-            @return The joint state of the manipulator after the movement.
+            @return The joint goal sent to the planner (see planExecuteAsync()).
         */
         sensor_msgs::msg::JointState oneJointMove(const int num, const double joint_rot); // to execute rotation of a single joint
 
@@ -266,7 +212,7 @@ class ManipulatorMenu
         // Planning 
 
         /*!
-            @brief Send a joint goal to the manipulator planner and wait for the result.
+            @brief Send a joint goal to the manipulator planner (joint_goal action) and wait for the result.
             @param joint_goal: Joint goal to be published (in radians).
             @param start_state: Start state of the manipulator (in degrees).
             @param timeout: Timeout for the operation (in seconds).
@@ -279,7 +225,7 @@ class ManipulatorMenu
             uint timeout=DEFAULT_PLANNING_TIMEOUT);
         
         /*!
-            @brief Send a TCP goal to the manipulator planner and wait for the result.
+            @brief Send a TCP goal to the manipulator planner (tcp_goal action) and wait for the result.
             @param tcp_goal: TCP goal to be published.
             @param start_state: Start state of the manipulator (in degrees).
             @param timeout: Timeout for the operation (in seconds).
@@ -293,7 +239,7 @@ class ManipulatorMenu
             uint timeout=DEFAULT_PLANNING_TIMEOUT);
 
         /*!
-            @brief Send a Cartesian goal to the manipulator planner and wait for the result.
+            @brief Send a Cartesian goal to the manipulator planner (cartesian_plan action) and wait for the result.
             @param waypoints: Waypoints to be published.
             @param start_state: Start state of the manipulator (in degrees).
             @param timeout: Timeout for the operation (in seconds).
@@ -307,29 +253,34 @@ class ManipulatorMenu
             uint timeout=DEFAULT_PLANNING_TIMEOUT);
 
         /*!
-            @brief Execute a trajectory, blocks until the trajectory is executed or timeout is reached.
-            @param joint_trajectory: Joint trajectory to be executed.
-            @param timeout: Timeout for the operation (in seconds).
-            @return True if the trajectory was executed successfully, false otherwise.
-            @note This function will block until the trajectory is executed or the timeout is reached.
+            @brief Send a trajectory to the planner through the set_trajectory service.
+            @param trajectory: Trajectory to be set.
+            @return True if the planner accepted the trajectory, false otherwise.
         */
         bool setTrajectoryClient(const moveit_msgs::msg::RobotTrajectory& trajectory);
 
-        bool executeAndWait(const moveit_msgs::msg::RobotTrajectory joint_trajectory, uint timeout=DEFAULT_EXECUTION_TIMEOUT);
+        /*!
+            @brief Execute a trajectory through the execute_trajectory action, blocks until the execution ends.
+            @param joint_trajectory: Joint trajectory to be executed.
+            @param feedback_timeout: The execution is considered timed out (and cancelled) if no progress
+                   feedback is received for longer than this (in seconds).
+            @return True if the trajectory was executed successfully, false if stopped, timed out or rejected.
+        */
+        bool executeAndWait(const moveit_msgs::msg::RobotTrajectory joint_trajectory, double feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT);
 
         /*!
             @brief Plan a joint goal, execute it and wait for the result.
             @details This function combines the two functions planAndWait() and executeAndWait().
             @param joint_goal: Joint goal to be published (in radians).
             @param timeout_planning: Timeout for the planning operation (in seconds).
-            @param timeout_execution: Timeout for the execution operation (in seconds).
+            @param execution_feedback_timeout: Max age of the execution feedback (in seconds), see executeAndWait().
             @return True if the trajectory was executed successfully, false otherwise.
             @note This function will block until the trajectory is executed or the timeout is reached.
         */
        bool planExecuteAndWait(
             const sensor_msgs::msg::JointState joint_goal, 
             uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
-            uint timeout_execution=DEFAULT_EXECUTION_TIMEOUT
+            double execution_feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT
         );
         
         /*!
@@ -337,14 +288,14 @@ class ManipulatorMenu
             @details This function combines the two functions planAndWait() and executeAndWait().
             @param joint_goal: Joint goal to be published (in degrees).
             @param timeout_planning: Timeout for the planning operation (in seconds).
-            @param timeout_execution: Timeout for the execution operation (in seconds).
+            @param execution_feedback_timeout: Max age of the execution feedback (in seconds), see executeAndWait().
             @return True if the trajectory was executed successfully, false otherwise.
             @note This function will block until the trajectory is executed or the timeout is reached.
         */
         bool planExecuteAndWait(
             const std::vector<double> joint_goal, 
             uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
-            uint timeout_execution=DEFAULT_EXECUTION_TIMEOUT
+            double execution_feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT
         );
 
          /*!
@@ -352,14 +303,14 @@ class ManipulatorMenu
             @details This function combines the two functions planAndWait() and executeAndWait().
             @param known_pose: Name of the known pose to plan to.
             @param timeout_planning: Timeout for the planning operation (in seconds).
-            @param timeout_execution: Timeout for the execution operation (in seconds).
+            @param execution_feedback_timeout: Max age of the execution feedback (in seconds), see executeAndWait().
             @return True if the trajectory was executed successfully, false otherwise.
             @note This function will block until the trajectory is executed or the timeout is reached.
         */
         bool planExecuteAndWait(
             const std::string& known_pose,
             uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
-            uint timeout_execution=DEFAULT_EXECUTION_TIMEOUT
+            double execution_feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT
         );
 
         /*!
@@ -368,7 +319,7 @@ class ManipulatorMenu
             @param tcp_goal: TCP goal position to be published.
             @param frame: Frame in which the position is expressed (leave empty for default frame).
             @param timeout_planning: Timeout for the planning operation (in seconds).
-            @param timeout_execution: Timeout for the execution operation (in seconds).
+            @param execution_feedback_timeout: Max age of the execution feedback (in seconds), see executeAndWait().
             @return True if the trajectory was executed successfully, false otherwise.
             @note This function will block until the trajectory is executed or the timeout is reached.
         */
@@ -376,7 +327,7 @@ class ManipulatorMenu
             const geometry_msgs::msg::Pose tcp_goal, 
             const std::string& frame = "", //Leave empty for default frame
             uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
-            uint timeout_execution=DEFAULT_EXECUTION_TIMEOUT
+            double execution_feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT
         );
 
         /*!
@@ -385,7 +336,7 @@ class ManipulatorMenu
             @param waypoints: Vector of waypoint poses defining the Cartesian path.
             @param frame: Frame in which the positions are expressed (leave empty for default frame).
             @param timeout_planning: Timeout for the planning operation (in seconds).
-            @param timeout_execution: Timeout for the execution operation (in seconds).
+            @param execution_feedback_timeout: Max age of the execution feedback (in seconds), see executeAndWait().
             @return True if the trajectory was executed successfully, false otherwise.
             @note This function will block until the trajectory is executed or the timeout is reached.
         */
@@ -393,8 +344,136 @@ class ManipulatorMenu
             const std::vector<geometry_msgs::msg::Pose> waypoints, 
             const std::string& frame = "", //Leave empty for default frame
             uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
-            uint timeout_execution=DEFAULT_EXECUTION_TIMEOUT
+            double execution_feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT
         );
+
+        // Async planning and execution
+        // The *Async functions return immediately, the outcome is tracked by getPlanStatus()/getPlanResult()
+        // and getExecutionStatus()/getExecutionProgress(). A new request supersedes the one in progress of the same kind.
+        // Timeouts are enforced by a watchdog timer, so the node must be spinning.
+
+        /*!
+            @brief Send a joint goal to the manipulator planner (joint_goal action) without waiting.
+            @param joint_goal: Joint goal (in radians).
+            @param start_state: Start state of the manipulator (in degrees).
+            @param timeout: Timeout for the planning (in seconds).
+            @return False if the request failed immediately (e.g. planner unavailable), true if it was sent.
+        */
+        bool planAsync(
+            const sensor_msgs::msg::JointState joint_goal, 
+            const std::vector<double> start_state = std::vector<double>(),
+            uint timeout=DEFAULT_PLANNING_TIMEOUT);
+
+        /*!
+            @brief Send a TCP goal to the manipulator planner (tcp_goal action) without waiting.
+            @param tcp_goal: TCP goal.
+            @param start_state: Start state of the manipulator (in degrees).
+            @param frame: Frame in which the goal is expressed (leave empty for default frame).
+            @param timeout: Timeout for the planning (in seconds).
+            @return False if the request failed immediately (e.g. planner unavailable), true if it was sent.
+        */
+        bool planAsync(
+            const geometry_msgs::msg::Pose tcp_goal, 
+            const std::vector<double> start_state = std::vector<double>(), 
+            const std::string& frame = "", //Leave empty for default frame
+            uint timeout=DEFAULT_PLANNING_TIMEOUT);
+
+        /*!
+            @brief Send a Cartesian goal to the manipulator planner (cartesian_plan action) without waiting.
+            @param waypoints: Waypoints of the path.
+            @param start_state: Start state of the manipulator (in degrees).
+            @param frame: Frame in which the waypoints are expressed (leave empty for default frame).
+            @param timeout: Timeout for the planning (in seconds).
+            @return False if the request failed immediately (e.g. planner unavailable), true if it was sent.
+        */
+        bool cartesianPlanAsync(
+            const std::vector<geometry_msgs::msg::Pose> waypoints, 
+            const std::vector<double> start_state = std::vector<double>(),
+            const std::string& frame = "", //Leave empty for default frame
+            uint timeout=DEFAULT_PLANNING_TIMEOUT);
+
+        /*!
+            @brief Execute a trajectory through the execute_trajectory action without waiting.
+            @param joint_trajectory: Joint trajectory to be executed.
+            @param feedback_timeout: The execution is cancelled and set to TIMEOUT if no progress
+                   feedback is received for longer than this (in seconds).
+            @return False if the request failed immediately (e.g. planner unavailable), true if it was sent.
+        */
+        bool executeAsync(const moveit_msgs::msg::RobotTrajectory joint_trajectory, double feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT);
+
+        /*!
+            @brief Plan a joint goal and execute it once planned, without waiting.
+            @details Planning outcome is tracked by getPlanStatus(), the whole request by getExecutionStatus()
+                     (FAILED if the planning fails, SUCCEEDED if the robot is already in the goal position).
+            @param joint_goal: Joint goal (in radians).
+            @param timeout_planning: Timeout for the planning (in seconds).
+            @param execution_feedback_timeout: Max age of the execution feedback (in seconds), see executeAsync().
+            @return False if the request failed immediately, true if it was sent.
+        */
+        bool planExecuteAsync(
+            const sensor_msgs::msg::JointState joint_goal, 
+            uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
+            double execution_feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT
+        );
+
+        /*!
+            @brief Plan a joint goal and execute it once planned, without waiting (see planExecuteAsync()).
+            @param joint_goal: Joint goal (in degrees).
+        */
+        bool planExecuteAsync(
+            const std::vector<double> joint_goal, 
+            uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
+            double execution_feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT
+        );
+
+        /*!
+            @brief Plan a known pose and execute it once planned, without waiting (see planExecuteAsync()).
+            @param known_pose: Name of the known pose to plan to.
+        */
+        bool planExecuteAsync(
+            const std::string& known_pose,
+            uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
+            double execution_feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT
+        );
+
+        /*!
+            @brief Plan a TCP goal and execute it once planned, without waiting (see planExecuteAsync()).
+            @param tcp_goal: TCP goal.
+            @param frame: Frame in which the goal is expressed (leave empty for default frame).
+        */
+        bool planExecuteAsync(
+            const geometry_msgs::msg::Pose tcp_goal, 
+            const std::string& frame = "", //Leave empty for default frame
+            uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
+            double execution_feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT
+        );
+
+        /*!
+            @brief Plan a Cartesian path and execute it once planned, without waiting (see planExecuteAsync()).
+            @param waypoints: Waypoints of the path.
+            @param frame: Frame in which the waypoints are expressed (leave empty for default frame).
+        */
+        bool cartesianPlanExecuteAsync(
+            const std::vector<geometry_msgs::msg::Pose> waypoints, 
+            const std::string& frame = "", //Leave empty for default frame
+            uint timeout_planning=DEFAULT_PLANNING_TIMEOUT,
+            double execution_feedback_timeout=DEFAULT_EXECUTION_FEEDBACK_TIMEOUT
+        );
+
+        //! Status of the last planning request
+        PlanStatus getPlanStatus();
+        //! Result of the last planning request (failures are reported through error_code and message)
+        manipulator_interfaces::msg::TrajectoryResult getPlanResult();
+        //! Status of the last execution request
+        ExecutionStatus getExecutionStatus();
+        //! Message describing the outcome of the last execution request
+        std::string getExecutionMessage();
+        //! Last progress feedback of the current/last execution
+        manipulator_interfaces::action::ExecuteTrajectory::Feedback getExecutionProgress();
+        //! True while a planning request is pending
+        bool isPlanning();
+        //! True while an execution request is pending or running
+        bool isExecuting();
 
         /*!
             @brief Stop trajectory execution.
@@ -799,7 +878,47 @@ class ManipulatorMenu
         // --------------------- PRIVATE PUBS/SUBS ---------------------
 
         void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr& msg);
-        void trajectoryCallback(const manipulator_interfaces::msg::TrajectoryResult::SharedPtr& msg);
+
+        // --------------------- PRIVATE ACTIONS ---------------------
+
+        // Send a planning goal to client without waiting, the result is stored by finishPlan().
+        // If execute_after is true the planned trajectory is executed as request exec_id.
+        // Returns the id of the planning request.
+        template <typename ActionT>
+        uint64_t sendPlanGoalAsync(
+            const typename rclcpp_action::Client<ActionT>::SharedPtr& client,
+            const typename ActionT::Goal& goal,
+            uint timeout,
+            bool execute_after = false,
+            double exec_feedback_timeout = DEFAULT_EXECUTION_FEEDBACK_TIMEOUT);
+
+        // Store the outcome of planning request id (ignored if superseded) and chain the execution if requested
+        void finishPlan(uint64_t id, const manipulator_interfaces::msg::TrajectoryResult& result);
+        void finishPlan(uint64_t id, int32_t error_code, const std::string& message);
+        void logPlanStatuses(uint64_t id, const std::vector<std::string>& statuses); // Log the planner statuses not printed yet
+
+        // Set the trajectory and send the execution goal without waiting.
+        // id = 0 allocates a new execution request, otherwise uses the id reserved by sendPlanGoalAsync().
+        // Returns the id of the execution request.
+        uint64_t executeAsyncImpl(const moveit_msgs::msg::RobotTrajectory& trajectory, double feedback_timeout, uint64_t id = 0);
+        void sendExecuteGoal(uint64_t id); // Called once the trajectory has been set
+
+        // Store the outcome of execution request id (ignored if superseded)
+        void finishExecution(uint64_t id, ExecutionStatus status, const std::string& message);
+        void finishExecutionLocked(uint64_t id, ExecutionStatus status, const std::string& message); // async_mutex_ must be held
+
+        // Check planning and execution timeouts (watchdog_timer_ callback)
+        void asyncWatchdog();
+
+        // Block until the request id is completed or superseded
+        manipulator_interfaces::msg::TrajectoryResult waitForPlan(uint64_t id);
+        bool waitForExecution(uint64_t id);
+
+        uint64_t newExecutionRequest(double feedback_timeout); // Allocate a new execution request (async_mutex_ must be held)
+
+        // False if the request id already failed (used by the *Async functions return value)
+        bool planDispatched(uint64_t id);
+        bool executionDispatched(uint64_t id);
 
         // --------------------- USER ACTIONS ---------------------
         
@@ -875,10 +994,29 @@ class ManipulatorMenu
 
         uint clients_wait_timeout_ {10}; //Seconds
 
-        //Planner goals publishers
-        rclcpp::Publisher<manipulator_interfaces::msg::JointGoal>::SharedPtr jointGoal_pub_;   
-        rclcpp::Publisher<manipulator_interfaces::msg::TcpGoal>::SharedPtr tcpGoal_pub_;
-        rclcpp::Publisher<manipulator_interfaces::msg::CartesianGoal>::SharedPtr cartesianPlan_pub_;
+        //Async planning/execution state (protected by async_mutex_)
+        std::mutex async_mutex_;
+        rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
+        rclcpp::TimerBase::SharedPtr watchdog_timer_;                   // Enforces planning timeout and execution feedback timeout
+
+        PlanStatus plan_status_ = PlanStatus::IDLE;
+        std::shared_ptr<void> plan_goal_handle_;                        // Keeps the planning goal alive until its result arrives
+        manipulator_interfaces::msg::TrajectoryResult plan_result_;
+        uint64_t plan_request_id_ = 0;                                  // Incremented at each request, callbacks of older requests are ignored
+        rclcpp::Time plan_deadline_;
+        size_t plan_statuses_printed_ = 0;                              // Planner statuses already logged for the current request
+        bool plan_execute_after_ = false;                               // Execute the planned trajectory (planExecuteAsync)
+        uint64_t plan_exec_id_ = 0;                                     // Execution request reserved by planExecuteAsync
+        double plan_exec_feedback_timeout_ = DEFAULT_EXECUTION_FEEDBACK_TIMEOUT;
+
+        ExecutionStatus exec_status_ = ExecutionStatus::IDLE;
+        std::string exec_message_;
+        manipulator_interfaces::action::ExecuteTrajectory::Feedback exec_progress_;
+        uint64_t exec_request_id_ = 0;                                  // Incremented at each request, callbacks of older requests are ignored
+        rclcpp_action::ClientGoalHandle<manipulator_interfaces::action::ExecuteTrajectory>::SharedPtr exec_goal_handle_;
+        rclcpp::Time exec_last_feedback_;
+        bool exec_waiting_plan_ = false;                                // Execution reserved by planExecuteAsync, waiting for the plan
+        double exec_feedback_timeout_ = DEFAULT_EXECUTION_FEEDBACK_TIMEOUT;
 
         //Constraints publishers
         rclcpp::Publisher<moveit_msgs::msg::JointConstraint>::SharedPtr jointConstraints_pub_;
@@ -939,13 +1077,14 @@ class ManipulatorMenu
         sensor_msgs::msg::JointState current_joint_pose_;
 
         // Planning 
-        rclcpp::Subscription<manipulator_interfaces::msg::TrajectoryResult>::SharedPtr plannedTrajectory_sub_;      // Subscription to the planned trajectory
+        rclcpp::CallbackGroup::SharedPtr actions_cb_group_;                                                            // Callback group for planning/execution action clients
+        rclcpp_action::Client<manipulator_interfaces::action::PlanJointGoal>::SharedPtr jointGoal_action_client_;       // Plans joint goals
+        rclcpp_action::Client<manipulator_interfaces::action::PlanTcpGoal>::SharedPtr tcpGoal_action_client_;           // Plans TCP goals
+        rclcpp_action::Client<manipulator_interfaces::action::PlanCartesianGoal>::SharedPtr cartesianPlan_action_client_; // Plans cartesian paths
+        rclcpp_action::Client<manipulator_interfaces::action::ExecuteTrajectory>::SharedPtr execute_action_client_;    // Executes the trajectory set via set_trajectory
         rclcpp::Publisher<moveit_msgs::msg::RobotTrajectory>::SharedPtr trajectory_pub_;                            // Publishes the trajectory to be executed (legacy compatibility)
         rclcpp::Client<manipulator_interfaces::srv::SetTrajectory>::SharedPtr trajectory_service_client_;         // Service to deliver a trajectory to the planner without polling on a topic
         rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr executionControl_pub_;                                    // Moves or stops the robot
-
-        manipulator_interfaces::msg::TrajectoryResult traj_result_; // Planned trajectory
-        bool traj_received_ = false; 
 
         // Robot state
         geometry_msgs::msg::Pose current_tcp_pose_;

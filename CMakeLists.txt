@@ -20,6 +20,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
 
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
@@ -62,6 +63,7 @@ endif()
 
 set(MANIPULATOR_MENU_DEPENDS
     rclcpp
+    rclcpp_action
     geometry_msgs
     sensor_msgs
     std_msgs
@@ -119,6 +121,7 @@ add_executable(manipulator_planner src/manipulator_planner.cpp src/manipulator_p
 
 ament_target_dependencies(manipulator_planner
     rclcpp
+    rclcpp_action
     geometry_msgs
     sensor_msgs
     std_msgs

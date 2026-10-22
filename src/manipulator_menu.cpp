@@ -4,7 +4,7 @@
 // --------------------- PUBLIC CONSTRUCTOR ---------------------
 
 ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Node::SharedPtr& node, const bool sync_parameters) 
-    : params_(params), node_(node), traj_result_(), traj_received_(false)
+    : params_(params), node_(node)
 {
     // Display Manipulator
     RCLCPP_INFO(node_->get_logger(), "Manipulator menu initialized with the following setup:");
@@ -33,9 +33,6 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     current_joint_pose_.name      = params_.joint_names;
 
     // --------------------- PUBS & SUBS DELCARATIONS ---------------------
-    jointGoal_pub_               = node_->create_publisher<manipulator_interfaces::msg::JointGoal>(params_.manipulator_name+"/joint_goal", 1);
-    tcpGoal_pub_                 = node_->create_publisher<manipulator_interfaces::msg::TcpGoal>(params_.manipulator_name+"/tcp_goal", 1);
-    cartesianPlan_pub_           = node_->create_publisher<manipulator_interfaces::msg::CartesianGoal>(params_.manipulator_name+"/cartesian_plan", 1);
     collisionObject_pub_         = node_->create_publisher<moveit_msgs::msg::CollisionObject>(params_.manipulator_name+"/collision_object", 1);
     attachedCollisionObject_pub_ = node_->create_publisher<moveit_msgs::msg::AttachedCollisionObject>(params_.manipulator_name+"/attached_collision_object", 1);
     jointConstraints_pub_        = node_->create_publisher<moveit_msgs::msg::JointConstraint>(params_.manipulator_name+"/joint_constraint", 1);
@@ -86,21 +83,26 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
 
     // ---------------------- Planning ----------------------
     
-    auto cb_group = node_->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-    rclcpp::SubscriptionOptions sub_options;
-    sub_options.callback_group = cb_group;
+    // Separate callback group so that the *AndWait functions can wait on the actions from any thread.
+    // Action callbacks, the trajectory service response and the watchdog share it, so they never run concurrently.
+    actions_cb_group_ = node_->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-    plannedTrajectory_sub_ = node_->create_subscription<manipulator_interfaces::msg::TrajectoryResult>(
-        params_.planning_group+"/planned_trajectory", qos_reliable(1),
-        [this](const manipulator_interfaces::msg::TrajectoryResult::SharedPtr msg) {
-            trajectoryCallback(msg);
-        },
-        sub_options
-    );
+    jointGoal_action_client_     = rclcpp_action::create_client<manipulator_interfaces::action::PlanJointGoal>(node_, params_.manipulator_name+"/joint_goal", actions_cb_group_);
+    tcpGoal_action_client_       = rclcpp_action::create_client<manipulator_interfaces::action::PlanTcpGoal>(node_, params_.manipulator_name+"/tcp_goal", actions_cb_group_);
+    cartesianPlan_action_client_ = rclcpp_action::create_client<manipulator_interfaces::action::PlanCartesianGoal>(node_, params_.manipulator_name+"/cartesian_plan", actions_cb_group_);
+    execute_action_client_       = rclcpp_action::create_client<manipulator_interfaces::action::ExecuteTrajectory>(node_, params_.planning_group+"/execute_trajectory", actions_cb_group_);
 
     trajectory_pub_ = node_->create_publisher<moveit_msgs::msg::RobotTrajectory>(params_.planning_group+"/trajectory", 1);
-    trajectory_service_client_ = node_->create_client<manipulator_interfaces::srv::SetTrajectory>(params_.planning_group+"/set_trajectory");
+    trajectory_service_client_ = node_->create_client<manipulator_interfaces::srv::SetTrajectory>(params_.planning_group+"/set_trajectory", rclcpp::ServicesQoS(), actions_cb_group_);
     executionControl_pub_ = node_->create_publisher<std_msgs::msg::Bool>(params_.planning_group+"/execution_control", 1);
+
+    plan_deadline_ = steady_clock_.now();
+    exec_last_feedback_ = steady_clock_.now();
+    watchdog_timer_ = node_->create_wall_timer(
+        std::chrono::milliseconds(static_cast<int>(1000.0 / params_.ros_freq)),
+        [this]() { asyncWatchdog(); },
+        actions_cb_group_
+    );
 
     // ---------------------- Real time control ----------------------
 
@@ -422,64 +424,6 @@ void ManipulatorMenu::spinner()
 
 // --------------------- MOVEMENTS HANDLER ---------------------
 
-// Publish a joint goal by passing a vector of joints in deg
-sensor_msgs::msg::JointState ManipulatorMenu::publishJointGoal(const std::vector<double> joint_goal, const std::vector<double> start_state, const bool execute)
-{
-    // Fill the joint msg with degToRad conversion
-    sensor_msgs::msg::JointState joint_state = joint_state_from_vector(joint_goal);
-    return publishJointGoal(joint_state, start_state, execute);
-}
-
-// Publish a joint goal by passing a JointState msg
-sensor_msgs::msg::JointState ManipulatorMenu::publishJointGoal(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state, const bool execute)
-{
-    manipulator_interfaces::msg::JointGoal joint_goal_msg;
-    joint_goal_msg.start_state = joint_state_from_vector(start_state);
-    joint_goal_msg.joint_goal = joint_goal;
-    joint_goal_msg.execute = execute;
-    // Publish the JointState message
-    jointGoal_pub_->publish(joint_goal_msg);
-    return joint_goal;
-}
-
-// Publish a Tcp goal by passing a vector (rotations must be expressed in deg)
-geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(
-    const std::vector<double> position, 
-    const std::vector<double> start_state, 
-    const std::string& frame, 
-    const bool execute)
-{
-    geometry_msgs::msg::Pose tcp_pose = pose_from_vector(position);
-
-    return publishTcpGoal(tcp_pose, start_state, frame, execute);
-}
-
-// Publish a Tcp goal by passing a geometry_msgs::msg::Pose
-geometry_msgs::msg::Pose ManipulatorMenu::publishTcpGoal(
-    const geometry_msgs::msg::Pose tcp_pose, 
-    const std::vector<double> start_state,
-    const std::string& frame, 
-    const bool execute)
-{
-    manipulator_interfaces::msg::TcpGoal tcp_goal_msg;
-    tcp_goal_msg.target_pose = tcp_pose;
-    tcp_goal_msg.start_state =  joint_state_from_vector(start_state);
-    tcp_goal_msg.execute = execute;
-    tcp_goal_msg.end_effector = manipulator_interfaces::msg::TcpGoal::DEFAULT;
-
-    if (!frame.empty())
-    {
-        tcp_goal_msg.frame = frame;
-    }
-    else
-    {
-        tcp_goal_msg.frame = manipulator_interfaces::msg::TcpGoal::DEFAULT;
-    }
-
-    tcpGoal_pub_->publish(tcp_goal_msg);
-    return tcp_pose;
-}
-
 sensor_msgs::msg::JointState ManipulatorMenu::oneJointMove(const int num, const double joint_rot)
 {
     // Fill current joints pose as target
@@ -490,37 +434,8 @@ sensor_msgs::msg::JointState ManipulatorMenu::oneJointMove(const int num, const 
     }
     // Change the joint target position
     joint_target[num] = joint_target[num] + joint_rot;
-    return publishJointGoal(joint_target);
-}
-
-void ManipulatorMenu::publishCartesianGoal(
-    const std::vector<geometry_msgs::msg::Pose> waypoints,
-    const std::vector<double> start_state,
-    const std::string& frame,
-    const bool execute)
-{
-    manipulator_interfaces::msg::CartesianGoal cartesian_goal_msg;
-    cartesian_goal_msg.end_effector = manipulator_interfaces::msg::CartesianGoal::DEFAULT;
-
-    for (const auto& waypoint : waypoints)
-    {
-        cartesian_goal_msg.waypoints.poses.push_back(waypoint);
-    }
-
-    cartesian_goal_msg.execute = execute;
-    cartesian_goal_msg.start_state = joint_state_from_vector(start_state);
-
-    if (!frame.empty())
-    {
-        cartesian_goal_msg.frame = frame;
-    }
-    else
-    {
-        cartesian_goal_msg.frame = manipulator_interfaces::msg::TcpGoal::DEFAULT;
-    }
-
-    // Publish the Cartesian goal message
-    cartesianPlan_pub_->publish(cartesian_goal_msg);
+    planExecuteAsync(joint_target);
+    return joint_state_from_vector(joint_target);
 }
 
 std::vector<double> ManipulatorMenu::getKnownPose(const std::string& pose_name)
@@ -540,34 +455,227 @@ std::vector<double> ManipulatorMenu::getKnownPose(const std::string& pose_name)
 
 // -------------------- PLANNING --------------------
 
-manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::planAndWait(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state, uint timeout)
+namespace
 {
-    traj_received_ = false;
-    traj_result_ = manipulator_interfaces::msg::TrajectoryResult();
-    
-    // Publish the joint goal
-    publishJointGoal(joint_goal, start_state, false);
-    
-    //Set a start time to check for timeout
-    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
-    auto start_time = steady_clock.now();
+    using manipulator_interfaces::msg::TrajectoryResult;
 
+    TrajectoryResult failedTrajectoryResult(int32_t error_code, const std::string& message)
+    {
+        TrajectoryResult result;
+        result.success = false;
+        result.error_code = error_code;
+        result.message = message;
+        return result;
+    }
+
+    manipulator_interfaces::action::PlanJointGoal::Goal makeJointGoal(
+        const sensor_msgs::msg::JointState& joint_goal,
+        const sensor_msgs::msg::JointState& start_state)
+    {
+        manipulator_interfaces::action::PlanJointGoal::Goal goal;
+        goal.goal.start_state = start_state;
+        goal.goal.joint_goal = joint_goal;
+        goal.goal.execute = false;
+        return goal;
+    }
+
+    manipulator_interfaces::action::PlanTcpGoal::Goal makeTcpGoal(
+        const geometry_msgs::msg::Pose& tcp_goal,
+        const sensor_msgs::msg::JointState& start_state,
+        const std::string& frame)
+    {
+        manipulator_interfaces::action::PlanTcpGoal::Goal goal;
+        goal.goal.target_pose = tcp_goal;
+        goal.goal.start_state = start_state;
+        goal.goal.execute = false;
+        goal.goal.end_effector = manipulator_interfaces::msg::TcpGoal::DEFAULT;
+        goal.goal.frame = frame.empty() ? manipulator_interfaces::msg::TcpGoal::DEFAULT : frame;
+        return goal;
+    }
+
+    manipulator_interfaces::action::PlanCartesianGoal::Goal makeCartesianGoal(
+        const std::vector<geometry_msgs::msg::Pose>& waypoints,
+        const sensor_msgs::msg::JointState& start_state,
+        const std::string& frame)
+    {
+        manipulator_interfaces::action::PlanCartesianGoal::Goal goal;
+        goal.goal.waypoints.poses = waypoints;
+        goal.goal.start_state = start_state;
+        goal.goal.execute = false;
+        goal.goal.end_effector = manipulator_interfaces::msg::CartesianGoal::DEFAULT;
+        goal.goal.frame = frame.empty() ? manipulator_interfaces::msg::CartesianGoal::DEFAULT : frame;
+        return goal;
+    }
+}
+
+template <typename ActionT>
+uint64_t ManipulatorMenu::sendPlanGoalAsync(
+    const typename rclcpp_action::Client<ActionT>::SharedPtr& client,
+    const typename ActionT::Goal& goal,
+    uint timeout,
+    bool execute_after,
+    double exec_feedback_timeout)
+{
+    using GoalHandle = rclcpp_action::ClientGoalHandle<ActionT>;
+
+    uint64_t id;
+    {
+        std::lock_guard<std::mutex> lock(async_mutex_);
+
+        // A planExecute request still waiting for its (now superseded) plan will never be executed
+        if (exec_waiting_plan_) {
+            finishExecutionLocked(exec_request_id_, ExecutionStatus::FAILED, "Superseded by a newer planning request");
+        }
+
+        id = ++plan_request_id_;
+        plan_status_ = PlanStatus::PENDING;
+        plan_result_ = TrajectoryResult();
+        plan_goal_handle_.reset();
+        plan_deadline_ = steady_clock_.now() + rclcpp::Duration::from_seconds(static_cast<double>(timeout));
+        plan_statuses_printed_ = 0;
+        plan_execute_after_ = execute_after;
+        plan_exec_feedback_timeout_ = exec_feedback_timeout;
+        plan_exec_id_ = 0;
+
+        if (execute_after) {
+            plan_exec_id_ = newExecutionRequest(exec_feedback_timeout);
+            exec_waiting_plan_ = true;
+        }
+    }
+
+    if (!client->action_server_is_ready()) {
+        finishPlan(id, TrajectoryResult::UNKNOWN, "Planner action server unavailable");
+        return id;
+    }
+
+    auto goal_options = typename rclcpp_action::Client<ActionT>::SendGoalOptions();
+
+    goal_options.goal_response_callback = [this, id](typename GoalHandle::SharedPtr goal_handle) {
+        if (!goal_handle) {
+            finishPlan(id, TrajectoryResult::UNKNOWN, "Planning goal rejected by the planner");
+            return;
+        }
+        // The client keeps only weak references to the goal, hold it until the result arrives
+        std::lock_guard<std::mutex> lock(async_mutex_);
+        if (id == plan_request_id_ && plan_status_ == PlanStatus::PENDING) {
+            plan_goal_handle_ = goal_handle;
+        }
+    };
+
+    // Feedback and result carry the full list of statuses, only the ones not printed yet are logged.
+    // This recovers statuses whose feedback was dropped because it arrived before the goal response.
+    goal_options.feedback_callback = [this, id](typename GoalHandle::SharedPtr,
+                                                const std::shared_ptr<const typename ActionT::Feedback> feedback) {
+        logPlanStatuses(id, feedback->statuses);
+    };
+
+    goal_options.result_callback = [this, id](const typename GoalHandle::WrappedResult& wrapped_result) {
+        if (!wrapped_result.result) {
+            finishPlan(id, TrajectoryResult::UNKNOWN, "Planning action returned no result");
+            return;
+        }
+        logPlanStatuses(id, wrapped_result.result->statuses);
+        finishPlan(id, wrapped_result.result->result);
+    };
+
+    client->async_send_goal(goal, goal_options);
+    return id;
+}
+
+void ManipulatorMenu::logPlanStatuses(uint64_t id, const std::vector<std::string>& statuses)
+{
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    if (id != plan_request_id_) {
+        return;
+    }
+    for (; plan_statuses_printed_ < statuses.size(); plan_statuses_printed_++) {
+        RCLCPP_INFO(node_->get_logger(), "[planner] %s", statuses[plan_statuses_printed_].c_str());
+    }
+}
+
+void ManipulatorMenu::finishPlan(uint64_t id, int32_t error_code, const std::string& message)
+{
+    finishPlan(id, failedTrajectoryResult(error_code, message));
+}
+
+void ManipulatorMenu::finishPlan(uint64_t id, const manipulator_interfaces::msg::TrajectoryResult& result)
+{
+    bool execute = false;
+    uint64_t exec_id = 0;
+    double exec_feedback_timeout = DEFAULT_EXECUTION_FEEDBACK_TIMEOUT;
+
+    {
+        std::lock_guard<std::mutex> lock(async_mutex_);
+        if (id != plan_request_id_ || plan_status_ != PlanStatus::PENDING) {
+            return; // Superseded or already completed (e.g. timed out)
+        }
+
+        plan_result_ = result;
+        plan_status_ = result.success ? PlanStatus::SUCCEEDED : PlanStatus::FAILED;
+        plan_goal_handle_.reset();
+
+        if (result.success) {
+            RCLCPP_INFO(node_->get_logger(), "Trajectory planned successfully.");
+        } else {
+            RCLCPP_ERROR(node_->get_logger(), "Trajectory planning failed, error code: %d, error msg: %s", result.error_code, result.message.c_str());
+        }
+
+        // Continue a planExecute request
+        if (plan_execute_after_ && exec_waiting_plan_ && exec_request_id_ == plan_exec_id_) {
+            if (result.success) {
+                execute = true;
+                exec_id = plan_exec_id_;
+                exec_feedback_timeout = plan_exec_feedback_timeout_;
+            } else if (result.error_code == TrajectoryResult::SAME_POSITION) {
+                //If the robot was already in that position consider the execution successfull
+                finishExecutionLocked(plan_exec_id_, ExecutionStatus::SUCCEEDED, "Already in the goal position");
+            } else {
+                finishExecutionLocked(plan_exec_id_, ExecutionStatus::FAILED, "Planning failed: " + result.message);
+            }
+        }
+    }
+
+    if (execute) {
+        executeAsyncImpl(result.trajectory, exec_feedback_timeout, exec_id);
+    }
+}
+
+manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::waitForPlan(uint64_t id)
+{
     rclcpp::Rate rate(params_.ros_freq);
 
-    while (rclcpp::ok()){
-        if((steady_clock.now() - start_time).seconds() > timeout){
-            RCLCPP_ERROR(node_->get_logger(), "Timeout reached while waiting for planned trajectory.");
-            break;
+    while (rclcpp::ok()) {
+        {
+            std::lock_guard<std::mutex> lock(async_mutex_);
+            if (id != plan_request_id_) {
+                RCLCPP_WARN(node_->get_logger(), "Planning request superseded by a newer one");
+                return failedTrajectoryResult(TrajectoryResult::PREEMPTED, "Superseded by a newer planning request");
+            }
+            if (plan_status_ != PlanStatus::PENDING) {
+                return plan_result_;
+            }
         }
-
-        if(traj_received_){
-            break;
-        }
-
         rate.sleep();
     }
 
-    return traj_result_;
+    return failedTrajectoryResult(TrajectoryResult::PREEMPTED, "Interrupted while waiting for planned trajectory");
+}
+
+bool ManipulatorMenu::planDispatched(uint64_t id)
+{
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    return !(id == plan_request_id_ && plan_status_ == PlanStatus::FAILED);
+}
+
+manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::planAndWait(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state, uint timeout)
+{
+    if (!jointGoal_action_client_->wait_for_action_server(std::chrono::seconds(clients_wait_timeout_))) {
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to planning action server");
+        return failedTrajectoryResult(TrajectoryResult::UNKNOWN, "Planner action server unavailable");
+    }
+
+    return waitForPlan(sendPlanGoalAsync<manipulator_interfaces::action::PlanJointGoal>(
+        jointGoal_action_client_, makeJointGoal(joint_goal, joint_state_from_vector(start_state)), timeout));
 }
 
 manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::planAndWait(
@@ -576,33 +684,13 @@ manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::planAndWait(
     const std::string& frame,
     uint timeout)
 {
-    traj_received_ = false;
-    traj_result_ = manipulator_interfaces::msg::TrajectoryResult();
-    
-    // Publish the tcp goal
-    publishTcpGoal(tcp_goal, start_state, frame, false);
-
-    //Set a start time to check for timeout
-    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
-    auto start_time = steady_clock.now();
-
-    rclcpp::Rate rate(params_.ros_freq);
-
-    while (rclcpp::ok()){
-
-        if((steady_clock.now() - start_time).seconds() > timeout){
-            RCLCPP_ERROR(node_->get_logger(), "Timeout reached while waiting for planned trajectory.");
-            break;
-        }
-
-        if(traj_received_){
-            break;
-        }
-
-        rate.sleep();
+    if (!tcpGoal_action_client_->wait_for_action_server(std::chrono::seconds(clients_wait_timeout_))) {
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to planning action server");
+        return failedTrajectoryResult(TrajectoryResult::UNKNOWN, "Planner action server unavailable");
     }
 
-    return traj_result_;
+    return waitForPlan(sendPlanGoalAsync<manipulator_interfaces::action::PlanTcpGoal>(
+        tcpGoal_action_client_, makeTcpGoal(tcp_goal, joint_state_from_vector(start_state), frame), timeout));
 }
 
 manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::cartesianPlanAndWait(
@@ -611,34 +699,42 @@ manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::cartesianPlanAndW
     const std::string& frame,
     uint timeout)
 {
-    traj_received_ = false;
-    traj_result_ = manipulator_interfaces::msg::TrajectoryResult();
-    
-    // Publish the tcp goal
-    publishCartesianGoal(waypoints, start_state, frame, false);
-
-    //Set a start time to check for timeout
-    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
-    auto start_time = steady_clock.now();
-
-    rclcpp::Rate rate(params_.ros_freq);
-
-    while (rclcpp::ok()){
-
-        if((steady_clock.now() - start_time).seconds() > timeout){
-            RCLCPP_ERROR(node_->get_logger(), "Timeout reached while waiting for planned trajectory.");
-            break;
-        }
-
-        if(traj_received_){
-            break;
-        }
-
-        rate.sleep();
+    if (!cartesianPlan_action_client_->wait_for_action_server(std::chrono::seconds(clients_wait_timeout_))) {
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to planning action server");
+        return failedTrajectoryResult(TrajectoryResult::UNKNOWN, "Planner action server unavailable");
     }
 
-    return traj_result_;
+    return waitForPlan(sendPlanGoalAsync<manipulator_interfaces::action::PlanCartesianGoal>(
+        cartesianPlan_action_client_, makeCartesianGoal(waypoints, joint_state_from_vector(start_state), frame), timeout));
 }
+
+bool ManipulatorMenu::planAsync(const sensor_msgs::msg::JointState joint_goal, const std::vector<double> start_state, uint timeout)
+{
+    return planDispatched(sendPlanGoalAsync<manipulator_interfaces::action::PlanJointGoal>(
+        jointGoal_action_client_, makeJointGoal(joint_goal, joint_state_from_vector(start_state)), timeout));
+}
+
+bool ManipulatorMenu::planAsync(
+    const geometry_msgs::msg::Pose tcp_goal, 
+    const std::vector<double> start_state, 
+    const std::string& frame,
+    uint timeout)
+{
+    return planDispatched(sendPlanGoalAsync<manipulator_interfaces::action::PlanTcpGoal>(
+        tcpGoal_action_client_, makeTcpGoal(tcp_goal, joint_state_from_vector(start_state), frame), timeout));
+}
+
+bool ManipulatorMenu::cartesianPlanAsync(
+    const std::vector<geometry_msgs::msg::Pose> waypoints, 
+    const std::vector<double> start_state, 
+    const std::string& frame,
+    uint timeout)
+{
+    return planDispatched(sendPlanGoalAsync<manipulator_interfaces::action::PlanCartesianGoal>(
+        cartesianPlan_action_client_, makeCartesianGoal(waypoints, joint_state_from_vector(start_state), frame), timeout));
+}
+
+// -------------------- EXECUTION --------------------
 
 bool ManipulatorMenu::setTrajectoryClient(const moveit_msgs::msg::RobotTrajectory& trajectory)
 {
@@ -677,53 +773,258 @@ bool ManipulatorMenu::setTrajectoryClient(const moveit_msgs::msg::RobotTrajector
     return true;
 }
 
-bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajectory, uint timeout)
+uint64_t ManipulatorMenu::newExecutionRequest(double feedback_timeout)
 {
-    if (!setTrajectoryClient(trajectory))
-    {
-        return false;
+    // A new request supersedes the current one
+    if (exec_goal_handle_) {
+        execute_action_client_->async_cancel_goal(exec_goal_handle_);
+        exec_goal_handle_.reset();
     }
 
+    exec_waiting_plan_ = false;
+    exec_status_ = ExecutionStatus::PENDING;
+    exec_message_.clear();
+    exec_progress_ = manipulator_interfaces::action::ExecuteTrajectory::Feedback();
+    exec_last_feedback_ = steady_clock_.now();
+    exec_feedback_timeout_ = feedback_timeout;
+    return ++exec_request_id_;
+}
+
+uint64_t ManipulatorMenu::executeAsyncImpl(const moveit_msgs::msg::RobotTrajectory& trajectory, double feedback_timeout, uint64_t id)
+{
+    {
+        std::lock_guard<std::mutex> lock(async_mutex_);
+        if (id == 0) {
+            id = newExecutionRequest(feedback_timeout);
+        } else if (id != exec_request_id_ || exec_status_ != ExecutionStatus::PENDING) {
+            return id; // Superseded or stopped while planning
+        } else {
+            // Start the feedback timeout from now (the request was reserved while planning)
+            exec_waiting_plan_ = false;
+            exec_last_feedback_ = steady_clock_.now();
+            exec_feedback_timeout_ = feedback_timeout;
+        }
+    }
+
+    if (!trajectory_service_client_->service_is_ready()) {
+        finishExecution(id, ExecutionStatus::FAILED, "Trajectory service unavailable");
+        return id;
+    }
+
+    auto request = std::make_shared<manipulator_interfaces::srv::SetTrajectory::Request>();
+    request->trajectory = trajectory;
+
+    trajectory_service_client_->async_send_request(request,
+        [this, id](rclcpp::Client<manipulator_interfaces::srv::SetTrajectory>::SharedFuture future) {
+            auto response = future.get();
+            if (!response->success) {
+                finishExecution(id, ExecutionStatus::FAILED, "Trajectory service rejected the trajectory: " + response->message);
+                return;
+            }
+            sendExecuteGoal(id);
+        });
+
+    return id;
+}
+
+void ManipulatorMenu::sendExecuteGoal(uint64_t id)
+{
+    using ExecuteTrajectory = manipulator_interfaces::action::ExecuteTrajectory;
+    using GoalHandle = rclcpp_action::ClientGoalHandle<ExecuteTrajectory>;
+
+    {
+        std::lock_guard<std::mutex> lock(async_mutex_);
+        if (id != exec_request_id_ || exec_status_ != ExecutionStatus::PENDING) {
+            return; // Superseded or stopped while setting the trajectory
+        }
+    }
+
+    if (!execute_action_client_->action_server_is_ready()) {
+        finishExecution(id, ExecutionStatus::FAILED, "Execution action server unavailable");
+        return;
+    }
+
+    auto goal_options = rclcpp_action::Client<ExecuteTrajectory>::SendGoalOptions();
+
+    goal_options.goal_response_callback = [this, id](GoalHandle::SharedPtr goal_handle) {
+        if (!goal_handle) {
+            finishExecution(id, ExecutionStatus::FAILED, "Execution goal rejected by the planner");
+            return;
+        }
+
+        std::lock_guard<std::mutex> lock(async_mutex_);
+        if (id != exec_request_id_ || exec_status_ != ExecutionStatus::PENDING) {
+            // Superseded or stopped before the goal was accepted
+            execute_action_client_->async_cancel_goal(goal_handle);
+            return;
+        }
+        // The client keeps only weak references to the goal, hold it until the result arrives
+        exec_goal_handle_ = goal_handle;
+        exec_status_ = ExecutionStatus::RUNNING;
+        exec_last_feedback_ = steady_clock_.now();
+    };
+
+    goal_options.feedback_callback = [this, id](GoalHandle::SharedPtr,
+                                                const std::shared_ptr<const ExecuteTrajectory::Feedback> feedback) {
+        std::lock_guard<std::mutex> lock(async_mutex_);
+        if (id != exec_request_id_) {
+            return;
+        }
+        exec_progress_ = *feedback;
+        exec_last_feedback_ = steady_clock_.now();
+    };
+
+    goal_options.result_callback = [this, id](const GoalHandle::WrappedResult& wrapped_result) {
+        if (!wrapped_result.result) {
+            finishExecution(id, ExecutionStatus::FAILED, "Execution action returned no result");
+            return;
+        }
+
+        const std::string& message = wrapped_result.result->message;
+        switch (wrapped_result.result->result_code)
+        {
+            case ExecuteTrajectory::Result::SUCCESS:
+                finishExecution(id, ExecutionStatus::SUCCEEDED, message);
+                break;
+            case ExecuteTrajectory::Result::STOPPED:
+                finishExecution(id, ExecutionStatus::STOPPED, message);
+                break;
+            case ExecuteTrajectory::Result::TIMEOUT:
+                finishExecution(id, ExecutionStatus::TIMEOUT, message);
+                break;
+            default:
+                finishExecution(id, ExecutionStatus::FAILED, "Execution failed with code " + std::to_string(wrapped_result.result->result_code) + ": " + message);
+                break;
+        }
+    };
+
+    RCLCPP_INFO(node_->get_logger(), "Starting trajectory execution");
+    execute_action_client_->async_send_goal(ExecuteTrajectory::Goal(), goal_options);
+}
+
+void ManipulatorMenu::finishExecution(uint64_t id, ExecutionStatus status, const std::string& message)
+{
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    finishExecutionLocked(id, status, message);
+}
+
+void ManipulatorMenu::finishExecutionLocked(uint64_t id, ExecutionStatus status, const std::string& message)
+{
+    if (id != exec_request_id_ || (exec_status_ != ExecutionStatus::PENDING && exec_status_ != ExecutionStatus::RUNNING)) {
+        return; // Superseded or already completed
+    }
+
+    exec_status_ = status;
+    exec_message_ = message;
+    exec_goal_handle_.reset();
+    exec_waiting_plan_ = false;
+
+    switch (status)
+    {
+        case ExecutionStatus::SUCCEEDED:
+            RCLCPP_INFO(node_->get_logger(), "%s", message.c_str());
+            break;
+        case ExecutionStatus::STOPPED:
+            RCLCPP_ERROR(node_->get_logger(), "Trajectory execution stopped: %s", message.c_str());
+            break;
+        case ExecutionStatus::TIMEOUT:
+            RCLCPP_ERROR(node_->get_logger(), "Trajectory execution timed out: %s", message.c_str());
+            break;
+        default:
+            RCLCPP_ERROR(node_->get_logger(), "Trajectory execution failed: %s", message.c_str());
+            break;
+    }
+}
+
+void ManipulatorMenu::asyncWatchdog()
+{
+    uint64_t timed_out_plan = 0;
+
+    {
+        std::lock_guard<std::mutex> lock(async_mutex_);
+        rclcpp::Time now = steady_clock_.now();
+
+        if (plan_status_ == PlanStatus::PENDING && now > plan_deadline_) {
+            timed_out_plan = plan_request_id_;
+        }
+
+        // The feedback timeout starts once the execution is requested (not while waiting for the plan)
+        if ((exec_status_ == ExecutionStatus::PENDING || exec_status_ == ExecutionStatus::RUNNING) && !exec_waiting_plan_) {
+            double feedback_age = (now - exec_last_feedback_).seconds();
+            if (feedback_age > exec_feedback_timeout_) {
+                if (exec_goal_handle_) {
+                    execute_action_client_->async_cancel_goal(exec_goal_handle_);
+                }
+                //Fallback in case the action server is not responding
+                std_msgs::msg::Bool ctrl_msg;
+                ctrl_msg.data = false;
+                executionControl_pub_->publish(ctrl_msg);
+
+                char message[96];
+                std::snprintf(message, sizeof(message), "No execution feedback received for %.2f seconds", feedback_age);
+                finishExecutionLocked(exec_request_id_, ExecutionStatus::TIMEOUT, message);
+            }
+        }
+    }
+
+    if (timed_out_plan != 0) {
+        finishPlan(timed_out_plan, TrajectoryResult::TIMED_OUT, "Timeout reached while waiting for planned trajectory");
+    }
+}
+
+bool ManipulatorMenu::waitForExecution(uint64_t id)
+{
     rclcpp::Rate rate(params_.ros_freq);
 
-    sensor_msgs::msg::JointState goal_state;
-    trajectory_msgs::msg::JointTrajectoryPoint last_traj_pt = trajectory.joint_trajectory.points.back();
-    goal_state.position = last_traj_pt.positions;
-
-    //Set a start time to check for timeout
-    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
-    auto start_time = steady_clock.now();
-
-    //Tell the planner to start the execution
-    std_msgs::msg::Bool ctrl_msg;
-    ctrl_msg.data = true;
-    RCLCPP_INFO(node_->get_logger(), "Starting trajectory execution");
-    executionControl_pub_->publish(ctrl_msg);
-
-    while(rclcpp::ok()){
-        if((steady_clock.now() - start_time).seconds() > timeout){
-            RCLCPP_ERROR(node_->get_logger(), "Timeout reached while waiting for trajectory execution.");
-            break;
-        }
-        //Repeatedly check joint states to see if the goal has been reached
-        for (size_t i {0}; i < goal_state.position.size(); i++){
-            if (std::abs(goal_state.position[i] - current_joint_pose_.position[i]) > params_.joint_tolerance){
-                break; //At least one joint is not in the goal position
+    while (rclcpp::ok()) {
+        {
+            std::lock_guard<std::mutex> lock(async_mutex_);
+            if (id != exec_request_id_) {
+                RCLCPP_WARN(node_->get_logger(), "Execution request superseded by a newer one");
+                return false;
             }
-
-            if (i == goal_state.position.size() - 1) {return true;} //If we got to the last element trajectory exec is complete
+            if (exec_status_ != ExecutionStatus::PENDING && exec_status_ != ExecutionStatus::RUNNING) {
+                return exec_status_ == ExecutionStatus::SUCCEEDED;
+            }
         }
-
         rate.sleep();
     }
 
     return false;
 }
 
+bool ManipulatorMenu::executionDispatched(uint64_t id)
+{
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    return !(id == exec_request_id_ && exec_status_ == ExecutionStatus::FAILED);
+}
+
+bool ManipulatorMenu::executeAndWait(moveit_msgs::msg::RobotTrajectory trajectory, double feedback_timeout)
+{
+    if (!trajectory_service_client_->wait_for_service(std::chrono::seconds(clients_wait_timeout_))) {
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to trajectory service");
+        return false;
+    }
+
+    if (!execute_action_client_->wait_for_action_server(std::chrono::seconds(clients_wait_timeout_))) {
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to execution action server");
+        return false;
+    }
+
+    return waitForExecution(executeAsyncImpl(trajectory, feedback_timeout));
+}
+
+bool ManipulatorMenu::executeAsync(const moveit_msgs::msg::RobotTrajectory trajectory, double feedback_timeout)
+{
+    return executionDispatched(executeAsyncImpl(trajectory, feedback_timeout));
+}
+
+// -------------------- PLAN AND EXECUTE --------------------
+
 bool ManipulatorMenu::planExecuteAndWait(
     const sensor_msgs::msg::JointState joint_goal, 
     uint timeout_planning,
-    uint timeout_execution
+    double execution_feedback_timeout
 ){
     // Plan the trajectory
     manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(joint_goal, std::vector<double>(), timeout_planning);
@@ -731,9 +1032,9 @@ bool ManipulatorMenu::planExecuteAndWait(
     if (traj_result.success)
     {
         // Execute the trajectory and wait for it to finish
-        return executeAndWait(traj_result.trajectory, timeout_execution);
+        return executeAndWait(traj_result.trajectory, execution_feedback_timeout);
     }
-    else if (traj_result_.error_code == manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION)
+    else if (traj_result.error_code == manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION)
     {
         return true; //If the robot was already in that position consider the execution successfull
     } else {
@@ -744,15 +1045,15 @@ bool ManipulatorMenu::planExecuteAndWait(
 bool ManipulatorMenu::planExecuteAndWait(
     const std::vector<double> joint_goal, 
     uint timeout_planning,
-    uint timeout_execution
+    double execution_feedback_timeout
 ){
-    return planExecuteAndWait(joint_state_from_vector(joint_goal), timeout_planning, timeout_execution);
+    return planExecuteAndWait(joint_state_from_vector(joint_goal), timeout_planning, execution_feedback_timeout);
 }
 
 bool ManipulatorMenu::planExecuteAndWait(
     const std::string& known_pose, 
     uint timeout_planning,
-    uint timeout_execution
+    double execution_feedback_timeout
 ){
     // Get the known pose
     std::vector<double> joint_goal = getKnownPose(known_pose);
@@ -761,30 +1062,24 @@ bool ManipulatorMenu::planExecuteAndWait(
         return false;
     }
 
-    return planExecuteAndWait(joint_goal, timeout_planning, timeout_execution);
+    return planExecuteAndWait(joint_goal, timeout_planning, execution_feedback_timeout);
 }
 
 bool ManipulatorMenu::planExecuteAndWait(
     const geometry_msgs::msg::Pose tcp_goal, 
     const std::string& frame, //Leave empty for default frame
     uint timeout_planning,
-    uint timeout_execution
+    double execution_feedback_timeout
 ){
     // Plan the trajectory
     manipulator_interfaces::msg::TrajectoryResult traj_result = planAndWait(tcp_goal, std::vector<double>(), frame, timeout_planning);
-    
-    std::vector<double> last_point = traj_result.trajectory.joint_trajectory.points.back().positions;
-    for (unsigned long k = 0; k < last_point.size(); k++)
-    {
-        last_point[k] = last_point[k] * 180 / M_PI; //Convert rad to deg
-    }
 
     if (traj_result.success)
     {
         // Execute the trajectory and wait for it to finish
-        return executeAndWait(traj_result.trajectory, timeout_execution);
+        return executeAndWait(traj_result.trajectory, execution_feedback_timeout);
     }
-    else if (traj_result_.error_code == manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION)
+    else if (traj_result.error_code == manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION)
     {
         return true; //If the robot was already in that position consider the execution successfull
     } else {
@@ -796,7 +1091,7 @@ bool ManipulatorMenu::cartesianPlanExecuteAndWait(
     const std::vector<geometry_msgs::msg::Pose> waypoints, 
     const std::string& frame, //Leave empty for default frame
     uint timeout_planning,
-    uint timeout_execution
+    double execution_feedback_timeout
 ){
     // Plan the trajectory
     manipulator_interfaces::msg::TrajectoryResult traj_result = cartesianPlanAndWait(waypoints, std::vector<double>(), frame, timeout_planning);
@@ -804,9 +1099,9 @@ bool ManipulatorMenu::cartesianPlanExecuteAndWait(
     if (traj_result.success)
     {
         // Execute the trajectory and wait for it to finish
-        return executeAndWait(traj_result.trajectory, timeout_execution);
+        return executeAndWait(traj_result.trajectory, execution_feedback_timeout);
     }
-    else if (traj_result_.error_code == manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION)
+    else if (traj_result.error_code == manipulator_interfaces::msg::TrajectoryResult::SAME_POSITION)
     {
         return true; //If the robot was already in that position consider the execution successfull
     } else {
@@ -814,8 +1109,117 @@ bool ManipulatorMenu::cartesianPlanExecuteAndWait(
     }
 }
 
+bool ManipulatorMenu::planExecuteAsync(
+    const sensor_msgs::msg::JointState joint_goal, 
+    uint timeout_planning,
+    double execution_feedback_timeout
+){
+    return planDispatched(sendPlanGoalAsync<manipulator_interfaces::action::PlanJointGoal>(
+        jointGoal_action_client_, makeJointGoal(joint_goal, sensor_msgs::msg::JointState()), timeout_planning,
+        true, execution_feedback_timeout));
+}
+
+bool ManipulatorMenu::planExecuteAsync(
+    const std::vector<double> joint_goal, 
+    uint timeout_planning,
+    double execution_feedback_timeout
+){
+    return planExecuteAsync(joint_state_from_vector(joint_goal), timeout_planning, execution_feedback_timeout);
+}
+
+bool ManipulatorMenu::planExecuteAsync(
+    const std::string& known_pose, 
+    uint timeout_planning,
+    double execution_feedback_timeout
+){
+    std::vector<double> joint_goal = getKnownPose(known_pose);
+    if (joint_goal.empty()) {
+        RCLCPP_ERROR(node_->get_logger(), "Known pose %s not found.", known_pose.c_str());
+        return false;
+    }
+
+    return planExecuteAsync(joint_goal, timeout_planning, execution_feedback_timeout);
+}
+
+bool ManipulatorMenu::planExecuteAsync(
+    const geometry_msgs::msg::Pose tcp_goal, 
+    const std::string& frame, //Leave empty for default frame
+    uint timeout_planning,
+    double execution_feedback_timeout
+){
+    return planDispatched(sendPlanGoalAsync<manipulator_interfaces::action::PlanTcpGoal>(
+        tcpGoal_action_client_, makeTcpGoal(tcp_goal, sensor_msgs::msg::JointState(), frame), timeout_planning,
+        true, execution_feedback_timeout));
+}
+
+bool ManipulatorMenu::cartesianPlanExecuteAsync(
+    const std::vector<geometry_msgs::msg::Pose> waypoints, 
+    const std::string& frame, //Leave empty for default frame
+    uint timeout_planning,
+    double execution_feedback_timeout
+){
+    return planDispatched(sendPlanGoalAsync<manipulator_interfaces::action::PlanCartesianGoal>(
+        cartesianPlan_action_client_, makeCartesianGoal(waypoints, sensor_msgs::msg::JointState(), frame), timeout_planning,
+        true, execution_feedback_timeout));
+}
+
+// -------------------- ASYNC STATUS --------------------
+
+ManipulatorMenu::PlanStatus ManipulatorMenu::getPlanStatus()
+{
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    return plan_status_;
+}
+
+manipulator_interfaces::msg::TrajectoryResult ManipulatorMenu::getPlanResult()
+{
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    return plan_result_;
+}
+
+ManipulatorMenu::ExecutionStatus ManipulatorMenu::getExecutionStatus()
+{
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    return exec_status_;
+}
+
+std::string ManipulatorMenu::getExecutionMessage()
+{
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    return exec_message_;
+}
+
+manipulator_interfaces::action::ExecuteTrajectory::Feedback ManipulatorMenu::getExecutionProgress()
+{
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    return exec_progress_;
+}
+
+bool ManipulatorMenu::isPlanning()
+{
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    return plan_status_ == PlanStatus::PENDING;
+}
+
+bool ManipulatorMenu::isExecuting()
+{
+    std::lock_guard<std::mutex> lock(async_mutex_);
+    return exec_status_ == ExecutionStatus::PENDING || exec_status_ == ExecutionStatus::RUNNING;
+}
+
 void ManipulatorMenu::stopTrajectory(){
-    // Publish an empty trajectory to stop the current one
+    // Cancel any execution goal (the running request ends as STOPPED)
+    execute_action_client_->async_cancel_all_goals();
+
+    {
+        // A request not yet accepted by the planner is stopped here, its goal is cancelled once accepted
+        std::lock_guard<std::mutex> lock(async_mutex_);
+        if (exec_status_ == ExecutionStatus::PENDING) {
+            finishExecutionLocked(exec_request_id_, ExecutionStatus::STOPPED, "Execution stopped before it started");
+        }
+    }
+
+    // Also stop executions started without the action (fire-and-forget goals)
     std_msgs::msg::Bool ctrl_msg;
     ctrl_msg.data = false;
     executionControl_pub_->publish(ctrl_msg);
@@ -1027,13 +1431,13 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_x(const double x_step, bool
 
     if (linear)
     {
-        // publishCartesianGoal({goal_pose});
         cartesianPlanExecuteAndWait({goal_pose});
         return goal_pose;
     }
     else
     {
-        return publishTcpGoal(goal_pose);
+        planExecuteAsync(goal_pose);
+        return goal_pose;
     }
 }
 
@@ -1047,13 +1451,13 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_y(const double y_step, bool
 
     if (linear)
     {
-        // publishCartesianGoal({goal_pose});
         cartesianPlanExecuteAndWait({goal_pose});
         return goal_pose;
     }
     else
     {
-        return publishTcpGoal(goal_pose);
+        planExecuteAsync(goal_pose);
+        return goal_pose;
     }
 }
 
@@ -1067,13 +1471,13 @@ geometry_msgs::msg::Pose ManipulatorMenu::move_along_z(const double z_step, bool
 
     if (linear)
     {
-        // publishCartesianGoal({goal_pose});
         cartesianPlanExecuteAndWait({goal_pose});
         return goal_pose;
     }
     else
     {
-        return publishTcpGoal(goal_pose);
+        planExecuteAsync(goal_pose);
+        return goal_pose;
     }
 }
 
@@ -1088,7 +1492,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::make_tcp_rot(const std::vector<double>
     goal_pose[3] = goal_pose[3] + rot_vec[0];
     goal_pose[4] = goal_pose[4] + rot_vec[1];
     goal_pose[5] = goal_pose[5] + rot_vec[2];
-    return publishTcpGoal(goal_pose);
+    planExecuteAsync(pose_from_vector(goal_pose));
+    return pose_from_vector(goal_pose);
 }
 
 // Set an ABSOLUTE orientation ee position around the 3 carthesian axis (in degrees)
@@ -1100,7 +1505,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::change_tcp_orient(const std::vector<do
     goal_pose[3] = rot_vec[0];
     goal_pose[4] = rot_vec[1];
     goal_pose[5] = rot_vec[2];
-    return publishTcpGoal(goal_pose);
+    planExecuteAsync(pose_from_vector(goal_pose));
+    return pose_from_vector(goal_pose);
 }
 
 // Set a relative rotation around x axis (in degrees)
@@ -1110,7 +1516,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::rotate_around_x(const double x_rot_ste
     std::vector<double> goal_pose = getEEpos_rpy();
     // Update tcp orient goal
     goal_pose[3] = goal_pose[3] + x_rot_step;
-    return publishTcpGoal(goal_pose);
+    planExecuteAsync(pose_from_vector(goal_pose));
+    return pose_from_vector(goal_pose);
 }
 
 // Set a relative rotation around y axis (in degrees)
@@ -1120,7 +1527,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::rotate_around_y(const double y_rot_ste
     std::vector<double> goal_pose = getEEpos_rpy();
     // Update tcp orient goal
     goal_pose[4] = goal_pose[4] + y_rot_step;
-    return publishTcpGoal(goal_pose);
+    planExecuteAsync(pose_from_vector(goal_pose));
+    return pose_from_vector(goal_pose);
 }
 
 // Set a relative rotation around z axis (in degrees)
@@ -1130,7 +1538,8 @@ geometry_msgs::msg::Pose ManipulatorMenu::rotate_around_z(const double z_rot_ste
     std::vector<double> goal_pose = getEEpos_rpy();
     // Update tcp orient goal
     goal_pose[5] = goal_pose[5] + z_rot_step;
-    return publishTcpGoal(goal_pose);
+    planExecuteAsync(pose_from_vector(goal_pose));
+    return pose_from_vector(goal_pose);
 }
 
 // --------------------- GRIPPER ---------------------
@@ -2082,23 +2491,6 @@ void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::Sha
     current_joint_pose_.position = joints_values_group_;
 }
 
-void ManipulatorMenu::trajectoryCallback(const manipulator_interfaces::msg::TrajectoryResult::SharedPtr& msg)
-{
-    //std::lock_guard<std::mutex> lock(traj_mtx_);
-    if(msg->success)
-    {
-        RCLCPP_INFO(node_->get_logger(), "Trajectory planned successfully.");
-    }
-    else
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Trajectory planning failed, error code: %d, error msg: %s", msg->error_code, msg->message.c_str());
-    }
-
-    traj_result_ = *msg.get();
-    traj_received_ = true;
-}
-
-
 /*
     ================================================================
     ================== USER INTERFACE FUNCTIONS ====================
@@ -2395,7 +2787,7 @@ void ManipulatorMenu::userGoToKnownPose()
     if (choice < known_poses_.size()){
         std::advance(it, choice);
         std::vector<double> pose = it->second;
-        publishJointGoal(pose);
+        planExecuteAsync(pose);
     } else {
         std::cout << "Invalid choice!" << std::endl;
     }
