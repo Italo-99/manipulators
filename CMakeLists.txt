@@ -38,7 +38,6 @@ find_package(moveit_ros_planning REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 
 find_package(tf2_ros REQUIRED)
-find_package(motors_trajectory REQUIRED)
 find_package(rviz_visual_tools REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(yaml_cpp_vendor REQUIRED)
@@ -70,7 +69,6 @@ set(MANIPULATOR_MENU_DEPENDS
     std_srvs
     trajectory_msgs
     moveit_msgs
-    motors_trajectory
     yaml_cpp_vendor
     manipulator_interfaces
     tf2_ros
@@ -90,7 +88,7 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-#Add directories to be installed
+# Add directories to be installed
 install(DIRECTORY
   config
   launch

@@ -41,7 +41,6 @@
 
 #include "std_srvs/srv/set_bool.hpp"
 
-#include "motors_trajectory/srv/roboti_q_gripper_control.hpp"
 #include "manipulator_interfaces/srv/inv_kine.hpp"
 #include "manipulator_interfaces/srv/pseudo_inverse.hpp"
 #include "manipulator_interfaces/srv/f_kine.hpp"
@@ -1049,7 +1048,6 @@ class ManipulatorMenu
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setAdmittanceVelMode_client_;
         
         //Gripper clients for robotiq85 gripper
-        rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripperGrab_client_; //Not implemented for now
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gripperMove_client_;
 
         //Client to retrieve parameters from the manipulator_planner node automatically
