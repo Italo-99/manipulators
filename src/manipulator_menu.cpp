@@ -50,6 +50,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     eePose_sub_ = node_->create_subscription<geometry_msgs::msg::Pose>(
         params_.manipulator_name+"/tcp_pose", qos_best_effort(1),
         [this](const geometry_msgs::msg::Pose::SharedPtr msg) {
+            std::lock_guard<std::mutex> lock(this->state_mutex_);
             this->current_tcp_pose_ = *msg;
         }
     );
@@ -604,7 +605,7 @@ void ManipulatorMenu::finishPlan(uint64_t id, const manipulator_interfaces::msg:
     uint64_t exec_id = 0;
     double exec_feedback_timeout = DEFAULT_EXECUTION_FEEDBACK_TIMEOUT;
 
-    {
+    { //Mutex lock scope
         std::lock_guard<std::mutex> lock(async_mutex_);
         if (id != plan_request_id_ || plan_status_ != PlanStatus::PENDING) {
             return; // Superseded or already completed (e.g. timed out)
@@ -1385,6 +1386,7 @@ geometry_msgs::msg::Pose ManipulatorMenu::getOffsetPose(const geometry_msgs::msg
 // Get current EE pose
 geometry_msgs::msg::Pose ManipulatorMenu::getEEpose()
 {
+    std::lock_guard<std::mutex> lock(state_mutex_);
     return current_tcp_pose_;
 }
 
@@ -1405,12 +1407,18 @@ std::vector<double> ManipulatorMenu::getEEpos_rpy()
 sensor_msgs::msg::JointState ManipulatorMenu::getJointStateRadians()
 {
     // Get current joint state
-    return joint_state_from_vector(joints_values_group_);
+    std::vector<double> joint_values;
+    {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        joint_values = joints_values_group_;
+    }
+    return joint_state_from_vector(joint_values);
 }
 
 std::vector<double> ManipulatorMenu::getJointStateDegrees()
 {
     // Get current joint values in radians
+    std::lock_guard<std::mutex> lock(state_mutex_);
     std::vector<double> joint_values;
     for (unsigned long k = 0; k < params_.joint_names.size(); ++k)
     {
@@ -2451,6 +2459,7 @@ void ManipulatorMenu::shutdown_handler()
 
 void ManipulatorMenu::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr &joints_state)
 {
+    std::lock_guard<std::mutex> lock(state_mutex_);
 
     // Map to store couples joint name - joint values
     std::unordered_map<std::string, double>::iterator it;

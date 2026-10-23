@@ -1084,7 +1084,8 @@ class ManipulatorMenu
         rclcpp::Client<manipulator_interfaces::srv::SetTrajectory>::SharedPtr trajectory_service_client_;         // Service to deliver a trajectory to the planner without polling on a topic
         rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr executionControl_pub_;                                    // Moves or stops the robot
 
-        // Robot state
+        // Robot state (written by the subscribers, guarded by state_mutex_)
+        mutable std::mutex state_mutex_;
         geometry_msgs::msg::Pose current_tcp_pose_;
         geometry_msgs::msg::Twist current_tcp_vel_;
         std::unordered_map<std::string, double> joints_map_group_;
