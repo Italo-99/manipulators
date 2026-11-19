@@ -30,8 +30,8 @@
     <depend>moveit_ros_planning_interface</depend>
     <depend>moveit_visual_tools</depend>
 
+    <depend>pilz_industrial_motion_planner</depend>
     <depend>tf2_ros</depend>
-    <depend>motors_trajectory</depend>
     <depend>rviz_visual_tools</depend>
     <depend>eigen</depend>
     <depend>yaml_cpp_vendor</depend>

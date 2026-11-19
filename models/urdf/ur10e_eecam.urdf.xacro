@@ -131,14 +131,13 @@
                     <box size="0.130 0.170 $(arg tcp_offset)"/>
                 </geometry>
             </collision>
-
-            <joint name="tool0-ee_collision_box" type="fixed">
-                <parent link="tool0"/>
-                <child link="ee_collision_box"/>
-                <origin xyz="0 0.0 0.080 " rpy="0 0 0"/>
-            </joint>
-
         </link>
+
+        <joint name="tool0-ee_collision_box" type="fixed">
+            <parent link="tool0"/>
+            <child link="ee_collision_box"/>
+            <origin xyz="0 0.0 0.080 " rpy="0 0 0"/>
+        </joint>
     </xacro:if>
 
 

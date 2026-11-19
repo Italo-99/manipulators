@@ -12,7 +12,7 @@
     <!-- Additional objects Arguments -->
     <xacro:arg name="camera"                   default="true"/>
     <xacro:arg name="gripper"                  default="false"/>
-    <xacro:arg name="gfloor"                   default="true"/>
+    <xacro:arg name="gfloor"                   default="false"/>
     <xacro:arg name="gripper_collision_box"    default="true"/>
 
     <xacro:property name="camera"                value="$(arg camera)"/>
