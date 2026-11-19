@@ -17,7 +17,7 @@ vel_factor:             0.2
 
 acc_factor:             0.2
 
-ros_freq:               500        # ROS loop frequency (update rate of callbacks)
+ros_freq:               500.0        # ROS loop frequency (update rate of callbacks)
 
 max_speed_ee:           0.5       # Maximum velocity of the end-effector in [m/s] in jacobian real time control
 

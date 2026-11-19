@@ -45,9 +45,6 @@
 #include "manipulator_interfaces/srv/pseudo_inverse.hpp"
 #include "manipulator_interfaces/srv/f_kine.hpp"
 #include "manipulator_interfaces/srv/jacobian.hpp"
-#include "manipulator_interfaces/srv/change_planner_tolerances.hpp"
-#include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
-#include "manipulator_interfaces/srv/enable_real_time_constraints.hpp"
 #include "manipulator_interfaces/srv/set_trajectory.hpp"
 
 #include "manipulator_interfaces/msg/joint_goal.hpp"
@@ -1037,9 +1034,6 @@ class ManipulatorMenu
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr eeVel_sub_; //Subscription to the end effector twist
 
         //Setter clients
-        rclcpp::Client<manipulator_interfaces::srv::ChangePlannerScalingFactors>::SharedPtr changePlannerScalingFactors_client_;
-        rclcpp::Client<manipulator_interfaces::srv::ChangePlannerTolerances>::SharedPtr changePlannerTolerances_client_;
-        rclcpp::Client<manipulator_interfaces::srv::EnableRealTimeConstraints>::SharedPtr enableRealTimeConstraints_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setJacobianControl_client_;
         rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr setRealTimeControl_client_;
 
@@ -1052,6 +1046,8 @@ class ManipulatorMenu
 
         //Client to retrieve parameters from the manipulator_planner node automatically
         rclcpp::SyncParametersClient::SharedPtr getManipulatorParams_client_; //gets the parameter from the manipulator planner node
+        rclcpp::AsyncParametersClient::SharedPtr setManipulatorParams_client_; //sets the parameters of the manipulator planner node
+        void setPlannerParameters(const std::vector<rclcpp::Parameter> &parameters); //asynchronously sets parameters of the manipulator planner node
 
         // Kinematics clients
         rclcpp::Client<manipulator_interfaces::srv::InvKine>::SharedPtr invKine_client_;

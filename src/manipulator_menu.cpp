@@ -13,6 +13,7 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
     // ---------------------- Params sync ----------------------
 
     getManipulatorParams_client_ = std::make_shared<rclcpp::SyncParametersClient>(node_, "/manipulator_planner");
+    setManipulatorParams_client_ = std::make_shared<rclcpp::AsyncParametersClient>(node_, "/manipulator_planner");
 
     if (sync_parameters){
         waitManipulatorParameters();
@@ -70,9 +71,6 @@ ManipulatorMenu::ManipulatorMenu(ManipulatorMenuParams params, const rclcpp::Nod
 
     setJacobianControl_client_           = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/jacobian_control_setter");
     setRealTimeControl_client_           = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/joints_real_time_setter");
-    enableRealTimeConstraints_client_    = node_->create_client<manipulator_interfaces::srv::EnableRealTimeConstraints>(params_.manipulator_name+"/enable_real_time_constraints");
-    changePlannerScalingFactors_client_  = node_->create_client<manipulator_interfaces::srv::ChangePlannerScalingFactors>(params_.manipulator_name+"/change_planner_scaling_factors");
-    changePlannerTolerances_client_      = node_->create_client<manipulator_interfaces::srv::ChangePlannerTolerances>(params_.manipulator_name+"/change_planner_tolerances");
 
     // --------------------- Admittace control clients ---------------------
     setAdmittanceControl_client_         = node_->create_client<std_srvs::srv::SetBool>(params_.manipulator_name+"/enable_admittance");
@@ -1958,100 +1956,66 @@ void ManipulatorMenu::setJsRealTimeControl(bool set)
     setRealTimeControl_client_->async_send_request(request, cb);
 }
 
-void ManipulatorMenu::setRealTimeConstraints(bool limit_joints, bool limit_jacobian, bool collision_check){
-    auto request = std::make_shared<manipulator_interfaces::srv::EnableRealTimeConstraints::Request>();
-    request->limit_joints_control = limit_joints;
-    request->limit_jacobian_control = limit_jacobian;
-    request->real_time_collision_check = collision_check;
-
-    // Check if service is available
-    if (!enableRealTimeConstraints_client_->wait_for_service(std::chrono::milliseconds(100)))
+// Set parameters of the manipulator planner node through the ROS parameter server
+void ManipulatorMenu::setPlannerParameters(const std::vector<rclcpp::Parameter> &parameters)
+{
+    if (!setManipulatorParams_client_->wait_for_service(std::chrono::milliseconds(100)))
     {
-        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to enable_real_time_constraints service");
+        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to the manipulator planner parameter service");
         return;
     }
 
-    auto cb = [&, this](rclcpp::Client<manipulator_interfaces::srv::EnableRealTimeConstraints>::SharedFuture future){
-        auto result = future.get();
-        if (result->success)
+    auto cb = [parameters, this](std::shared_future<std::vector<rcl_interfaces::msg::SetParametersResult>> future){
+        auto results = future.get();
+        for (size_t i = 0; i < results.size() && i < parameters.size(); i++)
         {
-            RCLCPP_INFO(node_->get_logger(), "Set real time constraints: limit_joints_control = %s, limit_jacobian_control = %s, real_time_collision_check = %s",
-                        limit_joints ? "True" : "False", limit_jacobian ? "True" : "False", collision_check ? "True" : "False");
-        }
-        else
-        {
-            RCLCPP_ERROR(node_->get_logger(), "Failed to set real time constraints.");
+            if (results[i].successful)
+            {
+                RCLCPP_INFO(node_->get_logger(), "Planner parameter set: %s = %s",
+                            parameters[i].get_name().c_str(), parameters[i].value_to_string().c_str());
+            }
+            else
+            {
+                RCLCPP_ERROR(node_->get_logger(), "Failed to set planner parameter %s: %s",
+                             parameters[i].get_name().c_str(), results[i].reason.c_str());
+            }
         }
     };
 
     // Send the request asynchronously
-    enableRealTimeConstraints_client_->async_send_request(request, cb); 
+    setManipulatorParams_client_->set_parameters(parameters, cb);
+}
+
+void ManipulatorMenu::setRealTimeConstraints(bool limit_joints, bool limit_jacobian, bool collision_check){
+    setPlannerParameters({
+        rclcpp::Parameter("limit_joints_control", limit_joints),
+        rclcpp::Parameter("limit_jacobian_control", limit_jacobian),
+        rclcpp::Parameter("real_time_collision_check", collision_check)
+    });
 }
 
 // Set new dynamic planners vel/acc params
 void ManipulatorMenu::setPlannerScalingFactors(float new_vel, float new_acc)
 {
-    auto request = std::make_shared<manipulator_interfaces::srv::ChangePlannerScalingFactors::Request>();
-    request->acc_factor = new_acc;
-    request->vel_factor = new_vel;
-
-    // Check if service is available
-    if (!changePlannerScalingFactors_client_->wait_for_service(std::chrono::milliseconds(100)))
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to set_planner_scaling_factors service");
-        return;
-    }
-
-    auto cb = [&, this](rclcpp::Client<manipulator_interfaces::srv::ChangePlannerScalingFactors>::SharedFuture future){
-        auto result = future.get();
-        if (result->success)
-        {
-            RCLCPP_INFO(node_->get_logger(), "Planner scaling factors changed: acc_factor = %f, vel_factor = %f", new_acc, new_vel);
-        }
-        else
-        {
-            RCLCPP_ERROR(node_->get_logger(), "Failed to set planner scaling factors");
-        }
-    };
-
-    // Send the request asynchronously
-    changePlannerScalingFactors_client_->async_send_request(request, cb);
+    setPlannerParameters({
+        rclcpp::Parameter("vel_factor", static_cast<double>(new_vel)),
+        rclcpp::Parameter("acc_factor", static_cast<double>(new_acc))
+    });
 }
 
-// Set new dynamic planners vel/acc params
+// Set new dynamic planners tolerances
 void ManipulatorMenu::setPlannerTolerances(float position, float orientation, float joint)
 {
-    auto request = std::make_shared<manipulator_interfaces::srv::ChangePlannerTolerances::Request>();
-    request->position_tolerance = position;
-    request->orientation_tolerance = orientation;
-    request->joint_tolerance = joint;
-
     // Update tolerances
     params_.joint_tolerance = joint; 
     params_.tcp_position_tolerance = position; 
     params_.tcp_orientation_tolerance = orientation; 
 
-    // Check if service is available
-    while (!changePlannerTolerances_client_->wait_for_service(std::chrono::milliseconds(100)))
-    {
-        RCLCPP_ERROR(node_->get_logger(), "Unable to connect to set_planner_tolerances service");
-        return;
-    }
-
-    auto cb = [&, this](rclcpp::Client<manipulator_interfaces::srv::ChangePlannerTolerances>::SharedFuture future){
-        auto result = future.get();
-        if (result->success)
-        {
-            RCLCPP_INFO(node_->get_logger(), "Planner params changed: position_tolerance = %f, orientation_tolerance = %f, joint_tolerance = %f", position, orientation, joint);
-        }
-        else
-        {
-            RCLCPP_ERROR(node_->get_logger(), "Failed to set planner params");
-        }
-    };
-
-    // Send the request asynchronously
-    changePlannerTolerances_client_->async_send_request(request, cb);
+    setPlannerParameters({
+        rclcpp::Parameter("position_tolerance", static_cast<double>(position)),
+        rclcpp::Parameter("orientation_tolerance", static_cast<double>(orientation)),
+        rclcpp::Parameter("joint_tolerance", static_cast<double>(joint))
+    });
 }
 
 // --------------------- ADMITTANCE CONTROL ---------------------

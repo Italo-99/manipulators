@@ -8,7 +8,7 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
 {
     RCLCPP_INFO(node_->get_logger(), "Initializing DynamicPlanner...");
 
-    params_ = DynamicPlannerParams::fromNode(node_);
+    checkParams();
 
     RCLCPP_INFO(node_->get_logger(), "Planning group: %s", planning_group_.c_str());
     RCLCPP_INFO(node_->get_logger(), "Velocity factor: %f", params_.vel_factor);
@@ -63,9 +63,41 @@ DynamicPlanner::DynamicPlanner(const rclcpp::Node::SharedPtr &node,
 DynamicPlanner::~DynamicPlanner()
 {
     RCLCPP_INFO(node_->get_logger(), "Destroying DynamicPlanner...");
-    planning_scene_monitor_.reset();
-    rviz_visual_tools_.reset();
+    shutdown();
     node_.reset();
+}
+
+void DynamicPlanner::shutdown()
+{
+    // Timers first, so no callback touches the members released below
+    if (traj_timer_) { traj_timer_->cancel(); }
+    if (execute_poll_timer_) { execute_poll_timer_->cancel(); }
+    traj_timer_.reset();
+    execute_poll_timer_.reset();
+
+    {
+        std::lock_guard<std::mutex> lock(execute_goal_mutex_);
+        active_execute_goal_.reset();
+    }
+
+    execute_action_server_.reset();
+    plan_action_client_.reset();
+    cartesian_motion_sequence_client_.reset();
+    set_trajectory_srv_.reset();
+    joints_state_sub_.reset();
+    trajectory_sub_.reset();
+    execution_ctrl_sub_.reset();
+    trajpoint_sub_.reset();
+
+    tf_listener_.reset();
+
+    if (planning_scene_monitor_) {
+        planning_scene_monitor_->stopStateMonitor();
+        planning_scene_monitor_->stopWorldGeometryMonitor();
+        planning_scene_monitor_->stopSceneMonitor();
+        planning_scene_monitor_.reset();
+    }
+    rviz_visual_tools_.reset();
 }
 
 void DynamicPlanner::initialize()
@@ -164,11 +196,19 @@ void DynamicPlanner::initialize()
             return this->handleExecuteCancel(goal_handle);
         },
         [this](const std::shared_ptr<ExecuteTrajectoryGoalHandle> goal_handle) {
-            // Execution lasts for the whole trajectory, run it outside of the executor
-            std::thread{[this, goal_handle]() { this->executeAction(goal_handle); }}.detach();
+            this->handleExecuteAccepted(goal_handle);
         },
         rcl_action_server_get_default_options(),
         action_cb_group_
+    );
+
+    // Monitors the active execute goal without blocking the executor (cancel requests keep being served)
+    execute_poll_timer_ = node_->create_wall_timer(
+        std::chrono::milliseconds(static_cast<int>(params_.execution_feedback_period * 1000)),
+        [this]() {
+            this->pollExecuteGoal();
+        },
+        cb_group_
     );
 }
 
@@ -660,11 +700,6 @@ DynamicPlannerParams DynamicPlanner::getParams() const
     return params_;
 }
 
-void DynamicPlanner::setParams(const DynamicPlannerParams &params)
-{
-    params_ = params;
-}
-
 moveit::core::RobotStatePtr DynamicPlanner::getRobotState() const
 {
     return kinematic_state_;
@@ -1147,6 +1182,14 @@ rclcpp_action::GoalResponse DynamicPlanner::handleExecuteGoal(const rclcpp_actio
     (void)uuid;
     (void)goal;
 
+    {
+        std::lock_guard<std::mutex> lock(execute_goal_mutex_);
+        if (active_execute_goal_){
+            RCLCPP_ERROR(node_->get_logger(), "Execution goal rejected: another execution goal is active");
+            return rclcpp_action::GoalResponse::REJECT;
+        }
+    }
+
     if (isExecuting()){
         RCLCPP_ERROR(node_->get_logger(), "Execution goal rejected: robot is already moving");
         return rclcpp_action::GoalResponse::REJECT;
@@ -1168,109 +1211,108 @@ rclcpp_action::CancelResponse DynamicPlanner::handleExecuteCancel(const std::sha
     return rclcpp_action::CancelResponse::ACCEPT;
 }
 
-void DynamicPlanner::executeAction(const std::shared_ptr<ExecuteTrajectoryGoalHandle> goal_handle)
+void DynamicPlanner::publishExecuteProgress(const std::shared_ptr<ExecuteTrajectoryGoalHandle>& goal_handle)
 {
-    auto result = std::make_shared<ExecuteTrajectory::Result>();
     auto feedback = std::make_shared<ExecuteTrajectory::Feedback>();
+    size_t done, total;
+    getExecutionProgress(done, total);
+    feedback->current_point = static_cast<uint32_t>(done);
+    feedback->total_points = static_cast<uint32_t>(total);
+    feedback->percentage = total > 0 ? 100.0f * static_cast<float>(done) / static_cast<float>(total) : 0.0f;
+    goal_handle->publish_feedback(feedback);
+}
 
-    auto publishProgress = [&]() {
-        size_t done, total;
-        getExecutionProgress(done, total);
-        feedback->current_point = static_cast<uint32_t>(done);
-        feedback->total_points = static_cast<uint32_t>(total);
-        feedback->percentage = total > 0 ? 100.0f * static_cast<float>(done) / static_cast<float>(total) : 0.0f;
-        goal_handle->publish_feedback(feedback);
-    };
+void DynamicPlanner::handleExecuteAccepted(const std::shared_ptr<ExecuteTrajectoryGoalHandle> goal_handle)
+{
+    std::lock_guard<std::mutex> lock(execute_goal_mutex_);
 
-    const std::vector<double> goal_positions = robot_trajectory_.joint_trajectory.points.empty() ?
+    execute_goal_positions_ = robot_trajectory_.joint_trajectory.points.empty() ?
         std::vector<double>() : robot_trajectory_.joint_trajectory.points.back().positions;
 
     if (!executeTrajectory()){
+        auto result = std::make_shared<ExecuteTrajectory::Result>();
         result->result_code = ExecuteTrajectory::Result::STOPPED;
         result->message = "Failed to start execution";
         goal_handle->abort(result);
         return;
     }
 
-    rclcpp::Rate rate(1.0 / params_.execution_feedback_period);
+    execute_settling_ = false;
+    active_execute_goal_ = goal_handle;
+}
 
-    // Execution: wait for all the trajectory points to be sent
-    while (rclcpp::ok()){
-        if (goal_handle->is_canceling()){
-            stop();
-            while (isExecuting() && rclcpp::ok()){
-                std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.sample_time * 1000) + 1));
-            }
-            publishProgress();
-            result->result_code = ExecuteTrajectory::Result::STOPPED;
-            result->message = "Execution cancelled";
-            goal_handle->canceled(result);
-            return;
-        }
+void DynamicPlanner::pollExecuteGoal()
+{
+    std::lock_guard<std::mutex> lock(execute_goal_mutex_);
 
-        publishProgress();
-
-        ExecutionOutcome outcome = getExecutionOutcome();
-        if (outcome == ExecutionOutcome::COMPLETED){
-            break;
-        }
-        if (outcome == ExecutionOutcome::STOPPED){
-            result->result_code = ExecuteTrajectory::Result::STOPPED;
-            result->message = "Execution stopped mid trajectory";
-            goal_handle->abort(result);
-            return;
-        }
-        if (outcome == ExecutionOutcome::JOINT_STATES_LOST){
-            result->result_code = ExecuteTrajectory::Result::TIMEOUT;
-            result->message = "Joint states lost during execution";
-            goal_handle->abort(result);
-            return;
-        }
-
-        rate.sleep();
-    }
-
-    if (!rclcpp::ok()){
-        result->result_code = ExecuteTrajectory::Result::STOPPED;
-        result->message = "Shutdown during execution";
-        goal_handle->abort(result);
+    if (!active_execute_goal_){
         return;
     }
 
-    // Settling: wait for the robot to reach the last trajectory point
-    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
-    auto settle_start = steady_clock.now();
-
-    while (rclcpp::ok()){
-        if (checkJointDiff(goal_positions)){
-            publishProgress();
-            result->result_code = ExecuteTrajectory::Result::SUCCESS;
-            result->message = "Trajectory executed successfully";
-            goal_handle->succeed(result);
-            return;
-        }
-
-        if (goal_handle->is_canceling()){
-            result->result_code = ExecuteTrajectory::Result::STOPPED;
-            result->message = "Execution cancelled while settling on the last point";
-            goal_handle->canceled(result);
-            return;
-        }
-
-        if ((steady_clock.now() - settle_start).seconds() > params_.execution_settle_timeout){
-            result->result_code = ExecuteTrajectory::Result::TIMEOUT;
-            result->message = "Robot did not reach the last trajectory point within " + std::to_string(params_.execution_settle_timeout) + " s";
-            goal_handle->abort(result);
-            return;
-        }
-
-        publishProgress();
-        rate.sleep();
+    const auto goal_handle = active_execute_goal_;
+    if (!goal_handle->is_active()){
+        active_execute_goal_.reset();
+        return;
     }
 
-    result->result_code = ExecuteTrajectory::Result::STOPPED;
-    result->message = "Shutdown during execution";
-    goal_handle->abort(result);
+    auto result = std::make_shared<ExecuteTrajectory::Result>();
+    auto finish = [&](auto terminate, uint8_t code, const std::string& message) {
+        publishExecuteProgress(goal_handle);
+        result->result_code = code;
+        result->message = message;
+        terminate(result);
+        active_execute_goal_.reset();
+    };
+    auto succeed  = [&](auto r) { goal_handle->succeed(r); };
+    auto abort    = [&](auto r) { goal_handle->abort(r); };
+    auto canceled = [&](auto r) { goal_handle->canceled(r); };
+
+    if (!execute_settling_){
+        // Execution: wait for all the trajectory points to be sent
+        if (goal_handle->is_canceling()){
+            if (isExecuting()){
+                stop(); // Wait for traj_timer_ to stop the robot, terminate on a later poll
+                return;
+            }
+            finish(canceled, ExecuteTrajectory::Result::STOPPED, "Execution cancelled");
+            return;
+        }
+
+        switch (getExecutionOutcome()){
+            case ExecutionOutcome::COMPLETED:
+                execute_settling_ = true;
+                execute_settle_start_ = rclcpp::Clock(RCL_STEADY_TIME).now();
+                break; // Fall through to settling below
+            case ExecutionOutcome::STOPPED:
+                finish(abort, ExecuteTrajectory::Result::STOPPED, "Execution stopped mid trajectory");
+                return;
+            case ExecutionOutcome::JOINT_STATES_LOST:
+                finish(abort, ExecuteTrajectory::Result::TIMEOUT, "Joint states lost during execution");
+                return;
+            default:
+                publishExecuteProgress(goal_handle);
+                return;
+        }
+    }
+
+    // Settling: wait for the robot to reach the last trajectory point
+    if (checkJointDiff(execute_goal_positions_)){
+        finish(succeed, ExecuteTrajectory::Result::SUCCESS, "Trajectory executed successfully");
+        return;
+    }
+
+    if (goal_handle->is_canceling()){
+        finish(canceled, ExecuteTrajectory::Result::STOPPED, "Execution cancelled while settling on the last point");
+        return;
+    }
+
+    if ((rclcpp::Clock(RCL_STEADY_TIME).now() - execute_settle_start_).seconds() > params_.execution_settle_timeout){
+        finish(abort, ExecuteTrajectory::Result::TIMEOUT,
+               "Robot did not reach the last trajectory point within " + std::to_string(params_.execution_settle_timeout) + " s");
+        return;
+    }
+
+    publishExecuteProgress(goal_handle);
 }
 
 // ------------------------------------- TRAJECTORY METHODS -------------------------------------
@@ -1447,22 +1489,35 @@ moveit_msgs::action::MoveGroup::Result DynamicPlanner::computeMotionPlan(const m
     }
     
     //Send the request
-    bool done = false;
+    //The callbacks may run after this function returned (timeout), so they only touch heap state they co-own
+    struct State {
+        std::mutex mutex;
+        std::atomic<bool> done{false};
+        std::shared_ptr<moveit_msgs::action::MoveGroup::Result> res;
+    };
+    auto state = std::make_shared<State>();
+    auto logger = node_->get_logger();
+
     auto goal_opts = rclcpp_action::Client<moveit_msgs::action::MoveGroup>::SendGoalOptions();
 
-    goal_opts.goal_response_callback = [&](const rclcpp_action::ClientGoalHandle<moveit_msgs::action::MoveGroup>::SharedPtr& goal_handle) {
+    goal_opts.goal_response_callback = [state, logger](const rclcpp_action::ClientGoalHandle<moveit_msgs::action::MoveGroup>::SharedPtr& goal_handle) {
         if (!goal_handle) {
-            done = true;
-            RCLCPP_INFO(node_->get_logger(), "Planning request rejected");
+            RCLCPP_INFO(logger, "Planning request rejected");
+            state->done.store(true);
         }
         else {
-            RCLCPP_INFO(node_->get_logger(), "Planning request accepted");
+            RCLCPP_INFO(logger, "Planning request accepted");
         }
     };
-    goal_opts.result_callback = [&](const rclcpp_action::ClientGoalHandle<moveit_msgs::action::MoveGroup>::WrappedResult& result) {
-        RCLCPP_INFO(node_->get_logger(), "Motion plan completed in %f seconds", result.result->planning_time);
-        res = result.result;
-        done = true;
+    goal_opts.result_callback = [state, logger](const rclcpp_action::ClientGoalHandle<moveit_msgs::action::MoveGroup>::WrappedResult& result) {
+        if (result.result) {
+            RCLCPP_INFO(logger, "Motion plan completed in %f seconds", result.result->planning_time);
+        }
+        {
+            std::lock_guard<std::mutex> lock(state->mutex);
+            state->res = result.result;
+        }
+        state->done.store(true);
     };
     goal_opts.feedback_callback = [](auto, auto) {};
 
@@ -1470,15 +1525,22 @@ moveit_msgs::action::MoveGroup::Result DynamicPlanner::computeMotionPlan(const m
     
     auto start_time = node_->now();
 
-    while (!done && rclcpp::ok()){
-        std::this_thread::sleep_for(std::chrono::milliseconds((int)params_.sample_time * 1000));
+    while (!state->done.load() && rclcpp::ok()){
+        std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.sample_time * 1000) + 1));
         if ((node_->now() - start_time).seconds() > params_.planning_time + 1.0){ //Add a second of tolerance
             break;
         }
     }
 
-    if (!done){
-        RCLCPP_ERROR(node_->get_logger(), "Motion plan service call timed out");
+    {
+        std::lock_guard<std::mutex> lock(state->mutex);
+        if (state->res) {
+            res = state->res;
+        }
+    }
+
+    if (!state->done.load() || !state->res){
+        RCLCPP_ERROR(node_->get_logger(), "Motion plan service call timed out or was rejected");
         res->error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
     }
 
@@ -1506,26 +1568,44 @@ moveit_msgs::msg::MotionSequenceResponse DynamicPlanner::computeMotionSequence(c
     }
     
     //Send the request
-    bool done = false;
+    //The callback may run after this function returned (timeout), so it only touches heap state it co-owns
+    struct State {
+        std::mutex mutex;
+        std::atomic<bool> done{false};
+        std::shared_ptr<moveit_msgs::msg::MotionSequenceResponse> res;
+    };
+    auto state = std::make_shared<State>();
+    auto logger = node_->get_logger();
 
-    auto cb = [&](rclcpp::Client<moveit_msgs::srv::GetMotionSequence>::SharedFuture future) {
-        RCLCPP_INFO(node_->get_logger(), "Motion sequence completed in %f seconds", future.get()->response.planning_time);
-        res = std::make_shared<moveit_msgs::msg::MotionSequenceResponse>(future.get()->response);
-        done = true;
+    auto cb = [state, logger](rclcpp::Client<moveit_msgs::srv::GetMotionSequence>::SharedFuture future) {
+        auto response = future.get();
+        RCLCPP_INFO(logger, "Motion sequence completed in %f seconds", response->response.planning_time);
+        {
+            std::lock_guard<std::mutex> lock(state->mutex);
+            state->res = std::make_shared<moveit_msgs::msg::MotionSequenceResponse>(response->response);
+        }
+        state->done.store(true);
     };
 
     cartesian_motion_sequence_client_->async_send_request(req, cb);
     
     auto start_time = node_->now();
 
-    while (!done && rclcpp::ok()){
-        std::this_thread::sleep_for(std::chrono::milliseconds((int)params_.sample_time * 1000));
+    while (!state->done.load() && rclcpp::ok()){
+        std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.sample_time * 1000) + 1));
         if ((node_->now() - start_time).seconds() > params_.planning_time + 1.0){ //Add a second of tolerance
             break;
         }
     }
 
-    if (!done){
+    {
+        std::lock_guard<std::mutex> lock(state->mutex);
+        if (state->res) {
+            res = state->res;
+        }
+    }
+
+    if (!state->done.load()){
         RCLCPP_ERROR(node_->get_logger(), "Motion plan service call timed out");
         res->error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
     }
@@ -1802,28 +1882,38 @@ void DynamicPlanner::visualizePrimitive(const shape_msgs::msg::SolidPrimitive &p
     }
 }
 
-DynamicPlannerParams DynamicPlannerParams::fromNode(const rclcpp::Node::SharedPtr &node)
+void DynamicPlanner::checkParams()
 {
-    DynamicPlannerParams params;
+    using PB = ParameterBinder;
+    param_binder_ = std::make_unique<ParameterBinder>(node_.get());
+    DynamicPlannerParams d; // defaults
+    auto &p = params_;
+    auto &b = *param_binder_;
 
-    params.planning_pipeline        = node->get_parameter_or("planning_pipeline", params.planning_pipeline);
-    params.planner_id               = node->get_parameter_or("planner_id", params.planner_id);
-    params.num_attempts             = node->get_parameter_or("num_attempts", params.num_attempts);
-    params.planning_time            = node->get_parameter_or("planning_time", params.planning_time);
-    params.vel_factor               = node->get_parameter_or("vel_factor", params.vel_factor);
-    params.acc_factor               = node->get_parameter_or("acc_factor", params.acc_factor);
-    params.sample_time              = node->get_parameter_or("sample_time", params.sample_time);
-    params.max_velocity             = node->get_parameter_or("max_velocity", params.max_velocity);
-    params.position_tolerance       = node->get_parameter_or("position_tolerance", params.position_tolerance);
-    params.orientation_tolerance    = node->get_parameter_or("orientation_tolerance", params.orientation_tolerance);
-    params.joint_tolerance          = node->get_parameter_or("joint_tolerance", params.joint_tolerance);
-    params.world_frame              = node->get_parameter_or("world_frame", params.world_frame);
-    params.end_effector_link        = node->get_parameter_or("ee_name", params.end_effector_link);
-    params.min_cartesian_fraction   = node->get_parameter_or("min_cartesian_fraction", params.min_cartesian_fraction);
-    params.joint_states_timeout     = node->get_parameter_or("joint_states_timeout", params.joint_states_timeout);
-    params.tf_timeout               = node->get_parameter_or("tf_timeout", params.tf_timeout);
-    params.execution_feedback_period = node->get_parameter_or("execution_feedback_period", params.execution_feedback_period);
-    params.execution_settle_timeout = node->get_parameter_or("execution_settle_timeout", params.execution_settle_timeout);
+    // Read-only parameters: used at startup or read as strings from other threads
+    b.bindReadOnly("planning_pipeline", d.planning_pipeline, &p.planning_pipeline, "MoveIt planning pipeline");
+    b.bindReadOnly("planner_id",        d.planner_id,        &p.planner_id,        "Planner id inside the planning pipeline");
+    b.bindReadOnly("sample_time",       d.sample_time,       &p.sample_time,       "Sample time of the trajectory execution [s]");
+    b.bindReadOnly("world_frame",       d.world_frame,       &p.world_frame,       "World frame (without prefix)");
+    b.bindReadOnly("ee_name",           d.end_effector_link, &p.end_effector_link, "End effector link (without prefix)");
 
-    return params;
+    // Runtime tunable parameters
+    b.bind("num_attempts",   d.num_attempts,   &p.num_attempts,   PB::descriptor("Max number of planning attempts").intRange(1, 100));
+    b.bind("planning_time",  d.planning_time,  &p.planning_time,  PB::descriptor("Max planning time [s] (0: no limit)").range(0.0, 600.0));
+    b.bind("vel_factor",     d.vel_factor,     &p.vel_factor,     PB::descriptor("Planner velocity scaling factor").range(0.0, 1.0));
+    b.bind("acc_factor",     d.acc_factor,     &p.acc_factor,     PB::descriptor("Planner acceleration scaling factor").range(0.0, 1.0));
+    b.bind("max_velocity",   d.max_velocity,   &p.max_velocity,   PB::descriptor("Max end effector velocity for the cartesian planner [m/s]").range(0.0, 10.0));
+    b.bind("position_tolerance",    d.position_tolerance,    &p.position_tolerance,    PB::descriptor("Goal position tolerance of the tcp [m]").range(0.0, 1.0));
+    b.bind("orientation_tolerance", d.orientation_tolerance, &p.orientation_tolerance, PB::descriptor("Goal orientation tolerance of the tcp [rad]").range(0.0, 3.15));
+    b.bind("joint_tolerance",       d.joint_tolerance,       &p.joint_tolerance,       PB::descriptor("Goal joint tolerance [rad]").range(0.0, 3.15));
+    b.bind("min_cartesian_fraction", d.min_cartesian_fraction, &p.min_cartesian_fraction,
+           PB::descriptor("Min fraction of a cartesian plan to consider it successful").range(0.0, 1.0));
+    b.bind("joint_states_timeout", d.joint_states_timeout, &p.joint_states_timeout,
+           PB::descriptor("Planner is blocked if no joint states are received for this long [s]").range(0.0, 60.0));
+    b.bind("tf_timeout", d.tf_timeout, &p.tf_timeout,
+           PB::descriptor("TF lookups fail if transforms are older than this [s]").range(0.0, 60.0));
+    b.bind("execution_feedback_period", d.execution_feedback_period, &p.execution_feedback_period,
+           PB::descriptor("Period of the execution action feedback [s]").range(0.01, 10.0));
+    b.bind("execution_settle_timeout", d.execution_settle_timeout, &p.execution_settle_timeout,
+           PB::descriptor("Max time to reach the last trajectory point once all points are sent [s]").range(0.0, 60.0));
 }

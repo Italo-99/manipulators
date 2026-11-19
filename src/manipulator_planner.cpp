@@ -72,36 +72,6 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
         main_cb_group_
     );
 
-    changePlannerScalingFactors_service_ = this->create_service<manipulator_interfaces::srv::ChangePlannerScalingFactors>(
-        manipulator_name_ + "/change_planner_scaling_factors",
-        [this](const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerScalingFactors::Request> request,
-               std::shared_ptr<manipulator_interfaces::srv::ChangePlannerScalingFactors::Response> response) {
-            this->changePlannerScalingFactors_callback(request, response);
-        },
-        rclcpp::ServicesQoS(),
-        main_cb_group_
-    );
-
-    changePlannerTolerances_service_ = this->create_service<manipulator_interfaces::srv::ChangePlannerTolerances>(
-        manipulator_name_ + "/change_planner_tolerances",
-        [this](const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerTolerances::Request> request,
-               std::shared_ptr<manipulator_interfaces::srv::ChangePlannerTolerances::Response> response) {
-            this->changePlannerTolerances_callback(request, response);
-        },
-        rclcpp::ServicesQoS(),
-        main_cb_group_
-    );
-
-    realTimeConstraintsSetter_service_ = this->create_service<manipulator_interfaces::srv::EnableRealTimeConstraints>(
-        manipulator_name_ + "/enable_real_time_constraints",
-        [this](const std::shared_ptr<manipulator_interfaces::srv::EnableRealTimeConstraints::Request> request,
-               std::shared_ptr<manipulator_interfaces::srv::EnableRealTimeConstraints::Response> response) {
-            this->realTimeConstraintsSetter_callback(request, response);
-        },
-        rclcpp::ServicesQoS(),
-        main_cb_group_
-    );
-
     jointsRealTimeSetter_service_ = this->create_service<std_srvs::srv::SetBool>(
         manipulator_name_ + "/joints_real_time_setter",
         [this](const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -184,10 +154,6 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     );
 
     // Initialize planning action servers (same names as the goal topics)
-    actions_cb_group_ = this->create_callback_group(
-        rclcpp::CallbackGroupType::MutuallyExclusive
-    );
-
     tcpGoal_action_server_ = createPlanActionServer<manipulator_interfaces::action::PlanTcpGoal>(
         manipulator_name_ + "/tcp_goal", &ManipulatorPlannerNode::planTcpGoal
     );
@@ -221,35 +187,19 @@ ManipulatorPlannerNode::ManipulatorPlannerNode(const std::string node_name, cons
     tcpPose_pub_ = this->create_publisher<geometry_msgs::msg::Pose>(manipulator_name_ + "/tcp_pose", 1);
     tcpVel_pub_  = this->create_publisher<geometry_msgs::msg::Twist>(manipulator_name_ + "/tcp_vel", 1);
 
-    rclcpp::contexts::get_global_default_context()->add_pre_shutdown_callback(
-        std::bind(&ManipulatorPlannerNode::shutdown_handler, this) // Register shutdown handler
+    pre_shutdown_handle_ = rclcpp::contexts::get_global_default_context()->add_pre_shutdown_callback(
+        [this]() { this->shutdown_handler(); } // Register shutdown handler (removed in the destructor)
     );
 }
 
 ManipulatorPlannerNode::~ManipulatorPlannerNode() {
     RCLCPP_INFO(get_logger(), "Destroying ManipulatorPlannerNode...");
-    // Stop the spinner thread
-    if (mainloop_timer_) {
-        mainloop_timer_->cancel();
-    }
-    if(tcpPose_timer_) {
-        tcpPose_timer_->cancel();
-    }
-    if(tcpVel_timer_) {
-        tcpVel_timer_->cancel();
-    }
-    executor_.cancel();
-    dynamic_planner_.reset(); // Reset the dynamic planner
+    rclcpp::contexts::get_global_default_context()->remove_pre_shutdown_callback(pre_shutdown_handle_);
+    dynamic_planner_.reset(); // No-op if spinner() already tore it down
 }
 
 void ManipulatorPlannerNode::spinner() {
-    unsigned long long int num_samples = 0; // Number of samples for the mean time calculation
-
-    rclcpp::Rate rate(ros_freq_);
-
     initializePlanner(); //Initialize dynamic_planner_
-
-    rclcpp::Clock steady_clock(RCL_STEADY_TIME);
 
     main_cb_group_ = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive
@@ -257,7 +207,7 @@ void ManipulatorPlannerNode::spinner() {
 
     mainloop_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / ros_freq_)),
-        [&, this]() {
+        [this]() {
 
             if (spinner_mean_ > 0.9 / ros_freq_) {
                 RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 20000, "Spinner mean time is too high: %f s", spinner_mean_);
@@ -272,27 +222,27 @@ void ManipulatorPlannerNode::spinner() {
             if (jac_control_) {
 
                 // This is the main loop for the node
-                auto start_time = steady_clock.now();
+                auto start_time = steady_clock_.now();
 
                 // Jacobian control
                 jacobianControl();
 
                 // Calculate the mean time for each iteration of the spinner
-                double elapsed_time = (steady_clock.now() - start_time).seconds();
-                spinner_mean_ = (spinner_mean_ * static_cast<double>(num_samples) + elapsed_time) / static_cast<double>(num_samples + 1);
-                num_samples++;
+                double elapsed_time = (steady_clock_.now() - start_time).seconds();
+                spinner_mean_ = (spinner_mean_ * static_cast<double>(spinner_samples_) + elapsed_time) / static_cast<double>(spinner_samples_ + 1);
+                spinner_samples_++;
             }
             else if (js_rt_control_) {
                 // This is the main loop for the node
-                auto start_time = steady_clock.now();
+                auto start_time = steady_clock_.now();
 
                 // Real-time joint speed control
                 jointsRealTimeControl();
 
                 // Calculate the mean time for each iteration of the spinner
-                double elapsed_time = (steady_clock.now() - start_time).seconds();
-                spinner_mean_ = (spinner_mean_ * static_cast<double>(num_samples) + elapsed_time) / static_cast<double>(num_samples + 1);
-                num_samples++;
+                double elapsed_time = (steady_clock_.now() - start_time).seconds();
+                spinner_mean_ = (spinner_mean_ * static_cast<double>(spinner_samples_) + elapsed_time) / static_cast<double>(spinner_samples_ + 1);
+                spinner_samples_++;
             } else if (isRobotMoving() && !dynamic_planner_->isExecuting()) {
                 zeroJacobianCmd();
                 zeroJointsCmd();
@@ -304,21 +254,35 @@ void ManipulatorPlannerNode::spinner() {
 
             tcpPose_pub_->publish(getFKine());
             tcpVel_pub_->publish(getTcpVel());
-
-            rate.sleep();
         },
         main_cb_group_
     );
 
     executor_.add_node(this->shared_from_this()); //Add the dynamic planner node to the executor
-    executor_.spin(); // Start the executor
+    executor_.spin(); // Returns on shutdown, after every running callback has returned and the threads are joined
+
+    // Ordered teardown: nothing is spinning anymore, so no callback can race with the release below
+    mainloop_timer_.reset();
+    dynamic_planner_->stop();
+    dynamic_planner_->shutdown();
+    executor_.remove_node(this->shared_from_this());
+    dynamic_planner_.reset(); // Breaks the node <-> DynamicPlanner reference cycle, the node can now be destroyed
 }
 
 // ------------------------------------- PRIVATE METHODS -------------------------------------
 
 void ManipulatorPlannerNode::shutdown_handler(){
-    dynamic_planner_->stop(); // Stop the robot
     RCLCPP_INFO(get_logger(), "Spinner mean time: %f s", spinner_mean_);
+
+    if (!dynamic_planner_ || !dynamic_planner_->isReady()) {
+        return; // Shutdown during startup or no joint states: nothing to stop
+    }
+
+    // The trajectory timer will not run anymore, so send the zero velocity command directly
+    dynamic_planner_->stop();
+    sensor_msgs::msg::JointState zero_js_cmd = dynamic_planner_->getJointState();
+    zero_js_cmd.velocity = std::vector<double>(zero_js_cmd.name.size(), 0.0);
+    dynamic_planner_->moveRobot(zero_js_cmd);
 }
 
 //KINEMATICS FUNCTIONS
@@ -433,49 +397,6 @@ void ManipulatorPlannerNode::getPseudoInverseJacobian_callback(
     std::vector<double> pseudo_inv_values(pseudo_inv.data(), pseudo_inv.data() + pseudo_inv.size()); //Flattens the matrix into a vector
 
     response->matrix_values = pseudo_inv_values;
-}
-
-void ManipulatorPlannerNode::changePlannerScalingFactors_callback(
-    const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerScalingFactors::Request> request,
-    std::shared_ptr<manipulator_interfaces::srv::ChangePlannerScalingFactors::Response> response
-) {
-    DynamicPlannerParams params = dynamic_planner_->getParams();
-    params.acc_factor = request->acc_factor;
-    params.vel_factor = request->vel_factor;
-    dynamic_planner_->setParams(params);
-
-    //Also apply changes to the actual parameters of the node
-    rclcpp::Parameter new_acc("acc_factor", params.acc_factor);
-    rclcpp::Parameter new_vel("vel_factor", params.vel_factor);
-    this->set_parameter(new_acc);
-    this->set_parameter(new_vel);
-
-    response->success = true;
-    RCLCPP_INFO(this->get_logger(), "Planner parameters changed successfully (vel_factor: %f, acc_factor: %f)", params.vel_factor, params.acc_factor);
-}
-
-void ManipulatorPlannerNode::changePlannerTolerances_callback(
-    const std::shared_ptr<manipulator_interfaces::srv::ChangePlannerTolerances::Request> request,
-    std::shared_ptr<manipulator_interfaces::srv::ChangePlannerTolerances::Response> response
-) {
-    DynamicPlannerParams params = dynamic_planner_->getParams();
-    params.position_tolerance = request->position_tolerance;
-    params.orientation_tolerance = request->orientation_tolerance;
-    params.joint_tolerance = request->joint_tolerance;
-    dynamic_planner_->setParams(params);
-
-    //Also apply changes to the actual parameters of the node
-    rclcpp::Parameter new_position("position_tolerance", params.position_tolerance);
-    rclcpp::Parameter new_orientation("orientation_tolerance", params.orientation_tolerance);
-    rclcpp::Parameter new_joint("joint_tolerance", params.joint_tolerance);
-
-    this->set_parameter(new_position);
-    this->set_parameter(new_orientation);
-    this->set_parameter(new_joint);
-
-    response->success = true;
-    RCLCPP_INFO(this->get_logger(), "Planner parameters changed successfully (position_tolerance: %f, orientation_tolerance: %f, joint_tolerance: %f)", 
-                params.position_tolerance, params.orientation_tolerance, params.joint_tolerance);
 }
 
 manipulator_interfaces::msg::TrajectoryResult ManipulatorPlannerNode::planTcpGoal(const manipulator_interfaces::msg::TcpGoal& goal, const DynamicPlanner::StatusCallback& status_cb)
@@ -620,6 +541,9 @@ typename rclcpp_action::Server<ActionT>::SharedPtr ManipulatorPlannerNode::creat
 {
     using GoalHandle = rclcpp_action::ServerGoalHandle<ActionT>;
 
+    auto cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    actions_cb_groups_.push_back(cb_group); // The node holds callback groups weakly, keep this one alive
+
     return rclcpp_action::create_server<ActionT>(
         this,
         name,
@@ -636,44 +560,31 @@ typename rclcpp_action::Server<ActionT>::SharedPtr ManipulatorPlannerNode::creat
             return rclcpp_action::CancelResponse::REJECT;
         },
         [this, plan_fn](const std::shared_ptr<GoalHandle> goal_handle) {
-            // Planning is blocking, run it outside of the executor
-            std::thread{[this, plan_fn, goal_handle]() {
-                auto feedback = std::make_shared<typename ActionT::Feedback>();
-                DynamicPlanner::StatusCallback status_cb = [goal_handle, feedback](const std::string& status) {
-                    feedback->statuses.push_back(status);
-                    goal_handle->publish_feedback(feedback);
-                };
+            // Planning blocks this executor thread (and only this server's callback group) until done.
+            // The goal response has already been sent, and executor_.spin() cannot return before this callback does,
+            // so the goal handle and the server are guaranteed to be alive when the result is published.
+            auto feedback = std::make_shared<typename ActionT::Feedback>();
+            DynamicPlanner::StatusCallback status_cb = [goal_handle, feedback](const std::string& status) {
+                feedback->statuses.push_back(status);
+                goal_handle->publish_feedback(feedback);
+            };
 
-                auto result = std::make_shared<typename ActionT::Result>();
-                result->result = (this->*plan_fn)(goal_handle->get_goal()->goal, status_cb);
-                result->statuses = feedback->statuses; // Statuses whose feedback was dropped by the client are recovered here
+            auto result = std::make_shared<typename ActionT::Result>();
+            result->result = (this->*plan_fn)(goal_handle->get_goal()->goal, status_cb);
+            result->statuses = feedback->statuses; // Statuses whose feedback was dropped by the client are recovered here
 
-                if (result->result.success) {
-                    goal_handle->succeed(result);
-                } else {
-                    goal_handle->abort(result);
-                }
-            }}.detach();
+            if (!goal_handle->is_active()) {
+                return;
+            }
+            if (result->result.success) {
+                goal_handle->succeed(result);
+            } else {
+                goal_handle->abort(result);
+            }
         },
         rcl_action_server_get_default_options(),
-        actions_cb_group_
+        cb_group
     );
-}
-
-// Enable or disable the real time constraints for the planner
-// (limit_joints_control_ and limit_jacobian_control_ parameters)
-void ManipulatorPlannerNode::realTimeConstraintsSetter_callback(const std::shared_ptr<manipulator_interfaces::srv::EnableRealTimeConstraints::Request> req, 
-                                                                std::shared_ptr<manipulator_interfaces::srv::EnableRealTimeConstraints::Response> res)
-{
-    // Set the real time constraints
-    limit_joints_control_ = req->limit_joints_control;
-    limit_jacobian_control_ = req->limit_jacobian_control;
-    real_time_collision_check_ = req->real_time_collision_check;
-    RCLCPP_INFO(get_logger(), "Real time constraints set as: limit_joints_control = %s, limit_jacobian_control = %s, real_time_collision_check = %s", 
-                limit_joints_control_ ? "True" : "False", limit_jacobian_control_ ? "True" : "False", real_time_collision_check_ ? "True" : "False");
-
-    // Return success
-    res->success = true;
 }
 
 // Set the jacobian speed based control
@@ -1118,31 +1029,51 @@ void ManipulatorPlannerNode::addPrefix(const std::string &prefix, std::vector<st
 }
 
 void ManipulatorPlannerNode::checkParams() {
-    std::string prefix = this->get_parameter_or("prefix", std::string());
+    using PB = ParameterBinder;
+    param_binder_ = std::make_unique<ParameterBinder>(this);
 
-    manipulator_name_         = this->get_parameter_or("manipulator_name", std::string());
-    planning_group_           = prefix + this->get_parameter_or("planning_group", std::string());
-    joint_names_              = this->get_parameter_or("joint_names", std::vector<std::string>());
-    ee_name_                  = prefix + this->get_parameter_or("ee_name", std::string());
-    ros_freq_                 = this->get_parameter_or("ros_freq", 500);
-    max_speed_ee_             = this->get_parameter_or("max_speed_ee", 1.0);
-    max_accel_ee_             = this->get_parameter_or("max_accel_ee", 1.0);
-    max_rot_speed_ee_         = this->get_parameter_or("max_rot_speed_ee", 1.0);
-    max_rot_accel_ee_         = this->get_parameter_or("max_rot_accel_ee", 1.0);
-    max_spd_jnts_             = this->get_parameter_or("max_spd_jnts", 1.0);
-    max_acc_jnts_             = this->get_parameter_or("max_acc_jnts", 1.0);
-    gripper_links_            = this->get_parameter_or("gripper_links", std::vector<std::string>());
-    fixed_links_              = this->get_parameter_or("fixed_links", std::vector<std::string>());
-    world_frame_              = prefix + this->get_parameter_or("world_frame", std::string("base_link"));
-    real_time_safety_dt_      = this->get_parameter_or("real_time_safety_dt", 0.0);
+    // Read-only parameters: structural, only used at startup
+    std::string prefix;
+    param_binder_->bindReadOnly("prefix",           std::string(),                 &prefix,            "Prefix prepended to joint, link and frame names");
+    param_binder_->bindReadOnly("manipulator_name", std::string(),                 &manipulator_name_, "Namespace used for the planner services and topics");
+    param_binder_->bindReadOnly("planning_group",   std::string(),                 &planning_group_,   "MoveIt planning group (without prefix)");
+    param_binder_->bindReadOnly("joint_names",      std::vector<std::string>(),    &joint_names_,      "Joint names of the planning group (without prefix)");
+    param_binder_->bindReadOnly("ee_name",          std::string(),                 &ee_name_,          "End effector link (without prefix)");
+    param_binder_->bindReadOnly("ros_freq",         500.0,                         &ros_freq_,         "Main loop frequency [Hz]");
+    param_binder_->bindReadOnly("gripper_links",    std::vector<std::string>(),    &gripper_links_,    "Gripper links (without prefix)");
+    param_binder_->bindReadOnly("fixed_links",      std::vector<std::string>(),    &fixed_links_,      "Fixed links (without prefix)");
+    param_binder_->bindReadOnly("world_frame",      std::string("base_link"),      &world_frame_,      "World frame (without prefix)");
 
-    limit_joints_control_     = this->get_parameter_or("limit_joints_control", false);
-    limit_jacobian_control_   = this->get_parameter_or("limit_jacobian_control", false);
-    real_time_collision_check_ = this->get_parameter_or("real_time_collision_check", false);
+    // Runtime tunable parameters
+    param_binder_->bind("max_speed_ee",     1.0, &max_speed_ee_,     PB::descriptor("Max end effector linear speed in jacobian control [m/s]").range(0.0, 10.0));
+    param_binder_->bind("max_accel_ee",     1.0, &max_accel_ee_,     PB::descriptor("Max end effector linear acceleration in jacobian control [m/s^2]").range(0.0, 100.0));
+    param_binder_->bind("max_rot_speed_ee", 1.0, &max_rot_speed_ee_, PB::descriptor("Max end effector angular speed in jacobian control [rad/s]").range(0.0, 10.0));
+    param_binder_->bind("max_rot_accel_ee", 1.0, &max_rot_accel_ee_, PB::descriptor("Max end effector angular acceleration in jacobian control [rad/s^2]").range(0.0, 100.0));
+    param_binder_->bind("max_spd_jnts",     1.0, &max_spd_jnts_,     PB::descriptor("Max joint speed in real time joint control [rad/s]").range(0.0, 10.0));
+    param_binder_->bind("max_acc_jnts",     1.0, &max_acc_jnts_,     PB::descriptor("Max joint acceleration in real time joint control [rad/s^2]").range(0.0, 100.0));
+    param_binder_->bind("real_time_safety_dt", 0.0, &real_time_safety_dt_,
+                        PB::descriptor("Real time commands older than this are ignored [s] (0: disabled)").range(0.0, 10.0));
 
-    jac_max_damping_factor_   = this->get_parameter_or("jacobian_max_damping_factor", 0.1);
-    jac_sigma_threshold_      = this->get_parameter_or("jacobian_sigma_threshold", 0.1);
+    param_binder_->bind("jacobian_max_damping_factor", 0.1, &jac_max_damping_factor_,
+                        PB::descriptor("Max damping factor of the damped jacobian pseudo inverse").range(0.0, 10.0));
+    param_binder_->bind("jacobian_sigma_threshold", 0.1, &jac_sigma_threshold_,
+                        PB::descriptor("Singular value below which damping is applied").range(0.0, 10.0));
 
+    auto log_bool = [this](const std::string &name) {
+        return [this, name](const bool &value) {
+            RCLCPP_INFO(get_logger(), "%s = %s", name.c_str(), value ? "True" : "False");
+        };
+    };
+    param_binder_->bind("limit_joints_control", false, &limit_joints_control_,
+                        PB::descriptor("Limit real time joint control to max_spd_jnts/max_acc_jnts"), log_bool("limit_joints_control"));
+    param_binder_->bind("limit_jacobian_control", false, &limit_jacobian_control_,
+                        PB::descriptor("Limit jacobian control to the end effector speed/acceleration limits"), log_bool("limit_jacobian_control"));
+    param_binder_->bind("real_time_collision_check", false, &real_time_collision_check_,
+                        PB::descriptor("Check collisions during real time control"), log_bool("real_time_collision_check"));
+
+    planning_group_ = prefix + planning_group_;
+    ee_name_        = prefix + ee_name_;
+    world_frame_    = prefix + world_frame_;
     addPrefix(prefix, joint_names_);
     addPrefix(prefix, gripper_links_);
     addPrefix(prefix, fixed_links_);

@@ -2,6 +2,7 @@
 #define MANIPULATOR_PLANNER_H
 
 #include "manipulators/DynamicPlanner.h"
+#include "manipulators/ParameterBinder.h"
 #include "rclcpp/rclcpp.hpp"
 #include <string>
 #include <Eigen/Geometry>
@@ -23,10 +24,7 @@
 #include "manipulator_interfaces/srv/f_kine.hpp"
 #include "manipulator_interfaces/srv/inv_kine.hpp"
 #include "manipulator_interfaces/srv/jacobian.hpp"
-#include "manipulator_interfaces/srv/change_planner_tolerances.hpp"
-#include "manipulator_interfaces/srv/change_planner_scaling_factors.hpp"
 #include "manipulator_interfaces/srv/pseudo_inverse.hpp"
-#include "manipulator_interfaces/srv/enable_real_time_constraints.hpp"
 #include "manipulator_interfaces/msg/joint_goal.hpp"
 #include "manipulator_interfaces/msg/tcp_goal.hpp"
 #include "manipulator_interfaces/msg/cartesian_goal.hpp"
@@ -128,21 +126,6 @@ class ManipulatorPlannerNode : public rclcpp::Node {
             manipulator_interfaces::srv::PseudoInverse::Response::SharedPtr response
         );
 
-        void changePlannerScalingFactors_callback(
-            const manipulator_interfaces::srv::ChangePlannerScalingFactors::Request::SharedPtr request,
-            manipulator_interfaces::srv::ChangePlannerScalingFactors::Response::SharedPtr response
-        );
-
-        void changePlannerTolerances_callback(
-            const manipulator_interfaces::srv::ChangePlannerTolerances::Request::SharedPtr request,
-            manipulator_interfaces::srv::ChangePlannerTolerances::Response::SharedPtr response
-        );
-
-        void realTimeConstraintsSetter_callback(
-            const manipulator_interfaces::srv::EnableRealTimeConstraints::Request::SharedPtr request,
-            manipulator_interfaces::srv::EnableRealTimeConstraints::Response::SharedPtr response
-        );
-
         void jointsRealTimeSetter_callback( // Set the real time joints speed based control
             const std_srvs::srv::SetBool::Request::SharedPtr req, 
             std_srvs::srv::SetBool::Response::SharedPtr res
@@ -160,9 +143,10 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         manipulator_interfaces::msg::TrajectoryResult planJointGoal(const manipulator_interfaces::msg::JointGoal& goal, const DynamicPlanner::StatusCallback& status_cb = {});
         manipulator_interfaces::msg::TrajectoryResult planCartesianGoal(const manipulator_interfaces::msg::CartesianGoal& goal, const DynamicPlanner::StatusCallback& status_cb = {});
 
-        // Create an action server that plans the received goal with plan_fn in a dedicated thread,
+        // Create an action server that plans the received goal with plan_fn inside the executor (accepted callback),
         // publishing the planner status as feedback and returning the TrajectoryResult
         template <typename ActionT, typename PlanFn>
+        // Each server gets its own callback group, so a running plan does not block goal responses of the other servers
         typename rclcpp_action::Server<ActionT>::SharedPtr createPlanActionServer(const std::string& name, PlanFn plan_fn);
 
         //SUBSCRIBERS
@@ -197,7 +181,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         void addPrefix(const std::string& prefix, std::vector<std::string>& vector) const; //Add a prefix to all elements of a vector
         
         void initializePlanner(); //Creates a node for the DynamicPlanner, adds it to the executor and initializes the planner_ object
-        void checkParams(); //Declare the parameters for the node
+        void checkParams(); //Declare the parameters for the node and bind them to the member variables
         double sign(double val); //Returns the sign of a number or 0 (+1.0 or -1.0)
 
         bool isPoseInsidePrimitive(
@@ -237,6 +221,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         bool real_time_collision_check_; // If true, the real time control will check for collisions with the environment and with itself
         double jac_sigma_threshold_;
         double jac_max_damping_factor_;
+        std::unique_ptr<ParameterBinder> param_binder_; // Keeps the member variables above in sync with the ROS parameters
 
         //Services
         rclcpp::Service<manipulator_interfaces::srv::FKine>::SharedPtr fkine_service_;
@@ -245,9 +230,6 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         rclcpp::Service<manipulator_interfaces::srv::PseudoInverse>::SharedPtr pseudoInverse_service_;
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jointsRealTimeSetter_service_;
         rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr jacobianControlSetter_service_;
-        rclcpp::Service<manipulator_interfaces::srv::EnableRealTimeConstraints>::SharedPtr realTimeConstraintsSetter_service_;
-        rclcpp::Service<manipulator_interfaces::srv::ChangePlannerTolerances>::SharedPtr changePlannerTolerances_service_;
-        rclcpp::Service<manipulator_interfaces::srv::ChangePlannerScalingFactors>::SharedPtr changePlannerScalingFactors_service_;
 
         //Subscribers
         rclcpp::Subscription<moveit_msgs::msg::CollisionObject>::SharedPtr collisionObject_sub_;                    //Subscriber for addition and update of collision objects
@@ -271,8 +253,14 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         //Execution
         std::shared_ptr<DynamicPlanner> dynamic_planner_;       //Dynamic planner object
         
-        rclcpp::executors::MultiThreadedExecutor executor_;     //Executor for accessory nodes (e.g. dynamic planner)
+        // Planning blocks one thread inside the action callback while the MoveGroup result is received on another one,
+        // so the executor needs a few threads regardless of the machine
+        static constexpr size_t EXECUTOR_THREADS = 6;
+        rclcpp::executors::MultiThreadedExecutor executor_{rclcpp::ExecutorOptions(), EXECUTOR_THREADS};
         double spinner_mean_ = 0.0;                             //Mean value for the time taken for each iteration of the spinner
+        unsigned long long int spinner_samples_ = 0;            //Number of samples for the spinner mean time
+        rclcpp::Clock steady_clock_{RCL_STEADY_TIME};           //Clock used to measure the spinner time
+        rclcpp::PreShutdownCallbackHandle pre_shutdown_handle_; //Handle to unregister shutdown_handler
         rclcpp::TimerBase::SharedPtr mainloop_timer_;           //Timer for the main loop
         rclcpp::TimerBase::SharedPtr tcpPose_timer_;            //Timer for publishing tcp pose
         rclcpp::TimerBase::SharedPtr tcpVel_timer_;             //Timer for publishing tcp velocity
@@ -280,7 +268,7 @@ class ManipulatorPlannerNode : public rclcpp::Node {
         std::shared_ptr<rclcpp::CallbackGroup> services_cb_group_;       // Callback group for services
         std::shared_ptr<rclcpp::CallbackGroup> subscribers_cb_group_;    // Callback group for subscribers
         std::shared_ptr<rclcpp::CallbackGroup> main_cb_group_;           // Callback group for mainloop timer 
-        std::shared_ptr<rclcpp::CallbackGroup> actions_cb_group_;        // Callback group for planning action servers
+        std::vector<rclcpp::CallbackGroup::SharedPtr> actions_cb_groups_; // Owns the per-server callback groups (the node only keeps weak refs)
         std::mutex planning_mutex_;                                      // Prevents concurrent planning from different action goals
 
         //Real time control variables

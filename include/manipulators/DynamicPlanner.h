@@ -14,6 +14,7 @@
 
 //ROS Imports
 #include <rclcpp/rclcpp.hpp>
+#include "manipulators/ParameterBinder.h"
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/quaternion.hpp>
@@ -80,8 +81,6 @@ struct DynamicPlannerParams
     double execution_settle_timeout = 2.0;                       // Max time for the robot to reach the last trajectory point once all points are sent (seconds)
 
     DynamicPlannerParams() {}
-
-    static DynamicPlannerParams fromNode(const rclcpp::Node::SharedPtr& node);
 };
 
 inline rclcpp::QoS QOS_PROFILE_RELIABLE()
@@ -181,12 +180,14 @@ class DynamicPlanner
 
         void stop(); //Stop the execution of the planned trajectory
 
+        //Release timers, subscriptions, servers and the planning scene monitor.
+        //Call once the executor has stopped spinning, before destroying the object.
+        void shutdown();
+
         // --------------- GETTERS AND SETTERS ----------------
 
-        // Dynamic planner parameters getter and setter
+        // Dynamic planner parameters getter (parameters are changed through the ROS parameter server)
         DynamicPlannerParams getParams() const;
-
-        void setParams(const DynamicPlannerParams& params);
                 
         planning_scene_monitor::LockedPlanningSceneRW getPlanningScene(); //Get the current planning scen as a read-only lock object
 
@@ -267,7 +268,9 @@ class DynamicPlanner
 
         rclcpp_action::GoalResponse handleExecuteGoal(const rclcpp_action::GoalUUID& uuid, std::shared_ptr<const ExecuteTrajectory::Goal> goal);
         rclcpp_action::CancelResponse handleExecuteCancel(const std::shared_ptr<ExecuteTrajectoryGoalHandle> goal_handle);
-        void executeAction(const std::shared_ptr<ExecuteTrajectoryGoalHandle> goal_handle); //Runs in a dedicated thread until the execution ends
+        void handleExecuteAccepted(const std::shared_ptr<ExecuteTrajectoryGoalHandle> goal_handle); //Starts the execution of the accepted goal
+        void pollExecuteGoal(); //Periodically called by execute_poll_timer_: publishes feedback and terminates the active goal
+        void publishExecuteProgress(const std::shared_ptr<ExecuteTrajectoryGoalHandle>& goal_handle);
 
         // --------------- TRAJECTORY METHODS ----------------
 
@@ -296,7 +299,7 @@ class DynamicPlanner
 
         // --------------- HELPER METHODS ----------------
         
-        void checkParams(); // Get all the ros parameters and assign them to params_
+        void checkParams(); // Declare the ros parameters and bind them to params_
 
         bool checkJointDiff(const std::vector<double> &joint_values);                             //Check if the difference between joint_values and current pose is negligible
         bool checkJointDiff(const std::vector<double> &val_a, const std::vector<double> &val_b);  //Check if the difference between val_a and val_b is negligible
@@ -332,6 +335,7 @@ class DynamicPlanner
 
         //Parameters for planning
         DynamicPlannerParams params_;                   //Dynamic planner parameters
+        std::unique_ptr<ParameterBinder> param_binder_; //Keeps params_ in sync with the ROS parameters
 
         //MoveIt2 interfaces
         planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor_; //Planning scene monitor
@@ -381,6 +385,11 @@ class DynamicPlanner
 
         //Action servers
         rclcpp_action::Server<ExecuteTrajectory>::SharedPtr execute_action_server_; //Executes the trajectory set via set_trajectory, reports completion percentage
+        std::shared_ptr<ExecuteTrajectoryGoalHandle> active_execute_goal_;          //Goal currently being executed (nullptr if none)
+        std::vector<double> execute_goal_positions_;                               //Last point of the trajectory being executed
+        bool execute_settling_ = false;                                             //True once all points are sent and the robot is settling on the last one
+        rclcpp::Time execute_settle_start_;                                         //Time at which settling started (steady clock)
+        std::mutex execute_goal_mutex_;                                             //Protects the active execute goal state
         
         //TF2
         std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
@@ -388,6 +397,7 @@ class DynamicPlanner
 
         //Timers
         rclcpp::TimerBase::SharedPtr traj_timer_; //Timer to execute trajectory points
+        rclcpp::TimerBase::SharedPtr execute_poll_timer_; //Timer that monitors the active execute goal
         
         //Callback group
         rclcpp::CallbackGroup::SharedPtr cb_group_;
